@@ -1,0 +1,376 @@
+import 'package:flutter/material.dart';
+
+// ─── Colors ───────────────────────────────────────────────────────
+class AppColors {
+  static const Color primary = Color(0xFF1a56db);
+  static const Color primaryLight = Color(0xFF3B82F6);
+  static const Color primaryDark = Color(0xFF1E40AF);
+  static const Color accent = Color(0xFF0EA5E9);
+
+  static const Color success = Color(0xFF10B981);
+  static const Color successLight = Color(0xFFD1FAE5);
+  static const Color warning = Color(0xFFF59E0B);
+  static const Color warningLight = Color(0xFFFEF3C7);
+  static const Color error = Color(0xFFEF4444);
+  static const Color errorLight = Color(0xFFFEE2E2);
+  static const Color info = Color(0xFF6366F1);
+  static const Color infoLight = Color(0xFFE0E7FF);
+
+  static const Color background = Color(0xFFF8FAFC);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color surfaceAlt = Color(0xFFF1F5F9);
+  static const Color border = Color(0xFFE2E8F0);
+  static const Color borderLight = Color(0xFFF1F5F9);
+
+  static const Color textPrimary = Color(0xFF0F172A);
+  static const Color textSecondary = Color(0xFF475569);
+  static const Color textTertiary = Color(0xFF94A3B8);
+  static const Color textOnPrimary = Color(0xFFFFFFFF);
+
+  static const Color sidebarBg = Color(0xFF0F172A);
+  static const Color sidebarText = Color(0xFFCBD5E1);
+  static const Color sidebarActive = Color(0xFF1a56db);
+  static const Color sidebarHover = Color(0xFF1E293B);
+}
+
+// ─── Gradients ────────────────────────────────────────────────────
+class AppGradients {
+  static const LinearGradient primary = LinearGradient(
+    colors: [Color(0xFF1a56db), Color(0xFF3B82F6)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  static const LinearGradient success = LinearGradient(
+    colors: [Color(0xFF059669), Color(0xFF10B981)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  static const LinearGradient warning = LinearGradient(
+    colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  static const LinearGradient error = LinearGradient(
+    colors: [Color(0xFFDC2626), Color(0xFFEF4444)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  static const LinearGradient info = LinearGradient(
+    colors: [Color(0xFF4F46E5), Color(0xFF6366F1)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+}
+
+// ─── Spacing ──────────────────────────────────────────────────────
+class AppSpacing {
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 16;
+  static const double lg = 24;
+  static const double xl = 32;
+  static const double xxl = 48;
+}
+
+// ─── Border Radius ────────────────────────────────────────────────
+class AppRadius {
+  static const double sm = 6;
+  static const double md = 10;
+  static const double lg = 14;
+  static const double xl = 20;
+  static const double full = 999;
+}
+
+// ─── Shadows ──────────────────────────────────────────────────────
+class AppShadows {
+  static List<BoxShadow> get sm => [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.04),
+          blurRadius: 6,
+          offset: const Offset(0, 2),
+        ),
+      ];
+  static List<BoxShadow> get md => [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.06),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ];
+  static List<BoxShadow> get lg => [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.08),
+          blurRadius: 24,
+          offset: const Offset(0, 8),
+        ),
+      ];
+}
+
+// ─── Enums ────────────────────────────────────────────────────────
+enum DocumentStatus {
+  draft,
+  sent,
+  accepted,
+  rejected,
+  converted,
+  cancelled;
+
+  String get label {
+    switch (this) {
+      case draft:
+        return 'Brouillon';
+      case sent:
+        return 'Envoyé';
+      case accepted:
+        return 'Accepté';
+      case rejected:
+        return 'Rejeté';
+      case converted:
+        return 'Converti';
+      case cancelled:
+        return 'Annulé';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case draft:
+        return AppColors.textTertiary;
+      case sent:
+        return AppColors.info;
+      case accepted:
+        return AppColors.success;
+      case rejected:
+        return AppColors.error;
+      case converted:
+        return AppColors.primary;
+      case cancelled:
+        return AppColors.textTertiary;
+    }
+  }
+}
+
+enum InvoiceStatus {
+  draft,
+  sent,
+  partial,
+  paid,
+  overdue,
+  cancelled;
+
+  String get label {
+    switch (this) {
+      case draft:
+        return 'Brouillon';
+      case sent:
+        return 'Envoyée';
+      case partial:
+        return 'Partiellement payée';
+      case paid:
+        return 'Payée';
+      case overdue:
+        return 'En retard';
+      case cancelled:
+        return 'Annulée';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case draft:
+        return AppColors.textTertiary;
+      case sent:
+        return AppColors.info;
+      case partial:
+        return AppColors.warning;
+      case paid:
+        return AppColors.success;
+      case overdue:
+        return AppColors.error;
+      case cancelled:
+        return AppColors.textTertiary;
+    }
+  }
+}
+
+enum OrderStatus {
+  pending,
+  confirmed,
+  inProgress,
+  delivered,
+  cancelled;
+
+  String get label {
+    switch (this) {
+      case pending:
+        return 'En attente';
+      case confirmed:
+        return 'Confirmée';
+      case inProgress:
+        return 'En cours';
+      case delivered:
+        return 'Livrée';
+      case cancelled:
+        return 'Annulée';
+    }
+  }
+}
+
+enum MovementType {
+  entry,
+  exit,
+  transfer,
+  adjustment;
+
+  String get label {
+    switch (this) {
+      case entry:
+        return 'Entrée';
+      case exit:
+        return 'Sortie';
+      case transfer:
+        return 'Transfert';
+      case adjustment:
+        return 'Ajustement';
+    }
+  }
+}
+
+enum PaymentMethod {
+  cash,
+  check,
+  transfer,
+  card,
+  traite;
+
+  String get label {
+    switch (this) {
+      case cash:
+        return 'Espèces';
+      case check:
+        return 'Chèque';
+      case transfer:
+        return 'Virement';
+      case card:
+        return 'Carte';
+      case traite:
+        return 'Traite';
+    }
+  }
+}
+
+enum CheckTraiteType {
+  checkReceived,
+  checkIssued,
+  traiteReceived,
+  traiteIssued;
+
+  String get label {
+    switch (this) {
+      case checkReceived:
+        return 'Chèque reçu';
+      case checkIssued:
+        return 'Chèque émis';
+      case traiteReceived:
+        return 'Traite reçue';
+      case traiteIssued:
+        return 'Traite émise';
+    }
+  }
+}
+
+enum CheckTraiteStatus {
+  pending,
+  deposited,
+  cashed,
+  returned,
+  cancelled;
+
+  String get label {
+    switch (this) {
+      case pending:
+        return 'En attente';
+      case deposited:
+        return 'Déposé';
+      case cashed:
+        return 'Encaissé';
+      case returned:
+        return 'Retourné';
+      case cancelled:
+        return 'Annulé';
+    }
+  }
+}
+
+enum ProjectStatus {
+  planning,
+  active,
+  completed,
+  onHold,
+  cancelled;
+
+  String get label {
+    switch (this) {
+      case planning:
+        return 'Planification';
+      case active:
+        return 'Actif';
+      case completed:
+        return 'Terminé';
+      case onHold:
+        return 'En pause';
+      case cancelled:
+        return 'Annulé';
+    }
+  }
+}
+
+enum TransactionType {
+  income,
+  expense;
+
+  String get label {
+    switch (this) {
+      case income:
+        return 'Recette';
+      case expense:
+        return 'Dépense';
+    }
+  }
+}
+
+enum SyncOperation {
+  insert,
+  update,
+  delete;
+}
+
+// ─── Default TVA Rates (Algeria) ──────────────────────────────────
+class TvaRates {
+  static const double normal = 19.0;
+  static const double reduced = 9.0;
+  static const double exempt = 0.0;
+  static const List<double> all = [19.0, 9.0, 0.0];
+}
+
+// ─── Document Number Prefixes ─────────────────────────────────────
+class DocPrefix {
+  static const String invoice = 'FAC';
+  static const String quote = 'DEV';
+  static const String deliveryNote = 'BL';
+  static const String creditNote = 'AV';
+  static const String purchaseInvoice = 'FA';
+  static const String exitVoucher = 'BS';
+  static const String returnVoucher = 'BR';
+  static const String stockEntry = 'BE';
+  static const String stockWithdrawal = 'BP';
+  static const String stockTransfer = 'BT';
+  static const String inventorySheet = 'FI';
+  static const String customerOrder = 'CC';
+  static const String supplierOrder = 'CF';
+  static const String receivingVoucher = 'BRec';
+  static const String supplierCreditNote = 'AVF';
+  static const String supplierReturn = 'BRF';
+  static const String paymentIn = 'PAI';
+  static const String paymentOut = 'DEB';
+}

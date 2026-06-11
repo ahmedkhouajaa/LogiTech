@@ -1,0 +1,155 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'blocs/auth/auth_bloc.dart';
+import 'blocs/customers/customers_bloc.dart';
+import 'blocs/suppliers/suppliers_bloc.dart';
+import 'blocs/products/products_bloc.dart';
+import 'blocs/invoices/invoices_bloc.dart';
+import 'blocs/quotes/quotes_bloc.dart';
+import 'blocs/stock/stock_bloc.dart';
+import 'blocs/dashboard/dashboard_bloc.dart';
+import 'blocs/transactions/transactions_bloc.dart';
+import 'blocs/projects/projects_bloc.dart';
+import 'blocs/payments/payments_bloc.dart';
+
+import 'services/auth_service.dart';
+import 'services/connectivity_service.dart';
+import 'services/sync_service.dart';
+import 'database/database_helper.dart';
+import 'utils/constants.dart';
+
+import 'screens/login_screen.dart';
+import 'screens/app_shell_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('fr_FR', null);
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Initialize services
+  await ConnectivityService.instance.initialize();
+  SyncService.instance.startPeriodicSync();
+
+  // Warm up the database
+  await DatabaseHelper.instance.database;
+
+  runApp(const BusinessManagerApp());
+}
+
+class BusinessManagerApp extends StatelessWidget {
+  const BusinessManagerApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => AuthBloc(authService: AuthService.instance)..add(AuthCheckRequested())),
+        BlocProvider(create: (_) => DashboardBloc()),
+        BlocProvider(create: (_) => CustomersBloc()),
+        BlocProvider(create: (_) => SuppliersBloc()),
+        BlocProvider(create: (_) => ProductsBloc()),
+        BlocProvider(create: (_) => InvoicesBloc()),
+        BlocProvider(create: (_) => QuotesBloc()),
+        BlocProvider(create: (_) => StockBloc()),
+        BlocProvider(create: (_) => TransactionsBloc()),
+        BlocProvider(create: (_) => ProjectsBloc()),
+        BlocProvider(create: (_) => PaymentsBloc()),
+      ],
+      child: MaterialApp(
+        title: 'Business Manager Pro',
+        debugShowCheckedModeBanner: false,
+        theme: _buildTheme(),
+        home: const _AppGate(),
+      ),
+    );
+  }
+
+  ThemeData _buildTheme() {
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary,
+        surface: AppColors.surface,
+        surfaceContainerHighest: AppColors.surfaceAlt,
+      ),
+      textTheme: GoogleFonts.interTextTheme(),
+      scaffoldBackgroundColor: AppColors.background,
+      cardTheme: CardThemeData(
+        color: AppColors.surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: BorderSide(color: AppColors.border),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+        elevation: 8,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.surfaceAlt,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 2)),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        foregroundColor: AppColors.textPrimary,
+      ),
+      dividerTheme: const DividerThemeData(color: AppColors.border, thickness: 1),
+    );
+  }
+}
+
+class _AppGate extends StatelessWidget {
+  const _AppGate();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        if (state is AuthLoading || state is AuthInitial) {
+          return const Scaffold(
+            backgroundColor: AppColors.sidebarBg,
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: AppColors.primary),
+                  SizedBox(height: 16),
+                  Text('Chargement...', style: TextStyle(color: Colors.white60, fontSize: 14)),
+                ],
+              ),
+            ),
+          );
+        }
+        if (state is AuthAuthenticated) {
+          return const AppShellScreen();
+        }
+        return const LoginScreen();
+      },
+    );
+  }
+}

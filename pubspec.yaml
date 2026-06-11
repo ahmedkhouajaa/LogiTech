@@ -1,0 +1,46 @@
+name: business_manager_pro
+description: Business Manager Pro - ERP/CRM/Invoicing/Inventory Management
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  sqflite_common_ffi: ^2.3.4+5
+  sqflite_common: ^2.5.4+5
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  flutter_bloc: ^9.1.0
+  bloc: ^9.0.0
+  equatable: ^2.0.7
+  pdf: ^3.11.2
+  printing: ^5.14.0
+  intl: ^0.20.2
+  uuid: ^4.5.1
+  connectivity_plus: ^6.1.4
+  shared_preferences: ^2.5.3
+  fl_chart: any
+  google_fonts: any
+  file_picker: any
+  excel: any
+  url_launcher: ^6.3.1
+  provider: ^6.1.4
+  open_filex: ^4.4.0
+  firebase_core: ^4.10.0
+  firebase_auth: ^6.5.2
+  cloud_firestore: ^6.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/images/
