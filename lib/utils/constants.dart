@@ -155,6 +155,7 @@ enum InvoiceStatus {
   sent,
   partial,
   paid,
+  unpaid,
   overdue,
   cancelled;
 
@@ -168,6 +169,8 @@ enum InvoiceStatus {
         return 'Partiellement payée';
       case paid:
         return 'Payée';
+      case unpaid:
+        return 'Non payé';
       case overdue:
         return 'En retard';
       case cancelled:
@@ -185,6 +188,8 @@ enum InvoiceStatus {
         return AppColors.warning;
       case paid:
         return AppColors.success;
+      case unpaid:
+        return AppColors.error;
       case overdue:
         return AppColors.error;
       case cancelled:
@@ -212,6 +217,100 @@ enum OrderStatus {
         return 'Livrée';
       case cancelled:
         return 'Annulée';
+    }
+  }
+}
+
+enum CustomerOrderStatus {
+  draft,
+  created,
+  inProgress,
+  delivered,
+  cancelled;
+
+  String get label {
+    switch (this) {
+      case draft:
+        return 'Brouillon';
+      case created:
+        return 'Créé';
+      case inProgress:
+        return 'En cours';
+      case delivered:
+        return 'Livré';
+      case cancelled:
+        return 'Annulé';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case draft:
+        return AppColors.textTertiary;
+      case created:
+        return AppColors.primary;
+      case inProgress:
+        return AppColors.warning;
+      case delivered:
+        return AppColors.success;
+      case cancelled:
+        return AppColors.textTertiary;
+    }
+  }
+}
+
+enum DeliveryNoteStatus {
+  draft,
+  delivered,
+  cancelled;
+
+  String get label {
+    switch (this) {
+      case draft:
+        return 'Brouillon';
+      case delivered:
+        return 'Livré';
+      case cancelled:
+        return 'Annulé';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case draft:
+        return AppColors.textTertiary;
+      case delivered:
+        return AppColors.success;
+      case cancelled:
+        return AppColors.error;
+    }
+  }
+}
+
+enum StockWithdrawalStatus {
+  draft,
+  validated,
+  cancelled;
+
+  String get label {
+    switch (this) {
+      case draft:
+        return 'Brouillon';
+      case validated:
+        return 'Validé';
+      case cancelled:
+        return 'Annulé';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case draft:
+        return AppColors.textTertiary;
+      case validated:
+        return AppColors.success;
+      case cancelled:
+        return AppColors.error;
     }
   }
 }
@@ -338,6 +437,48 @@ enum TransactionType {
     }
   }
 }
+enum SupplierOrderStatus {
+  draft,
+  sent,
+  validated,
+  partiallyReceived,
+  received,
+  cancelled;
+
+  String get label {
+    switch (this) {
+      case draft:
+        return 'Brouillon';
+      case sent:
+        return 'Envoyé';
+      case validated:
+        return 'Validé';
+      case partiallyReceived:
+        return 'Partiellement reçu';
+      case received:
+        return 'Reçu';
+      case cancelled:
+        return 'Annulé';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case draft:
+        return AppColors.textTertiary;
+      case sent:
+        return AppColors.info;
+      case validated:
+        return AppColors.success;
+      case partiallyReceived:
+        return AppColors.warning;
+      case received:
+        return AppColors.primary;
+      case cancelled:
+        return AppColors.error;
+    }
+  }
+}
 
 enum SyncOperation {
   insert,
@@ -349,8 +490,9 @@ enum SyncOperation {
 class TvaRates {
   static const double normal = 19.0;
   static const double reduced = 9.0;
+  static const double reduced2 = 7.0;
   static const double exempt = 0.0;
-  static const List<double> all = [19.0, 9.0, 0.0];
+  static const List<double> all = [19.0, 9.0, 7.0, 0.0];
 }
 
 // ─── Document Number Prefixes ─────────────────────────────────────

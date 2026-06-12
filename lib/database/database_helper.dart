@@ -15,6 +15,9 @@ import '../models/transaction_model.dart';
 import '../models/check_traite.dart';
 import '../models/project.dart';
 import '../models/payment_model.dart';
+import '../models/customer_order.dart';
+import '../models/stock_withdrawal.dart';
+import '../models/supplier_order.dart';
 import '../utils/constants.dart';
 
 class DatabaseHelper {
@@ -38,7 +41,7 @@ class DatabaseHelper {
     return await databaseFactoryFfi.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 3,
+        version: 9,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       ),
@@ -77,6 +80,193 @@ class DatabaseHelper {
     }
     if (oldVersion < 3) {
       await _createPaymentTables(db);
+    }
+    if (oldVersion < 4) {
+      final invoiceColumns = [
+        "ALTER TABLE invoices ADD COLUMN project_id TEXT",
+        "ALTER TABLE invoices ADD COLUMN conditions TEXT",
+        "ALTER TABLE invoices ADD COLUMN pricing_mode TEXT DEFAULT 'ht'",
+        "ALTER TABLE invoices ADD COLUMN global_discount_percent REAL DEFAULT 0",
+        "ALTER TABLE invoices ADD COLUMN global_discount_amount REAL DEFAULT 0",
+        "ALTER TABLE invoices ADD COLUMN timbre_fiscal REAL DEFAULT 0",
+      ];
+      for (final sql in invoiceColumns) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
+    }
+    if (oldVersion < 5) {
+      final orderColumns = [
+        "ALTER TABLE customer_orders ADD COLUMN project_id TEXT",
+        "ALTER TABLE customer_orders ADD COLUMN conditions TEXT",
+        "ALTER TABLE customer_orders ADD COLUMN pricing_mode TEXT DEFAULT 'ht'",
+        "ALTER TABLE customer_orders ADD COLUMN global_discount_percent REAL DEFAULT 0",
+        "ALTER TABLE customer_orders ADD COLUMN global_discount_amount REAL DEFAULT 0",
+        "ALTER TABLE customer_orders ADD COLUMN timbre_fiscal REAL DEFAULT 1.000",
+      ];
+      final orderItemColumns = [
+        "ALTER TABLE customer_order_items ADD COLUMN discount_percent REAL DEFAULT 0",
+        "ALTER TABLE customer_order_items ADD COLUMN show_description INTEGER DEFAULT 0",
+        "ALTER TABLE customer_order_items ADD COLUMN show_discount INTEGER DEFAULT 0",
+      ];
+      for (final sql in [...orderColumns, ...orderItemColumns]) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
+    }
+    if (oldVersion < 6) {
+      final dnColumns = [
+        "ALTER TABLE delivery_notes ADD COLUMN project_id TEXT",
+        "ALTER TABLE delivery_notes ADD COLUMN pricing_mode TEXT DEFAULT 'ht'",
+        "ALTER TABLE delivery_notes ADD COLUMN global_discount_percent REAL DEFAULT 0",
+        "ALTER TABLE delivery_notes ADD COLUMN global_discount_amount REAL DEFAULT 0",
+        "ALTER TABLE delivery_notes ADD COLUMN timbre_fiscal REAL DEFAULT 0",
+        "ALTER TABLE delivery_notes ADD COLUMN vehicle_registration TEXT",
+        "ALTER TABLE delivery_notes ADD COLUMN driver_name TEXT",
+        "ALTER TABLE delivery_notes ADD COLUMN conditions TEXT",
+        "ALTER TABLE delivery_notes ADD COLUMN total_ht REAL DEFAULT 0",
+        "ALTER TABLE delivery_notes ADD COLUMN total_tva REAL DEFAULT 0",
+        "ALTER TABLE delivery_notes ADD COLUMN total_ttc REAL DEFAULT 0",
+      ];
+      final dniColumns = [
+        "ALTER TABLE delivery_note_items ADD COLUMN description TEXT",
+        "ALTER TABLE delivery_note_items ADD COLUMN tva_rate REAL DEFAULT 19",
+        "ALTER TABLE delivery_note_items ADD COLUMN discount_percent REAL DEFAULT 0",
+        "ALTER TABLE delivery_note_items ADD COLUMN total_ht REAL DEFAULT 0",
+        "ALTER TABLE delivery_note_items ADD COLUMN show_description INTEGER DEFAULT 0",
+        "ALTER TABLE delivery_note_items ADD COLUMN show_discount INTEGER DEFAULT 0",
+      ];
+      for (final sql in [...dnColumns, ...dniColumns]) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if already exists
+        }
+      }
+    }
+
+    if (oldVersion < 7) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS bons_sortie (
+          id TEXT PRIMARY KEY,
+          number TEXT NOT NULL,
+          customer_id TEXT NOT NULL,
+          project_id TEXT,
+          date TEXT NOT NULL,
+          status TEXT DEFAULT 'draft',
+          pricing_mode TEXT DEFAULT 'ht',
+          global_discount_percent REAL DEFAULT 0,
+          global_discount_amount REAL DEFAULT 0,
+          timbre_fiscal REAL DEFAULT 0,
+          vehicle_registration TEXT,
+          driver_name TEXT,
+          warehouse_id TEXT,
+          notes TEXT,
+          conditions TEXT,
+          total_ht REAL DEFAULT 0,
+          total_tva REAL DEFAULT 0,
+          total_ttc REAL DEFAULT 0,
+          firebase_uid TEXT,
+          is_deleted INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (customer_id) REFERENCES customers(id)
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS bons_sortie_items (
+          id TEXT PRIMARY KEY,
+          withdrawal_id TEXT NOT NULL,
+          product_id TEXT NOT NULL,
+          description TEXT,
+          quantity REAL DEFAULT 1,
+          unit_price REAL DEFAULT 0,
+          tva_rate REAL DEFAULT 19,
+          discount_percent REAL DEFAULT 0,
+          total_ht REAL DEFAULT 0,
+          show_description INTEGER DEFAULT 0,
+          show_discount INTEGER DEFAULT 0,
+          FOREIGN KEY (withdrawal_id) REFERENCES bons_sortie(id)
+        )
+      ''');
+    }
+
+    if (oldVersion < 8) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS bons_sortie (
+          id TEXT PRIMARY KEY,
+          number TEXT NOT NULL,
+          customer_id TEXT NOT NULL,
+          project_id TEXT,
+          date TEXT NOT NULL,
+          status TEXT DEFAULT 'draft',
+          pricing_mode TEXT DEFAULT 'ht',
+          global_discount_percent REAL DEFAULT 0,
+          global_discount_amount REAL DEFAULT 0,
+          timbre_fiscal REAL DEFAULT 0,
+          vehicle_registration TEXT,
+          driver_name TEXT,
+          warehouse_id TEXT,
+          notes TEXT,
+          conditions TEXT,
+          total_ht REAL DEFAULT 0,
+          total_tva REAL DEFAULT 0,
+          total_ttc REAL DEFAULT 0,
+          firebase_uid TEXT,
+          is_deleted INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (customer_id) REFERENCES customers(id)
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS bons_sortie_items (
+          id TEXT PRIMARY KEY,
+          withdrawal_id TEXT NOT NULL,
+          product_id TEXT NOT NULL,
+          description TEXT,
+          quantity REAL DEFAULT 1,
+          unit_price REAL DEFAULT 0,
+          tva_rate REAL DEFAULT 19,
+          discount_percent REAL DEFAULT 0,
+          total_ht REAL DEFAULT 0,
+          show_description INTEGER DEFAULT 0,
+          show_discount INTEGER DEFAULT 0,
+          FOREIGN KEY (withdrawal_id) REFERENCES bons_sortie(id)
+        )
+      ''');
+    }
+
+    if (oldVersion < 9) {
+      final soColumns = [
+        "ALTER TABLE supplier_orders ADD COLUMN project_id TEXT",
+        "ALTER TABLE supplier_orders ADD COLUMN pricing_mode TEXT DEFAULT 'ht'",
+        "ALTER TABLE supplier_orders ADD COLUMN global_discount_percent REAL DEFAULT 0",
+        "ALTER TABLE supplier_orders ADD COLUMN global_discount_amount REAL DEFAULT 0",
+        "ALTER TABLE supplier_orders ADD COLUMN timbre_fiscal REAL DEFAULT 1.000",
+        "ALTER TABLE supplier_orders ADD COLUMN conditions TEXT",
+      ];
+      final soiColumns = [
+        "ALTER TABLE supplier_order_items ADD COLUMN description TEXT",
+        "ALTER TABLE supplier_order_items ADD COLUMN discount_percent REAL DEFAULT 0",
+        "ALTER TABLE supplier_order_items ADD COLUMN show_description INTEGER DEFAULT 0",
+        "ALTER TABLE supplier_order_items ADD COLUMN show_discount INTEGER DEFAULT 0",
+      ];
+      for (final sql in [...soColumns, ...soiColumns]) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
     }
   }
 
@@ -270,14 +460,20 @@ class DatabaseHelper {
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         customer_id TEXT NOT NULL,
+        project_id TEXT,
         quote_id TEXT,
         date TEXT NOT NULL,
-        status TEXT DEFAULT 'pending',
+        status TEXT DEFAULT 'draft',
         delivery_date TEXT,
+        pricing_mode TEXT DEFAULT 'ht',
+        global_discount_percent REAL DEFAULT 0,
+        global_discount_amount REAL DEFAULT 0,
+        timbre_fiscal REAL DEFAULT 1.000,
         total_ht REAL DEFAULT 0,
         total_tva REAL DEFAULT 0,
         total_ttc REAL DEFAULT 0,
         notes TEXT,
+        conditions TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
@@ -295,7 +491,10 @@ class DatabaseHelper {
         quantity REAL DEFAULT 1,
         unit_price REAL DEFAULT 0,
         tva_rate REAL DEFAULT 19,
+        discount_percent REAL DEFAULT 0,
         total_ht REAL DEFAULT 0,
+        show_description INTEGER DEFAULT 0,
+        show_discount INTEGER DEFAULT 0,
         FOREIGN KEY (order_id) REFERENCES customer_orders(id)
       )
     ''');
@@ -307,10 +506,21 @@ class DatabaseHelper {
         number TEXT NOT NULL,
         customer_id TEXT NOT NULL,
         order_id TEXT,
+        project_id TEXT,
         date TEXT NOT NULL,
         status TEXT DEFAULT 'draft',
+        pricing_mode TEXT DEFAULT 'ht',
+        global_discount_percent REAL DEFAULT 0,
+        global_discount_amount REAL DEFAULT 0,
+        timbre_fiscal REAL DEFAULT 0,
+        vehicle_registration TEXT,
+        driver_name TEXT,
         warehouse_id TEXT,
         notes TEXT,
+        conditions TEXT,
+        total_ht REAL DEFAULT 0,
+        total_tva REAL DEFAULT 0,
+        total_ttc REAL DEFAULT 0,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
@@ -324,9 +534,61 @@ class DatabaseHelper {
         id TEXT PRIMARY KEY,
         delivery_note_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
+        description TEXT,
         quantity REAL DEFAULT 1,
         unit_price REAL DEFAULT 0,
+        tva_rate REAL DEFAULT 19,
+        discount_percent REAL DEFAULT 0,
+        total_ht REAL DEFAULT 0,
+        show_description INTEGER DEFAULT 0,
+        show_discount INTEGER DEFAULT 0,
         FOREIGN KEY (delivery_note_id) REFERENCES delivery_notes(id)
+      )
+    ''');
+
+    // ─── Exit Vouchers (Bons de Sortie) ───────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS bons_sortie (
+        id TEXT PRIMARY KEY,
+        number TEXT NOT NULL,
+        customer_id TEXT NOT NULL,
+        project_id TEXT,
+        date TEXT NOT NULL,
+        status TEXT DEFAULT 'draft',
+        pricing_mode TEXT DEFAULT 'ht',
+        global_discount_percent REAL DEFAULT 0,
+        global_discount_amount REAL DEFAULT 0,
+        timbre_fiscal REAL DEFAULT 0,
+        vehicle_registration TEXT,
+        driver_name TEXT,
+        warehouse_id TEXT,
+        notes TEXT,
+        conditions TEXT,
+        total_ht REAL DEFAULT 0,
+        total_tva REAL DEFAULT 0,
+        total_ttc REAL DEFAULT 0,
+        firebase_uid TEXT,
+        is_deleted INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (customer_id) REFERENCES customers(id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS bons_sortie_items (
+        id TEXT PRIMARY KEY,
+        withdrawal_id TEXT NOT NULL,
+        product_id TEXT NOT NULL,
+        description TEXT,
+        quantity REAL DEFAULT 1,
+        unit_price REAL DEFAULT 0,
+        tva_rate REAL DEFAULT 19,
+        discount_percent REAL DEFAULT 0,
+        total_ht REAL DEFAULT 0,
+        show_description INTEGER DEFAULT 0,
+        show_discount INTEGER DEFAULT 0,
+        FOREIGN KEY (withdrawal_id) REFERENCES bons_sortie(id)
       )
     ''');
 
@@ -338,6 +600,7 @@ class DatabaseHelper {
         customer_id TEXT NOT NULL,
         order_id TEXT,
         delivery_note_id TEXT,
+        project_id TEXT,
         date TEXT NOT NULL,
         due_date TEXT NOT NULL,
         status TEXT DEFAULT 'draft',
@@ -346,7 +609,12 @@ class DatabaseHelper {
         total_ttc REAL DEFAULT 0,
         amount_paid REAL DEFAULT 0,
         stamp_tax REAL DEFAULT 0,
+        timbre_fiscal REAL DEFAULT 0,
+        global_discount_percent REAL DEFAULT 0,
+        global_discount_amount REAL DEFAULT 0,
+        pricing_mode TEXT DEFAULT 'ht',
         notes TEXT,
+        conditions TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
@@ -472,6 +740,12 @@ class DatabaseHelper {
         total_tva REAL DEFAULT 0,
         total_ttc REAL DEFAULT 0,
         notes TEXT,
+        project_id TEXT,
+        pricing_mode TEXT DEFAULT 'ht',
+        global_discount_percent REAL DEFAULT 0,
+        global_discount_amount REAL DEFAULT 0,
+        timbre_fiscal REAL DEFAULT 1.000,
+        conditions TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
@@ -485,9 +759,13 @@ class DatabaseHelper {
         id TEXT PRIMARY KEY,
         order_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
+        description TEXT,
         quantity REAL DEFAULT 1,
         unit_price REAL DEFAULT 0,
         tva_rate REAL DEFAULT 19,
+        discount_percent REAL DEFAULT 0,
+        show_description INTEGER DEFAULT 0,
+        show_discount INTEGER DEFAULT 0,
         FOREIGN KEY (order_id) REFERENCES supplier_orders(id)
       )
     ''');
@@ -1105,9 +1383,10 @@ class DatabaseHelper {
   Future<List<Invoice>> getInvoices() async {
     final db = await database;
     final maps = await db.rawQuery('''
-      SELECT i.*, c.name as customer_name 
+      SELECT i.*, c.name as customer_name, p.name as project_name
       FROM invoices i 
       LEFT JOIN customers c ON i.customer_id = c.id 
+      LEFT JOIN projects p ON i.project_id = p.id
       WHERE i.is_deleted = 0 
       ORDER BY i.created_at DESC
     ''');
@@ -1117,9 +1396,10 @@ class DatabaseHelper {
   Future<Invoice?> getInvoice(String id) async {
     final db = await database;
     final maps = await db.rawQuery('''
-      SELECT i.*, c.name as customer_name 
+      SELECT i.*, c.name as customer_name, p.name as project_name
       FROM invoices i 
       LEFT JOIN customers c ON i.customer_id = c.id 
+      LEFT JOIN projects p ON i.project_id = p.id
       WHERE i.id = ?
     ''', [id]);
     if (maps.isEmpty) return null;
@@ -1260,24 +1540,211 @@ class DatabaseHelper {
   }
 
   // ─── Delivery Notes ─────────────────────────────────────────────
-  Future<List<DeliveryNote>> getDeliveryNotes() async {
+  Future<List<DeliveryNote>> getDeliveryNotes({
+    String? status,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     final db = await database;
-    final maps = await db.rawQuery('''
-      SELECT d.*, c.name as customer_name 
-      FROM delivery_notes d 
-      LEFT JOIN customers c ON d.customer_id = c.id 
-      WHERE d.is_deleted = 0 
-      ORDER BY d.created_at DESC
-    ''');
-    return maps.map((m) => DeliveryNote.fromMap(m)).toList();
+    String query = '''
+      SELECT dn.*,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
+             p.name AS project_name
+      FROM delivery_notes dn
+      JOIN customers c ON dn.customer_id = c.id
+      LEFT JOIN projects p ON dn.project_id = p.id
+      WHERE dn.is_deleted = 0
+    ''';
+    final args = <dynamic>[];
+
+    if (status != null && status.isNotEmpty && status != 'Tous') {
+      query += ' AND dn.status = ?';
+      args.add(status);
+    }
+    if (startDate != null) {
+      query += ' AND date(dn.date) >= date(?)';
+      args.add(startDate.toIso8601String());
+    }
+    if (endDate != null) {
+      query += ' AND date(dn.date) <= date(?)';
+      args.add(endDate.toIso8601String());
+    }
+
+    query += ' ORDER BY dn.date DESC, dn.created_at DESC';
+    final result = await db.rawQuery(query, args);
+    return result.map((m) => DeliveryNote.fromMap(m)).toList();
+  }
+
+  Future<DeliveryNote?> getDeliveryNote(String id) async {
+    final db = await database;
+    final dnResult = await db.rawQuery('''
+      SELECT dn.*,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
+             p.name AS project_name
+      FROM delivery_notes dn
+      JOIN customers c ON dn.customer_id = c.id
+      LEFT JOIN projects p ON dn.project_id = p.id
+      WHERE dn.id = ? AND dn.is_deleted = 0
+    ''', [id]);
+    if (dnResult.isEmpty) return null;
+    final itemsResult = await db.query(
+      'delivery_note_items',
+      where: 'delivery_note_id = ?',
+      whereArgs: [id],
+    );
+    final items = itemsResult.map((m) => DeliveryNoteItem.fromMap(m)).toList();
+    return DeliveryNote.fromMap(dnResult.first, items);
   }
 
   Future<void> insertDeliveryNote(DeliveryNote note) async {
-    await insert('delivery_notes', note.toMap());
     final db = await database;
-    for (final item in note.items) {
-      await db.insert('delivery_note_items', item.toMap());
+    final data = note.toMap();
+    await db.transaction((txn) async {
+      await txn.insert('delivery_notes', data);
+      for (var item in note.items) {
+        await txn.insert('delivery_note_items', item.toMap());
+      }
+    });
+    await _addToSyncQueue('delivery_notes', note.id, 'INSERT', data);
+  }
+
+  Future<void> updateDeliveryNote(DeliveryNote note) async {
+    final db = await database;
+    final data = note.toMap();
+    data['updated_at'] = DateTime.now().toIso8601String();
+    await db.transaction((txn) async {
+      await txn.update('delivery_notes', data,
+          where: 'id = ?', whereArgs: [note.id]);
+      await txn.delete('delivery_note_items',
+          where: 'delivery_note_id = ?', whereArgs: [note.id]);
+      for (var item in note.items) {
+        await txn.insert('delivery_note_items', item.toMap());
+      }
+    });
+    await _addToSyncQueue('delivery_notes', note.id, 'UPDATE', data);
+  }
+
+  Future<void> softDeleteDeliveryNote(String id) async {
+    final db = await database;
+    final data = {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()};
+    await db.update('delivery_notes', data, where: 'id = ?', whereArgs: [id]);
+    await _addToSyncQueue('delivery_notes', id, 'DELETE', data);
+  }
+
+  Future<int> getNextDeliveryNoteSequence() async {
+    final db = await database;
+    final year = DateTime.now().year;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) + 1 AS next FROM delivery_notes WHERE number LIKE ?',
+      ['BL-$year-%'],
+    );
+    return result.first['next'] as int? ?? 1;
+  }
+
+  // ─── Stock Withdrawals ──────────────────────────────────────────
+  Future<List<StockWithdrawal>> getStockWithdrawals({
+    String? status,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+    String query = '''
+      SELECT sw.*,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
+             p.name AS project_name
+      FROM bons_sortie sw
+      JOIN customers c ON sw.customer_id = c.id
+      LEFT JOIN projects p ON sw.project_id = p.id
+      WHERE sw.is_deleted = 0
+    ''';
+    final args = <dynamic>[];
+
+    if (status != null && status.isNotEmpty && status != 'Tous') {
+      query += ' AND sw.status = ?';
+      args.add(status);
     }
+    if (startDate != null) {
+      query += ' AND date(sw.date) >= date(?)';
+      args.add(startDate.toIso8601String());
+    }
+    if (endDate != null) {
+      query += ' AND date(sw.date) <= date(?)';
+      args.add(endDate.toIso8601String());
+    }
+
+    query += ' ORDER BY sw.date DESC, sw.created_at DESC';
+    final result = await db.rawQuery(query, args);
+    return result.map((m) => StockWithdrawal.fromMap(m)).toList();
+  }
+
+  Future<StockWithdrawal?> getStockWithdrawal(String id) async {
+    final db = await database;
+    final swResult = await db.rawQuery('''
+      SELECT sw.*,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
+             p.name AS project_name
+      FROM bons_sortie sw
+      JOIN customers c ON sw.customer_id = c.id
+      LEFT JOIN projects p ON sw.project_id = p.id
+      WHERE sw.id = ? AND sw.is_deleted = 0
+    ''', [id]);
+    if (swResult.isEmpty) return null;
+    final itemsResult = await db.query(
+      'bons_sortie_items',
+      where: 'withdrawal_id = ?',
+      whereArgs: [id],
+    );
+    final items = itemsResult.map((m) => StockWithdrawalItem.fromMap(m)).toList();
+    return StockWithdrawal.fromMap(swResult.first, items);
+  }
+
+  Future<void> insertStockWithdrawal(StockWithdrawal sw) async {
+    final db = await database;
+    final data = sw.toMap();
+    await db.transaction((txn) async {
+      await txn.insert('bons_sortie', data);
+      for (var item in sw.items) {
+        await txn.insert('bons_sortie_items', item.toMap());
+      }
+    });
+    await _addToSyncQueue('bons_sortie', sw.id, 'INSERT', data);
+  }
+
+  Future<void> updateStockWithdrawal(StockWithdrawal sw) async {
+    final db = await database;
+    final data = sw.toMap();
+    data['updated_at'] = DateTime.now().toIso8601String();
+    await db.transaction((txn) async {
+      await txn.update('bons_sortie', data,
+          where: 'id = ?', whereArgs: [sw.id]);
+      await txn.delete('bons_sortie_items',
+          where: 'withdrawal_id = ?', whereArgs: [sw.id]);
+      for (var item in sw.items) {
+        await txn.insert('bons_sortie_items', item.toMap());
+      }
+    });
+    await _addToSyncQueue('bons_sortie', sw.id, 'UPDATE', data);
+  }
+
+  Future<void> softDeleteStockWithdrawal(String id) async {
+    final db = await database;
+    final data = {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()};
+    await db.update('bons_sortie', data, where: 'id = ?', whereArgs: [id]);
+    await _addToSyncQueue('bons_sortie', id, 'DELETE', data);
+  }
+
+  Future<int> getNextStockWithdrawalSequence() async {
+    final db = await database;
+    final year = DateTime.now().year;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) + 1 AS next FROM bons_sortie WHERE number LIKE ?',
+      ['BS-$year-%'],
+    );
+    return result.first['next'] as int? ?? 1;
   }
 
   // ─── Checks & Traites ──────────────────────────────────────────
@@ -1545,6 +2012,255 @@ class DatabaseHelper {
     final result = await db.rawQuery(
       'SELECT COUNT(*) + 1 as next FROM payments WHERE payment_number LIKE ?',
       ['$prefix-$year%'],
+    );
+    return result.first['next'] as int? ?? 1;
+  }
+
+  // ─── Customer Orders ─────────────────────────────────────────
+  Future<List<CustomerOrder>> getCustomerOrders({String? status, DateTime? startDate, DateTime? endDate}) async {
+    final db = await database;
+    String query = '''
+      SELECT o.*,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
+             p.name AS project_name
+      FROM customer_orders o
+      JOIN customers c ON o.customer_id = c.id
+      LEFT JOIN projects p ON o.project_id = p.id
+      WHERE o.is_deleted = 0
+    ''';
+    final args = <dynamic>[];
+
+    if (status != null && status != 'all' && status != 'Tous') {
+      query += ' AND o.status = ?';
+      args.add(status);
+    }
+    if (startDate != null) {
+      query += ' AND date(o.date) >= date(?)';
+      args.add(startDate.toIso8601String());
+    }
+    if (endDate != null) {
+      query += ' AND date(o.date) <= date(?)';
+      args.add(endDate.toIso8601String());
+    }
+
+    query += ' ORDER BY o.date DESC, o.created_at DESC';
+
+    final result = await db.rawQuery(query, args);
+    return result.map((map) => CustomerOrder.fromMap(map)).toList();
+  }
+
+  Future<CustomerOrder?> getCustomerOrder(String id) async {
+    final db = await database;
+    final orderResult = await db.rawQuery('''
+      SELECT o.*,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
+             p.name AS project_name
+      FROM customer_orders o
+      JOIN customers c ON o.customer_id = c.id
+      LEFT JOIN projects p ON o.project_id = p.id
+      WHERE o.id = ? AND o.is_deleted = 0
+    ''', [id]);
+
+    if (orderResult.isEmpty) return null;
+
+    final itemsResult = await db.query(
+      'customer_order_items',
+      where: 'order_id = ?',
+      whereArgs: [id],
+    );
+
+    final items = itemsResult.map((map) => CustomerOrderItem.fromMap(map)).toList();
+    return CustomerOrder.fromMap(orderResult.first, items);
+  }
+
+  Future<void> insertCustomerOrder(CustomerOrder order) async {
+    final db = await database;
+    final data = order.toMap();
+    await db.transaction((txn) async {
+      await txn.insert('customer_orders', data);
+      for (var item in order.items) {
+        await txn.insert('customer_order_items', item.toMap());
+      }
+    });
+    await _addToSyncQueue('customer_orders', order.id, 'INSERT', data);
+  }
+
+  Future<void> updateCustomerOrder(CustomerOrder order) async {
+    final db = await database;
+    final data = order.toMap();
+    data['updated_at'] = DateTime.now().toIso8601String();
+    await db.transaction((txn) async {
+      await txn.update(
+        'customer_orders',
+        data,
+        where: 'id = ?',
+        whereArgs: [order.id],
+      );
+
+      // Replace items
+      await txn.delete(
+        'customer_order_items',
+        where: 'order_id = ?',
+        whereArgs: [order.id],
+      );
+      for (var item in order.items) {
+        await txn.insert('customer_order_items', item.toMap());
+      }
+    });
+    await _addToSyncQueue('customer_orders', order.id, 'UPDATE', data);
+  }
+
+  Future<void> softDeleteCustomerOrder(String id) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'customer_orders',
+        {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
+    await _addToSyncQueue('customer_orders', id, 'DELETE', {'is_deleted': 1});
+  }
+
+  Future<int> getNextCustomerOrderSequence() async {
+    final db = await database;
+    final year = DateTime.now().year;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) + 1 as next FROM customer_orders WHERE number LIKE ?',
+      ['CC-$year-%'],
+    );
+    return result.first['next'] as int? ?? 1;
+  }
+
+  // ─── Supplier Orders ──────────────────────────────────────────────
+
+  Future<List<SupplierOrder>> getSupplierOrders({String? status, DateTime? startDate, DateTime? endDate}) async {
+    final db = await database;
+    
+    String where = 'so.is_deleted = 0';
+    List<dynamic> whereArgs = [];
+
+    if (status != null && status != 'Tous') {
+      where += ' AND so.status = ?';
+      whereArgs.add(status);
+    }
+    if (startDate != null) {
+      where += ' AND date(so.date) >= date(?)';
+      whereArgs.add(startDate.toIso8601String());
+    }
+    if (endDate != null) {
+      where += ' AND date(so.date) <= date(?)';
+      whereArgs.add(endDate.toIso8601String());
+    }
+
+    final result = await db.rawQuery('''
+      SELECT so.*, 
+             s.name AS supplier_name,
+             p.name AS project_name
+      FROM supplier_orders so
+      JOIN suppliers s ON so.supplier_id = s.id
+      LEFT JOIN projects p ON so.project_id = p.id
+      WHERE $where
+      ORDER BY so.date DESC, so.created_at DESC
+    ''', whereArgs);
+
+    final List<SupplierOrder> orders = [];
+    for (var row in result) {
+      final itemsResult = await db.query(
+        'supplier_order_items',
+        where: 'order_id = ?',
+        whereArgs: [row['id']],
+      );
+      final items = itemsResult.map((i) => SupplierOrderItem.fromMap(i)).toList();
+      orders.add(SupplierOrder.fromMap(row, items));
+    }
+    return orders;
+  }
+
+  Future<SupplierOrder?> getSupplierOrderById(String id) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT so.*, 
+             s.name AS supplier_name,
+             p.name AS project_name
+      FROM supplier_orders so
+      JOIN suppliers s ON so.supplier_id = s.id
+      LEFT JOIN projects p ON so.project_id = p.id
+      WHERE so.id = ? AND so.is_deleted = 0
+    ''', [id]);
+    
+    if (result.isEmpty) return null;
+    
+    final itemsResult = await db.query(
+      'supplier_order_items',
+      where: 'order_id = ?',
+      whereArgs: [id],
+    );
+    final items = itemsResult.map((i) => SupplierOrderItem.fromMap(i)).toList();
+    
+    return SupplierOrder.fromMap(result.first, items);
+  }
+
+  Future<void> insertSupplierOrder(SupplierOrder order) async {
+    final db = await database;
+    final data = order.toMap();
+    await db.transaction((txn) async {
+      await txn.insert('supplier_orders', data);
+      for (var item in order.items) {
+        await txn.insert('supplier_order_items', item.toMap());
+      }
+    });
+    await _addToSyncQueue('supplier_orders', order.id, 'INSERT', data);
+  }
+
+  Future<void> updateSupplierOrder(SupplierOrder order) async {
+    final db = await database;
+    final data = order.toMap();
+    data['updated_at'] = DateTime.now().toIso8601String();
+    
+    await db.transaction((txn) async {
+      await txn.update(
+        'supplier_orders',
+        data,
+        where: 'id = ?',
+        whereArgs: [order.id],
+      );
+      
+      await txn.delete(
+        'supplier_order_items',
+        where: 'order_id = ?',
+        whereArgs: [order.id],
+      );
+      
+      for (var item in order.items) {
+        await txn.insert('supplier_order_items', item.toMap());
+      }
+    });
+    await _addToSyncQueue('supplier_orders', order.id, 'UPDATE', data);
+  }
+
+  Future<void> softDeleteSupplierOrder(String id) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'supplier_orders',
+        {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
+    await _addToSyncQueue('supplier_orders', id, 'DELETE', {'is_deleted': 1});
+  }
+
+  Future<int> getNextSupplierOrderSequence() async {
+    final db = await database;
+    final year = DateTime.now().year;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) + 1 as next FROM supplier_orders WHERE number LIKE ?',
+      ['CF-$year-%'],
     );
     return result.first['next'] as int? ?? 1;
   }

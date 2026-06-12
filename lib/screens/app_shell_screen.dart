@@ -12,6 +12,7 @@ import 'customers_screen.dart';
 import 'suppliers_screen.dart';
 import 'products_screen.dart';
 import 'invoices_screen.dart';
+import 'customer_orders_screen.dart';
 import 'quotes_screen.dart';
 import 'delivery_notes_screen.dart';
 import 'stock_screen.dart';
@@ -21,9 +22,11 @@ import 'projects_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
 import 'purchase_invoices_screen.dart';
+import 'supplier_orders_screen.dart';
 import 'withholding_tax_screen.dart';
 import 'warehouses_screen.dart';
 import 'payments_screen.dart';
+import 'stock_withdrawals_screen.dart';
 
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
@@ -54,6 +57,8 @@ class _AppShellScreenState extends State<AppShellScreen> {
         return const ProductsScreen();
       case AppModule.invoices:
         return const InvoicesScreen();
+      case AppModule.customerOrders:
+        return const CustomerOrdersScreen();
       case AppModule.quotes:
         return const QuotesScreen();
       case AppModule.deliveryNotes:
@@ -74,11 +79,15 @@ class _AppShellScreenState extends State<AppShellScreen> {
         return const PaymentsScreen();
       case AppModule.purchaseInvoices:
         return const PurchaseInvoicesScreen();
+      case AppModule.supplierOrders:
+        return const SupplierOrdersScreen();
       case AppModule.withholdingTaxSales:
       case AppModule.withholdingTaxPurchase:
         return WithholdingTaxScreen(isSales: _activeModule == AppModule.withholdingTaxSales);
       case AppModule.warehouses:
         return const WarehousesScreen();
+      case AppModule.exitVouchers:
+        return const StockWithdrawalsScreen();
       default:
         return _ComingSoonScreen(module: _activeModule);
     }

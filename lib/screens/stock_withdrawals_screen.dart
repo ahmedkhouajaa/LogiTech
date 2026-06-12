@@ -1,27 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../blocs/delivery_notes/delivery_notes_bloc.dart';
+import '../blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
-import '../models/delivery_note.dart';
+import '../models/stock_withdrawal.dart';
 import '../models/customer.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
-import 'create_delivery_note_screen.dart';
+import 'create_stock_withdrawal_screen.dart';
 
-class DeliveryNotesScreen extends StatefulWidget {
-  const DeliveryNotesScreen({super.key});
+class StockWithdrawalsScreen extends StatefulWidget {
+  const StockWithdrawalsScreen({super.key});
 
   @override
-  State<DeliveryNotesScreen> createState() => _DeliveryNotesScreenState();
+  State<StockWithdrawalsScreen> createState() => _StockWithdrawalsScreenState();
 }
 
-class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
+class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
   String? _selectedClientId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  DeliveryNoteStatus? _statusFilter;
+  StockWithdrawalStatus? _statusFilter;
 
   int _rowsPerPage = 20;
   int _currentPage = 0;
@@ -29,12 +29,12 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<DeliveryNotesBloc>().add(LoadDeliveryNotes());
+    context.read<StockWithdrawalsBloc>().add(LoadStockWithdrawals());
     context.read<CustomersBloc>().add(LoadCustomers());
   }
 
   void _applyFilters() {
-    context.read<DeliveryNotesBloc>().add(FilterDeliveryNotes(
+    context.read<StockWithdrawalsBloc>().add(FilterStockWithdrawals(
       clientId: _selectedClientId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
@@ -60,7 +60,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   Row(
                     children: [
                       const Text(
-                        'Bon de Livraison',
+                        'Bon de Sortie',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -73,7 +73,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Gérer vos bons de livraison',
+                    'Gérer vos bons de sortie',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
@@ -81,7 +81,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
               ElevatedButton.icon(
                 onPressed: () => _navigate(context, null),
                 icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Créer un Bon de Livraison'),
+                label: const Text('Créer un Bon de Sortie'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -112,18 +112,18 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
     );
   }
 
-  void _navigate(BuildContext context, DeliveryNote? existing) {
+  void _navigate(BuildContext context, StockWithdrawal? existing) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => MultiBlocProvider(
           providers: [
-            BlocProvider.value(value: context.read<DeliveryNotesBloc>()),
+            BlocProvider.value(value: context.read<StockWithdrawalsBloc>()),
             BlocProvider.value(value: context.read<CustomersBloc>()),
             BlocProvider.value(value: context.read<ProductsBloc>()),
             BlocProvider.value(value: context.read<ProjectsBloc>()),
           ],
-          child: CreateDeliveryNoteScreen(existing: existing),
+          child: CreateStockWithdrawalScreen(existing: existing),
         ),
       ),
     );
@@ -218,7 +218,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   const DropdownMenuItem(
                       value: null,
                       child: Text('Tous', style: TextStyle(color: AppColors.textPrimary))),
-                  ...DeliveryNoteStatus.values.map((s) =>
+                  ...StockWithdrawalStatus.values.map((s) =>
                       DropdownMenuItem(value: s, child: Text(s.label))),
                 ],
                 onChanged: (val) {
@@ -346,18 +346,18 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
   }
 
   Widget _buildTable() {
-    return BlocBuilder<DeliveryNotesBloc, DeliveryNotesState>(
+    return BlocBuilder<StockWithdrawalsBloc, StockWithdrawalsState>(
       builder: (context, state) {
-        if (state is DeliveryNotesLoading) {
+        if (state is StockWithdrawalsLoading) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (state is DeliveryNotesError) {
+        if (state is StockWithdrawalsError) {
           return Center(
               child: Text(state.message,
                   style: const TextStyle(color: AppColors.error)));
         }
-        if (state is DeliveryNotesLoaded) {
-          final notes = state.notes;
+        if (state is StockWithdrawalsLoaded) {
+          final notes = state.withdrawals;
           final total = notes.length;
           final totalPages = total == 0 ? 1 : (total / _rowsPerPage).ceil();
           final page = _currentPage.clamp(0, totalPages - 1);
@@ -441,7 +441,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                                       Icon(Icons.local_shipping_outlined,
                                           size: 48, color: AppColors.border),
                                       SizedBox(height: 16),
-                                      Text('Aucun bon de livraison trouvé',
+                                      Text('Aucun bon de sortie trouvé',
                                           style: TextStyle(
                                               color: AppColors.textSecondary)),
                                     ],
@@ -549,14 +549,14 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
     );
   }
 
-  Widget _buildRow(BuildContext context, DeliveryNote note, int index) {
-    final statusEnum = DeliveryNoteStatus.values.firstWhere(
+  Widget _buildRow(BuildContext context, StockWithdrawal note, int index) {
+    final statusEnum = StockWithdrawalStatus.values.firstWhere(
       (e) => e.name == note.status,
-      orElse: () => DeliveryNoteStatus.draft,
+      orElse: () => StockWithdrawalStatus.draft,
     );
     final clientLabel =
         note.customerCompany ?? note.customerName ?? 'Client inconnu';
-    final isDraft = statusEnum == DeliveryNoteStatus.draft;
+    final isDraft = statusEnum == StockWithdrawalStatus.draft;
 
     return Container(
       color: index % 2 == 0
@@ -725,13 +725,13 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
     );
   }
 
-  void _confirmDelete(DeliveryNote note) {
+  void _confirmDelete(StockWithdrawal note) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmer la suppression'),
         content: Text(
-            'Voulez-vous vraiment supprimer le bon ${note.number} ?'),
+            'Voulez-vous vraiment supprimer le bon de sortie ${note.number} ?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -741,8 +741,8 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
             onPressed: () {
               Navigator.pop(ctx);
               context
-                  .read<DeliveryNotesBloc>()
-                  .add(DeleteDeliveryNote(note.id));
+                  .read<StockWithdrawalsBloc>()
+                  .add(DeleteStockWithdrawal(note.id));
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,

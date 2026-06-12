@@ -4,12 +4,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
 import 'blocs/auth/auth_bloc.dart';
 import 'blocs/customers/customers_bloc.dart';
 import 'blocs/suppliers/suppliers_bloc.dart';
 import 'blocs/products/products_bloc.dart';
 import 'blocs/invoices/invoices_bloc.dart';
+import 'blocs/customer_orders/customer_orders_bloc.dart';
+import 'blocs/delivery_notes/delivery_notes_bloc.dart';
+import 'blocs/supplier_orders/supplier_orders_bloc.dart';
+import 'blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
 import 'blocs/quotes/quotes_bloc.dart';
 import 'blocs/stock/stock_bloc.dart';
 import 'blocs/dashboard/dashboard_bloc.dart';
@@ -60,6 +65,10 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => SuppliersBloc()),
         BlocProvider(create: (_) => ProductsBloc()),
         BlocProvider(create: (_) => InvoicesBloc()),
+        BlocProvider(create: (_) => CustomerOrdersBloc()),
+        BlocProvider(create: (_) => DeliveryNotesBloc()),
+        BlocProvider(create: (_) => SupplierOrdersBloc()),
+        BlocProvider(create: (_) => StockWithdrawalsBloc()),
         BlocProvider(create: (_) => QuotesBloc()),
         BlocProvider(create: (_) => StockBloc()),
         BlocProvider(create: (_) => TransactionsBloc()),
@@ -70,6 +79,15 @@ class BusinessManagerApp extends StatelessWidget {
         title: 'Business Manager Pro',
         debugShowCheckedModeBanner: false,
         theme: _buildTheme(),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('fr', 'FR'),
+          Locale('en', 'US'),
+        ],
         home: const _AppGate(),
       ),
     );

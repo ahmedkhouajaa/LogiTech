@@ -1,16 +1,15 @@
 import 'package:uuid/uuid.dart';
 
-class DeliveryNote {
+class StockWithdrawal {
   final String id;
   final String number;
   final String customerId;
   final String? customerName;
   final String? customerCompany;
-  final String? orderId;
   final String? projectId;
   final String? projectName;
   final DateTime date;
-  final String status; // draft, delivered, cancelled
+  final String status; // draft, validated, cancelled
   final String pricingMode; // 'ht' or 'ttc'
   final double globalDiscountPercent;
   final double globalDiscountAmount;
@@ -24,15 +23,14 @@ class DeliveryNote {
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final List<DeliveryNoteItem> items;
+  final List<StockWithdrawalItem> items;
 
-  DeliveryNote({
+  StockWithdrawal({
     String? id,
     required this.number,
     required this.customerId,
     this.customerName,
     this.customerCompany,
-    this.orderId,
     this.projectId,
     this.projectName,
     required this.date,
@@ -84,13 +82,12 @@ class DeliveryNote {
     }
   }
 
-  DeliveryNote copyWith({
+  StockWithdrawal copyWith({
     String? id,
     String? number,
     String? customerId,
     String? customerName,
     String? customerCompany,
-    String? orderId,
     String? projectId,
     String? projectName,
     DateTime? date,
@@ -108,15 +105,14 @@ class DeliveryNote {
     bool? isDeleted,
     DateTime? createdAt,
     DateTime? updatedAt,
-    List<DeliveryNoteItem>? items,
+    List<StockWithdrawalItem>? items,
   }) {
-    return DeliveryNote(
+    return StockWithdrawal(
       id: id ?? this.id,
       number: number ?? this.number,
       customerId: customerId ?? this.customerId,
       customerName: customerName ?? this.customerName,
       customerCompany: customerCompany ?? this.customerCompany,
-      orderId: orderId ?? this.orderId,
       projectId: projectId ?? this.projectId,
       projectName: projectName ?? this.projectName,
       date: date ?? this.date,
@@ -142,7 +138,6 @@ class DeliveryNote {
         'id': id,
         'number': number,
         'customer_id': customerId,
-        'order_id': orderId,
         'project_id': projectId,
         'date': date.toIso8601String(),
         'status': status,
@@ -164,14 +159,13 @@ class DeliveryNote {
         'updated_at': updatedAt.toIso8601String(),
       };
 
-  factory DeliveryNote.fromMap(Map<String, dynamic> map, [List<DeliveryNoteItem> items = const []]) =>
-      DeliveryNote(
+  factory StockWithdrawal.fromMap(Map<String, dynamic> map, [List<StockWithdrawalItem> items = const []]) =>
+      StockWithdrawal(
         id: map['id'] as String,
         number: map['number'] as String,
         customerId: map['customer_id'] as String,
         customerName: map['customer_name'] as String?,
         customerCompany: map['customer_company'] as String?,
-        orderId: map['order_id'] as String?,
         projectId: map['project_id'] as String?,
         projectName: map['project_name'] as String?,
         date: DateTime.parse(map['date'] as String),
@@ -193,9 +187,9 @@ class DeliveryNote {
       );
 }
 
-class DeliveryNoteItem {
+class StockWithdrawalItem {
   final String id;
-  final String deliveryNoteId;
+  final String withdrawalId;
   final String productId;
   final String? description;
   final double quantity;
@@ -205,9 +199,9 @@ class DeliveryNoteItem {
   final bool showDescription;
   final bool showDiscount;
 
-  DeliveryNoteItem({
+  StockWithdrawalItem({
     String? id,
-    required this.deliveryNoteId,
+    required this.withdrawalId,
     required this.productId,
     this.description,
     this.quantity = 1,
@@ -223,9 +217,9 @@ class DeliveryNoteItem {
   double get tvaAmount => totalHT * (tvaRate / 100);
   double get totalTTC => totalHT + tvaAmount;
 
-  DeliveryNoteItem copyWith({
+  StockWithdrawalItem copyWith({
     String? id,
-    String? deliveryNoteId,
+    String? withdrawalId,
     String? productId,
     String? description,
     double? quantity,
@@ -235,9 +229,9 @@ class DeliveryNoteItem {
     bool? showDescription,
     bool? showDiscount,
   }) {
-    return DeliveryNoteItem(
+    return StockWithdrawalItem(
       id: id ?? this.id,
-      deliveryNoteId: deliveryNoteId ?? this.deliveryNoteId,
+      withdrawalId: withdrawalId ?? this.withdrawalId,
       productId: productId ?? this.productId,
       description: description ?? this.description,
       quantity: quantity ?? this.quantity,
@@ -251,7 +245,7 @@ class DeliveryNoteItem {
 
   Map<String, dynamic> toMap() => {
         'id': id,
-        'delivery_note_id': deliveryNoteId,
+        'withdrawal_id': withdrawalId,
         'product_id': productId,
         'description': description,
         'quantity': quantity,
@@ -263,9 +257,9 @@ class DeliveryNoteItem {
         'show_discount': showDiscount ? 1 : 0,
       };
 
-  factory DeliveryNoteItem.fromMap(Map<String, dynamic> map) => DeliveryNoteItem(
+  factory StockWithdrawalItem.fromMap(Map<String, dynamic> map) => StockWithdrawalItem(
         id: map['id'] as String,
-        deliveryNoteId: map['delivery_note_id'] as String,
+        withdrawalId: map['withdrawal_id'] as String,
         productId: map['product_id'] as String,
         description: map['description'] as String?,
         quantity: (map['quantity'] as num?)?.toDouble() ?? 1,

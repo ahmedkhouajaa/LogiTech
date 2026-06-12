@@ -1,17 +1,16 @@
 import 'package:intl/intl.dart';
-import 'constants.dart';
 
 // ─── Currency Formatting ──────────────────────────────────────────
-String formatCurrency(double amount, {String symbol = 'DA'}) {
+String formatCurrency(double amount, {String symbol = 'TND'}) {
   final formatter = NumberFormat('#,##0.00', 'fr_FR');
   return '${formatter.format(amount)} $symbol';
 }
 
 String formatCurrencyCompact(double amount) {
   if (amount >= 1000000) {
-    return '${(amount / 1000000).toStringAsFixed(1)}M DA';
+    return '${(amount / 1000000).toStringAsFixed(1)}M TND';
   } else if (amount >= 1000) {
-    return '${(amount / 1000).toStringAsFixed(1)}K DA';
+    return '${(amount / 1000).toStringAsFixed(1)}K TND';
   }
   return formatCurrency(amount);
 }
@@ -102,4 +101,20 @@ double calculateStampTax(double totalTTC) {
   if (totalTTC <= 0) return 0;
   final tax = totalTTC * 0.01;
   return tax < 2500 ? 0 : tax;
+}
+
+// ─── Tunisian Currency Formatting (TND) ────────────────────────────
+String formatCurrencyDT(double amount) {
+  final formatter = NumberFormat('#,##0.000', 'fr_FR');
+  return '${formatter.format(amount)} TND';
+}
+
+// ─── Long Date Format (e.g., "11 juin 2026") ──────────────────────
+String formatDateLong(DateTime date) {
+  return DateFormat('d MMMM yyyy', 'fr_FR').format(date);
+}
+
+// ─── Date + Time Format (e.g., "11 juin 2026 - 18:18") ───────────
+String formatDateTimeLong(DateTime date) {
+  return '${DateFormat('d MMMM yyyy', 'fr_FR').format(date)} - ${DateFormat('HH:mm', 'fr_FR').format(date)}';
 }

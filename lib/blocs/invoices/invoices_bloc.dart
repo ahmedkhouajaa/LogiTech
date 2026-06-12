@@ -41,6 +41,15 @@ class FilterInvoicesByStatus extends InvoicesEvent {
   @override
   List<Object?> get props => [status];
 }
+class FilterInvoices extends InvoicesEvent {
+  final String? clientId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final InvoiceStatus? status;
+  const FilterInvoices({this.clientId, this.dateFrom, this.dateTo, this.status});
+  @override
+  List<Object?> get props => [clientId, dateFrom, dateTo, status];
+}
 
 abstract class InvoicesState extends Equatable {
   const InvoicesState();
@@ -53,9 +62,19 @@ class InvoicesLoaded extends InvoicesState {
   final List<Invoice> invoices;
   final List<Invoice> filteredInvoices;
   final InvoiceStatus? activeFilter;
-  const InvoicesLoaded(this.invoices, this.filteredInvoices, {this.activeFilter});
+  final String? clientFilter;
+  final DateTime? dateFromFilter;
+  final DateTime? dateToFilter;
+  const InvoicesLoaded(
+    this.invoices,
+    this.filteredInvoices, {
+    this.activeFilter,
+    this.clientFilter,
+    this.dateFromFilter,
+    this.dateToFilter,
+  });
   @override
-  List<Object?> get props => [invoices, filteredInvoices, activeFilter];
+  List<Object?> get props => [invoices, filteredInvoices, activeFilter, clientFilter, dateFromFilter, dateToFilter];
 }
 class InvoicesError extends InvoicesState {
   final String message;
@@ -72,6 +91,7 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
     on<DeleteInvoice>(_onDelete);
     on<MarkInvoicePaid>(_onMarkPaid);
     on<FilterInvoicesByStatus>(_onFilter);
+    on<FilterInvoices>(_onFilterCombined);
   }
 
   Future<void> _onLoad(LoadInvoices event, Emitter<InvoicesState> emit) async {
@@ -133,6 +153,44 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
           ? current.invoices
           : current.invoices.where((i) => i.status == event.status).toList();
       emit(InvoicesLoaded(current.invoices, filtered, activeFilter: event.status));
+    }
+  }
+
+  void _onFilterCombined(FilterInvoices event, Emitter<InvoicesState> emit) {
+    if (state is InvoicesLoaded) {
+      final current = state as InvoicesLoaded;
+      var filtered = current.invoices.toList();
+
+      // Filter by client
+      if (event.clientId != null && event.clientId!.isNotEmpty) {
+        filtered = filtered.where((i) => i.customerId == event.clientId).toList();
+      }
+
+      // Filter by date range
+      if (event.dateFrom != null) {
+        filtered = filtered.where((i) =>
+          i.date.isAfter(event.dateFrom!.subtract(const Duration(days: 1)))
+        ).toList();
+      }
+      if (event.dateTo != null) {
+        filtered = filtered.where((i) =>
+          i.date.isBefore(event.dateTo!.add(const Duration(days: 1)))
+        ).toList();
+      }
+
+      // Filter by status
+      if (event.status != null) {
+        filtered = filtered.where((i) => i.status == event.status).toList();
+      }
+
+      emit(InvoicesLoaded(
+        current.invoices,
+        filtered,
+        activeFilter: event.status,
+        clientFilter: event.clientId,
+        dateFromFilter: event.dateFrom,
+        dateToFilter: event.dateTo,
+      ));
     }
   }
 }

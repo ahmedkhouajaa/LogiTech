@@ -7,6 +7,8 @@ class Invoice {
   final String? customerName;
   final String? orderId;
   final String? deliveryNoteId;
+  final String? projectId;
+  final String? projectName;
   final DateTime date;
   final DateTime dueDate;
   final InvoiceStatus status;
@@ -15,7 +17,12 @@ class Invoice {
   final double totalTTC;
   final double amountPaid;
   final double stampTax;
+  final double timbreFiscal;
+  final double globalDiscountPercent;
+  final double globalDiscountAmount;
+  final String pricingMode; // 'ht' or 'ttc'
   final String? notes;
+  final String? conditionsGenerales;
   final List<InvoiceItem> items;
   final String? firebaseUid;
   final bool isDeleted;
@@ -29,6 +36,8 @@ class Invoice {
     this.customerName,
     this.orderId,
     this.deliveryNoteId,
+    this.projectId,
+    this.projectName,
     required this.date,
     required this.dueDate,
     this.status = InvoiceStatus.draft,
@@ -37,7 +46,12 @@ class Invoice {
     this.totalTTC = 0,
     this.amountPaid = 0,
     this.stampTax = 0,
+    this.timbreFiscal = 0,
+    this.globalDiscountPercent = 0,
+    this.globalDiscountAmount = 0,
+    this.pricingMode = 'ht',
     this.notes,
+    this.conditionsGenerales,
     this.items = const [],
     this.firebaseUid,
     this.isDeleted = false,
@@ -52,10 +66,16 @@ class Invoice {
   Map<String, dynamic> toMap() => {
         'id': id, 'number': number, 'customer_id': customerId,
         'order_id': orderId, 'delivery_note_id': deliveryNoteId,
+        'project_id': projectId,
         'date': date.toIso8601String(), 'due_date': dueDate.toIso8601String(),
         'status': status.name, 'total_ht': totalHT, 'total_tva': totalTva,
         'total_ttc': totalTTC, 'amount_paid': amountPaid, 'stamp_tax': stampTax,
-        'notes': notes, 'firebase_uid': firebaseUid,
+        'timbre_fiscal': timbreFiscal,
+        'global_discount_percent': globalDiscountPercent,
+        'global_discount_amount': globalDiscountAmount,
+        'pricing_mode': pricingMode,
+        'notes': notes, 'conditions': conditionsGenerales,
+        'firebase_uid': firebaseUid,
         'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
@@ -67,6 +87,8 @@ class Invoice {
         customerName: map['customer_name'] as String?,
         orderId: map['order_id'] as String?,
         deliveryNoteId: map['delivery_note_id'] as String?,
+        projectId: map['project_id'] as String?,
+        projectName: map['project_name'] as String?,
         date: DateTime.parse(map['date'] as String),
         dueDate: DateTime.parse(map['due_date'] as String),
         status: InvoiceStatus.values.firstWhere(
@@ -77,7 +99,12 @@ class Invoice {
         totalTTC: (map['total_ttc'] as num?)?.toDouble() ?? 0,
         amountPaid: (map['amount_paid'] as num?)?.toDouble() ?? 0,
         stampTax: (map['stamp_tax'] as num?)?.toDouble() ?? 0,
+        timbreFiscal: (map['timbre_fiscal'] as num?)?.toDouble() ?? 0,
+        globalDiscountPercent: (map['global_discount_percent'] as num?)?.toDouble() ?? 0,
+        globalDiscountAmount: (map['global_discount_amount'] as num?)?.toDouble() ?? 0,
+        pricingMode: map['pricing_mode'] as String? ?? 'ht',
         notes: map['notes'] as String?,
+        conditionsGenerales: map['conditions'] as String?,
         firebaseUid: map['firebase_uid'] as String?,
         isDeleted: map['is_deleted'] == 1,
         createdAt: DateTime.parse(map['created_at'] as String),
@@ -86,9 +113,13 @@ class Invoice {
 
   Invoice copyWith({
     String? id, String? number, String? customerId, String? customerName,
-    String? orderId, String? deliveryNoteId, DateTime? date, DateTime? dueDate,
+    String? orderId, String? deliveryNoteId, String? projectId, String? projectName,
+    DateTime? date, DateTime? dueDate,
     InvoiceStatus? status, double? totalHT, double? totalTva, double? totalTTC,
-    double? amountPaid, double? stampTax, String? notes, List<InvoiceItem>? items,
+    double? amountPaid, double? stampTax, double? timbreFiscal,
+    double? globalDiscountPercent, double? globalDiscountAmount,
+    String? pricingMode, String? notes, String? conditionsGenerales,
+    List<InvoiceItem>? items,
     String? firebaseUid, bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
   }) => Invoice(
         id: id ?? this.id, number: number ?? this.number,
@@ -96,11 +127,19 @@ class Invoice {
         customerName: customerName ?? this.customerName,
         orderId: orderId ?? this.orderId,
         deliveryNoteId: deliveryNoteId ?? this.deliveryNoteId,
+        projectId: projectId ?? this.projectId,
+        projectName: projectName ?? this.projectName,
         date: date ?? this.date, dueDate: dueDate ?? this.dueDate,
         status: status ?? this.status, totalHT: totalHT ?? this.totalHT,
         totalTva: totalTva ?? this.totalTva, totalTTC: totalTTC ?? this.totalTTC,
         amountPaid: amountPaid ?? this.amountPaid, stampTax: stampTax ?? this.stampTax,
-        notes: notes ?? this.notes, items: items ?? this.items,
+        timbreFiscal: timbreFiscal ?? this.timbreFiscal,
+        globalDiscountPercent: globalDiscountPercent ?? this.globalDiscountPercent,
+        globalDiscountAmount: globalDiscountAmount ?? this.globalDiscountAmount,
+        pricingMode: pricingMode ?? this.pricingMode,
+        notes: notes ?? this.notes,
+        conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
+        items: items ?? this.items,
         firebaseUid: firebaseUid ?? this.firebaseUid,
         isDeleted: isDeleted ?? this.isDeleted,
         createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
@@ -118,6 +157,8 @@ class InvoiceItem {
   final double tvaRate;
   final double discountPercent;
   final double totalHT;
+  final bool showDescription;
+  final bool showDiscount;
 
   InvoiceItem({
     required this.id,
@@ -130,6 +171,8 @@ class InvoiceItem {
     this.tvaRate = 19,
     this.discountPercent = 0,
     this.totalHT = 0,
+    this.showDescription = false,
+    this.showDiscount = false,
   });
 
   double get computedTotalHT {
@@ -162,7 +205,7 @@ class InvoiceItem {
   InvoiceItem copyWith({
     String? id, String? invoiceId, String? productId, String? productName,
     String? description, double? quantity, double? unitPrice, double? tvaRate,
-    double? discountPercent, double? totalHT,
+    double? discountPercent, double? totalHT, bool? showDescription, bool? showDiscount,
   }) => InvoiceItem(
         id: id ?? this.id, invoiceId: invoiceId ?? this.invoiceId,
         productId: productId ?? this.productId,
@@ -172,5 +215,7 @@ class InvoiceItem {
         tvaRate: tvaRate ?? this.tvaRate,
         discountPercent: discountPercent ?? this.discountPercent,
         totalHT: totalHT ?? this.totalHT,
+        showDescription: showDescription ?? this.showDescription,
+        showDiscount: showDiscount ?? this.showDiscount,
       );
 }
