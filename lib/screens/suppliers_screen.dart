@@ -27,9 +27,59 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Page Header & KPIs
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Gestion des Fournisseurs', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const SizedBox(height: 4),
+              const Text('Gérez vos fournisseurs et vos dettes envers eux.', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+              const SizedBox(height: 24),
+              BlocBuilder<SuppliersBloc, SuppliersState>(
+                builder: (context, state) {
+                  int totalSuppliers = 0;
+                  double totalOwed = 0;
+
+                  if (state is SuppliersLoaded) {
+                    totalSuppliers = state.suppliers.length;
+                    totalOwed = state.suppliers.fold(0, (sum, s) => sum + s.balance);
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: DashboardCard(
+                          title: 'Total Fournisseurs',
+                          value: totalSuppliers.toString(),
+                          icon: Icons.factory_rounded,
+                          gradientColors: const [Color(0xFF7C3AED), Color(0xFF8B5CF6)],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        child: DashboardCard(
+                          title: 'Total Dettes',
+                          value: formatCurrency(totalOwed),
+                          icon: Icons.account_balance_wallet_rounded,
+                          gradientColors: const [Color(0xFFD97706), Color(0xFFF59E0B)],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      const Expanded(child: SizedBox()), // Placeholder for balance layout
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        // Action Bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Row(
             children: [
               AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
@@ -38,6 +88,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
             ],
           ),
         ),
+        const SizedBox(height: AppSpacing.md),
         Expanded(
           child: BlocBuilder<SuppliersBloc, SuppliersState>(
             builder: (context, state) {
@@ -51,16 +102,26 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                   child: AppCard(
                     padding: EdgeInsets.zero,
                     child: DataTableWidget<Supplier>(
-                      columns: const ['Code', 'Nom', 'Téléphone', 'Email', 'Ville', 'Solde'],
+                      columns: const ['Code', 'Fournisseur', 'Téléphone', 'Email', 'Ville', 'Solde'],
                       rows: filtered,
                       emptyMessage: 'Aucun fournisseur trouvé',
                       cellBuilder: (s) => [
                         DataCell(Text(s.code, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 12))),
-                        DataCell(Text(s.name, style: const TextStyle(fontWeight: FontWeight.w500))),
+                        DataCell(Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 14,
+                              backgroundColor: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                              child: Text(s.name.isNotEmpty ? s.name[0].toUpperCase() : '?', style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(s.name, style: const TextStyle(fontWeight: FontWeight.w500)),
+                          ],
+                        )),
                         DataCell(Text(s.phone ?? '—')),
                         DataCell(Text(s.email ?? '—')),
                         DataCell(Text(s.city ?? '—')),
-                        DataCell(Text(formatCurrency(s.balance))),
+                        DataCell(Text(formatCurrency(s.balance), style: TextStyle(color: s.balance > 0 ? AppColors.error : AppColors.textPrimary, fontWeight: FontWeight.w600))),
                       ],
                       onEdit: (s) => _showDialog(context, s),
                       onDelete: (s) => context.read<SuppliersBloc>().add(DeleteSupplier(s.id)),
@@ -120,68 +181,107 @@ class _SupplierDialogState extends State<_SupplierDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      insetPadding: const EdgeInsets.all(40),
-      child: SizedBox(
-        width: 600,
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+      child: Container(
+        width: 800,
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.lg,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [const Color(0xFF7C3AED), const Color(0xFF8B5CF6)]),
-                borderRadius: const BorderRadius.only(topLeft: Radius.circular(AppRadius.lg), topRight: Radius.circular(AppRadius.lg)),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(AppRadius.lg), topRight: Radius.circular(AppRadius.lg)),
+                border: Border(bottom: BorderSide(color: AppColors.border)),
               ),
-              child: Row(children: [
-                const Icon(Icons.factory_rounded, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(widget.existing == null ? 'Nouveau fournisseur' : 'Modifier fournisseur', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                const Spacer(),
-                IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.pop(context)),
-              ]),
+              child: Row(
+                children: [
+                  const Icon(Icons.factory_rounded, color: Color(0xFF7C3AED)),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.existing == null ? 'Créer un Nouveau Fournisseur' : 'Modifier le Fournisseur',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  const Spacer(),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
+                    label: const Text('Retour', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: _save,
+                    icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
+                    label: Text(widget.existing == null ? 'Créer' : 'Enregistrer', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C3AED),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                  ),
+                ],
+              ),
             ),
             Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Form(
                   key: _formKey,
-                  child: Column(children: [
-                    Row(children: [
-                      Expanded(child: AppTextField(label: 'Code *', controller: _codeCtrl, validator: (v) => v!.isEmpty ? 'Requis' : null)),
-                      const SizedBox(width: 16),
-                      Expanded(child: AppTextField(label: 'Nom *', controller: _nameCtrl, validator: (v) => v!.isEmpty ? 'Requis' : null)),
-                    ]),
-                    const SizedBox(height: 16),
-                    Row(children: [
-                      Expanded(child: AppTextField(label: 'Téléphone', controller: _phoneCtrl)),
-                      const SizedBox(width: 16),
-                      Expanded(child: AppTextField(label: 'Email', controller: _emailCtrl)),
-                    ]),
-                    const SizedBox(height: 16),
-                    Row(children: [
-                      Expanded(child: AppTextField(label: 'Adresse', controller: _addressCtrl)),
-                      const SizedBox(width: 16),
-                      Expanded(child: AppTextField(label: 'Ville', controller: _cityCtrl)),
-                    ]),
-                    const SizedBox(height: 16),
-                    Row(children: [
-                      Expanded(child: AppTextField(label: 'NIF', controller: _taxCtrl)),
-                      const SizedBox(width: 16),
-                      Expanded(child: AppTextField(label: 'RC', controller: _rcCtrl)),
-                    ]),
-                    const SizedBox(height: 16),
-                    AppTextField(label: 'Notes', controller: _notesCtrl, maxLines: 2),
-                  ]),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text("Informations Générales", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      const SizedBox(height: 16),
+                      Row(children: [
+                        Expanded(child: AppTextField(label: 'Code *', controller: _codeCtrl, validator: (v) => v!.isEmpty ? 'Requis' : null)),
+                        const SizedBox(width: 16),
+                        Expanded(child: AppTextField(label: 'Nom / Raison Sociale *', controller: _nameCtrl, validator: (v) => v!.isEmpty ? 'Requis' : null)),
+                      ]),
+                      const SizedBox(height: 16),
+                      Row(children: [
+                        Expanded(child: AppTextField(label: 'Téléphone', controller: _phoneCtrl, keyboardType: TextInputType.phone)),
+                        const SizedBox(width: 16),
+                        Expanded(child: AppTextField(label: 'Email', controller: _emailCtrl, keyboardType: TextInputType.emailAddress)),
+                      ]),
+                      const SizedBox(height: 24),
+                      const Divider(height: 1, color: AppColors.border),
+                      const SizedBox(height: 24),
+                      const Text("Localisation", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      const SizedBox(height: 16),
+                      Row(children: [
+                        Expanded(flex: 2, child: AppTextField(label: 'Adresse', controller: _addressCtrl)),
+                        const SizedBox(width: 16),
+                        Expanded(child: AppTextField(label: 'Ville', controller: _cityCtrl)),
+                      ]),
+                      const SizedBox(height: 24),
+                      const Divider(height: 1, color: AppColors.border),
+                      const SizedBox(height: 24),
+                      const Text("Informations Fiscales & Notes", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      const SizedBox(height: 16),
+                      Row(children: [
+                        Expanded(child: AppTextField(label: 'NIF (Numéro d\'Identification Fiscale)', controller: _taxCtrl)),
+                        const SizedBox(width: 16),
+                        Expanded(child: AppTextField(label: 'RC (Registre de Commerce)', controller: _rcCtrl)),
+                      ]),
+                      const SizedBox(height: 16),
+                      AppTextField(label: 'Notes privées', controller: _notesCtrl, maxLines: 3, hint: 'Ajouter une note sur ce fournisseur...'),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(children: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-                const Spacer(),
-                AppButton(label: 'Enregistrer', icon: Icons.save_rounded, onPressed: _save),
-              ]),
             ),
           ],
         ),

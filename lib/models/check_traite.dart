@@ -1,78 +1,122 @@
-import '../utils/constants.dart';
+import 'package:uuid/uuid.dart';
 
 class CheckTraite {
   final String id;
-  final CheckTraiteType type;
-  final String number;
+  final String documentNumber;
+  final String type; // 'check_received', 'check_issued', 'traite_received', 'traite_issued'
   final double amount;
-  final DateTime dateIssued;
-  final DateTime maturityDate;
-  final CheckTraiteStatus status;
-  final String partyName;
-  final String? accountId;
+  final String partyName; // customer or supplier name
+  final String? partyId; // customer_id or supplier_id
   final String? bankName;
+  final String? bankAccount;
+  final DateTime issueDate;
+  final DateTime maturityDate;
+  final String status; // 'pending', 'cashed', 'bounced', 'cancelled'
+  final String? paymentId; // link to payment when cashed
   final String? notes;
-  final String? firebaseUid;
-  final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  int get daysUntilMaturity {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final maturity = DateTime(maturityDate.year, maturityDate.month, maturityDate.day);
+    return maturity.difference(today).inDays;
+  }
+
   CheckTraite({
-    required this.id, required this.type, required this.number,
-    required this.amount, required this.dateIssued, required this.maturityDate,
-    this.status = CheckTraiteStatus.pending, required this.partyName,
-    this.accountId, this.bankName, this.notes, this.firebaseUid,
-    this.isDeleted = false, DateTime? createdAt, DateTime? updatedAt,
-  })  : createdAt = createdAt ?? DateTime.now(),
+    String? id,
+    required this.documentNumber,
+    required this.type,
+    required this.amount,
+    required this.partyName,
+    this.partyId,
+    this.bankName,
+    this.bankAccount,
+    required this.issueDate,
+    required this.maturityDate,
+    this.status = 'pending',
+    this.paymentId,
+    this.notes,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  })  : id = id ?? const Uuid().v4(),
+        createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
-  bool get isMatured => maturityDate.isBefore(DateTime.now());
-  int get daysUntilMaturity => maturityDate.difference(DateTime.now()).inDays;
-
-  Map<String, dynamic> toMap() => {
-        'id': id, 'type': type.name, 'number': number, 'amount': amount,
-        'date_issued': dateIssued.toIso8601String(),
-        'maturity_date': maturityDate.toIso8601String(),
-        'status': status.name, 'party_name': partyName,
-        'account_id': accountId, 'bank_name': bankName, 'notes': notes,
-        'firebase_uid': firebaseUid, 'is_deleted': isDeleted ? 1 : 0,
-        'created_at': createdAt.toIso8601String(),
-        'updated_at': updatedAt.toIso8601String(),
-      };
-
-  factory CheckTraite.fromMap(Map<String, dynamic> map) => CheckTraite(
-        id: map['id'] as String,
-        type: CheckTraiteType.values.firstWhere(
-          (e) => e.name == map['type'], orElse: () => CheckTraiteType.checkReceived),
-        number: map['number'] as String,
-        amount: (map['amount'] as num?)?.toDouble() ?? 0,
-        dateIssued: DateTime.parse(map['date_issued'] as String),
-        maturityDate: DateTime.parse(map['maturity_date'] as String),
-        status: CheckTraiteStatus.values.firstWhere(
-          (e) => e.name == map['status'], orElse: () => CheckTraiteStatus.pending),
-        partyName: map['party_name'] as String? ?? '',
-        accountId: map['account_id'] as String?,
-        bankName: map['bank_name'] as String?,
-        notes: map['notes'] as String?,
-        firebaseUid: map['firebase_uid'] as String?,
-        isDeleted: map['is_deleted'] == 1,
-        createdAt: DateTime.parse(map['created_at'] as String),
-        updatedAt: DateTime.parse(map['updated_at'] as String),
-      );
-
   CheckTraite copyWith({
-    String? id, CheckTraiteType? type, String? number, double? amount,
-    DateTime? dateIssued, DateTime? maturityDate, CheckTraiteStatus? status,
-    String? partyName, String? accountId, String? bankName, String? notes,
-    String? firebaseUid, bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
-  }) => CheckTraite(
-        id: id ?? this.id, type: type ?? this.type, number: number ?? this.number,
-        amount: amount ?? this.amount, dateIssued: dateIssued ?? this.dateIssued,
-        maturityDate: maturityDate ?? this.maturityDate, status: status ?? this.status,
-        partyName: partyName ?? this.partyName, accountId: accountId ?? this.accountId,
-        bankName: bankName ?? this.bankName, notes: notes ?? this.notes,
-        firebaseUid: firebaseUid ?? this.firebaseUid,
-        isDeleted: isDeleted ?? this.isDeleted,
-        createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
-      );
+    String? id,
+    String? documentNumber,
+    String? type,
+    double? amount,
+    String? partyName,
+    String? partyId,
+    String? bankName,
+    String? bankAccount,
+    DateTime? issueDate,
+    DateTime? maturityDate,
+    String? status,
+    String? paymentId,
+    String? notes,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return CheckTraite(
+      id: id ?? this.id,
+      documentNumber: documentNumber ?? this.documentNumber,
+      type: type ?? this.type,
+      amount: amount ?? this.amount,
+      partyName: partyName ?? this.partyName,
+      partyId: partyId ?? this.partyId,
+      bankName: bankName ?? this.bankName,
+      bankAccount: bankAccount ?? this.bankAccount,
+      issueDate: issueDate ?? this.issueDate,
+      maturityDate: maturityDate ?? this.maturityDate,
+      status: status ?? this.status,
+      paymentId: paymentId ?? this.paymentId,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'document_number': documentNumber,
+      'type': type,
+      'amount': amount,
+      'party_name': partyName,
+      'party_id': partyId,
+      'bank_name': bankName,
+      'bank_account': bankAccount,
+      'issue_date': issueDate.millisecondsSinceEpoch,
+      'maturity_date': maturityDate.millisecondsSinceEpoch,
+      'status': status,
+      'payment_id': paymentId,
+      'notes': notes,
+      'created_at': createdAt.millisecondsSinceEpoch,
+      'updated_at': updatedAt.millisecondsSinceEpoch,
+    };
+  }
+
+  factory CheckTraite.fromMap(Map<String, dynamic> map) {
+    return CheckTraite(
+      id: map['id'],
+      documentNumber: map['document_number'],
+      type: map['type'],
+      amount: map['amount']?.toDouble() ?? 0.0,
+      partyName: map['party_name'],
+      partyId: map['party_id'],
+      bankName: map['bank_name'],
+      bankAccount: map['bank_account'],
+      issueDate: DateTime.fromMillisecondsSinceEpoch(map['issue_date']),
+      maturityDate: DateTime.fromMillisecondsSinceEpoch(map['maturity_date']),
+      status: map['status'] ?? 'pending',
+      paymentId: map['payment_id'],
+      notes: map['notes'],
+      createdAt: map['created_at'] != null ? DateTime.fromMillisecondsSinceEpoch(map['created_at']) : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? DateTime.fromMillisecondsSinceEpoch(map['updated_at']) : DateTime.now(),
+    );
+  }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/quote.dart';
 import '../utils/constants.dart';
+import '../utils/helpers.dart';
 
 class QuoteItemWidget extends StatelessWidget {
   final QuoteItem item;

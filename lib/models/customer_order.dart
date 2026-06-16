@@ -18,6 +18,10 @@ class CustomerOrder {
   final double timbreFiscal;
   final String? notes;
   final String? conditionsGenerales;
+  final bool isConvertedToInvoice;
+  final String? convertedToInvoiceId;
+  final bool isConvertedToDelivery;
+  final String? convertedToDeliveryId;
   final String? firebaseUid;
   final bool isDeleted;
   final DateTime createdAt;
@@ -42,6 +46,10 @@ class CustomerOrder {
     this.timbreFiscal = 1.000,
     this.notes,
     this.conditionsGenerales,
+    this.isConvertedToInvoice = false,
+    this.convertedToInvoiceId,
+    this.isConvertedToDelivery = false,
+    this.convertedToDeliveryId,
     this.firebaseUid,
     this.isDeleted = false,
     DateTime? createdAt,
@@ -107,6 +115,10 @@ class CustomerOrder {
     double? timbreFiscal,
     String? notes,
     String? conditionsGenerales,
+    bool? isConvertedToInvoice,
+    String? convertedToInvoiceId,
+    bool? isConvertedToDelivery,
+    String? convertedToDeliveryId,
     String? firebaseUid,
     bool? isDeleted,
     DateTime? createdAt,
@@ -131,6 +143,10 @@ class CustomerOrder {
       timbreFiscal: timbreFiscal ?? this.timbreFiscal,
       notes: notes ?? this.notes,
       conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
+      isConvertedToInvoice: isConvertedToInvoice ?? this.isConvertedToInvoice,
+      convertedToInvoiceId: convertedToInvoiceId ?? this.convertedToInvoiceId,
+      isConvertedToDelivery: isConvertedToDelivery ?? this.isConvertedToDelivery,
+      convertedToDeliveryId: convertedToDeliveryId ?? this.convertedToDeliveryId,
       firebaseUid: firebaseUid ?? this.firebaseUid,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,
@@ -158,6 +174,10 @@ class CustomerOrder {
       'total_ht': totalHTAfterDiscount,
       'total_tva': totalTVA,
       'total_ttc': totalTTC,
+      'is_converted_to_invoice': isConvertedToInvoice ? 1 : 0,
+      'converted_to_invoice_id': convertedToInvoiceId,
+      'is_converted_to_delivery': isConvertedToDelivery ? 1 : 0,
+      'converted_to_delivery_id': convertedToDeliveryId,
       'firebase_uid': firebaseUid,
       'is_deleted': isDeleted ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
@@ -184,6 +204,10 @@ class CustomerOrder {
       timbreFiscal: map['timbre_fiscal'] ?? 1.000,
       notes: map['notes'],
       conditionsGenerales: map['conditions'],
+      isConvertedToInvoice: map['is_converted_to_invoice'] == 1,
+      convertedToInvoiceId: map['converted_to_invoice_id'],
+      isConvertedToDelivery: map['is_converted_to_delivery'] == 1,
+      convertedToDeliveryId: map['converted_to_delivery_id'],
       firebaseUid: map['firebase_uid'],
       isDeleted: map['is_deleted'] == 1,
       createdAt: DateTime.parse(map['created_at']),

@@ -15,6 +15,13 @@ class Quote {
   final List<QuoteItem> items;
   final String? firebaseUid;
   final bool isDeleted;
+  final bool isConverted;
+  final String? convertedTo;
+  final String? convertedToId;
+  final bool isConvertedToOrder;
+  final String? convertedToOrderId;
+  final bool isConvertedToDelivery;
+  final String? convertedToDeliveryId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -24,6 +31,9 @@ class Quote {
     this.status = DocumentStatus.draft, this.totalHT = 0, this.totalTva = 0,
     this.totalTTC = 0, this.notes, this.items = const [],
     this.firebaseUid, this.isDeleted = false,
+    this.isConverted = false, this.convertedTo, this.convertedToId,
+    this.isConvertedToOrder = false, this.convertedToOrderId,
+    this.isConvertedToDelivery = false, this.convertedToDeliveryId,
     DateTime? createdAt, DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
@@ -35,7 +45,14 @@ class Quote {
         'date': date.toIso8601String(), 'validity_date': validityDate.toIso8601String(),
         'status': status.name, 'total_ht': totalHT, 'total_tva': totalTva,
         'total_ttc': totalTTC, 'notes': notes, 'firebase_uid': firebaseUid,
-        'is_deleted': isDeleted ? 1 : 0, 'created_at': createdAt.toIso8601String(),
+        'is_deleted': isDeleted ? 1 : 0, 
+        'is_converted': isConverted ? 1 : 0,
+        'converted_to': convertedTo, 'converted_to_id': convertedToId,
+        'is_converted_to_order': isConvertedToOrder ? 1 : 0,
+        'converted_to_order_id': convertedToOrderId,
+        'is_converted_to_delivery': isConvertedToDelivery ? 1 : 0,
+        'converted_to_delivery_id': convertedToDeliveryId,
+        'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
 
@@ -53,6 +70,13 @@ class Quote {
         notes: map['notes'] as String?,
         firebaseUid: map['firebase_uid'] as String?,
         isDeleted: map['is_deleted'] == 1,
+        isConverted: map['is_converted'] == 1,
+        convertedTo: map['converted_to'] as String?,
+        convertedToId: map['converted_to_id'] as String?,
+        isConvertedToOrder: map['is_converted_to_order'] == 1,
+        convertedToOrderId: map['converted_to_order_id'] as String?,
+        isConvertedToDelivery: map['is_converted_to_delivery'] == 1,
+        convertedToDeliveryId: map['converted_to_delivery_id'] as String?,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
       );
@@ -62,6 +86,9 @@ class Quote {
     DateTime? date, DateTime? validityDate, DocumentStatus? status,
     double? totalHT, double? totalTva, double? totalTTC, String? notes,
     List<QuoteItem>? items, String? firebaseUid, bool? isDeleted,
+    bool? isConverted, String? convertedTo, String? convertedToId,
+    bool? isConvertedToOrder, String? convertedToOrderId,
+    bool? isConvertedToDelivery, String? convertedToDeliveryId,
     DateTime? createdAt, DateTime? updatedAt,
   }) => Quote(
         id: id ?? this.id, number: number ?? this.number,
@@ -73,6 +100,13 @@ class Quote {
         notes: notes ?? this.notes, items: items ?? this.items,
         firebaseUid: firebaseUid ?? this.firebaseUid,
         isDeleted: isDeleted ?? this.isDeleted,
+        isConverted: isConverted ?? this.isConverted,
+        convertedTo: convertedTo ?? this.convertedTo,
+        convertedToId: convertedToId ?? this.convertedToId,
+        isConvertedToOrder: isConvertedToOrder ?? this.isConvertedToOrder,
+        convertedToOrderId: convertedToOrderId ?? this.convertedToOrderId,
+        isConvertedToDelivery: isConvertedToDelivery ?? this.isConvertedToDelivery,
+        convertedToDeliveryId: convertedToDeliveryId ?? this.convertedToDeliveryId,
         createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
       );
 }

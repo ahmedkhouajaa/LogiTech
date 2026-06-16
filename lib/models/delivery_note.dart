@@ -9,6 +9,7 @@ class DeliveryNote {
   final String? orderId;
   final String? projectId;
   final String? projectName;
+  final String? devisId;
   final DateTime date;
   final String status; // draft, delivered, cancelled
   final String pricingMode; // 'ht' or 'ttc'
@@ -20,6 +21,10 @@ class DeliveryNote {
   final String? notes;
   final String? conditionsGenerales;
   final String? warehouseId;
+  final bool isConvertedToInvoice;
+  final String? convertedToInvoiceId;
+  final bool isConvertedToReturn;
+  final String? convertedToReturnId;
   final String? firebaseUid;
   final bool isDeleted;
   final DateTime createdAt;
@@ -35,6 +40,7 @@ class DeliveryNote {
     this.orderId,
     this.projectId,
     this.projectName,
+    this.devisId,
     required this.date,
     this.status = 'draft',
     this.pricingMode = 'ht',
@@ -46,6 +52,10 @@ class DeliveryNote {
     this.notes,
     this.conditionsGenerales,
     this.warehouseId,
+    this.isConvertedToInvoice = false,
+    this.convertedToInvoiceId,
+    this.isConvertedToReturn = false,
+    this.convertedToReturnId,
     this.firebaseUid,
     this.isDeleted = false,
     DateTime? createdAt,
@@ -93,6 +103,7 @@ class DeliveryNote {
     String? orderId,
     String? projectId,
     String? projectName,
+    String? devisId,
     DateTime? date,
     String? status,
     String? pricingMode,
@@ -104,6 +115,10 @@ class DeliveryNote {
     String? notes,
     String? conditionsGenerales,
     String? warehouseId,
+    bool? isConvertedToInvoice,
+    String? convertedToInvoiceId,
+    bool? isConvertedToReturn,
+    String? convertedToReturnId,
     String? firebaseUid,
     bool? isDeleted,
     DateTime? createdAt,
@@ -119,6 +134,7 @@ class DeliveryNote {
       orderId: orderId ?? this.orderId,
       projectId: projectId ?? this.projectId,
       projectName: projectName ?? this.projectName,
+      devisId: devisId ?? this.devisId,
       date: date ?? this.date,
       status: status ?? this.status,
       pricingMode: pricingMode ?? this.pricingMode,
@@ -130,6 +146,10 @@ class DeliveryNote {
       notes: notes ?? this.notes,
       conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
       warehouseId: warehouseId ?? this.warehouseId,
+      isConvertedToInvoice: isConvertedToInvoice ?? this.isConvertedToInvoice,
+      convertedToInvoiceId: convertedToInvoiceId ?? this.convertedToInvoiceId,
+      isConvertedToReturn: isConvertedToReturn ?? this.isConvertedToReturn,
+      convertedToReturnId: convertedToReturnId ?? this.convertedToReturnId,
       firebaseUid: firebaseUid ?? this.firebaseUid,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,
@@ -144,6 +164,7 @@ class DeliveryNote {
         'customer_id': customerId,
         'order_id': orderId,
         'project_id': projectId,
+        'devis_id': devisId,
         'date': date.toIso8601String(),
         'status': status,
         'pricing_mode': pricingMode,
@@ -158,6 +179,10 @@ class DeliveryNote {
         'total_ht': totalHTAfterDiscount,
         'total_tva': totalTVA,
         'total_ttc': totalTTC,
+        'is_converted_to_invoice': isConvertedToInvoice ? 1 : 0,
+        'converted_to_invoice_id': convertedToInvoiceId,
+        'is_converted_to_return': isConvertedToReturn ? 1 : 0,
+        'converted_to_return_id': convertedToReturnId,
         'firebase_uid': firebaseUid,
         'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
@@ -174,6 +199,7 @@ class DeliveryNote {
         orderId: map['order_id'] as String?,
         projectId: map['project_id'] as String?,
         projectName: map['project_name'] as String?,
+        devisId: map['devis_id'] as String?,
         date: DateTime.parse(map['date'] as String),
         status: map['status'] as String? ?? 'draft',
         pricingMode: map['pricing_mode'] as String? ?? 'ht',
@@ -183,9 +209,13 @@ class DeliveryNote {
         vehicleRegistration: map['vehicle_registration'] as String?,
         driverName: map['driver_name'] as String?,
         notes: map['notes'] as String?,
-        conditionsGenerales: map['conditions'] as String?,
-        warehouseId: map['warehouse_id'] as String?,
-        firebaseUid: map['firebase_uid'] as String?,
+        conditionsGenerales: map['conditions'],
+        warehouseId: map['warehouse_id'],
+        isConvertedToInvoice: map['is_converted_to_invoice'] == 1,
+        convertedToInvoiceId: map['converted_to_invoice_id'],
+        isConvertedToReturn: map['is_converted_to_return'] == 1,
+        convertedToReturnId: map['converted_to_return_id'],
+        firebaseUid: map['firebase_uid'],
         isDeleted: map['is_deleted'] == 1,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),

@@ -1,38 +1,36 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../blocs/delivery_notes/delivery_notes_bloc.dart';
+import '../blocs/return_notes/return_notes_bloc.dart';
+import '../blocs/return_notes/return_notes_event.dart';
+import '../blocs/return_notes/return_notes_state.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
-import '../models/delivery_note.dart';
+import '../models/return_note.dart';
 import '../models/customer.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
-import 'create_delivery_note_screen.dart';
+import 'create_return_note_screen.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../models/payment_model.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../blocs/invoices/invoices_bloc.dart';
-import '../blocs/return_notes/return_notes_bloc.dart';
-import '../blocs/return_notes/return_notes_event.dart';
 import '../models/invoice.dart';
-import '../models/return_note.dart';
 import 'create_invoice_screen.dart';
-import 'create_return_note_screen.dart';
 
-class DeliveryNotesScreen extends StatefulWidget {
-  const DeliveryNotesScreen({super.key});
+class ReturnNotesScreen extends StatefulWidget {
+  const ReturnNotesScreen({super.key});
 
   @override
-  State<DeliveryNotesScreen> createState() => _DeliveryNotesScreenState();
+  State<ReturnNotesScreen> createState() => _ReturnNotesScreenState();
 }
 
-class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
+class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
   String? _selectedClientId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
-  DeliveryNoteStatus? _statusFilter;
+  ReturnNoteStatus? _statusFilter;
 
   int _rowsPerPage = 20;
   int _currentPage = 0;
@@ -40,12 +38,12 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<DeliveryNotesBloc>().add(LoadDeliveryNotes());
+    context.read<ReturnNotesBloc>().add(LoadReturnNotes());
     context.read<CustomersBloc>().add(LoadCustomers());
   }
 
   void _applyFilters() {
-    context.read<DeliveryNotesBloc>().add(FilterDeliveryNotes(
+    context.read<ReturnNotesBloc>().add(FilterReturnNotes(
       clientId: _selectedClientId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
@@ -59,7 +57,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── Header ──
+        // Ã¢â€€Ã¢â€€ Header Ã¢â€€Ã¢â€€
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Row(
@@ -71,7 +69,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   Row(
                     children: [
                       const Text(
-                        'Bon de Livraison',
+                        'Bon de retour',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -84,7 +82,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Gérer vos bons de livraison',
+                    'Gérer vos Bons de retour',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
@@ -92,7 +90,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
               ElevatedButton.icon(
                 onPressed: () => _navigate(context, null),
                 icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Créer un Bon de Livraison'),
+                label: const Text('Créer un Bon de retour'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -104,14 +102,14 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
           ),
         ),
 
-        // ── Filter Bar ──
+        // Ã¢â€€Ã¢â€€ Filter Bar Ã¢â€€Ã¢â€€
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: _buildFilterBar(),
         ),
         const SizedBox(height: AppSpacing.lg),
 
-        // ── Table ──
+        // Ã¢â€€Ã¢â€€ Table Ã¢â€€Ã¢â€€
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -123,18 +121,18 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
     );
   }
 
-  void _navigate(BuildContext context, DeliveryNote? existing) {
+  void _navigate(BuildContext context, ReturnNote? existing) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => MultiBlocProvider(
           providers: [
-            BlocProvider.value(value: context.read<DeliveryNotesBloc>()),
+            BlocProvider.value(value: context.read<ReturnNotesBloc>()),
             BlocProvider.value(value: context.read<CustomersBloc>()),
             BlocProvider.value(value: context.read<ProductsBloc>()),
             BlocProvider.value(value: context.read<ProjectsBloc>()),
           ],
-          child: CreateDeliveryNoteScreen(existing: existing),
+          child: CreateReturnNoteScreen(existing: existing),
         ),
       ),
     );
@@ -229,7 +227,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   const DropdownMenuItem(
                       value: null,
                       child: Text('Tous', style: TextStyle(color: AppColors.textPrimary))),
-                  ...DeliveryNoteStatus.values.map((s) =>
+                  ...ReturnNoteStatus.values.map((s) =>
                       DropdownMenuItem(value: s, child: Text(s.label))),
                 ],
                 onChanged: (val) {
@@ -357,20 +355,20 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
   }
 
   Widget _buildTable() {
-    return BlocBuilder<DeliveryNotesBloc, DeliveryNotesState>(
+    return BlocBuilder<ReturnNotesBloc, ReturnNotesState>(
       builder: (context, state) {
-        if (state is DeliveryNotesLoading) {
+        if (state is ReturnNotesLoading) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (state is DeliveryNotesError) {
+        if (state is ReturnNotesError) {
           return Center(
               child: Text(state.message,
                   style: const TextStyle(color: AppColors.error)));
         }
-        if (state is DeliveryNotesLoaded) {
+        if (state is ReturnNotesLoaded) {
           final notes = state.notes;
           final total = notes.length;
-          final totalPages = total == 0 ? 1 : (total / _rowsPerPage).ceil();
+          final totalPages = total == 0 ? 1 : ((total / _rowsPerPage).ceil().toInt());
           final page = _currentPage.clamp(0, totalPages - 1);
           final start = page * _rowsPerPage;
           final end = (start + _rowsPerPage).clamp(0, total);
@@ -452,7 +450,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                                       Icon(Icons.local_shipping_outlined,
                                           size: 48, color: AppColors.border),
                                       SizedBox(height: 16),
-                                      Text('Aucun bon de livraison trouvé',
+                                      Text('Aucun Bon de retour trouvé',
                                           style: TextStyle(
                                               color: AppColors.textSecondary)),
                                     ],
@@ -524,8 +522,8 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                               const Spacer(),
                               Text(
                                 total == 0
-                                    ? 'Affichage de 0 à 0 sur 0 résultats'
-                                    : 'Affichage de ${start + 1} à $end sur $total résultats',
+                                    ? 'Affichage de 0 ÃƒÂ  0 sur 0 résultats'
+                                    : 'Affichage de ${start + 1} ÃƒÂ  $end sur $total résultats',
                                 style: const TextStyle(
                                     fontSize: 13,
                                     color: AppColors.textSecondary),
@@ -560,14 +558,14 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
     );
   }
 
-  Widget _buildRow(BuildContext context, DeliveryNote note, int index) {
-    final statusEnum = DeliveryNoteStatus.values.firstWhere(
+  Widget _buildRow(BuildContext context, ReturnNote note, int index) {
+    final statusEnum = ReturnNoteStatus.values.firstWhere(
       (e) => e.name == note.status,
-      orElse: () => DeliveryNoteStatus.draft,
+      orElse: () => ReturnNoteStatus.draft,
     );
     final clientLabel =
         note.customerCompany ?? note.customerName ?? 'Client inconnu';
-    final isDraft = statusEnum == DeliveryNoteStatus.draft;
+    final isDraft = statusEnum == ReturnNoteStatus.draft;
 
     return Container(
       color: index % 2 == 0
@@ -592,13 +590,13 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(note.number,
+                Text(note.returnNumber,
                     style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                         color: AppColors.textPrimary)),
                 const SizedBox(height: 3),
-                Text(formatDateTimeLong(note.date),
+                Text(formatDateTimeLong(note.dateEmission),
                     style: const TextStyle(
                         fontSize: 12, color: AppColors.textTertiary)),
               ],
@@ -682,17 +680,8 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   const PopupMenuDivider(height: 1),
                   _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
                   const PopupMenuDivider(height: 1),
-                  if (note.isConvertedToInvoice) ...[
-                    _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture créée')
-                  ] else if (note.isConvertedToReturn) ...[
-                    _buildMenuItem('view_return', Icons.assignment_return_outlined, AppColors.success, 'Voir le bon de retour créé')
-                  ] else ...[
-                    _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
-                    const PopupMenuDivider(height: 1),
-                    _buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture'),
-                    const PopupMenuDivider(height: 1),
-                    _buildMenuItem('to_return', Icons.assignment_return_outlined, AppColors.textSecondary, 'Transformer en Bon de Retour'),
-                  ],
+                  _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
+                  const PopupMenuDivider(height: 1),
                   const PopupMenuDivider(height: 1),
                   _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
                   const PopupMenuDivider(height: 1),
@@ -739,13 +728,13 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
     );
   }
 
-  void _confirmDelete(DeliveryNote note) {
+  void _confirmDelete(ReturnNote note) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmer la suppression'),
         content: Text(
-            'Voulez-vous vraiment supprimer le bon ${note.number} ?'),
+            'Voulez-vous vraiment supprimer le bon ${note.returnNumber} ?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -755,8 +744,8 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
             onPressed: () {
               Navigator.pop(ctx);
               context
-                  .read<DeliveryNotesBloc>()
-                  .add(DeleteDeliveryNote(note.id));
+                  .read<ReturnNotesBloc>()
+                  .add(DeleteReturnNote(note.id));
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
@@ -782,7 +771,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
     );
   }
 
-  void _handleAction(BuildContext context, String action, DeliveryNote note) {
+  void _handleAction(BuildContext context, String action, ReturnNote note) {
     switch (action) {
       case 'view':
         // TODO: View delivery note details
@@ -793,18 +782,6 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       case 'print':
         // TODO: Print logic
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impression non implémentée')));
-        break;
-      case 'to_invoice':
-        _showInvoiceConversionDialog(context, note);
-        break;
-      case 'view_invoice':
-        _openConvertedInvoice(context, note.convertedToInvoiceId);
-        break;
-      case 'to_return':
-        _showReturnConversionDialog(context, note);
-        break;
-      case 'view_return':
-        _openConvertedReturn(context, note.convertedToReturnId);
         break;
       case 'add_payment':
         _showAddPaymentDialog(context, note);
@@ -820,10 +797,10 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
     }
   }
 
-  void _showChangeStatusDialog(BuildContext context, DeliveryNote note) {
-    DeliveryNoteStatus selectedStatus = DeliveryNoteStatus.values.firstWhere(
+  void _showChangeStatusDialog(BuildContext context, ReturnNote note) {
+    ReturnNoteStatus selectedStatus = ReturnNoteStatus.values.firstWhere(
       (e) => e.name == note.status,
-      orElse: () => DeliveryNoteStatus.draft,
+      orElse: () => ReturnNoteStatus.draft,
     );
     final notesController = TextEditingController();
 
@@ -841,10 +818,10 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                 children: [
                   const Text('Nouveau statut:'),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<DeliveryNoteStatus>(
+                  DropdownButtonFormField<ReturnNoteStatus>(
                     value: selectedStatus,
                     decoration: const InputDecoration(border: OutlineInputBorder()),
-                    items: DeliveryNoteStatus.values.map((s) => DropdownMenuItem(
+                    items: ReturnNoteStatus.values.map((s) => DropdownMenuItem(
                       value: s,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -882,8 +859,8 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
               ),
               ElevatedButton(
                 onPressed: () {
-                  context.read<DeliveryNotesBloc>().add(
-                    UpdateDeliveryNote(note.copyWith(status: selectedStatus.name))
+                  context.read<ReturnNotesBloc>().add(
+                    UpdateReturnNote(note.copyWith(status: selectedStatus.name))
                   );
                   Navigator.pop(dialogCtx);
                 },
@@ -900,14 +877,14 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
     );
   }
 
-  void _showAddPaymentDialog(BuildContext context, DeliveryNote note) {
+  void _showAddPaymentDialog(BuildContext context, ReturnNote note) {
     final amountCtrl = TextEditingController(text: note.totalTTC.toStringAsFixed(3));
     final methodNotifier = ValueNotifier<String>('especes');
     
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Ajouter un paiement pour BL ${note.number}'),
+        title: Text('Ajouter un paiement pour BL ${note.returnNumber}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -962,7 +939,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   contactName: note.customerName ?? note.customerCompany,
                   amount: amount,
                   method: methodNotifier.value,
-                  reference: note.number,
+                  reference: note.returnNumber,
                   paymentDate: DateTime.now(),
                   status: 'paid',
                   createdAt: DateTime.now(),
@@ -994,272 +971,5 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
         ],
       ),
     );
-  }
-
-  void _showInvoiceConversionDialog(BuildContext context, DeliveryNote note) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: AppColors.warning),
-            SizedBox(width: 8),
-            Text('Confirmation'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Voulez-vous transformer ce bon de livraison en facture ?'),
-            const SizedBox(height: 16),
-            Text('BL: ${note.number}', style: const TextStyle(fontWeight: FontWeight.w600)),
-            Text('Client: ${note.customerName ?? note.customerCompany ?? "Inconnu"}'),
-            Text('Montant: ${formatCurrencyDT(note.totalTTC)}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _convertDeliveryToInvoice(context, note);
-            },
-            child: const Text('Confirmer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _convertDeliveryToInvoice(BuildContext context, DeliveryNote note) {
-    final now = DateTime.now();
-    final year = now.year;
-    final seq = now.millisecondsSinceEpoch % 100000;
-    final invoiceNumber = 'FAC-$year-${seq.toString().padLeft(5, '0')}';
-
-    final invoiceItems = note.items.map((i) => InvoiceItem(
-      id: const Uuid().v4(),
-      invoiceId: '', // Will be set in Invoice constructor/DB
-      productId: i.productId,
-      description: i.description,
-      quantity: i.quantity,
-      unitPrice: i.unitPrice,
-      tvaRate: i.tvaRate,
-      discountPercent: i.discountPercent,
-      totalHT: i.totalHT,
-      showDescription: i.showDescription,
-      showDiscount: i.showDiscount,
-    )).toList();
-
-    final newInvoice = Invoice(
-      id: const Uuid().v4(),
-      number: invoiceNumber,
-      customerId: note.customerId,
-      customerName: note.customerName,
-      orderId: note.orderId,
-      deliveryNoteId: note.id,
-      projectId: note.projectId,
-      projectName: note.projectName,
-      date: now,
-      dueDate: now.add(const Duration(days: 30)),
-      status: InvoiceStatus.unpaid,
-      pricingMode: note.pricingMode,
-      globalDiscountPercent: note.globalDiscountPercent,
-      globalDiscountAmount: note.globalDiscountAmount,
-      timbreFiscal: note.timbreFiscal,
-      notes: note.notes,
-      conditionsGenerales: note.conditionsGenerales,
-      items: invoiceItems,
-    );
-
-    context.read<InvoicesBloc>().add(AddInvoice(newInvoice));
-
-    final updatedNote = note.copyWith(
-      isConvertedToInvoice: true,
-      convertedToInvoiceId: newInvoice.id,
-      status: DeliveryNoteStatus.invoiced.name,
-    );
-    context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedNote));
-
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Facture $invoiceNumber créée avec succès'),
-      backgroundColor: AppColors.success,
-    ));
-  }
-
-  void _showReturnConversionDialog(BuildContext context, DeliveryNote note) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: AppColors.warning),
-            SizedBox(width: 8),
-            Text('Confirmation'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Voulez-vous transformer ce bon de livraison en bon de retour ?'),
-            const SizedBox(height: 16),
-            Text('BL: ${note.number}', style: const TextStyle(fontWeight: FontWeight.w600)),
-            Text('Client: ${note.customerName ?? note.customerCompany ?? "Inconnu"}'),
-            Text('Montant: ${formatCurrencyDT(note.totalTTC)}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _convertDeliveryToReturn(context, note);
-            },
-            child: const Text('Confirmer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _convertDeliveryToReturn(BuildContext context, DeliveryNote note) async {
-    final now = DateTime.now();
-    final year = now.year;
-    
-    // Get next return number sequence
-    final seq = await DatabaseHelper.instance.getNextReturnNoteSequence();
-    final returnNumber = 'RET-$year-${seq.toString().padLeft(5, '0')}';
-
-    final returnItems = note.items.map((i) => ReturnNoteItem(
-      id: const Uuid().v4(),
-      returnNoteId: '', // Will be set in DB when saving if needed, but the model doesn't strictly enforce it for items if generated
-      productId: i.productId,
-      designation: i.description ?? '',
-      quantity: -i.quantity, // Negative for returns
-      unitPrice: i.unitPrice,
-      tvaRate: i.tvaRate,
-      totalHT: -i.totalHT, // Negative for returns
-    )).toList();
-
-    final newReturn = ReturnNote(
-      id: const Uuid().v4(),
-      returnNumber: returnNumber,
-      customerId: note.customerId,
-      customerName: note.customerName,
-      customerCompany: note.customerCompany,
-      deliveryNoteId: note.id,
-      dateEmission: now,
-      status: ReturnNoteStatus.validated.name,
-      subtotalHT: -note.subTotalHT,
-      totalTTC: -note.totalTTC,
-      notes: note.notes,
-      conditions: note.conditionsGenerales,
-      items: returnItems,
-    );
-
-    for (var item in newReturn.items) {
-      // Re-assign return note ID properly
-      // Using copyWith is not possible if it doesn't exist, we can use a small hack or just re-map
-    }
-    
-    final finalItems = returnItems.map((i) => i.copyWith(returnNoteId: newReturn.id)).toList();
-    final returnWithItems = newReturn.copyWith(items: finalItems);
-
-    if (!context.mounted) return;
-    context.read<ReturnNotesBloc>().add(AddReturnNote(returnWithItems));
-
-    final updatedNote = note.copyWith(
-      isConvertedToReturn: true,
-      convertedToReturnId: returnWithItems.id,
-      status: DeliveryNoteStatus.returned.name,
-    );
-    context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedNote));
-
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Bon de retour $returnNumber créé avec succès'),
-      backgroundColor: AppColors.success,
-    ));
-  }
-
-  Future<void> _openConvertedReturn(BuildContext context, String? returnId) async {
-    if (returnId == null) return;
-    
-    final returnNote = await DatabaseHelper.instance.getReturnNote(returnId);
-    if (!context.mounted) return;
-    if (returnNote == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Bon de retour introuvable'),
-        backgroundColor: AppColors.error,
-      ));
-      return;
-    }
-
-    try {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => MultiBlocProvider(
-            providers: [
-              BlocProvider.value(value: context.read<ReturnNotesBloc>()),
-              BlocProvider.value(value: context.read<CustomersBloc>()),
-              BlocProvider.value(value: context.read<ProductsBloc>()),
-              BlocProvider.value(value: context.read<ProjectsBloc>()),
-            ],
-            child: CreateReturnNoteScreen(existing: returnNote),
-          ),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Impossible d\'ouvrir le bon de retour'),
-        backgroundColor: AppColors.error,
-      ));
-    }
-  }
-
-  Future<void> _openConvertedInvoice(BuildContext context, String? invoiceId) async {
-    if (invoiceId == null) return;
-    
-    final invoice = await DatabaseHelper.instance.getInvoice(invoiceId);
-    if (!context.mounted) return;
-    if (invoice == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Facture introuvable'),
-        backgroundColor: AppColors.error,
-      ));
-      return;
-    }
-
-    try {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => MultiBlocProvider(
-            providers: [
-              BlocProvider.value(value: context.read<InvoicesBloc>()),
-              BlocProvider.value(value: context.read<CustomersBloc>()),
-              BlocProvider.value(value: context.read<ProductsBloc>()),
-              BlocProvider.value(value: context.read<ProjectsBloc>()),
-            ],
-            child: CreateInvoiceScreen(existing: invoice),
-          ),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Impossible d\'ouvrir la facture'),
-        backgroundColor: AppColors.error,
-      ));
-    }
   }
 }

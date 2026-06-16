@@ -9,8 +9,16 @@ import '../models/customer.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
+import '../widgets/custom_app_bar.dart';
 import 'create_customer_order_screen.dart';
-
+import '../blocs/invoices/invoices_bloc.dart';
+import '../blocs/delivery_notes/delivery_notes_bloc.dart';
+import '../models/invoice.dart';
+import '../models/delivery_note.dart';
+import 'package:uuid/uuid.dart';
+import '../database/database_helper.dart';
+import 'create_invoice_screen.dart';
+import 'create_delivery_note_screen.dart';
 class CustomerOrdersScreen extends StatefulWidget {
   const CustomerOrdersScreen({super.key});
   @override
@@ -494,33 +502,42 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                                 icon: const Icon(Icons.more_horiz, color: AppColors.textSecondary),
                                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                                 color: AppColors.surface,
-                                                onSelected: (val) {
-                                                  switch (val) {
-                                                    case 'edit':
-                                                      Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                          builder: (_) => MultiBlocProvider(
-                                                            providers: [
-                                                              BlocProvider.value(value: context.read<CustomerOrdersBloc>()),
-                                                              BlocProvider.value(value: context.read<CustomersBloc>()),
-                                                              BlocProvider.value(value: context.read<ProductsBloc>()),
-                                                              BlocProvider.value(value: context.read<ProjectsBloc>()),
-                                                            ],
-                                                            child: CreateCustomerOrderScreen(existing: order),
-                                                          ),
-                                                        ),
-                                                      );
-                                                      break;
-                                                    case 'delete':
-                                                      _confirmDelete(order);
-                                                      break;
-                                                  }
-                                                },
+                                                onSelected: (val) => _handleAction(context, val, order),
                                                 itemBuilder: (_) => [
-                                                  const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_rounded, size: 16, color: AppColors.primary), SizedBox(width: 8), Text('Modifier')])),
-                                                  const PopupMenuItem(value: 'print', child: Row(children: [Icon(Icons.print_rounded, size: 16, color: AppColors.textSecondary), SizedBox(width: 8), Text('Imprimer')])),
-                                                  const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_rounded, size: 16, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))])),
+                                                  _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
+                                                  const PopupMenuDivider(height: 1),
+                                                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                                                  const PopupMenuDivider(height: 1),
+                                                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                                                  const PopupMenuDivider(height: 1),
+                                                  _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
+                                                  const PopupMenuDivider(height: 1),
+                                                  if (!order.isConvertedToInvoice && !order.isConvertedToDelivery) ...[
+                                                    _buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture'),
+                                                    const PopupMenuDivider(height: 1),
+                                                    _buildMenuItem('to_delivery', Icons.local_shipping_outlined, AppColors.textSecondary, 'Transformer en Bon de Livraison'),
+                                                    const PopupMenuDivider(height: 1),
+                                                  ] else ...[
+                                                    if (order.isConvertedToInvoice) ...[
+                                                      _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture créée'),
+                                                      const PopupMenuDivider(height: 1),
+                                                    ],
+                                                    if (order.isConvertedToDelivery) ...[
+                                                      _buildMenuItem('view_delivery', Icons.local_shipping_outlined, AppColors.success, 'Voir le bon de livraison créé'),
+                                                      const PopupMenuDivider(height: 1),
+                                                    ],
+                                                  ],
+                                                  _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
+                                                  const PopupMenuDivider(height: 1),
+                                                  _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
+                                                  const PopupMenuDivider(height: 1),
+                                                  _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
+                                                  const PopupMenuDivider(height: 1),
+                                                  _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
+                                                  const PopupMenuDivider(height: 1),
+                                                  _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
+                                                  const PopupMenuDivider(height: 1),
+                                                  _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'),
                                                 ],
                                               ),
                                             ),
@@ -639,5 +656,394 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         ],
       ),
     );
+  }
+
+  PopupMenuItem<String> _buildMenuItem(String value, IconData icon, Color iconColor, String text) {
+    return PopupMenuItem<String>(
+      value: value,
+      height: 40,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: iconColor),
+          const SizedBox(width: 12),
+          Text(text, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ],
+      ),
+    );
+  }
+
+  void _handleAction(BuildContext context, String action, CustomerOrder order) {
+    switch (action) {
+      case 'view':
+        // TODO: View order details
+        break;
+      case 'edit':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: context.read<CustomerOrdersBloc>()),
+                BlocProvider.value(value: context.read<CustomersBloc>()),
+                BlocProvider.value(value: context.read<ProductsBloc>()),
+                BlocProvider.value(value: context.read<ProjectsBloc>()),
+              ],
+              child: CreateCustomerOrderScreen(existing: order),
+            ),
+          ),
+        );
+        break;
+      case 'print':
+        // TODO: Print logic
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impression non implémentée')));
+        break;
+      case 'delete':
+        _confirmDelete(order);
+        break;
+      case 'status':
+        _showChangeStatusDialog(context, order);
+        break;
+      case 'to_invoice':
+        _showConversionDialog(context, order);
+        break;
+      case 'view_invoice':
+        _openConvertedInvoice(context, order.convertedToInvoiceId);
+        break;
+      case 'to_delivery':
+        _showDeliveryConversionDialog(context, order);
+        break;
+      case 'view_delivery':
+        _openConvertedDelivery(context, order.convertedToDeliveryId);
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _showChangeStatusDialog(BuildContext context, CustomerOrder order) {
+    CustomerOrderStatus selectedStatus = CustomerOrderStatus.values.firstWhere(
+      (e) => e.name == order.status,
+      orElse: () => CustomerOrderStatus.draft,
+    );
+    final notesController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Changer le statut'),
+            content: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Nouveau statut:'),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<CustomerOrderStatus>(
+                    value: selectedStatus,
+                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    items: CustomerOrderStatus.values.map((s) => DropdownMenuItem(
+                      value: s,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: s.color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(s.label, style: TextStyle(color: s.color, fontSize: 12, fontWeight: FontWeight.w500)),
+                      ),
+                    )).toList(),
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() => selectedStatus = v);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Notes (optionnel):'),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: notesController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Ajouter une note...',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('Annuler'),
+              ),
+              AppButton(
+                label: 'Enregistrer',
+                onPressed: () {
+                  context.read<CustomerOrdersBloc>().add(
+                    UpdateCustomerOrder(order.copyWith(status: selectedStatus.name))
+                  );
+                  Navigator.pop(dialogCtx);
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showConversionDialog(BuildContext context, CustomerOrder order) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+            SizedBox(width: 8),
+            Text('Confirmation'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Voulez-vous transformer cette commande en facture ?'),
+            const SizedBox(height: 16),
+            Text('Commande: ${order.number}', style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text('Client: ${order.customerName ?? '—'}'),
+            Text('Montant: ${formatCurrencyDT(order.totalTTC)}', style: const TextStyle(fontWeight: FontWeight.w600)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              _convertOrderToInvoice(context, order);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _convertOrderToInvoice(BuildContext context, CustomerOrder order) async {
+    final invoiceId = const Uuid().v4();
+    final invoiceNumber = generateDocNumber(DocPrefix.invoice, DateTime.now().millisecondsSinceEpoch % 1000000);
+    
+    final invoiceItems = order.items.map((qi) => InvoiceItem(
+      id: const Uuid().v4(),
+      invoiceId: invoiceId,
+      productId: qi.productId,
+      description: qi.description,
+      quantity: qi.quantity,
+      unitPrice: qi.unitPrice,
+      tvaRate: qi.tvaRate,
+      discountPercent: qi.discountPercent,
+      totalHT: qi.totalHT,
+    )).toList();
+
+    final invoice = Invoice(
+      id: invoiceId,
+      number: invoiceNumber,
+      customerId: order.customerId,
+      customerName: order.customerName,
+      orderId: order.id,
+      date: DateTime.now(),
+      dueDate: DateTime.now().add(const Duration(days: 30)),
+      status: InvoiceStatus.unpaid,
+      totalHT: order.totalHTAfterDiscount,
+      totalTva: order.totalTVA,
+      totalTTC: order.totalTTC,
+      notes: order.notes,
+      items: invoiceItems,
+      createdAt: DateTime.now(),
+    );
+
+    try {
+      final invoicesBloc = context.read<InvoicesBloc>();
+      invoicesBloc.add(AddInvoice(invoice));
+    } catch (e) {
+      await DatabaseHelper.instance.insertInvoice(invoice);
+    }
+
+    final updatedOrder = order.copyWith(
+      isConvertedToInvoice: true,
+      convertedToInvoiceId: invoiceId,
+      status: CustomerOrderStatus.validatedAndInvoiced.name,
+    );
+    context.read<CustomerOrdersBloc>().add(UpdateCustomerOrder(updatedOrder));
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Commande convertie en facture avec succès'),
+        backgroundColor: AppColors.success,
+      ));
+    }
+  }
+
+  Future<void> _openConvertedInvoice(BuildContext context, String? invoiceId) async {
+    if (invoiceId == null) return;
+    
+    final invoice = await DatabaseHelper.instance.getInvoice(invoiceId);
+    if (!mounted) return;
+    if (invoice == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Facture introuvable'),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
+
+    try {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: context.read<InvoicesBloc>()),
+              BlocProvider.value(value: context.read<CustomersBloc>()),
+              BlocProvider.value(value: context.read<ProductsBloc>()),
+            ],
+            child: CreateInvoiceScreen(existing: invoice),
+          ),
+        ),
+      );
+    } catch (e) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => CreateInvoiceScreen(existing: invoice)));
+    }
+  }
+
+  void _showDeliveryConversionDialog(BuildContext context, CustomerOrder order) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+            SizedBox(width: 8),
+            Text('Confirmation'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Voulez-vous transformer cette commande en bon de livraison ?'),
+            const SizedBox(height: 16),
+            Text('Commande: ${order.number}', style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text('Client: ${order.customerName ?? '—'}'),
+            Text('Montant: ${formatCurrencyDT(order.totalTTC)}', style: const TextStyle(fontWeight: FontWeight.w600)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              _convertOrderToDelivery(context, order);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _convertOrderToDelivery(BuildContext context, CustomerOrder order) async {
+    final deliveryId = const Uuid().v4();
+    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, DateTime.now().millisecondsSinceEpoch % 1000000);
+    
+    final deliveryItems = order.items.map((qi) => DeliveryNoteItem(
+      id: const Uuid().v4(),
+      deliveryNoteId: deliveryId,
+      productId: qi.productId,
+      description: qi.description,
+      quantity: qi.quantity,
+      unitPrice: qi.unitPrice,
+      tvaRate: qi.tvaRate,
+      discountPercent: qi.discountPercent,
+    )).toList();
+
+    final deliveryNote = DeliveryNote(
+      id: deliveryId,
+      number: deliveryNumber,
+      customerId: order.customerId,
+      customerName: order.customerName,
+      orderId: order.id,
+      date: DateTime.now(),
+      status: 'delivered',
+      notes: order.notes,
+      items: deliveryItems,
+      createdAt: DateTime.now(),
+    );
+
+    try {
+      final deliveryBloc = context.read<DeliveryNotesBloc>();
+      deliveryBloc.add(AddDeliveryNote(deliveryNote));
+    } catch (e) {
+      await DatabaseHelper.instance.insertDeliveryNote(deliveryNote);
+    }
+
+    final updatedOrder = order.copyWith(
+      isConvertedToDelivery: true,
+      convertedToDeliveryId: deliveryId,
+      status: CustomerOrderStatus.validated.name,
+    );
+    if (!mounted) return;
+    context.read<CustomerOrdersBloc>().add(UpdateCustomerOrder(updatedOrder));
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Commande convertie en bon de livraison avec succès'),
+        backgroundColor: AppColors.success,
+      ));
+    }
+  }
+
+  Future<void> _openConvertedDelivery(BuildContext context, String? deliveryId) async {
+    if (deliveryId == null) return;
+    
+    final delivery = await DatabaseHelper.instance.getDeliveryNote(deliveryId);
+    if (!mounted) return;
+    
+    if (delivery == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Bon de livraison introuvable'),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
+
+    try {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: context.read<DeliveryNotesBloc>()),
+              BlocProvider.value(value: context.read<CustomersBloc>()),
+              BlocProvider.value(value: context.read<ProductsBloc>()),
+            ],
+            child: CreateDeliveryNoteScreen(existing: delivery),
+          ),
+        ),
+      );
+    } catch (e) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => CreateDeliveryNoteScreen(existing: delivery)));
+    }
   }
 }

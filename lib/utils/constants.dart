@@ -109,6 +109,7 @@ class AppShadows {
 // ─── Enums ────────────────────────────────────────────────────────
 enum DocumentStatus {
   draft,
+  created,
   sent,
   accepted,
   rejected,
@@ -119,12 +120,14 @@ enum DocumentStatus {
     switch (this) {
       case draft:
         return 'Brouillon';
+      case created:
+        return 'Créé';
       case sent:
         return 'Envoyé';
       case accepted:
         return 'Accepté';
       case rejected:
-        return 'Rejeté';
+        return 'Refusé';
       case converted:
         return 'Converti';
       case cancelled:
@@ -135,15 +138,17 @@ enum DocumentStatus {
   Color get color {
     switch (this) {
       case draft:
-        return AppColors.textTertiary;
-      case sent:
+        return AppColors.warning;
+      case created:
         return AppColors.info;
+      case sent:
+        return const Color(0xFFA855F7); // Purple
       case accepted:
         return AppColors.success;
       case rejected:
         return AppColors.error;
       case converted:
-        return AppColors.primary;
+        return AppColors.success;
       case cancelled:
         return AppColors.textTertiary;
     }
@@ -226,7 +231,9 @@ enum CustomerOrderStatus {
   created,
   inProgress,
   delivered,
-  cancelled;
+  cancelled,
+  validated,
+  validatedAndInvoiced;
 
   String get label {
     switch (this) {
@@ -240,6 +247,10 @@ enum CustomerOrderStatus {
         return 'Livré';
       case cancelled:
         return 'Annulé';
+      case validatedAndInvoiced:
+        return 'Validée et facturée';
+      case validated:
+        return 'Validée';
     }
   }
 
@@ -255,6 +266,10 @@ enum CustomerOrderStatus {
         return AppColors.success;
       case cancelled:
         return AppColors.textTertiary;
+      case validatedAndInvoiced:
+        return AppColors.success;
+      case validated:
+        return AppColors.success;
     }
   }
 }
@@ -262,6 +277,8 @@ enum CustomerOrderStatus {
 enum DeliveryNoteStatus {
   draft,
   delivered,
+  invoiced,
+  returned,
   cancelled;
 
   String get label {
@@ -270,6 +287,10 @@ enum DeliveryNoteStatus {
         return 'Brouillon';
       case delivered:
         return 'Livré';
+      case invoiced:
+        return 'Livré et Facturé';
+      case returned:
+        return 'Retourné';
       case cancelled:
         return 'Annulé';
     }
@@ -280,6 +301,38 @@ enum DeliveryNoteStatus {
       case draft:
         return AppColors.textTertiary;
       case delivered:
+        return AppColors.success;
+      case invoiced:
+        return AppColors.primary;
+      case returned:
+        return AppColors.warning;
+      case cancelled:
+        return AppColors.error;
+    }
+  }
+}
+
+enum ReturnNoteStatus {
+  draft,
+  validated,
+  cancelled;
+
+  String get label {
+    switch (this) {
+      case draft:
+        return 'Brouillon';
+      case validated:
+        return 'Validé';
+      case cancelled:
+        return 'Annulé';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case draft:
+        return AppColors.textTertiary;
+      case validated:
         return AppColors.success;
       case cancelled:
         return AppColors.error;

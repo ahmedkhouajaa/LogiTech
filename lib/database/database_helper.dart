@@ -17,6 +17,7 @@ import '../models/project.dart';
 import '../models/payment_model.dart';
 import '../models/customer_order.dart';
 import '../models/stock_withdrawal.dart';
+import '../models/return_note.dart';
 import '../models/supplier_order.dart';
 import '../utils/constants.dart';
 
@@ -41,7 +42,7 @@ class DatabaseHelper {
     return await databaseFactoryFfi.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 9,
+        version: 19,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       ),
@@ -268,9 +269,380 @@ class DatabaseHelper {
         }
       }
     }
+
+    if (oldVersion < 10) {
+      await _createTreasuryTables(db);
+    }
+
+    if (oldVersion < 11) {
+      final productColumns = [
+        "ALTER TABLE products ADD COLUMN reference TEXT",
+        "ALTER TABLE products ADD COLUMN product_type TEXT DEFAULT 'produit'",
+        "ALTER TABLE products ADD COLUMN family_id TEXT",
+        "ALTER TABLE products ADD COLUMN sub_family_id TEXT",
+        "ALTER TABLE products ADD COLUMN brand_id TEXT",
+        "ALTER TABLE products ADD COLUMN private_notes TEXT",
+        "ALTER TABLE products ADD COLUMN allow_negative_stock INTEGER DEFAULT 0",
+        "ALTER TABLE products ADD COLUMN low_stock_alert INTEGER DEFAULT 0",
+        "ALTER TABLE products ADD COLUMN low_stock_threshold REAL DEFAULT 5",
+        "ALTER TABLE products ADD COLUMN high_stock_alert INTEGER DEFAULT 0",
+        "ALTER TABLE products ADD COLUMN high_stock_threshold REAL DEFAULT 0",
+        "ALTER TABLE products ADD COLUMN default_warehouse_id TEXT",
+        "ALTER TABLE products ADD COLUMN usual_discount REAL DEFAULT 0",
+      ];
+      for (final sql in productColumns) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
+
+      await _createProductRelatedTables(db);
+    }
+
+    if (oldVersion < 12) {
+      // Re-run the ALTER TABLE without UNIQUE since version 11 might have failed silently
+      final productColumns = [
+        "ALTER TABLE products ADD COLUMN reference TEXT",
+        "ALTER TABLE products ADD COLUMN product_type TEXT DEFAULT 'produit'",
+        "ALTER TABLE products ADD COLUMN family_id TEXT",
+        "ALTER TABLE products ADD COLUMN sub_family_id TEXT",
+        "ALTER TABLE products ADD COLUMN brand_id TEXT",
+        "ALTER TABLE products ADD COLUMN private_notes TEXT",
+        "ALTER TABLE products ADD COLUMN allow_negative_stock INTEGER DEFAULT 0",
+        "ALTER TABLE products ADD COLUMN low_stock_alert INTEGER DEFAULT 0",
+        "ALTER TABLE products ADD COLUMN low_stock_threshold REAL DEFAULT 5",
+        "ALTER TABLE products ADD COLUMN high_stock_alert INTEGER DEFAULT 0",
+        "ALTER TABLE products ADD COLUMN high_stock_threshold REAL DEFAULT 0",
+        "ALTER TABLE products ADD COLUMN default_warehouse_id TEXT",
+        "ALTER TABLE products ADD COLUMN usual_discount REAL DEFAULT 0",
+      ];
+      for (final sql in productColumns) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
+    }
+
+    if (oldVersion < 13) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS quote_status_history (
+          id TEXT PRIMARY KEY,
+          quote_id TEXT NOT NULL,
+          old_status TEXT,
+          new_status TEXT NOT NULL,
+          changed_by TEXT NOT NULL,
+          notes TEXT,
+          changed_at INTEGER NOT NULL,
+          FOREIGN KEY (quote_id) REFERENCES quotes(id)
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS quote_attachments (
+          id TEXT PRIMARY KEY,
+          quote_id TEXT NOT NULL,
+          file_name TEXT NOT NULL,
+          file_path TEXT NOT NULL,
+          file_size INTEGER,
+          file_type TEXT,
+          uploaded_at INTEGER NOT NULL,
+          uploaded_by TEXT,
+          FOREIGN KEY (quote_id) REFERENCES quotes(id)
+        )
+      ''');
+    }
+
+    if (oldVersion < 14) {
+      final columns = [
+        "ALTER TABLE quotes ADD COLUMN is_converted INTEGER DEFAULT 0",
+        "ALTER TABLE quotes ADD COLUMN converted_to TEXT",
+        "ALTER TABLE quotes ADD COLUMN converted_to_id TEXT",
+        "ALTER TABLE invoices ADD COLUMN devis_id TEXT",
+      ];
+      for (final sql in columns) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
+    }
+
+    if (oldVersion < 15) {
+      final columns = [
+        "ALTER TABLE quotes ADD COLUMN is_converted_to_order INTEGER DEFAULT 0",
+        "ALTER TABLE quotes ADD COLUMN converted_to_order_id TEXT",
+      ];
+      for (final sql in columns) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
+    }
+
+    if (oldVersion < 16) {
+      final columns = [
+        "ALTER TABLE quotes ADD COLUMN is_converted_to_delivery INTEGER DEFAULT 0",
+        "ALTER TABLE quotes ADD COLUMN converted_to_delivery_id TEXT",
+        "ALTER TABLE delivery_notes ADD COLUMN devis_id TEXT",
+      ];
+      for (final sql in columns) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
+    }
+
+    if (oldVersion < 17) {
+      final columns = [
+        "ALTER TABLE customer_orders ADD COLUMN is_converted_to_invoice INTEGER DEFAULT 0",
+        "ALTER TABLE customer_orders ADD COLUMN converted_to_invoice_id TEXT",
+        "ALTER TABLE customer_orders ADD COLUMN is_converted_to_delivery INTEGER DEFAULT 0",
+        "ALTER TABLE customer_orders ADD COLUMN converted_to_delivery_id TEXT",
+      ];
+      for (final sql in columns) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
+    }
+
+    if (oldVersion < 18) {
+      final columns = [
+        "ALTER TABLE delivery_notes ADD COLUMN is_converted_to_invoice INTEGER DEFAULT 0",
+        "ALTER TABLE delivery_notes ADD COLUMN converted_to_invoice_id TEXT",
+      ];
+      for (final sql in columns) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
+    }
+    if (oldVersion < 19) {
+      final columns = [
+        "ALTER TABLE delivery_notes ADD COLUMN is_converted_to_return INTEGER DEFAULT 0",
+        "ALTER TABLE delivery_notes ADD COLUMN converted_to_return_id TEXT",
+      ];
+      for (final sql in columns) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS return_notes (
+          id TEXT PRIMARY KEY,
+          return_number TEXT UNIQUE NOT NULL,
+          customer_id TEXT NOT NULL,
+          delivery_note_id TEXT,
+          date_emission TEXT NOT NULL,
+          subtotal_ht REAL DEFAULT 0,
+          total_ttc REAL DEFAULT 0,
+          notes TEXT,
+          conditions TEXT,
+          status TEXT DEFAULT 'draft',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (customer_id) REFERENCES customers(id),
+          FOREIGN KEY (delivery_note_id) REFERENCES delivery_notes(id)
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS return_note_items (
+          id TEXT PRIMARY KEY,
+          return_note_id TEXT NOT NULL,
+          product_id TEXT,
+          designation TEXT NOT NULL,
+          quantity REAL NOT NULL,
+          unit_price REAL NOT NULL,
+          tva_rate REAL DEFAULT 19,
+          total_ht REAL DEFAULT 0,
+          reason TEXT,
+          FOREIGN KEY (return_note_id) REFERENCES return_notes(id)
+        )
+      ''');
+    }
+  }
+
+  Future<void> _createProductRelatedTables(Database db) async {
+    // Product families table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS product_families (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          parent_id TEXT,
+          created_at INTEGER
+      )
+    ''');
+
+    // Product brands table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS product_brands (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          created_at INTEGER
+      )
+    ''');
+
+    // Units table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS product_units (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          symbol TEXT,
+          created_at INTEGER
+      )
+    ''');
+
+    // Price lists table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS price_lists (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT,
+          is_default INTEGER DEFAULT 0,
+          created_at INTEGER
+      )
+    ''');
+
+    // Price list items
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS price_list_items (
+          id TEXT PRIMARY KEY,
+          price_list_id TEXT NOT NULL,
+          product_id TEXT NOT NULL,
+          price REAL NOT NULL,
+          min_quantity REAL DEFAULT 1,
+          FOREIGN KEY (price_list_id) REFERENCES price_lists(id),
+          FOREIGN KEY (product_id) REFERENCES products(id)
+      )
+    ''');
+
+    // Additional taxes table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS product_additional_taxes (
+          id TEXT PRIMARY KEY,
+          product_id TEXT NOT NULL,
+          tax_name TEXT NOT NULL,
+          tax_rate REAL NOT NULL,
+          FOREIGN KEY (product_id) REFERENCES products(id)
+      )
+    ''');
+
+    // Seed default data
+    final hasUnits = (await db.rawQuery('SELECT COUNT(*) FROM product_units')).first.values.first as int;
+    if (hasUnits == 0) {
+      await db.execute("INSERT INTO product_units (id, name, symbol) VALUES ('1', 'Pièce', 'pc'), ('2', 'Kilogramme', 'kg'), ('3', 'Litre', 'L'), ('4', 'Mètre', 'm'), ('5', 'Heure', 'h'), ('6', 'Jour', 'j'), ('7', 'Mois', 'mois')");
+    }
+
+    final hasFamilies = (await db.rawQuery('SELECT COUNT(*) FROM product_families')).first.values.first as int;
+    if (hasFamilies == 0) {
+      await db.execute("INSERT INTO product_families (id, name) VALUES ('1', 'Électronique'), ('2', 'Informatique'), ('3', 'Bureau'), ('4', 'Mobilier'), ('5', 'Vêtements'), ('6', 'Alimentation')");
+    }
+  }
+
+  Future<void> _createTreasuryTables(Database db) async {
+    // Treasury Accounts
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS treasury_accounts (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        internal_name TEXT,
+        type TEXT NOT NULL,
+        bank_name TEXT,
+        agency TEXT,
+        iban TEXT,
+        currency TEXT DEFAULT 'TND',
+        balance REAL DEFAULT 0,
+        is_default INTEGER DEFAULT 0,
+        created_at INTEGER,
+        updated_at INTEGER
+      )
+    ''');
+
+    // Treasury Transactions
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS treasury_transactions (
+        id TEXT PRIMARY KEY,
+        transaction_number TEXT UNIQUE,
+        account_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        amount REAL NOT NULL,
+        category TEXT,
+        date_transaction INTEGER NOT NULL,
+        description TEXT,
+        project_id TEXT,
+        withholding_tax REAL DEFAULT 0,
+        withholding_tax_rate REAL DEFAULT 0,
+        payment_id TEXT,
+        created_at INTEGER,
+        updated_at INTEGER,
+        FOREIGN KEY (account_id) REFERENCES treasury_accounts(id),
+        FOREIGN KEY (payment_id) REFERENCES payments(id)
+      )
+    ''');
+
+    // Checks & Traites
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS checks_traites (
+        id TEXT PRIMARY KEY,
+        document_number TEXT UNIQUE NOT NULL,
+        type TEXT NOT NULL,
+        amount REAL NOT NULL,
+        party_name TEXT NOT NULL,
+        party_id TEXT,
+        bank_name TEXT,
+        bank_account TEXT,
+        issue_date INTEGER NOT NULL,
+        maturity_date INTEGER NOT NULL,
+        status TEXT DEFAULT 'pending',
+        payment_id TEXT,
+        notes TEXT,
+        created_at INTEGER,
+        updated_at INTEGER
+      )
+    ''');
+
+    // Transaction Categories
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS transaction_categories (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        is_default INTEGER DEFAULT 0,
+        created_at INTEGER
+      )
+    ''');
+
+    // Insert Default Categories
+    await db.execute('''
+      INSERT INTO transaction_categories (id, name, type, is_default, created_at) VALUES 
+      ('cat_salaries', 'Salaires', 'expense', 1, ${DateTime.now().millisecondsSinceEpoch}),
+      ('cat_taxes', 'Impôts', 'expense', 1, ${DateTime.now().millisecondsSinceEpoch}),
+      ('cat_rent', 'Loyer', 'expense', 1, ${DateTime.now().millisecondsSinceEpoch}),
+      ('cat_other_exp', 'Autre', 'expense', 1, ${DateTime.now().millisecondsSinceEpoch}),
+      ('cat_sales', 'Ventes', 'income', 1, ${DateTime.now().millisecondsSinceEpoch}),
+      ('cat_other_inc', 'Autre', 'income', 1, ${DateTime.now().millisecondsSinceEpoch})
+    ''');
   }
 
   Future<void> _createDB(Database db, int version) async {
+    await _createTreasuryTables(db);
     // ─── Company Settings ─────────────────────────────────────────
     await db.execute('''
       CREATE TABLE company_settings (
@@ -349,6 +721,41 @@ class DatabaseHelper {
       )
     ''');
 
+    // ─── Return Notes ─────────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS return_notes (
+        id TEXT PRIMARY KEY,
+        return_number TEXT UNIQUE NOT NULL,
+        customer_id TEXT NOT NULL,
+        delivery_note_id TEXT,
+        date_emission TEXT NOT NULL,
+        subtotal_ht REAL DEFAULT 0,
+        total_ttc REAL DEFAULT 0,
+        notes TEXT,
+        conditions TEXT,
+        status TEXT DEFAULT 'draft',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (customer_id) REFERENCES customers(id),
+        FOREIGN KEY (delivery_note_id) REFERENCES delivery_notes(id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS return_note_items (
+        id TEXT PRIMARY KEY,
+        return_note_id TEXT NOT NULL,
+        product_id TEXT,
+        designation TEXT NOT NULL,
+        quantity REAL NOT NULL,
+        unit_price REAL NOT NULL,
+        tva_rate REAL DEFAULT 19,
+        total_ht REAL DEFAULT 0,
+        reason TEXT,
+        FOREIGN KEY (return_note_id) REFERENCES return_notes(id)
+      )
+    ''');
+
     // ─── Suppliers ────────────────────────────────────────────────
     await db.execute('''
       CREATE TABLE suppliers (
@@ -376,15 +783,28 @@ class DatabaseHelper {
         id TEXT PRIMARY KEY,
         code TEXT NOT NULL,
         name TEXT NOT NULL,
+        reference TEXT,
         description TEXT,
         category TEXT,
+        product_type TEXT DEFAULT 'produit',
+        family_id TEXT,
+        sub_family_id TEXT,
+        brand_id TEXT,
         unit TEXT DEFAULT 'Unité',
         purchase_price REAL DEFAULT 0,
         selling_price REAL DEFAULT 0,
+        usual_discount REAL DEFAULT 0,
         tva_rate REAL DEFAULT 19,
         stock_qty REAL DEFAULT 0,
         min_stock_qty REAL DEFAULT 0,
+        allow_negative_stock INTEGER DEFAULT 0,
+        low_stock_alert INTEGER DEFAULT 0,
+        low_stock_threshold REAL DEFAULT 5,
+        high_stock_alert INTEGER DEFAULT 0,
+        high_stock_threshold REAL DEFAULT 0,
+        default_warehouse_id TEXT,
         barcode TEXT,
+        private_notes TEXT,
         is_active INTEGER DEFAULT 1,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
@@ -392,6 +812,8 @@ class DatabaseHelper {
         updated_at TEXT NOT NULL
       )
     ''');
+
+    await _createProductRelatedTables(db);
 
     // ─── Warehouses ───────────────────────────────────────────────
     await db.execute('''
@@ -432,6 +854,13 @@ class DatabaseHelper {
         notes TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
+        is_converted INTEGER DEFAULT 0,
+        converted_to TEXT,
+        converted_to_id TEXT,
+        is_converted_to_order INTEGER DEFAULT 0,
+        converted_to_order_id TEXT,
+        is_converted_to_delivery INTEGER DEFAULT 0,
+        converted_to_delivery_id TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (customer_id) REFERENCES customers(id)
@@ -451,6 +880,33 @@ class DatabaseHelper {
         total_ht REAL DEFAULT 0,
         FOREIGN KEY (quote_id) REFERENCES quotes(id),
         FOREIGN KEY (product_id) REFERENCES products(id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE quote_status_history (
+        id TEXT PRIMARY KEY,
+        quote_id TEXT NOT NULL,
+        old_status TEXT,
+        new_status TEXT NOT NULL,
+        changed_by TEXT NOT NULL,
+        notes TEXT,
+        changed_at INTEGER NOT NULL,
+        FOREIGN KEY (quote_id) REFERENCES quotes(id)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE quote_attachments (
+        id TEXT PRIMARY KEY,
+        quote_id TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_size INTEGER,
+        file_type TEXT,
+        uploaded_at INTEGER NOT NULL,
+        uploaded_by TEXT,
+        FOREIGN KEY (quote_id) REFERENCES quotes(id)
       )
     ''');
 
@@ -474,6 +930,10 @@ class DatabaseHelper {
         total_ttc REAL DEFAULT 0,
         notes TEXT,
         conditions TEXT,
+        is_converted_to_invoice INTEGER DEFAULT 0,
+        converted_to_invoice_id TEXT,
+        is_converted_to_delivery INTEGER DEFAULT 0,
+        converted_to_delivery_id TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
@@ -507,6 +967,7 @@ class DatabaseHelper {
         customer_id TEXT NOT NULL,
         order_id TEXT,
         project_id TEXT,
+        devis_id TEXT,
         date TEXT NOT NULL,
         status TEXT DEFAULT 'draft',
         pricing_mode TEXT DEFAULT 'ht',
@@ -521,6 +982,10 @@ class DatabaseHelper {
         total_ht REAL DEFAULT 0,
         total_tva REAL DEFAULT 0,
         total_ttc REAL DEFAULT 0,
+        is_converted_to_invoice INTEGER DEFAULT 0,
+        converted_to_invoice_id TEXT,
+        is_converted_to_return INTEGER DEFAULT 0,
+        converted_to_return_id TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
@@ -601,6 +1066,7 @@ class DatabaseHelper {
         order_id TEXT,
         delivery_note_id TEXT,
         project_id TEXT,
+        devis_id TEXT,
         date TEXT NOT NULL,
         due_date TEXT NOT NULL,
         status TEXT DEFAULT 'draft',
@@ -1176,7 +1642,7 @@ class DatabaseHelper {
     final existing = await db.query('payment_accounts', where: "name = ?", whereArgs: ['Caisse Principale']);
     if (existing.isEmpty) {
       await db.insert('payment_accounts', {
-        'id': newId,
+        'id': const Uuid().v4(),
         'name': 'Caisse Principale',
         'type': 'cash',
         'balance': 0,
@@ -1643,6 +2109,108 @@ class DatabaseHelper {
     return result.first['next'] as int? ?? 1;
   }
 
+  // ─── Return Notes ───────────────────────────────────────────────
+  Future<List<ReturnNote>> getReturnNotes({
+    String? status,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+    String query = '''
+      SELECT rn.*,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name
+      FROM return_notes rn
+      JOIN customers c ON rn.customer_id = c.id
+      WHERE 1=1
+    ''';
+    final args = <dynamic>[];
+
+    if (status != null && status.isNotEmpty && status != 'Tous') {
+      query += ' AND rn.status = ?';
+      args.add(status);
+    }
+    if (startDate != null) {
+      query += ' AND date(rn.date_emission) >= date(?)';
+      args.add(startDate.toIso8601String());
+    }
+    if (endDate != null) {
+      query += ' AND date(rn.date_emission) <= date(?)';
+      args.add(endDate.toIso8601String());
+    }
+
+    query += ' ORDER BY rn.date_emission DESC, rn.created_at DESC';
+    final result = await db.rawQuery(query, args);
+    return result.map((m) => ReturnNote.fromMap(m)).toList();
+  }
+
+  Future<ReturnNote?> getReturnNote(String id) async {
+    final db = await database;
+    final rnResult = await db.rawQuery('''
+      SELECT rn.*,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name
+      FROM return_notes rn
+      JOIN customers c ON rn.customer_id = c.id
+      WHERE rn.id = ?
+    ''', [id]);
+    if (rnResult.isEmpty) return null;
+    final itemsResult = await db.query(
+      'return_note_items',
+      where: 'return_note_id = ?',
+      whereArgs: [id],
+    );
+    final items = itemsResult.map((m) => ReturnNoteItem.fromMap(m)).toList();
+    return ReturnNote.fromMap(rnResult.first, items);
+  }
+
+  Future<void> insertReturnNote(ReturnNote note) async {
+    final db = await database;
+    final data = note.toMap();
+    await db.transaction((txn) async {
+      await txn.insert('return_notes', data);
+      for (var item in note.items) {
+        await txn.insert('return_note_items', item.toMap());
+      }
+    });
+    await _addToSyncQueue('return_notes', note.id, 'INSERT', data);
+  }
+
+  Future<void> updateReturnNote(ReturnNote note) async {
+    final db = await database;
+    final data = note.toMap();
+    data['updated_at'] = DateTime.now().toIso8601String();
+    await db.transaction((txn) async {
+      await txn.update('return_notes', data,
+          where: 'id = ?', whereArgs: [note.id]);
+      await txn.delete('return_note_items',
+          where: 'return_note_id = ?', whereArgs: [note.id]);
+      for (var item in note.items) {
+        await txn.insert('return_note_items', item.toMap());
+      }
+    });
+    await _addToSyncQueue('return_notes', note.id, 'UPDATE', data);
+  }
+
+  Future<void> deleteReturnNote(String id) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('return_note_items', where: 'return_note_id = ?', whereArgs: [id]);
+      await txn.delete('return_notes', where: 'id = ?', whereArgs: [id]);
+    });
+    await _addToSyncQueue('return_notes', id, 'DELETE', {'id': id});
+  }
+
+  Future<int> getNextReturnNoteSequence() async {
+    final db = await database;
+    final year = DateTime.now().year;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) + 1 AS next FROM return_notes WHERE return_number LIKE ?',
+      ['RET-$year-%'],
+    );
+    return result.first['next'] as int? ?? 1;
+  }
+
   // ─── Stock Withdrawals ──────────────────────────────────────────
   Future<List<StockWithdrawal>> getStockWithdrawals({
     String? status,
@@ -1770,6 +2338,26 @@ class DatabaseHelper {
     await insert('checks_traites', ct.toMap());
   }
 
+  Future<void> updateCheckTraite(CheckTraite ct) async {
+    await update('checks_traites', ct.toMap(), ct.id);
+  }
+
+  Future<void> updateCheckTraiteStatus(String id, String status, {String? paymentId}) async {
+    final db = await database;
+    final data = <String, dynamic>{
+      'status': status,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+    if (paymentId != null) {
+      data['payment_id'] = paymentId;
+    }
+    await db.update('checks_traites', data, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteCheckTraite(String id) async {
+    await softDelete('checks_traites', id);
+  }
+
   // ─── Transactions ──────────────────────────────────────────────
   Future<List<TransactionModel>> getTransactions() async {
     final db = await database;
@@ -1889,7 +2477,7 @@ class DatabaseHelper {
   Future<void> logActivity(String action, String description, {String? entityType, String? entityId}) async {
     final db = await database;
     await db.insert('activity_log', {
-      'id': newId,
+      'id': const Uuid().v4(),
       'action': action,
       'description': description,
       'entity_type': entityType,
@@ -1982,6 +2570,41 @@ class DatabaseHelper {
     final db = await database;
     await db.insert('payments', payment.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace);
+    
+    // Auto-create Treasury Transaction
+    if (payment.accountId != null) {
+      final year = DateTime.now().year;
+      final numberResult = await db.rawQuery(
+        'SELECT COUNT(*) + 1 as next FROM treasury_transactions WHERE transaction_number LIKE ?',
+        ['TR-$year-%'],
+      );
+      final nextNumber = numberResult.first['next'] as int? ?? 1;
+
+      final categoryResult = await db.rawQuery(
+        'SELECT id FROM transaction_categories WHERE type = ? AND is_default = 1 LIMIT 1',
+        [payment.direction == 'encaissement' ? 'income' : 'expense'],
+      );
+      final categoryId = categoryResult.isNotEmpty ? categoryResult.first['id'] as String : null;
+
+      final txData = {
+        'id': payment.id, // Or a new UUID, but linking the same ID is fine if we want 1:1, let's use a new one.
+        'transaction_number': 'TR-$year-${nextNumber.toString().padLeft(4, '0')}',
+        'account_id': payment.accountId,
+        'type': payment.direction == 'encaissement' ? 'income' : 'expense',
+        'amount': payment.amount,
+        'category': categoryId,
+        'date_transaction': payment.paymentDate.millisecondsSinceEpoch,
+        'description': 'Paiement ${payment.paymentNumber} (${payment.contactType == 'customer' ? 'Client' : 'Fournisseur'})',
+        'payment_id': payment.id,
+        'created_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      };
+      
+      // I cannot call createTreasuryTransaction directly if it uses db.transaction because nested transactions are not supported by sqflite without care. 
+      // Actually, insertPayment isn't in a transaction right now, but it's safer to just insert directly here or call createTreasuryTransaction.
+      await createTreasuryTransaction(txData);
+    }
+
     await _addToSyncQueue('payments', payment.id, 'INSERT', payment.toMap());
   }
 
@@ -1991,6 +2614,29 @@ class DatabaseHelper {
       ..['updated_at'] = DateTime.now().millisecondsSinceEpoch;
     await db.update('payments', data,
         where: 'id = ?', whereArgs: [payment.id]);
+        
+    // Update linked treasury transaction if exists
+    if (payment.accountId != null) {
+      final txs = await db.query('treasury_transactions', where: 'payment_id = ?', whereArgs: [payment.id]);
+      if (txs.isNotEmpty) {
+        final categoryResult = await db.rawQuery(
+          'SELECT id FROM transaction_categories WHERE type = ? AND is_default = 1 LIMIT 1',
+          [payment.direction == 'encaissement' ? 'income' : 'expense'],
+        );
+        final categoryId = categoryResult.isNotEmpty ? categoryResult.first['id'] as String : null;
+
+        await db.update('treasury_transactions', {
+          'account_id': payment.accountId,
+          'type': payment.direction == 'encaissement' ? 'income' : 'expense',
+          'amount': payment.amount,
+          'category': categoryId,
+          'date_transaction': payment.paymentDate.millisecondsSinceEpoch,
+          'description': 'Paiement ${payment.paymentNumber} (${payment.contactType == 'customer' ? 'Client' : 'Fournisseur'})',
+          'updated_at': DateTime.now().millisecondsSinceEpoch,
+        }, where: 'payment_id = ?', whereArgs: [payment.id]);
+      }
+    }
+        
     await _addToSyncQueue('payments', payment.id, 'UPDATE', data);
   }
 
@@ -2002,6 +2648,10 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+    
+    // Delete linked treasury transaction
+    await db.delete('treasury_transactions', where: 'payment_id = ?', whereArgs: [id]);
+    
     await _addToSyncQueue('payments', id, 'DELETE', {'is_deleted': 1});
   }
 
@@ -2264,4 +2914,115 @@ class DatabaseHelper {
     );
     return result.first['next'] as int? ?? 1;
   }
+
+  // ─── Treasury Accounts ───────────────────────────────────────────────
+  Future<List<Map<String, dynamic>>> getTreasuryAccounts() async {
+    final db = await database;
+    return await db.query('treasury_accounts', orderBy: 'is_default DESC, name ASC');
+  }
+
+  Future<void> createTreasuryAccount(Map<String, dynamic> data) async {
+    final db = await database;
+    await db.insert('treasury_accounts', data);
+  }
+
+  Future<void> updateTreasuryAccount(String id, Map<String, dynamic> data) async {
+    final db = await database;
+    await db.update('treasury_accounts', data, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteTreasuryAccount(String id) async {
+    final db = await database;
+    await db.delete('treasury_accounts', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ─── Treasury Transactions ───────────────────────────────────────────
+  Future<List<Map<String, dynamic>>> getTreasuryTransactions({DateTime? startDate, DateTime? endDate}) async {
+    final db = await database;
+    String where = '';
+    List<dynamic> whereArgs = [];
+    
+    if (startDate != null && endDate != null) {
+      where = 'date_transaction >= ? AND date_transaction <= ?';
+      whereArgs = [startDate.millisecondsSinceEpoch, endDate.millisecondsSinceEpoch];
+    }
+
+    final query = '''
+      SELECT t.*, a.name AS account_name, p.name AS project_name
+      FROM treasury_transactions t
+      LEFT JOIN treasury_accounts a ON t.account_id = a.id
+      LEFT JOIN projects p ON t.project_id = p.id
+      ${where.isNotEmpty ? 'WHERE $where' : ''}
+      ORDER BY t.date_transaction DESC, t.created_at DESC
+    ''';
+    return await db.rawQuery(query, whereArgs);
+  }
+
+  Future<void> createTreasuryTransaction(Map<String, dynamic> data) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('treasury_transactions', data);
+      
+      // Update account balance
+      final amount = data['amount'] as double;
+      final type = data['type'] as String; // 'income' or 'expense'
+      final accountId = data['account_id'] as String;
+      
+      final balanceChange = type == 'income' ? amount : -amount;
+      
+      await txn.rawUpdate(
+        'UPDATE treasury_accounts SET balance = balance + ?, updated_at = ? WHERE id = ?',
+        [balanceChange, DateTime.now().millisecondsSinceEpoch, accountId]
+      );
+    });
+  }
+
+  Future<void> deleteTreasuryTransaction(String id) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      final results = await txn.query('treasury_transactions', where: 'id = ?', whereArgs: [id]);
+      if (results.isNotEmpty) {
+        final tx = results.first;
+        final amount = tx['amount'] as double;
+        final type = tx['type'] as String;
+        final accountId = tx['account_id'] as String;
+        
+        // Reverse balance change
+        final balanceChange = type == 'income' ? -amount : amount;
+        await txn.rawUpdate(
+          'UPDATE treasury_accounts SET balance = balance + ?, updated_at = ? WHERE id = ?',
+          [balanceChange, DateTime.now().millisecondsSinceEpoch, accountId]
+        );
+        
+        await txn.delete('treasury_transactions', where: 'id = ?', whereArgs: [id]);
+      }
+    });
+  }
+
+  Future<int> getNextTreasuryTransactionSequence() async {
+    final db = await database;
+    final year = DateTime.now().year;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) + 1 as next FROM treasury_transactions WHERE transaction_number LIKE ?',
+      ['TR-$year-%'],
+    );
+    return result.first['next'] as int? ?? 1;
+  }
+
+  // ─── Transaction Categories ──────────────────────────────────────────
+  Future<List<Map<String, dynamic>>> getTransactionCategories() async {
+    final db = await database;
+    return await db.query('transaction_categories', orderBy: 'name ASC');
+  }
+
+  Future<void> createTransactionCategory(Map<String, dynamic> data) async {
+    final db = await database;
+    await db.insert('transaction_categories', data);
+  }
+
+  Future<void> deleteTransactionCategory(String id) async {
+    final db = await database;
+    await db.delete('transaction_categories', where: 'id = ?', whereArgs: [id]);
+  }
+
 }

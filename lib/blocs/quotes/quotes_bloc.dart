@@ -2,11 +2,22 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../database/database_helper.dart';
 import '../../models/quote.dart';
+import '../../models/quote_status_history.dart';
+import '../../utils/constants.dart';
 
 abstract class QuotesEvent extends Equatable { const QuotesEvent(); @override List<Object?> get props => []; }
 class LoadQuotes extends QuotesEvent {}
 class AddQuote extends QuotesEvent { final Quote quote; const AddQuote(this.quote); @override List<Object?> get props => [quote]; }
 class UpdateQuote extends QuotesEvent { final Quote quote; const UpdateQuote(this.quote); @override List<Object?> get props => [quote]; }
+class UpdateQuoteStatus extends QuotesEvent {
+  final String id;
+  final DocumentStatus oldStatus;
+  final DocumentStatus newStatus;
+  final String changedBy;
+  final String? notes;
+  const UpdateQuoteStatus(this.id, this.oldStatus, this.newStatus, this.changedBy, [this.notes]);
+  @override List<Object?> get props => [id, oldStatus, newStatus, changedBy, notes];
+}
 class DeleteQuote extends QuotesEvent { final String id; const DeleteQuote(this.id); @override List<Object?> get props => [id]; }
 
 abstract class QuotesState extends Equatable { const QuotesState(); @override List<Object?> get props => []; }
@@ -20,6 +31,7 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
     on<LoadQuotes>(_onLoad);
     on<AddQuote>(_onAdd);
     on<UpdateQuote>(_onUpdate);
+    on<UpdateQuoteStatus>(_onUpdateStatus);
     on<DeleteQuote>(_onDelete);
   }
 
@@ -32,6 +44,24 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
   }
   Future<void> _onUpdate(UpdateQuote event, Emitter<QuotesState> emit) async {
     try { await DatabaseHelper.instance.update('quotes', event.quote.toMap(), event.quote.id); add(LoadQuotes()); } catch (e) { emit(QuotesError(e.toString())); }
+  }
+  Future<void> _onUpdateStatus(UpdateQuoteStatus event, Emitter<QuotesState> emit) async {
+    try {
+      await DatabaseHelper.instance.update('quotes', {'status': event.newStatus.name, 'updated_at': DateTime.now().toIso8601String()}, event.id);
+      final history = QuoteStatusHistory(
+        id: DatabaseHelper.instance.newId,
+        quoteId: event.id,
+        oldStatus: event.oldStatus.name,
+        newStatus: event.newStatus.name,
+        changedBy: event.changedBy,
+        notes: event.notes,
+        changedAt: DateTime.now(),
+      );
+      await DatabaseHelper.instance.insert('quote_status_history', history.toMap());
+      add(LoadQuotes());
+    } catch (e) {
+      emit(QuotesError(e.toString()));
+    }
   }
   Future<void> _onDelete(DeleteQuote event, Emitter<QuotesState> emit) async {
     try { await DatabaseHelper.instance.softDelete('quotes', event.id); add(LoadQuotes()); } catch (e) { emit(QuotesError(e.toString())); }

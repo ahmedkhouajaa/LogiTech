@@ -258,9 +258,9 @@ class DashboardScreen extends StatelessWidget {
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
       child: Row(
         children: [
-          Icon(c.type == CheckTraiteType.checkReceived || c.type == CheckTraiteType.traiteReceived
+          Icon(c.type == 'check_received' || c.type == 'traite_received'
               ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-            size: 14, color: c.type == CheckTraiteType.checkReceived || c.type == CheckTraiteType.traiteReceived
+            size: 14, color: c.type == 'check_received' || c.type == 'traite_received'
                 ? AppColors.success : AppColors.error),
           const SizedBox(width: 8),
           Expanded(child: Column(

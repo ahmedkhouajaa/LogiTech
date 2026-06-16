@@ -15,9 +15,11 @@ import 'invoices_screen.dart';
 import 'customer_orders_screen.dart';
 import 'quotes_screen.dart';
 import 'delivery_notes_screen.dart';
+import 'return_notes_screen.dart';
 import 'stock_screen.dart';
-import 'transactions_screen.dart';
+import 'treasury_transactions_screen.dart';
 import 'checks_traites_screen.dart';
+import 'treasury_accounts_screen.dart';
 import 'projects_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
@@ -51,6 +53,8 @@ class _AppShellScreenState extends State<AppShellScreen> {
         return const DashboardScreen();
       case AppModule.customers:
         return const CustomersScreen();
+      case AppModule.accounts:
+        return const TreasuryAccountsScreen();
       case AppModule.suppliers:
         return const SuppliersScreen();
       case AppModule.products:
@@ -66,7 +70,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
       case AppModule.stockDashboard:
         return const StockScreen();
       case AppModule.transactions:
-        return const TransactionsScreen();
+        return const TreasuryTransactionsScreen();
       case AppModule.checksTraites:
         return const ChecksTraitesScreen();
       case AppModule.projects:
@@ -88,6 +92,8 @@ class _AppShellScreenState extends State<AppShellScreen> {
         return const WarehousesScreen();
       case AppModule.exitVouchers:
         return const StockWithdrawalsScreen();
+      case AppModule.returnVouchers:
+        return const ReturnNotesScreen();
       default:
         return _ComingSoonScreen(module: _activeModule);
     }
@@ -121,7 +127,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
       case AppModule.supplierCreditNotes: return 'Avoirs fournisseur';
       case AppModule.supplierReturns: return 'Retours fournisseur';
       case AppModule.customerOrders: return 'Commandes client';
-      case AppModule.accounts: return 'Comptes';
+      case AppModule.accounts: return 'Comptes de Trésorerie';
       case AppModule.stockEntry: return 'Bons d\'entrée';
       case AppModule.stockWithdrawal: return 'Bons de prélèvement';
       case AppModule.stockTransfer: return 'Bons de transfert';

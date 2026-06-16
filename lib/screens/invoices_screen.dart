@@ -409,35 +409,29 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             icon: const Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textSecondary),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
             offset: const Offset(0, 30),
-            onSelected: (action) {
-              switch (action) {
-                case 'edit':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MultiBlocProvider(
-                        providers: [
-                          BlocProvider.value(value: context.read<InvoicesBloc>()),
-                          BlocProvider.value(value: context.read<CustomersBloc>()),
-                          BlocProvider.value(value: context.read<ProductsBloc>()),
-                          BlocProvider.value(value: context.read<ProjectsBloc>()),
-                        ],
-                        child: CreateInvoiceScreen(existing: inv),
-                      ),
-                    ),
-                  );
-                  break;
-                case 'delete':
-                  _confirmDelete(inv);
-                  break;
-                case 'print':
-                  break;
-              }
-            },
+            onSelected: (val) => _handleAction(context, val, inv),
             itemBuilder: (_) => [
-              const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_rounded, size: 16, color: AppColors.primary), SizedBox(width: 8), Text('Modifier')])),
-              const PopupMenuItem(value: 'print', child: Row(children: [Icon(Icons.print_rounded, size: 16, color: AppColors.success), SizedBox(width: 8), Text('Imprimer')])),
-              const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_rounded, size: 16, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))])),
+              _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
+              const PopupMenuDivider(height: 1),
+              _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+              const PopupMenuDivider(height: 1),
+              _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+              const PopupMenuDivider(height: 1),
+              _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
+              const PopupMenuDivider(height: 1),
+              _buildMenuItem('to_credit_note', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Avoir'),
+              const PopupMenuDivider(height: 1),
+              _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
+              const PopupMenuDivider(height: 1),
+              _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
+              const PopupMenuDivider(height: 1),
+              _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
+              const PopupMenuDivider(height: 1),
+              _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
+              const PopupMenuDivider(height: 1),
+              _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
+              const PopupMenuDivider(height: 1),
+              _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'),
             ],
           ),
         ),
@@ -521,6 +515,133 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
           ),
         ],
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _buildMenuItem(String value, IconData icon, Color iconColor, String text) {
+    return PopupMenuItem<String>(
+      value: value,
+      height: 40,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: iconColor),
+          const SizedBox(width: 12),
+          Text(text, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ],
+      ),
+    );
+  }
+
+  void _handleAction(BuildContext context, String action, Invoice inv) {
+    switch (action) {
+      case 'view':
+        // TODO: View details
+        break;
+      case 'edit':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: context.read<InvoicesBloc>()),
+                BlocProvider.value(value: context.read<CustomersBloc>()),
+                BlocProvider.value(value: context.read<ProductsBloc>()),
+                BlocProvider.value(value: context.read<ProjectsBloc>()),
+              ],
+              child: CreateInvoiceScreen(existing: inv),
+            ),
+          ),
+        );
+        break;
+      case 'print':
+        // TODO: Print logic
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impression non implémentée')));
+        break;
+      case 'delete':
+        _confirmDelete(inv);
+        break;
+      case 'status':
+        _showChangeStatusDialog(context, inv);
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _showChangeStatusDialog(BuildContext context, Invoice inv) {
+    InvoiceStatus selectedStatus = inv.status;
+    final notesController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Changer le statut'),
+            content: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Nouveau statut:'),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<InvoiceStatus>(
+                    value: selectedStatus,
+                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    items: InvoiceStatus.values.map((s) => DropdownMenuItem(
+                      value: s,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: s.color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(s.label, style: TextStyle(color: s.color, fontSize: 12, fontWeight: FontWeight.w500)),
+                      ),
+                    )).toList(),
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() => selectedStatus = v);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Notes (optionnel):'),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: notesController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Ajouter une note...',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  context.read<InvoicesBloc>().add(
+                    UpdateInvoice(inv.copyWith(status: selectedStatus))
+                  );
+                  Navigator.pop(dialogCtx);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Enregistrer'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

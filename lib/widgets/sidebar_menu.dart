@@ -99,11 +99,13 @@ class _SidebarMenuState extends State<SidebarMenu> {
                   ]),
                   _buildGroup('paiements', Icons.account_balance_wallet_rounded, 'Paiements', [
                     _buildSubItem(AppModule.payments, 'Paiements'),
+                    _buildSubItem(AppModule.withholdingTaxSales, 'Retenue (ventes)'),
+                    _buildSubItem(AppModule.withholdingTaxPurchase, 'Retenue (achats)'),
+                  ]),
+                  _buildGroup('tresorerie', Icons.account_balance_rounded, 'Trésorerie', [
                     _buildSubItem(AppModule.accounts, 'Comptes'),
                     _buildSubItem(AppModule.transactions, 'Transactions'),
                     _buildSubItem(AppModule.checksTraites, 'Chèques & Traites'),
-                    _buildSubItem(AppModule.withholdingTaxSales, 'Retenue (ventes)'),
-                    _buildSubItem(AppModule.withholdingTaxPurchase, 'Retenue (achats)'),
                   ]),
                   const _SidebarDivider(),
                   _buildItem(AppModule.customers, Icons.people_rounded, 'Clients'),

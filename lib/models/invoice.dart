@@ -9,6 +9,7 @@ class Invoice {
   final String? deliveryNoteId;
   final String? projectId;
   final String? projectName;
+  final String? devisId;
   final DateTime date;
   final DateTime dueDate;
   final InvoiceStatus status;
@@ -38,6 +39,7 @@ class Invoice {
     this.deliveryNoteId,
     this.projectId,
     this.projectName,
+    this.devisId,
     required this.date,
     required this.dueDate,
     this.status = InvoiceStatus.draft,
@@ -66,7 +68,7 @@ class Invoice {
   Map<String, dynamic> toMap() => {
         'id': id, 'number': number, 'customer_id': customerId,
         'order_id': orderId, 'delivery_note_id': deliveryNoteId,
-        'project_id': projectId,
+        'project_id': projectId, 'devis_id': devisId,
         'date': date.toIso8601String(), 'due_date': dueDate.toIso8601String(),
         'status': status.name, 'total_ht': totalHT, 'total_tva': totalTva,
         'total_ttc': totalTTC, 'amount_paid': amountPaid, 'stamp_tax': stampTax,
@@ -89,6 +91,7 @@ class Invoice {
         deliveryNoteId: map['delivery_note_id'] as String?,
         projectId: map['project_id'] as String?,
         projectName: map['project_name'] as String?,
+        devisId: map['devis_id'] as String?,
         date: DateTime.parse(map['date'] as String),
         dueDate: DateTime.parse(map['due_date'] as String),
         status: InvoiceStatus.values.firstWhere(
@@ -114,6 +117,7 @@ class Invoice {
   Invoice copyWith({
     String? id, String? number, String? customerId, String? customerName,
     String? orderId, String? deliveryNoteId, String? projectId, String? projectName,
+    String? devisId,
     DateTime? date, DateTime? dueDate,
     InvoiceStatus? status, double? totalHT, double? totalTva, double? totalTTC,
     double? amountPaid, double? stampTax, double? timbreFiscal,
@@ -129,6 +133,7 @@ class Invoice {
         deliveryNoteId: deliveryNoteId ?? this.deliveryNoteId,
         projectId: projectId ?? this.projectId,
         projectName: projectName ?? this.projectName,
+        devisId: devisId ?? this.devisId,
         date: date ?? this.date, dueDate: dueDate ?? this.dueDate,
         status: status ?? this.status, totalHT: totalHT ?? this.totalHT,
         totalTva: totalTva ?? this.totalTva, totalTTC: totalTTC ?? this.totalTTC,

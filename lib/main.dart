@@ -21,7 +21,10 @@ import 'blocs/dashboard/dashboard_bloc.dart';
 import 'blocs/transactions/transactions_bloc.dart';
 import 'blocs/projects/projects_bloc.dart';
 import 'blocs/payments/payments_bloc.dart';
-
+import 'blocs/treasury_accounts/treasury_accounts_bloc.dart';
+import 'blocs/treasury_transactions/treasury_transactions_bloc.dart';
+import 'blocs/checks_traites/checks_traites_bloc.dart';
+import 'blocs/return_notes/return_notes_bloc.dart';
 import 'services/auth_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_service.dart';
@@ -74,6 +77,10 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => TransactionsBloc()),
         BlocProvider(create: (_) => ProjectsBloc()),
         BlocProvider(create: (_) => PaymentsBloc()),
+        BlocProvider(create: (_) => TreasuryAccountsBloc(databaseHelper: DatabaseHelper.instance)..add(LoadTreasuryAccounts())),
+        BlocProvider(create: (_) => TreasuryTransactionsBloc(databaseHelper: DatabaseHelper.instance)..add(const LoadTreasuryTransactions())),
+        BlocProvider(create: (_) => ChecksTraitesBloc(databaseHelper: DatabaseHelper.instance)..add(LoadChecksTraites())),
+        BlocProvider(create: (_) => ReturnNotesBloc()),
       ],
       child: MaterialApp(
         title: 'Business Manager Pro',

@@ -10,6 +10,7 @@ class DataTableWidget<T> extends StatefulWidget {
   final void Function(T row)? onDelete;
   final void Function(T row)? onView;
   final void Function(T row)? onPrint;
+  final Widget Function(T row)? customActionsBuilder;
   final String emptyMessage;
 
   const DataTableWidget({
@@ -21,6 +22,7 @@ class DataTableWidget<T> extends StatefulWidget {
     this.onDelete,
     this.onView,
     this.onPrint,
+    this.customActionsBuilder,
     this.emptyMessage = 'Aucun enregistrement',
   });
 
@@ -60,65 +62,121 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
       );
     }
 
-    final hasActions = widget.onEdit != null || widget.onDelete != null || widget.onView != null || widget.onPrint != null;
+    final hasActions = widget.onEdit != null || widget.onDelete != null || widget.onView != null || widget.onPrint != null || widget.customActionsBuilder != null;
 
-    return Column(
-      children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            sortColumnIndex: _sortColumnIndex,
-            sortAscending: _sortAscending,
-            headingRowColor: WidgetStateProperty.resolveWith((_) => AppColors.surfaceAlt),
-            headingTextStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: AppColors.textSecondary),
-            dataTextStyle: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-            dividerThickness: 0.5,
-            columnSpacing: 20,
-            horizontalMargin: 20,
-            columns: [
-              ...widget.columns.asMap().entries.map((e) => DataColumn(
-                label: Text(e.value),
-                onSort: (i, asc) => setState(() { _sortColumnIndex = i; _sortAscending = asc; }),
-              )),
-              if (hasActions) const DataColumn(label: Text('Actions')),
-            ],
-            rows: _pageRows.map((row) {
-              final cells = widget.cellBuilder(row);
-              return DataRow(
-                cells: [
-                  ...cells,
-                  if (hasActions)
-                    DataCell(Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (widget.onView != null)
-                          _ActionButton(icon: Icons.visibility_rounded, color: AppColors.info, tooltip: 'Voir', onTap: () => widget.onView!(row)),
-                        if (widget.onEdit != null)
-                          _ActionButton(icon: Icons.edit_rounded, color: AppColors.primary, tooltip: 'Modifier', onTap: () => widget.onEdit!(row)),
-                        if (widget.onPrint != null)
-                          _ActionButton(icon: Icons.print_rounded, color: AppColors.success, tooltip: 'Imprimer', onTap: () => widget.onPrint!(row)),
-                        if (widget.onDelete != null)
-                          _ActionButton(icon: Icons.delete_rounded, color: AppColors.error, tooltip: 'Supprimer', onTap: () => _confirmDelete(context, row)),
-                      ],
-                    )),
-                ],
-              );
-            }).toList(),
-          ),
-        ),
-        if (_totalPages > 1) _buildPagination(),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        Widget table = DataTable(
+          sortColumnIndex: _sortColumnIndex,
+          sortAscending: _sortAscending,
+          headingRowColor: WidgetStateProperty.resolveWith((_) => AppColors.surfaceAlt),
+          headingTextStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: AppColors.textSecondary),
+          dataTextStyle: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          dividerThickness: 0.5,
+          columnSpacing: 20,
+          horizontalMargin: 20,
+          columns: [
+            ...widget.columns.asMap().entries.map((e) => DataColumn(
+              label: Text(e.value),
+              onSort: (i, asc) => setState(() { _sortColumnIndex = i; _sortAscending = asc; }),
+            )),
+            if (hasActions) const DataColumn(label: Text('Actions')),
+          ],
+          rows: _pageRows.map((row) {
+            final cells = widget.cellBuilder(row);
+            return DataRow(
+              cells: [
+                ...cells,
+                if (hasActions)
+                  DataCell(
+                    widget.customActionsBuilder != null 
+                    ? widget.customActionsBuilder!(row)
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (widget.onView != null)
+                            _ActionButton(icon: Icons.visibility_rounded, color: AppColors.info, tooltip: 'Voir', onTap: () => widget.onView!(row)),
+                          if (widget.onEdit != null)
+                            _ActionButton(icon: Icons.edit_rounded, color: AppColors.primary, tooltip: 'Modifier', onTap: () => widget.onEdit!(row)),
+                          if (widget.onPrint != null)
+                            _ActionButton(icon: Icons.print_rounded, color: AppColors.success, tooltip: 'Imprimer', onTap: () => widget.onPrint!(row)),
+                          if (widget.onDelete != null)
+                            _ActionButton(icon: Icons.delete_rounded, color: AppColors.error, tooltip: 'Supprimer', onTap: () => _confirmDelete(context, row)),
+                        ],
+                      )
+                  ),
+              ],
+            );
+          }).toList(),
+        );
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (constraints.hasBoundedHeight)
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                      child: table,
+                    ),
+                  ),
+                ),
+              )
+            else
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: table,
+                ),
+              ),
+            if (widget.rows.isNotEmpty) _buildPagination(),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildPagination() {
+    final startItem = (_page * _rowsPerPage) + 1;
+    final endItem = ((_page + 1) * _rowsPerPage).clamp(0, widget.rows.length);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          Text('${widget.rows.length} enregistrements', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const Text('Lignes:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const SizedBox(width: 8),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: _rowsPerPage,
+              style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+              icon: const Icon(Icons.arrow_drop_down, size: 16),
+              items: [10, 15, 20, 50, 100].map((int value) {
+                return DropdownMenuItem<int>(
+                  value: value,
+                  child: Text(value.toString()),
+                );
+              }).toList(),
+              onChanged: (newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _rowsPerPage = newValue;
+                    _page = 0; // Reset to first page
+                  });
+                }
+              },
+            ),
+          ),
+          const SizedBox(width: 24),
+          Text('Affichage de $startItem à $endItem sur ${widget.rows.length} résultats', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const Spacer(),
-          Text('Page ${_page + 1} / $_totalPages', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Text('Page ${_page + 1} sur $_totalPages', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(width: 16),
           IconButton(
             icon: const Icon(Icons.chevron_left_rounded),

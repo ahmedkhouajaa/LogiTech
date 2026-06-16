@@ -6,9 +6,11 @@ import '../database/database_helper.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
+import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../models/payment_model.dart';
 import '../models/customer.dart';
 import '../models/supplier.dart';
+import '../models/treasury_account.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/dashboard_card.dart';
@@ -200,7 +202,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                       const SizedBox(width: 12),
                       // New payment button
                       ElevatedButton.icon(
-                        onPressed: () => _showCreateDialog(context, accounts),
+                        onPressed: () => _showCreateDialog(context),
                         icon: const Icon(Icons.add_rounded,
                             size: 18, color: Colors.white),
                         label: const Text('Nouveau paiement',
@@ -604,8 +606,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     );
   }
 
-  void _showCreateDialog(
-      BuildContext context, List<PaymentAccount> accounts) {
+  void _showCreateDialog(BuildContext context) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -614,8 +615,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           BlocProvider.value(value: context.read<PaymentsBloc>()),
           BlocProvider.value(value: context.read<CustomersBloc>()),
           BlocProvider.value(value: context.read<SuppliersBloc>()),
+          // Read TreasuryAccountsBloc from parent
+          BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
         ],
-        child: _CreatePaymentDialog(accounts: accounts),
+        child: const _CreatePaymentDialog(),
       ),
     );
   }
@@ -623,9 +626,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
 
 // ─── Create Payment Dialog ──────────────────────────────────────────────────
 class _CreatePaymentDialog extends StatefulWidget {
-  final List<PaymentAccount> accounts;
-
-  const _CreatePaymentDialog({required this.accounts});
+  const _CreatePaymentDialog();
 
   @override
   State<_CreatePaymentDialog> createState() => _CreatePaymentDialogState();
@@ -659,13 +660,8 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     super.initState();
     _paymentDate = DateTime.now();
 
-    // Pre-select default account
-    if (widget.accounts.isNotEmpty) {
-      final def =
-          widget.accounts.where((a) => a.isDefault).firstOrNull ??
-              widget.accounts.first;
-      _selectedAccountId = def.id;
-    }
+    // Trigger load of treasury accounts
+    context.read<TreasuryAccountsBloc>().add(LoadTreasuryAccounts());
 
     // Load contacts directly from database (avoids BLoC timing issues)
     _loadContactsFromDB();
@@ -1306,38 +1302,49 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                         ),
                         padding:
                             const EdgeInsets.symmetric(horizontal: 12),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _selectedAccountId,
-                            isExpanded: true,
-                            hint: const Text('Sélectionner un compte',
-                                style: TextStyle(
+                        child: BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+                          builder: (context, state) {
+                            List<TreasuryAccount> tAccounts = [];
+                            if (state is TreasuryAccountsLoaded) {
+                              tAccounts = state.accounts;
+                              if (_selectedAccountId == null && tAccounts.isNotEmpty) {
+                                _selectedAccountId = tAccounts.first.id;
+                              }
+                            }
+                            return DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedAccountId,
+                                isExpanded: true,
+                                hint: const Text('Sélectionner un compte',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppColors.textTertiary)),
+                                style: const TextStyle(
                                     fontSize: 13,
-                                    color: AppColors.textTertiary)),
-                            style: const TextStyle(
-                                fontSize: 13,
-                                color: AppColors.textPrimary),
-                            items: widget.accounts.map((a) {
-                              return DropdownMenuItem(
-                                value: a.id,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      a.type == 'bank'
-                                          ? Icons.account_balance_rounded
-                                          : Icons.payments_rounded,
-                                      size: 14,
-                                      color: AppColors.primary,
+                                    color: AppColors.textPrimary),
+                                items: tAccounts.map((a) {
+                                  return DropdownMenuItem(
+                                    value: a.id,
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          a.type == 'bank'
+                                              ? Icons.account_balance_rounded
+                                              : Icons.payments_rounded,
+                                          size: 14,
+                                          color: AppColors.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text('\${a.name} (Solde: \${formatCurrencyDT(a.balance)})'),
+                                      ],
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(a.name),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (v) =>
-                                setState(() => _selectedAccountId = v),
-                          ),
+                                  );
+                                }).toList(),
+                                onChanged: (v) =>
+                                    setState(() => _selectedAccountId = v),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],

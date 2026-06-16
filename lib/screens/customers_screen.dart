@@ -29,9 +29,68 @@ class _CustomersScreenState extends State<CustomersScreen> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Page Header & KPIs
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Gestion des Clients', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const SizedBox(height: 4),
+              const Text('Gérez vos clients, leurs coordonnées et soldes.', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+              const SizedBox(height: 24),
+              BlocBuilder<CustomersBloc, CustomersState>(
+                builder: (context, state) {
+                  int totalClients = 0;
+                  double totalBalance = 0;
+                  int debtors = 0;
+
+                  if (state is CustomersLoaded) {
+                    totalClients = state.customers.length;
+                    totalBalance = state.customers.fold(0, (sum, c) => sum + c.balance);
+                    debtors = state.customers.where((c) => c.balance < 0).length;
+                  }
+
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: DashboardCard(
+                          title: 'Total Clients',
+                          value: totalClients.toString(),
+                          icon: Icons.people_alt_rounded,
+                          gradientColors: const [Color(0xFF1a56db), Color(0xFF3B82F6)],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        child: DashboardCard(
+                          title: 'Solde Total',
+                          value: formatCurrency(totalBalance),
+                          icon: Icons.account_balance_wallet_rounded,
+                          gradientColors: const [Color(0xFF059669), Color(0xFF10B981)],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Expanded(
+                        child: DashboardCard(
+                          title: 'Clients Débiteurs',
+                          value: debtors.toString(),
+                          icon: Icons.warning_amber_rounded,
+                          gradientColors: const [Color(0xFFDC2626), Color(0xFFEF4444)],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        // Action Bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Row(
             children: [
               AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
@@ -44,6 +103,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
             ],
           ),
         ),
+        const SizedBox(height: AppSpacing.md),
         Expanded(
           child: BlocBuilder<CustomersBloc, CustomersState>(
             builder: (context, state) {
@@ -58,12 +118,22 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   child: AppCard(
                     padding: EdgeInsets.zero,
                     child: DataTableWidget<Customer>(
-                      columns: const ['Code', 'Nom', 'Téléphone', 'Email', 'Ville', 'Solde'],
+                      columns: const ['Code', 'Client', 'Téléphone', 'Email', 'Ville', 'Solde'],
                       rows: filtered,
                       emptyMessage: 'Aucun client trouvé',
                       cellBuilder: (c) => [
-                        DataCell(Text(c.code, style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 12))),
-                        DataCell(Text(c.name, style: const TextStyle(fontWeight: FontWeight.w500))),
+                        DataCell(Text(c.code, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 12))),
+                        DataCell(Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 14,
+                              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                              child: Text(c.name.isNotEmpty ? c.name[0].toUpperCase() : '?', style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(c.name, style: const TextStyle(fontWeight: FontWeight.w500)),
+                          ],
+                        )),
                         DataCell(Text(c.phone ?? '—')),
                         DataCell(Text(c.email ?? '—')),
                         DataCell(Text(c.city ?? '—')),
