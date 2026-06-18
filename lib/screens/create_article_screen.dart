@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/products/products_bloc.dart';
+import '../blocs/product_settings/product_settings_bloc.dart';
+import '../blocs/product_settings/product_settings_state.dart';
 import '../models/product.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
@@ -14,7 +16,7 @@ class CreateArticleScreen extends StatefulWidget {
   State<CreateArticleScreen> createState() => _CreateArticleScreenState();
 }
 
-class _CreateArticleScreenState extends State<CreateArticleScreen> {
+class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   
   // Controllers
@@ -26,18 +28,22 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
   String _destination = 'Vente et Achat';
   String _productType = 'produit';
   double _tvaRate = 19;
-  String _unit = 'Pièce';
-  String _family = 'Électronique'; // Assuming default family for demo
+  String _unit = 'Piece';
+  String? _family; 
   String? _subFamily;
+  String? _category;
   String? _brand;
   
   bool _allowNegativeStock = false;
   bool _lowStockAlert = false;
   bool _highStockAlert = false;
   
+  late TabController _tabController;
+  
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 4, vsync: this);
     final p = widget.existing;
     
     _nameCtrl = TextEditingController(text: p?.name ?? '');
@@ -51,9 +57,19 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
     _barcodeCtrl = TextEditingController(text: p?.barcode ?? '');
     _privateNotesCtrl = TextEditingController(text: p?.privateNotes ?? '');
     
-    _productType = p?.productType ?? 'produit';
+    _productType = ['produit', 'service', 'consommable'].contains(p?.productType) ? p!.productType : 'produit';
     _tvaRate = p?.tvaRate ?? 19;
-    _unit = p?.unit ?? 'Pièce';
+    
+    // Safely load unit
+    String rawUnit = p?.unit ?? 'Piece';
+    if (rawUnit == 'Pièce' || rawUnit == 'Unite') rawUnit = 'Piece';
+    _unit = ['Piece', 'Kilogramme', 'Litre', 'Metre'].contains(rawUnit) ? rawUnit : 'Piece';
+    
+    // Load family, subFamily, category, brand without constraints
+    _family = p?.familyId;
+    _subFamily = p?.subFamilyId;
+    _category = p?.category;
+    _brand = ['Samsung', 'Apple', 'Dell', 'HP'].contains(p?.brandId) ? p!.brandId : null;
     
     _allowNegativeStock = p?.allowNegativeStock ?? false;
     _lowStockAlert = p?.lowStockAlert ?? false;
@@ -62,6 +78,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     _nameCtrl.dispose(); _refCtrl.dispose(); _descCtrl.dispose();
     _purchCtrl.dispose(); _sellCtrl.dispose(); _discountCtrl.dispose();
     _barcodeCtrl.dispose(); _privateNotesCtrl.dispose();
@@ -84,7 +101,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
             child: Row(
               children: [
                 Text(
-                  widget.existing == null ? 'Créer un Nouvel Article' : 'Modifier l\'Article',
+                  widget.existing == null ? 'Creer un Nouvel Article' : 'Modifier l\'Article',
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 const Spacer(),
@@ -104,30 +121,47 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
                     backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   ),
-                  child: const Text('Créer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: const Text('Creer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
+              ],
+            ),
+          ),
+          
+          // TabBar Header
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: AppColors.border)),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              labelColor: const Color(0xFF7C3AED),
+              unselectedLabelColor: AppColors.textTertiary,
+              indicatorColor: const Color(0xFF7C3AED),
+              indicatorWeight: 3,
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+              tabs: const [
+                Tab(text: 'General', icon: Icon(Icons.info_outline_rounded, size: 20)),
+                Tab(text: 'Prix & TVA', icon: Icon(Icons.attach_money_rounded, size: 20)),
+                Tab(text: 'Classification', icon: Icon(Icons.category_outlined, size: 20)),
+                Tab(text: 'Stock & Alertes', icon: Icon(Icons.inventory_2_outlined, size: 20)),
               ],
             ),
           ),
           
           // Form Content
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildMainSection(),
-                    const SizedBox(height: 24),
-                    _buildPricingSection(),
-                    const SizedBox(height: 24),
-                    _buildClassificationSection(),
-                    const SizedBox(height: 24),
-                    _buildStockSection(),
-                  ],
-                ),
+            child: Form(
+              key: _formKey,
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  SingleChildScrollView(padding: const EdgeInsets.all(24), child: _buildMainSection()),
+                  SingleChildScrollView(padding: const EdgeInsets.all(24), child: _buildPricingSection()),
+                  SingleChildScrollView(padding: const EdgeInsets.all(24), child: _buildClassificationSection()),
+                  SingleChildScrollView(padding: const EdgeInsets.all(24), child: _buildStockSection()),
+                ],
               ),
             ),
           ),
@@ -178,7 +212,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
                   children: [
                     AppTextField(label: 'Nom de l\'Article', controller: _nameCtrl, hint: 'Saisissez le nom de l\'article', validator: (v) => v!.isEmpty ? 'Requis' : null),
                     const SizedBox(height: 16),
-                    AppTextField(label: 'Référence', controller: _refCtrl, hint: 'Saisissez la référence de l\'article'),
+                    AppTextField(label: 'Reference', controller: _refCtrl, hint: 'Saisissez la reference de l\'article'),
                     const SizedBox(height: 16),
                     AppTextField(label: 'Description', controller: _descCtrl, hint: 'Saisissez la description de l\'article', maxLines: 4),
                   ],
@@ -189,7 +223,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Image de l\'Article', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                    /* const Text('Image de l\'Article', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
                     const SizedBox(height: 8),
                     Container(
                       height: 180,
@@ -208,7 +242,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
                           ],
                         ),
                       ),
-                    ),
+                    ), */
                   ],
                 ),
               ),
@@ -257,7 +291,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
         children: [
           Row(
             children: [
-              const Text('Taxes Supplémentaires', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+              const Text('Taxes Supplementaires', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
               const SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: () {},
@@ -287,12 +321,12 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          const Text('Configurez des tarifs spéciaux pour différents groupes de clients ou quantités d\'achat', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          const Text('Configurez des tarifs speciaux pour differents groupes de clients ou quantites d\'achat', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             value: null,
-            hint: const Text('Sélectionnez une liste de prix'),
-            items: ['Prix de Gros', 'Prix Détaillant', 'Client VIP'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            hint: const Text('Selectionnez une liste de prix'),
+            items: ['Prix de Gros', 'Prix Detaillant', 'Client VIP'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
             onChanged: (v) {},
             decoration: InputDecoration(
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
@@ -320,41 +354,84 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Unité', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    value: _unit,
-                    items: ['Pièce', 'Kilogramme', 'Litre', 'Mètre'].map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
-                    onChanged: (v) => setState(() => _unit = v!),
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                  ),
-                ],
-              )),
+              Expanded(
+                child: BlocBuilder<ProductSettingsBloc, ProductSettingsState>(
+                  builder: (context, state) {
+                    if (state is ProductSettingsLoaded) {
+                      final families = state.rootFamilies;
+                      // Si la famille actuelle n'est plus dans la liste, on la reinitialise
+                      if (_family != null && !families.any((f) => f.id == _family)) {
+                        _family = null;
+                        _subFamily = null;
+                      }
+                      
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Famille', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<String>(
+                            value: _family,
+                            hint: const Text('Selectionner'),
+                            items: families.map((f) => DropdownMenuItem(value: f.id, child: Text(f.name))).toList(),
+                            onChanged: (v) {
+                              setState(() {
+                                _family = v;
+                                _subFamily = null; // Reset sub-family quand on change de famille
+                              });
+                            },
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return const SizedBox();
+                  },
+                ),
+              ),
               const SizedBox(width: 24),
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Famille', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    value: _family,
-                    items: ['Électronique', 'Informatique'].map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
-                    onChanged: (v) => setState(() => _family = v!),
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                  ),
-                ],
-              )),
+              Expanded(
+                child: BlocBuilder<ProductSettingsBloc, ProductSettingsState>(
+                  builder: (context, state) {
+                    if (state is ProductSettingsLoaded) {
+                      List<DropdownMenuItem<String>> items = [];
+                      if (_family != null) {
+                        final subFamilies = state.getSubFamilies(_family!);
+                        items = subFamilies.map((sf) => DropdownMenuItem(value: sf.id, child: Text(sf.name))).toList();
+                        
+                        // Reset if not found
+                        if (_subFamily != null && !subFamilies.any((sf) => sf.id == _subFamily)) {
+                          _subFamily = null;
+                        }
+                      }
+                      
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Sous-famille', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<String>(
+                            value: _subFamily,
+                            hint: const Text('Selectionner'),
+                            items: items,
+                            onChanged: _family == null ? null : (v) => setState(() => _subFamily = v),
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return const SizedBox();
+                  },
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -363,13 +440,13 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
               Expanded(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Sous-famille', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  const Text('Categorie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
-                    value: _subFamily,
-                    hint: const Text('Sélectionner'),
-                    items: ['Smartphones', 'Laptops', 'Accessoires'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                    onChanged: (v) => setState(() => _subFamily = v),
+                    value: _category,
+                    hint: const Text('Selectionner'),
+                    items: ['Standard', 'Premium'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                    onChanged: (v) => setState(() => _category = v),
                     decoration: InputDecoration(
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
@@ -386,7 +463,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
                     value: _brand,
-                    hint: const Text('Sélectionner'),
+                    hint: const Text('Selectionner'),
                     items: ['Samsung', 'Apple', 'Dell', 'HP'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                     onChanged: (v) => setState(() => _brand = v),
                     decoration: InputDecoration(
@@ -399,10 +476,34 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
               )),
             ],
           ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Unite', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    value: _unit,
+                    items: ['Piece', 'Kilogramme', 'Litre', 'Metre'].map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
+                    onChanged: (v) => setState(() => _unit = v!),
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ],
+              )),
+              const SizedBox(width: 24),
+              Expanded(child: Container()), // Empty space to align
+            ],
+          ),
           const SizedBox(height: 24),
           AppTextField(label: 'Code-barres', controller: _barcodeCtrl, hint: 'Entrez le code-barres'),
           const SizedBox(height: 16),
-          AppTextField(label: 'Notes Privées', controller: _privateNotesCtrl, maxLines: 3),
+          AppTextField(label: 'Notes Privees', controller: _privateNotesCtrl, maxLines: 3),
         ],
       ),
     );
@@ -422,7 +523,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Paramètres de Stock', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const Text('Parametres de Stock', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               Icon(Icons.keyboard_arrow_up_rounded, color: AppColors.textSecondary),
             ],
           ),
@@ -447,7 +548,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
           const SizedBox(height: 24),
           const Text('Alerte rupture de stock', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
-          const Text('Définissez des seuils d\'alerte pour être notifié quand le stock est faible dans chaque entrepôt', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const Text('Definissez des seuils d\'alerte pour etre notifie quand le stock est faible dans chaque entrepot', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
@@ -459,21 +560,21 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
               children: [
                 const Icon(Icons.warehouse_outlined, size: 18, color: AppColors.textSecondary),
                 const SizedBox(width: 8),
-                const Text('Entrepôt par défaut', style: TextStyle(fontSize: 14)),
+                const Text('Entrepot par defaut', style: TextStyle(fontSize: 14)),
                 const Spacer(),
                 Switch(
                   value: _lowStockAlert,
                   onChanged: (v) => setState(() => _lowStockAlert = v),
                   activeColor: AppColors.primary,
                 ),
-                Text('Alerte activée', style: TextStyle(fontSize: 13, color: _lowStockAlert ? AppColors.textPrimary : AppColors.textSecondary)),
+                Text('Alerte activee', style: TextStyle(fontSize: 13, color: _lowStockAlert ? AppColors.textPrimary : AppColors.textSecondary)),
               ],
             ),
           ),
           const SizedBox(height: 24),
           const Text('Alertes de Stock Maximum (surstockage)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
           const SizedBox(height: 4),
-          const Text('Définissez des seuils max pour être alerté quand le stock dépasse le maximum dans chaque entrepôt', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const Text('Definissez des seuils max pour etre alerte quand le stock depasse le maximum dans chaque entrepot', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
@@ -485,14 +586,14 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
               children: [
                 const Icon(Icons.warehouse_outlined, size: 18, color: AppColors.textSecondary),
                 const SizedBox(width: 8),
-                const Text('Entrepôt par défaut', style: TextStyle(fontSize: 14)),
+                const Text('Entrepot par defaut', style: TextStyle(fontSize: 14)),
                 const Spacer(),
                 Switch(
                   value: _highStockAlert,
                   onChanged: (v) => setState(() => _highStockAlert = v),
                   activeColor: AppColors.primary,
                 ),
-                Text('Alerte max activée', style: TextStyle(fontSize: 13, color: _highStockAlert ? AppColors.textPrimary : AppColors.textSecondary)),
+                Text('Alerte max activee', style: TextStyle(fontSize: 13, color: _highStockAlert ? AppColors.textPrimary : AppColors.textSecondary)),
               ],
             ),
           ),
@@ -584,6 +685,10 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
       reference: _refCtrl.text.trim().isEmpty ? null : _refCtrl.text.trim(),
       description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
       productType: _productType,
+      familyId: _family,
+      subFamilyId: _subFamily,
+      category: _category,
+      brandId: _brand,
       unit: _unit,
       purchasePrice: double.tryParse(_purchCtrl.text) ?? 0,
       sellingPrice: double.tryParse(_sellCtrl.text) ?? 0,

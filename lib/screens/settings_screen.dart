@@ -12,30 +12,30 @@ class SettingsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Paramètres', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text('Parametres', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: AppSpacing.lg),
           _buildSettingsGroup(
-            'Général',
+            'General',
             [
-              _buildSettingItem(Icons.business_rounded, 'Informations de l\'entreprise', 'Gérer les détails de la société, logo, NIF, RC'),
-              _buildSettingItem(Icons.palette_rounded, 'Apparence', 'Thème clair/sombre, couleurs de l\'interface'),
-              _buildSettingItem(Icons.language_rounded, 'Langue et région', 'Français (Algérie), devise par défaut'),
+              _buildSettingItem(Icons.business_rounded, 'Informations de l\'entreprise', 'Gerer les details de la societe, logo, NIF, RC'),
+              _buildSettingItem(Icons.palette_rounded, 'Apparence', 'Theme clair/sombre, couleurs de l\'interface'),
+              _buildSettingItem(Icons.language_rounded, 'Langue et region', 'Francais (Algerie), devise par defaut'),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
           _buildSettingsGroup(
             'Synchronisation',
             [
-              _buildSettingItem(Icons.cloud_sync_rounded, 'État de la synchronisation', 'Dernière synchro réussie il y a 5 min', isAction: true),
+              _buildSettingItem(Icons.cloud_sync_rounded, 'Etat de la synchronisation', 'Derniere synchro reussie il y a 5 min', isAction: true),
               _buildSettingItem(Icons.wifi_rounded, 'Mode hors ligne', 'Fonctionnement complet sans internet'),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
           _buildSettingsGroup(
-            'Comptabilité',
+            'Comptabilite',
             [
-              _buildSettingItem(Icons.receipt_long_rounded, 'Numérotation des documents', 'Préfixes et séquences (FAC-24-001)'),
-              _buildSettingItem(Icons.percent_rounded, 'Taux de TVA par défaut', '19%, 9% ou exonéré'),
+              _buildSettingItem(Icons.receipt_long_rounded, 'Numerotation des documents', 'Prefixes et sequences (FAC-24-001)'),
+              _buildSettingItem(Icons.percent_rounded, 'Taux de TVA par defaut', '19%, 9% ou exonere'),
             ],
           ),
         ],

@@ -29,66 +29,37 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Page Header & KPIs
-        Padding(
+        // Modern Action Bar
+        Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          decoration: const BoxDecoration(
+            color: Colors.transparent,
+            border: Border(bottom: BorderSide(color: Colors.transparent)),
+          ),
+          child: Row(
             children: [
-              const Text('Gestion des Fournisseurs', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              const SizedBox(height: 4),
-              const Text('Gérez vos fournisseurs et vos dettes envers eux.', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-              const SizedBox(height: 24),
-              BlocBuilder<SuppliersBloc, SuppliersState>(
-                builder: (context, state) {
-                  int totalSuppliers = 0;
-                  double totalOwed = 0;
-
-                  if (state is SuppliersLoaded) {
-                    totalSuppliers = state.suppliers.length;
-                    totalOwed = state.suppliers.fold(0, (sum, s) => sum + s.balance);
-                  }
-
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: DashboardCard(
-                          title: 'Total Fournisseurs',
-                          value: totalSuppliers.toString(),
-                          icon: Icons.factory_rounded,
-                          gradientColors: const [Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        child: DashboardCard(
-                          title: 'Total Dettes',
-                          value: formatCurrency(totalOwed),
-                          icon: Icons.account_balance_wallet_rounded,
-                          gradientColors: const [Color(0xFFD97706), Color(0xFFF59E0B)],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      const Expanded(child: SizedBox()), // Placeholder for balance layout
-                    ],
-                  );
-                },
+              const Text('Fournisseurs', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const Spacer(),
+              SizedBox(
+                width: 300,
+                child: AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              ElevatedButton.icon(
+                onPressed: () => _showDialog(context, null),
+                icon: const Icon(Icons.factory_rounded, size: 20, color: Colors.white),
+                label: const Text('Nouveau Fournisseur', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF7C3AED),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                ),
               ),
             ],
           ),
         ),
-        // Action Bar
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Row(
-            children: [
-              AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
-              const Spacer(),
-              AppButton(label: 'Nouveau fournisseur', icon: Icons.add_rounded, onPressed: () => _showDialog(context, null)),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
+        
         Expanded(
           child: BlocBuilder<SuppliersBloc, SuppliersState>(
             builder: (context, state) {
@@ -97,43 +68,158 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
               if (state is SuppliersLoaded) {
                 final filtered = _search.isEmpty ? state.suppliers
                     : state.suppliers.where((s) => s.name.toLowerCase().contains(_search) || s.code.toLowerCase().contains(_search)).toList();
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                  child: AppCard(
-                    padding: EdgeInsets.zero,
-                    child: DataTableWidget<Supplier>(
-                      columns: const ['Code', 'Fournisseur', 'Téléphone', 'Email', 'Ville', 'Solde'],
-                      rows: filtered,
-                      emptyMessage: 'Aucun fournisseur trouvé',
-                      cellBuilder: (s) => [
-                        DataCell(Text(s.code, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 12))),
-                        DataCell(Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 14,
-                              backgroundColor: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
-                              child: Text(s.name.isNotEmpty ? s.name[0].toUpperCase() : '?', style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.bold)),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(s.name, style: const TextStyle(fontWeight: FontWeight.w500)),
-                          ],
-                        )),
-                        DataCell(Text(s.phone ?? '—')),
-                        DataCell(Text(s.email ?? '—')),
-                        DataCell(Text(s.city ?? '—')),
-                        DataCell(Text(formatCurrency(s.balance), style: TextStyle(color: s.balance > 0 ? AppColors.error : AppColors.textPrimary, fontWeight: FontWeight.w600))),
+                
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.factory_outlined, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
+                        const SizedBox(height: 16),
+                        const Text('Aucun fournisseur trouve', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
                       ],
-                      onEdit: (s) => _showDialog(context, s),
-                      onDelete: (s) => context.read<SuppliersBloc>().add(DeleteSupplier(s.id)),
                     ),
-                  ),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  itemCount: filtered.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final s = filtered[index];
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.01), blurRadius: 4, offset: const Offset(0, 2)),
+                        ],
+                        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          onTap: () => _showDialog(context, s),
+                          hoverColor: const Color(0xFF7C3AED).withValues(alpha: 0.02),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Row(
+                              children: [
+                                // Avatar
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)]),
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: [
+                                      BoxShadow(color: const Color(0xFF8B5CF6).withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3)),
+                                    ]
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      s.name.isNotEmpty ? s.name[0].toUpperCase() : '?',
+                                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                
+                                // Info
+                                Expanded(
+                                  flex: 3,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        s.name,
+                                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.tag_rounded, size: 14, color: AppColors.textTertiary),
+                                          const SizedBox(width: 4),
+                                          Text(s.code, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+                                          if (s.email != null && s.email!.isNotEmpty) ...[
+                                            const SizedBox(width: 12),
+                                            const Icon(Icons.email_outlined, size: 14, color: AppColors.textTertiary),
+                                            const SizedBox(width: 4),
+                                            Text(s.email!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                          ],
+                                          if (s.phone != null && s.phone!.isNotEmpty) ...[
+                                            const SizedBox(width: 12),
+                                            const Icon(Icons.phone_outlined, size: 14, color: AppColors.textTertiary),
+                                            const SizedBox(width: 4),
+                                            Text(s.phone!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                // Solde
+                                Expanded(
+                                  flex: 1,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      const Text('Dette', style: TextStyle(fontSize: 11, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: s.balance > 0 ? AppColors.errorLight : AppColors.successLight.withValues(alpha: 0.5),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          formatCurrency(s.balance),
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: s.balance > 0 ? AppColors.error : AppColors.success,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                // Actions
+                                const SizedBox(width: 16),
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert_rounded, color: AppColors.textTertiary),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  elevation: 4,
+                                  onSelected: (val) {
+                                    if (val == 'edit') _showDialog(context, s);
+                                    if (val == 'delete') context.read<SuppliersBloc>().add(DeleteSupplier(s.id));
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')])),
+                                    const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))])),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 );
               }
               return const SizedBox();
             },
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
       ],
     );
   }
@@ -153,13 +239,15 @@ class _SupplierDialog extends StatefulWidget {
   State<_SupplierDialog> createState() => _SupplierDialogState();
 }
 
-class _SupplierDialogState extends State<_SupplierDialog> {
+class _SupplierDialogState extends State<_SupplierDialog> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _codeCtrl, _nameCtrl, _emailCtrl, _phoneCtrl, _addressCtrl, _cityCtrl, _taxCtrl, _rcCtrl, _notesCtrl;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     final s = widget.existing;
     _codeCtrl = TextEditingController(text: s?.code ?? 'FOU-${DateTime.now().millisecondsSinceEpoch % 10000}');
     _nameCtrl = TextEditingController(text: s?.name ?? '');
@@ -175,6 +263,7 @@ class _SupplierDialogState extends State<_SupplierDialog> {
   @override
   void dispose() {
     for (var c in [_codeCtrl, _nameCtrl, _emailCtrl, _phoneCtrl, _addressCtrl, _cityCtrl, _taxCtrl, _rcCtrl, _notesCtrl]) { c.dispose(); }
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -206,7 +295,7 @@ class _SupplierDialogState extends State<_SupplierDialog> {
                   const Icon(Icons.factory_rounded, color: Color(0xFF7C3AED)),
                   const SizedBox(width: 8),
                   Text(
-                    widget.existing == null ? 'Créer un Nouveau Fournisseur' : 'Modifier le Fournisseur',
+                    widget.existing == null ? 'Creer un Nouveau Fournisseur' : 'Modifier le Fournisseur',
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
                   const Spacer(),
@@ -224,7 +313,7 @@ class _SupplierDialogState extends State<_SupplierDialog> {
                   ElevatedButton.icon(
                     onPressed: _save,
                     icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
-                    label: Text(widget.existing == null ? 'Créer' : 'Enregistrer', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    label: Text(widget.existing == null ? 'Creer' : 'Enregistrer', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF7C3AED),
                       elevation: 0,
@@ -235,51 +324,88 @@ class _SupplierDialogState extends State<_SupplierDialog> {
                 ],
               ),
             ),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text("Informations Générales", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                      const SizedBox(height: 16),
-                      Row(children: [
-                        Expanded(child: AppTextField(label: 'Code *', controller: _codeCtrl, validator: (v) => v!.isEmpty ? 'Requis' : null)),
-                        const SizedBox(width: 16),
-                        Expanded(child: AppTextField(label: 'Nom / Raison Sociale *', controller: _nameCtrl, validator: (v) => v!.isEmpty ? 'Requis' : null)),
-                      ]),
-                      const SizedBox(height: 16),
-                      Row(children: [
-                        Expanded(child: AppTextField(label: 'Téléphone', controller: _phoneCtrl, keyboardType: TextInputType.phone)),
-                        const SizedBox(width: 16),
-                        Expanded(child: AppTextField(label: 'Email', controller: _emailCtrl, keyboardType: TextInputType.emailAddress)),
-                      ]),
-                      const SizedBox(height: 24),
-                      const Divider(height: 1, color: AppColors.border),
-                      const SizedBox(height: 24),
-                      const Text("Localisation", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                      const SizedBox(height: 16),
-                      Row(children: [
-                        Expanded(flex: 2, child: AppTextField(label: 'Adresse', controller: _addressCtrl)),
-                        const SizedBox(width: 16),
-                        Expanded(child: AppTextField(label: 'Ville', controller: _cityCtrl)),
-                      ]),
-                      const SizedBox(height: 24),
-                      const Divider(height: 1, color: AppColors.border),
-                      const SizedBox(height: 24),
-                      const Text("Informations Fiscales & Notes", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                      const SizedBox(height: 16),
-                      Row(children: [
-                        Expanded(child: AppTextField(label: 'NIF (Numéro d\'Identification Fiscale)', controller: _taxCtrl)),
-                        const SizedBox(width: 16),
-                        Expanded(child: AppTextField(label: 'RC (Registre de Commerce)', controller: _rcCtrl)),
-                      ]),
-                      const SizedBox(height: 16),
-                      AppTextField(label: 'Notes privées', controller: _notesCtrl, maxLines: 3, hint: 'Ajouter une note sur ce fournisseur...'),
-                    ],
-                  ),
+            // TabBar Header
+            Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(bottom: BorderSide(color: AppColors.border)),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                labelColor: const Color(0xFF7C3AED),
+                unselectedLabelColor: AppColors.textTertiary,
+                indicatorColor: const Color(0xFF7C3AED),
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                tabs: const [
+                  Tab(text: 'Informations', icon: Icon(Icons.info_outline_rounded, size: 20)),
+                  Tab(text: 'Localisation', icon: Icon(Icons.location_on_outlined, size: 20)),
+                  Tab(text: 'Financier & Notes', icon: Icon(Icons.account_balance_wallet_outlined, size: 20)),
+                ],
+              ),
+            ),
+            
+            // TabBarView Content
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // TAB 1: Informations Generales
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(children: [
+                            Expanded(child: AppTextField(label: 'Code *', controller: _codeCtrl, validator: (v) => v!.isEmpty ? 'Requis' : null)),
+                            const SizedBox(width: 16),
+                            Expanded(child: AppTextField(label: 'Nom / Raison Sociale *', controller: _nameCtrl, validator: (v) => v!.isEmpty ? 'Requis' : null)),
+                          ]),
+                          const SizedBox(height: 16),
+                          Row(children: [
+                            Expanded(child: AppTextField(label: 'Telephone', controller: _phoneCtrl, keyboardType: TextInputType.phone)),
+                            const SizedBox(width: 16),
+                            Expanded(child: AppTextField(label: 'Email', controller: _emailCtrl, keyboardType: TextInputType.emailAddress)),
+                          ]),
+                        ],
+                      ),
+                    ),
+                    
+                    // TAB 2: Localisation
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(children: [
+                            Expanded(flex: 2, child: AppTextField(label: 'Adresse', controller: _addressCtrl)),
+                            const SizedBox(width: 16),
+                            Expanded(child: AppTextField(label: 'Ville', controller: _cityCtrl)),
+                          ]),
+                        ],
+                      ),
+                    ),
+                    
+                    // TAB 3: Informations Fiscales & Notes
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(children: [
+                            Expanded(child: AppTextField(label: 'NIF (Numero d\'Identification Fiscale)', controller: _taxCtrl)),
+                            const SizedBox(width: 16),
+                            Expanded(child: AppTextField(label: 'RC (Registre de Commerce)', controller: _rcCtrl)),
+                          ]),
+                          const SizedBox(height: 16),
+                          AppTextField(label: 'Notes privees', controller: _notesCtrl, maxLines: 5, hint: 'Ajouter une note sur ce fournisseur...'),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

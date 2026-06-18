@@ -35,7 +35,7 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
           child: Row(
             children: [
               const Text(
-                'Chèques & Traites',
+                'Cheques & Traites',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
               const SizedBox(width: 8),
@@ -56,8 +56,8 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                     style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     items: const [
                       DropdownMenuItem(value: 'all', child: Text('Tous les types')),
-                      DropdownMenuItem(value: 'check_received', child: Text('Chèque (Client)')),
-                      DropdownMenuItem(value: 'check_issued', child: Text('Chèque (Fournisseur)')),
+                      DropdownMenuItem(value: 'check_received', child: Text('Cheque (Client)')),
+                      DropdownMenuItem(value: 'check_issued', child: Text('Cheque (Fournisseur)')),
                       DropdownMenuItem(value: 'traite_received', child: Text('Traite (Client)')),
                       DropdownMenuItem(value: 'traite_issued', child: Text('Traite (Fournisseur)')),
                     ],
@@ -108,9 +108,9 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                       border: Border.all(color: AppColors.border),
                     ),
                     child: DataTableWidget<CheckTraite>(
-                      columns: const ['N° Document', 'Type', 'Tiers', 'Montant', 'Échéance', 'Banque', 'Statut', 'Actions'],
+                      columns: const ['N° Document', 'Type', 'Tiers', 'Montant', 'Echeance', 'Banque', 'Statut', 'Actions'],
                       rows: filtered,
-                      emptyMessage: 'Aucun document trouvé',
+                      emptyMessage: 'Aucun document trouve',
                       cellBuilder: (doc) {
                         return [
                           DataCell(Text(doc.documentNumber, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary))),
@@ -128,12 +128,12 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                                   IconButton(
                                     icon: const Icon(Icons.check_circle_outline_rounded, size: 18, color: AppColors.success),
                                     onPressed: () => context.read<ChecksTraitesBloc>().add(UpdateCheckTraiteStatus(doc.id, 'cashed')),
-                                    tooltip: 'Marquer encaissé',
+                                    tooltip: 'Marquer encaisse',
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.cancel_outlined, size: 18, color: AppColors.error),
                                     onPressed: () => context.read<ChecksTraitesBloc>().add(UpdateCheckTraiteStatus(doc.id, 'bounced')),
-                                    tooltip: 'Marquer impayé',
+                                    tooltip: 'Marquer impaye',
                                   ),
                                 ],
                               ],
@@ -156,8 +156,8 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
 
   String _getTypeLabel(String type) {
     switch (type) {
-      case 'check_received': return 'Chèque (Recouvrement)';
-      case 'check_issued': return 'Chèque (Paiement)';
+      case 'check_received': return 'Cheque (Recouvrement)';
+      case 'check_issued': return 'Cheque (Paiement)';
       case 'traite_received': return 'Traite (Recouvrement)';
       case 'traite_issued': return 'Traite (Paiement)';
       default: return type;
@@ -174,11 +174,11 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
         break;
       case 'cashed':
         color = AppColors.success;
-        label = 'Encaissé';
+        label = 'Encaisse';
         break;
       case 'bounced':
         color = AppColors.error;
-        label = 'Impayé';
+        label = 'Impaye';
         break;
       default:
         color = AppColors.textTertiary;

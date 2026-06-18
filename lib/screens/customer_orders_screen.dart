@@ -80,11 +80,11 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  const Text('Gérer vos commandes client', style: TextStyle(color: AppColors.textSecondary)),
+                  const Text('Gerer vos commandes client', style: TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
               AppButton(
-                label: 'Créer une Commande Client',
+                label: 'Creer une Commande Client',
                 icon: Icons.add_rounded,
                 onPressed: () => Navigator.push(
                   context,
@@ -154,7 +154,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                       return DropdownButtonFormField<String>(
                         value: _selectedClientId,
                         decoration: InputDecoration(
-                          hintText: 'Sélectionner un client...',
+                          hintText: 'Selectionner un client...',
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
@@ -185,7 +185,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Date de début', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const Text('Date de debut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
@@ -214,7 +214,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            _dateFrom != null ? formatDateLong(_dateFrom!) : 'Sélectionner une date',
+                            _dateFrom != null ? formatDateLong(_dateFrom!) : 'Selectionner une date',
                             style: TextStyle(fontSize: 13, color: _dateFrom != null ? AppColors.textPrimary : AppColors.textTertiary),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -263,7 +263,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            _dateTo != null ? formatDateLong(_dateTo!) : 'Sélectionner une date',
+                            _dateTo != null ? formatDateLong(_dateTo!) : 'Selectionner une date',
                             style: TextStyle(fontSize: 13, color: _dateTo != null ? AppColors.textPrimary : AppColors.textTertiary),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -385,7 +385,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                           child: Row(
                             children: [
                               const SizedBox(width: 32), // Checkbox space
-                              const Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                              const Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
                               const Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
                               Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: const Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)))),
                               const Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
@@ -402,7 +402,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                     children: [
                                       Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.border),
                                       SizedBox(height: 16),
-                                      Text("Aucune commande trouvée", style: TextStyle(color: AppColors.textSecondary)),
+                                      Text("Aucune commande trouvee", style: TextStyle(color: AppColors.textSecondary)),
                                     ],
                                   ),
                                 )
@@ -519,15 +519,15 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                                     const PopupMenuDivider(height: 1),
                                                   ] else ...[
                                                     if (order.isConvertedToInvoice) ...[
-                                                      _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture créée'),
+                                                      _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture creee'),
                                                       const PopupMenuDivider(height: 1),
                                                     ],
                                                     if (order.isConvertedToDelivery) ...[
-                                                      _buildMenuItem('view_delivery', Icons.local_shipping_outlined, AppColors.success, 'Voir le bon de livraison créé'),
+                                                      _buildMenuItem('view_delivery', Icons.local_shipping_outlined, AppColors.success, 'Voir le bon de livraison cree'),
                                                       const PopupMenuDivider(height: 1),
                                                     ],
                                                   ],
-                                                  _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
+                                                  _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
                                                   const PopupMenuDivider(height: 1),
                                                   _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
                                                   const PopupMenuDivider(height: 1),
@@ -537,7 +537,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                                   const PopupMenuDivider(height: 1),
                                                   _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
                                                   const PopupMenuDivider(height: 1),
-                                                  _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'),
+                                                  _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
                                                 ],
                                               ),
                                             ),
@@ -585,7 +585,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                               Text('Page ${_currentPage + 1} sur $totalPages', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                               const Spacer(),
                               Text(
-                                totalItems == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de ${startIndex + 1} à $endIndex sur $totalItems résultats',
+                                totalItems == 0 ? 'Affichage de 0 a 0 sur 0 resultats' : 'Affichage de ${startIndex + 1} a $endIndex sur $totalItems resultats',
                                 style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                               ),
                               const SizedBox(width: 16),
@@ -695,7 +695,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         break;
       case 'print':
         // TODO: Print logic
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impression non implémentée')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impression non implementee')));
         break;
       case 'delete':
         _confirmDelete(order);
@@ -716,7 +716,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         _openConvertedDelivery(context, order.convertedToDeliveryId);
         break;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));
     }
   }
 
@@ -885,7 +885,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Commande convertie en facture avec succès'),
+        content: Text('Commande convertie en facture avec succes'),
         backgroundColor: AppColors.success,
       ));
     }
@@ -1008,7 +1008,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Commande convertie en bon de livraison avec succès'),
+        content: Text('Commande convertie en bon de livraison avec succes'),
         backgroundColor: AppColors.success,
       ));
     }

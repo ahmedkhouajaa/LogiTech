@@ -61,12 +61,31 @@ class DeliveryNote {
     DateTime? createdAt,
     DateTime? updatedAt,
     this.items = const [],
+    double? dbTotalHT,
+    double? dbTotalTVA,
+    double? dbTotalTTC,
   })  : id = id ?? const Uuid().v4(),
+        _dbTotalHT = dbTotalHT,
+        _dbTotalTVA = dbTotalTVA,
+        _dbTotalTTC = dbTotalTTC,
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
-  double get subTotalHT => items.fold(0, (sum, item) => sum + item.totalHT);
-  double get subTotalTTC => items.fold(0, (sum, item) => sum + item.totalTTC);
+  final double? _dbTotalHT;
+  final double? _dbTotalTVA;
+  final double? _dbTotalTTC;
+
+  double get subTotalHT {
+    if (items.isEmpty && _dbTotalHT != null) return _dbTotalHT!;
+    return items.fold(0, (sum, item) => sum + item.totalHT);
+  }
+
+  double get subTotalTTC {
+    if (items.isEmpty && _dbTotalTTC != null && pricingMode == 'ttc') {
+      return _dbTotalTTC! - timbreFiscal + discountAmount;
+    }
+    return items.fold(0, (sum, item) => sum + item.totalTTC);
+  }
 
   Map<double, double> get tvaBreakdown {
     final breakdown = <double, double>{};
@@ -76,7 +95,10 @@ class DeliveryNote {
     return breakdown;
   }
 
-  double get totalTVA => items.fold(0, (sum, item) => sum + item.tvaAmount);
+  double get totalTVA {
+    if (items.isEmpty && _dbTotalTVA != null) return _dbTotalTVA!;
+    return items.fold(0, (sum, item) => sum + item.tvaAmount);
+  }
 
   double get discountAmount {
     if (globalDiscountAmount > 0) return globalDiscountAmount;
@@ -84,9 +106,13 @@ class DeliveryNote {
     return 0;
   }
 
-  double get totalHTAfterDiscount => subTotalHT - discountAmount;
+  double get totalHTAfterDiscount {
+    if (items.isEmpty && _dbTotalHT != null) return _dbTotalHT!;
+    return subTotalHT - discountAmount;
+  }
 
   double get totalTTC {
+    if (items.isEmpty && _dbTotalTTC != null) return _dbTotalTTC!;
     if (pricingMode == 'ttc') {
       return subTotalTTC - discountAmount + timbreFiscal;
     } else {
@@ -220,6 +246,9 @@ class DeliveryNote {
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
         items: items,
+        dbTotalHT: map['total_ht'] != null ? (map['total_ht'] as num).toDouble() : null,
+        dbTotalTVA: map['total_tva'] != null ? (map['total_tva'] as num).toDouble() : null,
+        dbTotalTTC: map['total_ttc'] != null ? (map['total_ttc'] as num).toDouble() : null,
       );
 }
 

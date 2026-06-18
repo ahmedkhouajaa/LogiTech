@@ -11,6 +11,7 @@ import 'dashboard_screen.dart';
 import 'customers_screen.dart';
 import 'suppliers_screen.dart';
 import 'products_screen.dart';
+import 'product_settings_screen.dart';
 import 'invoices_screen.dart';
 import 'customer_orders_screen.dart';
 import 'quotes_screen.dart';
@@ -23,6 +24,7 @@ import 'treasury_accounts_screen.dart';
 import 'projects_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
+import 'credit_notes_screen.dart';
 import 'purchase_invoices_screen.dart';
 import 'supplier_orders_screen.dart';
 import 'withholding_tax_screen.dart';
@@ -59,6 +61,8 @@ class _AppShellScreenState extends State<AppShellScreen> {
         return const SuppliersScreen();
       case AppModule.products:
         return const ProductsScreen();
+      case AppModule.productSettings:
+        return const ProductSettingsScreen();
       case AppModule.invoices:
         return const InvoicesScreen();
       case AppModule.customerOrders:
@@ -69,6 +73,8 @@ class _AppShellScreenState extends State<AppShellScreen> {
         return const DeliveryNotesScreen();
       case AppModule.stockDashboard:
         return const StockScreen();
+      case AppModule.stockMovements:
+        return const StockMovementsScreen();
       case AppModule.transactions:
         return const TreasuryTransactionsScreen();
       case AppModule.checksTraites:
@@ -94,6 +100,8 @@ class _AppShellScreenState extends State<AppShellScreen> {
         return const StockWithdrawalsScreen();
       case AppModule.returnVouchers:
         return const ReturnNotesScreen();
+      case AppModule.creditNotes:
+        return const CreditNotesScreen();
       default:
         return _ComingSoonScreen(module: _activeModule);
     }
@@ -105,31 +113,32 @@ class _AppShellScreenState extends State<AppShellScreen> {
       case AppModule.customers: return 'Clients';
       case AppModule.suppliers: return 'Fournisseurs';
       case AppModule.products: return 'Articles';
+      case AppModule.productSettings: return 'Parametres des articles';
       case AppModule.invoices: return 'Factures';
       case AppModule.quotes: return 'Devis';
       case AppModule.deliveryNotes: return 'Bons de livraison';
       case AppModule.stockDashboard: return 'Stock';
       case AppModule.stockMovements: return 'Mouvements de stock';
       case AppModule.transactions: return 'Transactions';
-      case AppModule.checksTraites: return 'Chèques & Traites';
+      case AppModule.checksTraites: return 'Cheques & Traites';
       case AppModule.projects: return 'Projets';
       case AppModule.reports: return 'Rapports & Statistiques';
-      case AppModule.settings: return 'Paramètres';
+      case AppModule.settings: return 'Parametres';
       case AppModule.purchaseInvoices: return 'Factures d\'achat';
-      case AppModule.warehouses: return 'Entrepôts';
-      case AppModule.withholdingTaxSales: return 'Retenue à la source (Ventes)';
-      case AppModule.withholdingTaxPurchase: return 'Retenue à la source (Achats)';
+      case AppModule.warehouses: return 'Entrepots';
+      case AppModule.withholdingTaxSales: return 'Retenue a la source (Ventes)';
+      case AppModule.withholdingTaxPurchase: return 'Retenue a la source (Achats)';
       case AppModule.exitVouchers: return 'Bons de sortie';
       case AppModule.creditNotes: return 'Avoirs client';
       case AppModule.returnVouchers: return 'Bons de retour';
       case AppModule.supplierOrders: return 'Commandes fournisseur';
-      case AppModule.receivingVouchers: return 'Bons de réception';
+      case AppModule.receivingVouchers: return 'Bons de reception';
       case AppModule.supplierCreditNotes: return 'Avoirs fournisseur';
       case AppModule.supplierReturns: return 'Retours fournisseur';
       case AppModule.customerOrders: return 'Commandes client';
-      case AppModule.accounts: return 'Comptes de Trésorerie';
-      case AppModule.stockEntry: return 'Bons d\'entrée';
-      case AppModule.stockWithdrawal: return 'Bons de prélèvement';
+      case AppModule.accounts: return 'Comptes de Tresorerie';
+      case AppModule.stockEntry: return 'Bons d\'entree';
+      case AppModule.stockWithdrawal: return 'Bons de prelevement';
       case AppModule.stockTransfer: return 'Bons de transfert';
       case AppModule.inventorySheet: return 'Fiche d\'inventaire';
       case AppModule.payments: return 'Paiements';
@@ -189,11 +198,11 @@ class _AppShellScreenState extends State<AppShellScreen> {
                         itemBuilder: (_) => [
                           PopupMenuItem(
                             onTap: () => setState(() => _activeModule = AppModule.settings),
-                            child: const Row(children: [Icon(Icons.settings_rounded, size: 16), SizedBox(width: 8), Text('Paramètres')]),
+                            child: const Row(children: [Icon(Icons.settings_rounded, size: 16), SizedBox(width: 8), Text('Parametres')]),
                           ),
                           PopupMenuItem(
                             onTap: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
-                            child: const Row(children: [Icon(Icons.logout_rounded, size: 16, color: AppColors.error), SizedBox(width: 8), Text('Déconnexion', style: TextStyle(color: AppColors.error))]),
+                            child: const Row(children: [Icon(Icons.logout_rounded, size: 16, color: AppColors.error), SizedBox(width: 8), Text('Deconnexion', style: TextStyle(color: AppColors.error))]),
                           ),
                         ],
                       ),
@@ -225,7 +234,7 @@ class _ComingSoonScreen extends StatelessWidget {
         children: [
           Icon(Icons.construction_rounded, size: 64, color: AppColors.warning),
           const SizedBox(height: 16),
-          const Text('Module en développement', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          const Text('Module en developpement', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
           const SizedBox(height: 8),
           Text('Ce module sera disponible prochainement.', style: TextStyle(color: AppColors.textSecondary)),
         ],

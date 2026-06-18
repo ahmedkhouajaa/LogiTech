@@ -31,7 +31,7 @@ String formatDateShort(DateTime date) {
 String formatDateRelative(DateTime date) {
   final now = DateTime.now();
   final diff = now.difference(date);
-  if (diff.inMinutes < 1) return "À l'instant";
+  if (diff.inMinutes < 1) return "A l'instant";
   if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes} min';
   if (diff.inHours < 24) return 'Il y a ${diff.inHours}h';
   if (diff.inDays < 7) return 'Il y a ${diff.inDays} jours';

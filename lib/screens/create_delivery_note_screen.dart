@@ -132,7 +132,7 @@ class _CreateDeliveryNoteScreenState
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Veuillez sélectionner un client'),
+            content: Text('Veuillez selectionner un client'),
             backgroundColor: AppColors.error),
       );
       return;
@@ -188,8 +188,8 @@ class _CreateDeliveryNoteScreenState
     nav.pop();
     messenger.showSnackBar(SnackBar(
       content: Text(_isEditing
-          ? 'Bon ${note.number} mis à jour'
-          : 'Bon ${note.number} créé avec succès'),
+          ? 'Bon ${note.number} mis a jour'
+          : 'Bon ${note.number} cree avec succes'),
       backgroundColor: AppColors.success,
     ));
   }
@@ -262,9 +262,9 @@ class _CreateDeliveryNoteScreenState
             setState(() => _status = DeliveryNoteStatus.draft);
           }),
           const SizedBox(width: 8),
-          _buildHeaderButton(Icons.visibility_rounded, 'Aperçu', () {}),
+          _buildHeaderButton(Icons.visibility_rounded, 'Apercu', () {}),
           const SizedBox(width: 8),
-          _buildHeaderButton(Icons.settings_rounded, 'Paramètres', () {}),
+          _buildHeaderButton(Icons.settings_rounded, 'Parametres', () {}),
           const SizedBox(width: 8),
           SizedBox(
             height: 36,
@@ -324,7 +324,7 @@ class _CreateDeliveryNoteScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Date
-          const Text("Date d'émission",
+          const Text("Date d'emission",
               style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -429,14 +429,14 @@ class _CreateDeliveryNoteScreenState
                         return DropdownButtonFormField<String>(
                           value: _selectedProjectId,
                           isExpanded: true,
-                          hint: const Text('Projet par défaut',
+                          hint: const Text('Projet par defaut',
                               style: TextStyle(
                                   fontSize: 13,
                                   color: AppColors.textTertiary)),
                           items: [
                             const DropdownMenuItem<String>(
                                 value: null,
-                                child: Text('Projet par défaut',
+                                child: Text('Projet par defaut',
                                     style: TextStyle(fontSize: 13))),
                             ...projects.map((p) => DropdownMenuItem(
                                 value: p.id,
@@ -457,7 +457,7 @@ class _CreateDeliveryNoteScreenState
           ),
           const SizedBox(height: 20),
 
-          // Champs Personnalisés
+          // Champs Personnalises
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -468,14 +468,14 @@ class _CreateDeliveryNoteScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Champs Personnalisés',
+                const Text('Champs Personnalises',
                     style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary)),
                 const SizedBox(height: 4),
                 const Text(
-                    'Informations supplémentaires spécifiques à ce document',
+                    'Informations supplementaires specifiques a ce document',
                     style: TextStyle(
                         fontSize: 11, color: AppColors.textSecondary)),
                 const SizedBox(height: 12),
@@ -485,7 +485,7 @@ class _CreateDeliveryNoteScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Matricule du véhicule',
+                          const Text('Matricule du vehicule',
                               style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -615,11 +615,11 @@ class _CreateDeliveryNoteScreenState
               children: [
                 Expanded(
                     flex: 3,
-                    child: Text('Désignation',
+                    child: Text('Designation',
                         style: _tableHeaderStyle())),
                 SizedBox(
                     width: 120,
-                    child: Text('Quantité',
+                    child: Text('Quantite',
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
@@ -677,7 +677,7 @@ class _CreateDeliveryNoteScreenState
         children: [
           Row(
             children: [
-              // Désignation
+              // Designation
               Expanded(
                 flex: 3,
                 child: TextFormField(
@@ -689,7 +689,7 @@ class _CreateDeliveryNoteScreenState
                 ),
               ),
               const SizedBox(width: 8),
-              // Quantité with + button
+              // Quantite with + button
               SizedBox(
                 width: 120,
                 child: Row(
@@ -736,7 +736,7 @@ class _CreateDeliveryNoteScreenState
                   children: [
                     Expanded(
                       child: TextFormField(
-                        key: ValueKey('pu_${item.id}_init'),
+                        key: ValueKey('pu_${item.id}_${item.productId}'),
                         initialValue: item.unitPrice > 0
                             ? item.unitPrice.toStringAsFixed(0)
                             : '',
@@ -962,7 +962,7 @@ class _CreateDeliveryNoteScreenState
                   border: Border.all(color: AppColors.border),
                 ),
                 child: DropdownButtonFormField<String>(
-                  hint: const Text('Sélectionner un article...',
+                  hint: const Text('Selectionner un article...',
                       style: TextStyle(
                           fontSize: 13,
                           color: AppColors.textTertiary)),
@@ -1250,7 +1250,7 @@ class _CreateDeliveryNoteScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Conditions Générales',
+              const Text('Conditions Generales',
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1260,7 +1260,7 @@ class _CreateDeliveryNoteScreenState
                 controller: _conditionsCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText: 'Conditions générales pour ce document',
+                  hintText: 'Conditions generales pour ce document',
                   hintStyle: const TextStyle(
                       color: AppColors.textTertiary, fontSize: 13),
                   filled: true,

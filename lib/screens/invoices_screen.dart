@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid.dart';
 import '../blocs/invoices/invoices_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
@@ -10,6 +11,13 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/dashboard_card.dart';
+import '../widgets/invoice_payment_dialog.dart';
+import '../blocs/payments/payments_bloc.dart';
+import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
+import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
+import '../blocs/invoices/invoices_bloc.dart';
+import '../blocs/credit_notes/credit_notes_bloc.dart';
+import '../models/credit_note.dart';
 import 'create_invoice_screen.dart';
 
 class InvoicesScreen extends StatefulWidget {
@@ -55,7 +63,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
             children: [
-              Text('Gérer vos factures', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+              Text('Gerer vos factures', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
               const Spacer(),
               AppButton(
                 label: 'Nouvelle facture',
@@ -119,7 +127,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                   return DropdownButtonFormField<String>(
                     value: _selectedClientId,
                     isExpanded: true,
-                    hint: const Text('Sélectionner un client...', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
+                    hint: const Text('Selectionner un client...', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
                     items: [
                       const DropdownMenuItem<String>(value: null, child: Text('Tous les clients', style: TextStyle(fontSize: 13))),
                       ...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))),
@@ -135,14 +143,14 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          // Date de début
+          // Date de debut
           Expanded(
             flex: 2,
             child: _buildFilterField(
-              label: 'Date de début',
+              label: 'Date de debut',
               child: _buildDateFilterField(
                 value: _dateFrom,
-                hint: 'Sélectionner une date',
+                hint: 'Selectionner une date',
                 onChanged: (d) {
                   setState(() => _dateFrom = d);
                   _applyFilters();
@@ -158,7 +166,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               label: 'Date de fin',
               child: _buildDateFilterField(
                 value: _dateTo,
-                hint: 'Sélectionner une date',
+                hint: 'Selectionner une date',
                 onChanged: (d) {
                   setState(() => _dateTo = d);
                   _applyFilters();
@@ -207,7 +215,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 });
                 context.read<InvoicesBloc>().add(LoadInvoices());
               },
-              tooltip: 'Réinitialiser les filtres',
+              tooltip: 'Reinitialiser les filtres',
             ),
           ),
         ],
@@ -304,7 +312,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                             children: [
                               Icon(Icons.receipt_long_rounded, size: 48, color: AppColors.textTertiary),
                               const SizedBox(height: 12),
-                              const Text('Aucune facture trouvée', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                              const Text('Aucune facture trouvee', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
                             ],
                           ),
                         )
@@ -320,7 +328,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                               horizontalMargin: 16,
                               columns: const [
                                 DataColumn(label: SizedBox(width: 20)),
-                                DataColumn(label: Text('Référence')),
+                                DataColumn(label: Text('Reference')),
                                 DataColumn(label: Text('Client')),
                                 DataColumn(label: Text('Statut')),
                                 DataColumn(label: Text('Montant')),
@@ -354,7 +362,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
           ),
         ),
-        // Référence (number + date)
+        // Reference (number + date)
         DataCell(
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -419,9 +427,16 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               const PopupMenuDivider(height: 1),
               _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
               const PopupMenuDivider(height: 1),
-              _buildMenuItem('to_credit_note', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Avoir'),
+              if (inv.status != InvoiceStatus.paid) ...[
+                _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
+                const PopupMenuDivider(height: 1),
+              ],
+              if (inv.creditNoteId != null && inv.creditNoteId!.isNotEmpty)
+                _buildMenuItem('view_credit_note', Icons.receipt_long_outlined, AppColors.primary, 'Voir l\'avoir')
+              else
+                _buildMenuItem('to_credit_note', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Avoir'),
               const PopupMenuDivider(height: 1),
-              _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
+              _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
               const PopupMenuDivider(height: 1),
               _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
               const PopupMenuDivider(height: 1),
@@ -431,7 +446,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               const PopupMenuDivider(height: 1),
               _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
               const PopupMenuDivider(height: 1),
-              _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'),
+              _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
             ],
           ),
         ),
@@ -478,7 +493,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           const SizedBox(width: 24),
           // Display info
           Text(
-            'Affichage de $startRow à $endRow sur $totalRows résultats',
+            'Affichage de $startRow a $endRow sur $totalRows resultats',
             style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
           ),
           const Spacer(),
@@ -519,7 +534,89 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     );
   }
 
-  PopupMenuItem<String> _buildMenuItem(String value, IconData icon, Color iconColor, String text) {
+  void _createCreditNoteFromInvoice(BuildContext context, Invoice inv) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+            SizedBox(width: 8),
+            Text('Confirmation'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Voulez-vous transformer cette facture en avoir ?'),
+            const SizedBox(height: 16),
+            Text('Facture: ${inv.number}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text('Client: ${inv.customerName}'),
+            Text('Montant: ${formatCurrencyDT(inv.totalTTC + inv.timbreFiscal)}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+
+              final now = DateTime.now();
+              final String cnId = Uuid().v4();
+
+              final String cnNumber = 'AV-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
+              
+              final creditNote = CreditNote(
+                id: cnId,
+                number: cnNumber,
+                invoiceId: inv.id,
+                customerId: inv.customerId,
+                customerName: inv.customerName,
+                date: now,
+                status: CreditNoteStatus.unused,
+                totalHT: inv.totalHT,
+                totalTva: inv.totalTva,
+                totalTTC: inv.totalTTC,
+                items: inv.items.map((i) => CreditNoteItem(
+                  id: Uuid().v4(),
+                  productId: i.productId,
+                  quantity: i.quantity,
+                  unitPrice: i.unitPrice,
+                  tvaRate: i.tvaRate,
+                  totalHT: i.totalHT,
+                )).toList(),
+                createdAt: now,
+                updatedAt: now,
+              );
+
+              // Create the credit note
+              context.read<CreditNotesBloc>().add(AddCreditNote(creditNote));
+              
+              // Update the invoice to link it
+              final updatedInvoice = inv.copyWith(creditNoteId: cnId);
+              context.read<InvoicesBloc>().add(UpdateInvoice(updatedInvoice));
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Avoir $cnNumber créé avec succès'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Confirmer', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _buildMenuItem(
+    String value, IconData icon, Color iconColor, String text) {
     return PopupMenuItem<String>(
       value: value,
       height: 40,
@@ -556,7 +653,31 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         break;
       case 'print':
         // TODO: Print logic
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impression non implémentée')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impression non implementee')));
+        break;
+      case 'add_payment':
+        showDialog(
+          context: context,
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: context.read<PaymentsBloc>()),
+              BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+              BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+              BlocProvider.value(value: context.read<InvoicesBloc>()),
+            ],
+            child: InvoicePaymentDialog(invoice: inv),
+          ),
+        ).then((created) {
+          if (created == true && context.mounted) {
+            context.read<InvoicesBloc>().add(LoadInvoices());
+          }
+        });
+        break;
+      case 'to_credit_note':
+        _createCreditNoteFromInvoice(context, inv);
+        break;
+      case 'view_credit_note':
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Affichage de l\'avoir non implementé')));
         break;
       case 'delete':
         _confirmDelete(inv);
@@ -565,7 +686,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         _showChangeStatusDialog(context, inv);
         break;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));
     }
   }
 

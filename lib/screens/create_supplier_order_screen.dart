@@ -123,7 +123,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Veuillez sélectionner un fournisseur'),
+            content: Text('Veuillez selectionner un fournisseur'),
             backgroundColor: AppColors.error),
       );
       return;
@@ -177,8 +177,8 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
     nav.pop();
     messenger.showSnackBar(SnackBar(
       content: Text(_isEditing
-          ? 'Commande ${order.number} mise à jour'
-          : 'Commande ${order.number} créée avec succès'),
+          ? 'Commande ${order.number} mise a jour'
+          : 'Commande ${order.number} creee avec succes'),
       backgroundColor: AppColors.success,
     ));
   }
@@ -327,7 +327,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                         return DropdownButtonFormField<String>(
                           value: _selectedSupplierId,
                           decoration: const InputDecoration(
-                              hintText: 'Sélectionner un fournisseur...'),
+                              hintText: 'Selectionner un fournisseur...'),
                           items: suppliers
                               .map((s) => DropdownMenuItem(
                                   value: s.id, child: Text(s.name)))
@@ -336,7 +336,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                             setState(() => _selectedSupplierId = val);
                           },
                           validator: (v) => v == null
-                              ? 'Veuillez sélectionner un fournisseur'
+                              ? 'Veuillez selectionner un fournisseur'
                               : null,
                         );
                       },
@@ -416,7 +416,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                         return DropdownButtonFormField<String>(
                           value: _selectedProjectId,
                           decoration: const InputDecoration(
-                              hintText: 'Sélectionner un projet...'),
+                              hintText: 'Selectionner un projet...'),
                           items: [
                             const DropdownMenuItem(
                                 value: null, child: Text('Aucun projet')),
@@ -525,7 +525,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                             fontSize: 13,
                             color: AppColors.textSecondary))),
                 Expanded(
-                    child: Text('Quantité',
+                    child: Text('Quantite',
                         style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
@@ -562,7 +562,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
             const Padding(
               padding: EdgeInsets.all(32),
               child: Center(
-                child: Text('Aucun article ajouté. Cliquez sur "Ajouter un article".',
+                child: Text('Aucun article ajoute. Cliquez sur "Ajouter un article".',
                     style: TextStyle(color: AppColors.textSecondary)),
               ),
             ),
@@ -623,7 +623,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                               borderRadius: BorderRadius.circular(AppRadius.md),
                               borderSide:
                                   const BorderSide(color: AppColors.border)),
-                          hintText: 'Sélectionner un article...',
+                          hintText: 'Selectionner un article...',
                         ),
                         items: products
                             .map((p) => DropdownMenuItem(
@@ -860,7 +860,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
             _buildTotalRow('Remise globale', -_globalDiscountAmount,
                 color: AppColors.error),
             const SizedBox(height: 8),
-            _buildTotalRow('Total HT (Après remise)', _totalHTAfterDiscount,
+            _buildTotalRow('Total HT (Apres remise)', _totalHTAfterDiscount,
                 isBold: true),
           ],
           const Padding(
@@ -886,7 +886,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
             padding: EdgeInsets.symmetric(vertical: 8),
             child: Divider(color: AppColors.border),
           ),
-          _buildTotalRow('NET À PAYER', _totalTTC,
+          _buildTotalRow('NET A PAYER', _totalTTC,
               isBold: true, fontSize: 20, color: AppColors.primary),
         ],
       ),

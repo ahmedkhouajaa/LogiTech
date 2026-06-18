@@ -72,11 +72,11 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  const Text('Gérer vos commandes fournisseur', style: TextStyle(color: AppColors.textSecondary)),
+                  const Text('Gerer vos commandes fournisseur', style: TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
               AppButton(
-                label: 'Créer une Commande',
+                label: 'Creer une Commande',
                 icon: Icons.add_rounded,
                 onPressed: () => Navigator.push(
                   context,
@@ -146,7 +146,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                       return DropdownButtonFormField<String>(
                         value: _selectedSupplierId,
                         decoration: InputDecoration(
-                          hintText: 'Sélectionner un fournisseur...',
+                          hintText: 'Selectionner un fournisseur...',
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
@@ -177,7 +177,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Date de début', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const Text('Date de debut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
@@ -206,7 +206,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            _dateFrom != null ? formatDateLong(_dateFrom!) : 'Sélectionner une date',
+                            _dateFrom != null ? formatDateLong(_dateFrom!) : 'Selectionner une date',
                             style: TextStyle(fontSize: 13, color: _dateFrom != null ? AppColors.textPrimary : AppColors.textTertiary),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -255,7 +255,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            _dateTo != null ? formatDateLong(_dateTo!) : 'Sélectionner une date',
+                            _dateTo != null ? formatDateLong(_dateTo!) : 'Selectionner une date',
                             style: TextStyle(fontSize: 13, color: _dateTo != null ? AppColors.textPrimary : AppColors.textTertiary),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -377,7 +377,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                           child: Row(
                             children: [
                               const SizedBox(width: 32), // Checkbox space
-                              const Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                              const Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
                               const Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
                               Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: const Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)))),
                               const Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
@@ -394,7 +394,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                     children: [
                                       Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.border),
                                       SizedBox(height: 16),
-                                      Text("Aucune commande trouvée", style: TextStyle(color: AppColors.textSecondary)),
+                                      Text("Aucune commande trouvee", style: TextStyle(color: AppColors.textSecondary)),
                                     ],
                                   ),
                                 )
@@ -559,7 +559,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                               Text('Page ${_currentPage + 1} sur $totalPages', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                               const Spacer(),
                               Text(
-                                totalItems == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de ${startIndex + 1} à $endIndex sur $totalItems résultats',
+                                totalItems == 0 ? 'Affichage de 0 a 0 sur 0 resultats' : 'Affichage de ${startIndex + 1} a $endIndex sur $totalItems resultats',
                                 style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                               ),
                               const SizedBox(width: 16),

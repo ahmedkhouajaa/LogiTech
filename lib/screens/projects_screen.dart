@@ -46,7 +46,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   child: AppCard(
                     padding: EdgeInsets.zero,
                     child: DataTableWidget<Project>(
-                      columns: const ['Nom', 'Client', 'Statut', 'Budget', 'Date Début', 'Date Fin'],
+                      columns: const ['Nom', 'Client', 'Statut', 'Budget', 'Date Debut', 'Date Fin'],
                       rows: state.projects,
                       emptyMessage: 'Aucun projet',
                       cellBuilder: (p) => [

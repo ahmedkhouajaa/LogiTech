@@ -73,7 +73,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Gérer vos bons de sortie',
+                    'Gerer vos bons de sortie',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
@@ -81,7 +81,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
               ElevatedButton.icon(
                 onPressed: () => _navigate(context, null),
                 icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Créer un Bon de Sortie'),
+                label: const Text('Creer un Bon de Sortie'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -150,7 +150,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                   List<Customer> customers = [];
                   if (state is CustomersLoaded) customers = state.customers;
                   return _dropdownField(
-                    hint: 'Sélectionner un client...',
+                    hint: 'Selectionner un client...',
                     value: _selectedClientId,
                     items: [
                       const DropdownMenuItem(
@@ -176,10 +176,10 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
           Expanded(
             flex: 2,
             child: _filterSection(
-              label: 'Date de début',
+              label: 'Date de debut',
               child: _datePicker(
                 value: _dateFrom,
-                hint: 'Sélectionner une date',
+                hint: 'Selectionner une date',
                 onPicked: (d) {
                   setState(() => _dateFrom = d);
                   _applyFilters();
@@ -196,7 +196,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
               label: 'Date de fin',
               child: _datePicker(
                 value: _dateTo,
-                hint: 'Sélectionner une date',
+                hint: 'Selectionner une date',
                 onPicked: (d) {
                   setState(() => _dateTo = d);
                   _applyFilters();
@@ -393,7 +393,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                               const SizedBox(width: 32),
                               const Expanded(
                                   flex: 2,
-                                  child: Text('Référence',
+                                  child: Text('Reference',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 13,
@@ -441,7 +441,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                                       Icon(Icons.local_shipping_outlined,
                                           size: 48, color: AppColors.border),
                                       SizedBox(height: 16),
-                                      Text('Aucun bon de sortie trouvé',
+                                      Text('Aucun bon de sortie trouve',
                                           style: TextStyle(
                                               color: AppColors.textSecondary)),
                                     ],
@@ -513,8 +513,8 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                               const Spacer(),
                               Text(
                                 total == 0
-                                    ? 'Affichage de 0 à 0 sur 0 résultats'
-                                    : 'Affichage de ${start + 1} à $end sur $total résultats',
+                                    ? 'Affichage de 0 a 0 sur 0 resultats'
+                                    : 'Affichage de ${start + 1} a $end sur $total resultats',
                                 style: const TextStyle(
                                     fontSize: 13,
                                     color: AppColors.textSecondary),
@@ -575,7 +575,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
             ),
           ),
 
-          // Référence
+          // Reference
           Expanded(
             flex: 2,
             child: Column(

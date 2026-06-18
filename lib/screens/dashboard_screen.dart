@@ -79,7 +79,7 @@ class DashboardScreen extends StatelessWidget {
             children: [
               Text('Bienvenue !', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
               SizedBox(height: 4),
-              Text('Voici le résumé de votre activité', style: TextStyle(color: Colors.white70, fontSize: 13)),
+              Text('Voici le resume de votre activite', style: TextStyle(color: Colors.white70, fontSize: 13)),
             ],
           ),
           const Spacer(),
@@ -104,9 +104,9 @@ class DashboardScreen extends StatelessWidget {
       children: [
         Expanded(
           child: DashboardCard(
-            title: 'Montant Facturé',
+            title: 'Montant Facture',
             value: formatCurrencyCompact(totalInvoiced),
-            subtitle: 'Payé ${paid.toStringAsFixed(0)}% · En cours ${partial.toStringAsFixed(0)}% · Impayé ${unpaid.toStringAsFixed(0)}%',
+            subtitle: 'Paye ${paid.toStringAsFixed(0)}% · En cours ${partial.toStringAsFixed(0)}% · Impaye ${unpaid.toStringAsFixed(0)}%',
             icon: Icons.receipt_long_rounded,
             gradientColors: const [Color(0xFF1a56db), Color(0xFF3B82F6)],
           ),
@@ -124,7 +124,7 @@ class DashboardScreen extends StatelessWidget {
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: DashboardCard(
-            title: 'Paiements reçus',
+            title: 'Paiements recus',
             value: formatCurrencyCompact(state.totalPaid),
             subtitle: 'Encaissements total',
             icon: Icons.payments_rounded,
@@ -134,9 +134,9 @@ class DashboardScreen extends StatelessWidget {
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: DashboardCard(
-            title: 'TVA Collectée',
+            title: 'TVA Collectee',
             value: formatCurrencyCompact(state.totalTvaCollected),
-            subtitle: 'TVA déductible: ${formatCurrencyCompact(state.totalTvaDeductible)}',
+            subtitle: 'TVA deductible: ${formatCurrencyCompact(state.totalTvaDeductible)}',
             icon: Icons.calculate_rounded,
             gradientColors: const [Color(0xFFD97706), Color(0xFFF59E0B)],
           ),
@@ -150,7 +150,7 @@ class DashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(title: 'Prévision de Trésorerie', icon: Icons.trending_up_rounded),
+          const SectionHeader(title: 'Prevision de Tresorerie', icon: Icons.trending_up_rounded),
           const SizedBox(height: 20),
           SizedBox(
             height: 200,
@@ -168,7 +168,7 @@ class DashboardScreen extends StatelessWidget {
                   bottomTitles: AxisTitles(sideTitles: SideTitles(
                     showTitles: true,
                     getTitlesWidget: (v, _) {
-                      const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'];
+                      const months = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun'];
                       final idx = v.toInt();
                       if (idx < 0 || idx >= months.length) return const SizedBox();
                       return Text(months[idx], style: const TextStyle(fontSize: 10, color: AppColors.textTertiary));
@@ -209,7 +209,7 @@ class DashboardScreen extends StatelessWidget {
             children: [
               _buildLegend(AppColors.primary, 'Recettes'),
               const SizedBox(width: 16),
-              _buildLegend(AppColors.error, 'Dépenses'),
+              _buildLegend(AppColors.error, 'Depenses'),
             ],
           ),
         ],
@@ -234,14 +234,14 @@ class DashboardScreen extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            child: SectionHeader(title: 'Échéancier', icon: Icons.calendar_today_rounded,
-              action: Text('${checks.length} à venir', style: TextStyle(fontSize: 12, color: AppColors.primary))),
+            child: SectionHeader(title: 'Echeancier', icon: Icons.calendar_today_rounded,
+              action: Text('${checks.length} a venir', style: TextStyle(fontSize: 12, color: AppColors.primary))),
           ),
           const Divider(height: 1),
           if (checks.isEmpty)
             const Padding(
               padding: EdgeInsets.all(24),
-              child: Center(child: Text('Aucun échéance prochaine', style: TextStyle(color: AppColors.textTertiary, fontSize: 13))),
+              child: Center(child: Text('Aucun echeance prochaine', style: TextStyle(color: AppColors.textTertiary, fontSize: 13))),
             )
           else
             ...checks.take(6).map((c) => _buildCheckRow(c)),
@@ -272,7 +272,7 @@ class DashboardScreen extends StatelessWidget {
           )),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text(formatCurrencyCompact(c.amount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            Text(daysLeft <= 0 ? 'Échu' : 'J-$daysLeft', style: TextStyle(fontSize: 11, color: isUrgent ? AppColors.error : AppColors.textTertiary)),
+            Text(daysLeft <= 0 ? 'Echu' : 'J-$daysLeft', style: TextStyle(fontSize: 11, color: isUrgent ? AppColors.error : AppColors.textTertiary)),
           ]),
         ],
       ),
@@ -287,7 +287,7 @@ class DashboardScreen extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            child: const SectionHeader(title: 'Factures récentes', icon: Icons.receipt_rounded),
+            child: const SectionHeader(title: 'Factures recentes', icon: Icons.receipt_rounded),
           ),
           const Divider(height: 1),
           if (invoices.isEmpty)

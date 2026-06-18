@@ -57,7 +57,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Ã¢â€€Ã¢â€€ Header Ã¢â€€Ã¢â€€
+        // Ã¢a€€Ã¢a€€ Header Ã¢a€€Ã¢a€€
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Row(
@@ -82,7 +82,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Gérer vos Bons de retour',
+                    'Gerer vos Bons de retour',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
@@ -90,7 +90,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
               ElevatedButton.icon(
                 onPressed: () => _navigate(context, null),
                 icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Créer un Bon de retour'),
+                label: const Text('Creer un Bon de retour'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -102,14 +102,14 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
           ),
         ),
 
-        // Ã¢â€€Ã¢â€€ Filter Bar Ã¢â€€Ã¢â€€
+        // Ã¢a€€Ã¢a€€ Filter Bar Ã¢a€€Ã¢a€€
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: _buildFilterBar(),
         ),
         const SizedBox(height: AppSpacing.lg),
 
-        // Ã¢â€€Ã¢â€€ Table Ã¢â€€Ã¢â€€
+        // Ã¢a€€Ã¢a€€ Table Ã¢a€€Ã¢a€€
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -159,7 +159,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                   List<Customer> customers = [];
                   if (state is CustomersLoaded) customers = state.customers;
                   return _dropdownField(
-                    hint: 'Sélectionner un client...',
+                    hint: 'Selectionner un client...',
                     value: _selectedClientId,
                     items: [
                       const DropdownMenuItem(
@@ -185,10 +185,10 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
           Expanded(
             flex: 2,
             child: _filterSection(
-              label: 'Date de début',
+              label: 'Date de debut',
               child: _datePicker(
                 value: _dateFrom,
-                hint: 'Sélectionner une date',
+                hint: 'Selectionner une date',
                 onPicked: (d) {
                   setState(() => _dateFrom = d);
                   _applyFilters();
@@ -205,7 +205,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
               label: 'Date de fin',
               child: _datePicker(
                 value: _dateTo,
-                hint: 'Sélectionner une date',
+                hint: 'Selectionner une date',
                 onPicked: (d) {
                   setState(() => _dateTo = d);
                   _applyFilters();
@@ -402,7 +402,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                               const SizedBox(width: 32),
                               const Expanded(
                                   flex: 2,
-                                  child: Text('Référence',
+                                  child: Text('Reference',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 13,
@@ -450,7 +450,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                                       Icon(Icons.local_shipping_outlined,
                                           size: 48, color: AppColors.border),
                                       SizedBox(height: 16),
-                                      Text('Aucun Bon de retour trouvé',
+                                      Text('Aucun Bon de retour trouve',
                                           style: TextStyle(
                                               color: AppColors.textSecondary)),
                                     ],
@@ -522,8 +522,8 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                               const Spacer(),
                               Text(
                                 total == 0
-                                    ? 'Affichage de 0 ÃƒÂ  0 sur 0 résultats'
-                                    : 'Affichage de ${start + 1} ÃƒÂ  $end sur $total résultats',
+                                    ? 'Affichage de 0 a 0 sur 0 resultats'
+                                    : 'Affichage de ${start + 1} a  $end sur $total resultats',
                                 style: const TextStyle(
                                     fontSize: 13,
                                     color: AppColors.textSecondary),
@@ -584,7 +584,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
             ),
           ),
 
-          // Référence
+          // Reference
           Expanded(
             flex: 2,
             child: Column(
@@ -683,7 +683,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                   _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
                   const PopupMenuDivider(height: 1),
                   const PopupMenuDivider(height: 1),
-                  _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
+                  _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
                   const PopupMenuDivider(height: 1),
                   _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
                   const PopupMenuDivider(height: 1),
@@ -693,7 +693,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                   const PopupMenuDivider(height: 1),
                   _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
                   const PopupMenuDivider(height: 1),
-                  _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'),
+                  _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
                 ],
               ),
             ),
@@ -781,7 +781,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
         break;
       case 'print':
         // TODO: Print logic
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impression non implémentée')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impression non implementee')));
         break;
       case 'add_payment':
         _showAddPaymentDialog(context, note);
@@ -793,7 +793,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
         _showChangeStatusDialog(context, note);
         break;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));
     }
   }
 
@@ -903,12 +903,12 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
               builder: (context, val, child) => DropdownButtonFormField<String>(
                 value: val,
                 decoration: const InputDecoration(
-                  labelText: 'Méthode de paiement',
+                  labelText: 'Methode de paiement',
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'especes', child: Text('Espèces')),
-                  DropdownMenuItem(value: 'cheque', child: Text('Chèque')),
+                  DropdownMenuItem(value: 'especes', child: Text('Especes')),
+                  DropdownMenuItem(value: 'cheque', child: Text('Cheque')),
                   DropdownMenuItem(value: 'virement', child: Text('Virement')),
                   DropdownMenuItem(value: 'carte', child: Text('Carte')),
                 ],
@@ -955,7 +955,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                 if (context.mounted) {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Paiement ajouté avec succès'),
+                    content: Text('Paiement ajoute avec succes'),
                     backgroundColor: AppColors.success,
                   ));
                 }

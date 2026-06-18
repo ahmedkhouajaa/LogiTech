@@ -121,17 +121,17 @@ enum DocumentStatus {
       case draft:
         return 'Brouillon';
       case created:
-        return 'Créé';
+        return 'Cree';
       case sent:
-        return 'Envoyé';
+        return 'Envoye';
       case accepted:
-        return 'Accepté';
+        return 'Accepte';
       case rejected:
-        return 'Refusé';
+        return 'Refuse';
       case converted:
         return 'Converti';
       case cancelled:
-        return 'Annulé';
+        return 'Annule';
     }
   }
 
@@ -169,17 +169,17 @@ enum InvoiceStatus {
       case draft:
         return 'Brouillon';
       case sent:
-        return 'Envoyée';
+        return 'Envoyee';
       case partial:
-        return 'Partiellement payée';
+        return 'Partiellement payee';
       case paid:
-        return 'Payée';
+        return 'Payee';
       case unpaid:
-        return 'Non payé';
+        return 'Non paye';
       case overdue:
         return 'En retard';
       case cancelled:
-        return 'Annulée';
+        return 'Annulee';
     }
   }
 
@@ -215,13 +215,13 @@ enum OrderStatus {
       case pending:
         return 'En attente';
       case confirmed:
-        return 'Confirmée';
+        return 'Confirmee';
       case inProgress:
         return 'En cours';
       case delivered:
-        return 'Livrée';
+        return 'Livree';
       case cancelled:
-        return 'Annulée';
+        return 'Annulee';
     }
   }
 }
@@ -240,17 +240,17 @@ enum CustomerOrderStatus {
       case draft:
         return 'Brouillon';
       case created:
-        return 'Créé';
+        return 'Cree';
       case inProgress:
         return 'En cours';
       case delivered:
-        return 'Livré';
+        return 'Livre';
       case cancelled:
-        return 'Annulé';
+        return 'Annule';
       case validatedAndInvoiced:
-        return 'Validée et facturée';
+        return 'Validee et facturee';
       case validated:
-        return 'Validée';
+        return 'Validee';
     }
   }
 
@@ -286,13 +286,13 @@ enum DeliveryNoteStatus {
       case draft:
         return 'Brouillon';
       case delivered:
-        return 'Livré';
+        return 'Livre';
       case invoiced:
-        return 'Livré et Facturé';
+        return 'Livre et Facture';
       case returned:
-        return 'Retourné';
+        return 'Retourne';
       case cancelled:
-        return 'Annulé';
+        return 'Annule';
     }
   }
 
@@ -322,9 +322,9 @@ enum ReturnNoteStatus {
       case draft:
         return 'Brouillon';
       case validated:
-        return 'Validé';
+        return 'Valide';
       case cancelled:
-        return 'Annulé';
+        return 'Annule';
     }
   }
 
@@ -350,9 +350,9 @@ enum StockWithdrawalStatus {
       case draft:
         return 'Brouillon';
       case validated:
-        return 'Validé';
+        return 'Valide';
       case cancelled:
-        return 'Annulé';
+        return 'Annule';
     }
   }
 
@@ -377,7 +377,7 @@ enum MovementType {
   String get label {
     switch (this) {
       case entry:
-        return 'Entrée';
+        return 'Entree';
       case exit:
         return 'Sortie';
       case transfer:
@@ -398,9 +398,9 @@ enum PaymentMethod {
   String get label {
     switch (this) {
       case cash:
-        return 'Espèces';
+        return 'Especes';
       case check:
-        return 'Chèque';
+        return 'Cheque';
       case transfer:
         return 'Virement';
       case card:
@@ -420,13 +420,13 @@ enum CheckTraiteType {
   String get label {
     switch (this) {
       case checkReceived:
-        return 'Chèque reçu';
+        return 'Cheque recu';
       case checkIssued:
-        return 'Chèque émis';
+        return 'Cheque emis';
       case traiteReceived:
-        return 'Traite reçue';
+        return 'Traite recue';
       case traiteIssued:
-        return 'Traite émise';
+        return 'Traite emise';
     }
   }
 }
@@ -443,13 +443,13 @@ enum CheckTraiteStatus {
       case pending:
         return 'En attente';
       case deposited:
-        return 'Déposé';
+        return 'Depose';
       case cashed:
-        return 'Encaissé';
+        return 'Encaisse';
       case returned:
-        return 'Retourné';
+        return 'Retourne';
       case cancelled:
-        return 'Annulé';
+        return 'Annule';
     }
   }
 }
@@ -468,11 +468,11 @@ enum ProjectStatus {
       case active:
         return 'Actif';
       case completed:
-        return 'Terminé';
+        return 'Termine';
       case onHold:
         return 'En pause';
       case cancelled:
-        return 'Annulé';
+        return 'Annule';
     }
   }
 }
@@ -486,7 +486,7 @@ enum TransactionType {
       case income:
         return 'Recette';
       case expense:
-        return 'Dépense';
+        return 'Depense';
     }
   }
 }
@@ -503,15 +503,15 @@ enum SupplierOrderStatus {
       case draft:
         return 'Brouillon';
       case sent:
-        return 'Envoyé';
+        return 'Envoye';
       case validated:
-        return 'Validé';
+        return 'Valide';
       case partiallyReceived:
-        return 'Partiellement reçu';
+        return 'Partiellement recu';
       case received:
-        return 'Reçu';
+        return 'Recu';
       case cancelled:
-        return 'Annulé';
+        return 'Annule';
     }
   }
 
@@ -542,10 +542,11 @@ enum SyncOperation {
 // ─── Default TVA Rates (Algeria) ──────────────────────────────────
 class TvaRates {
   static const double normal = 19.0;
-  static const double reduced = 9.0;
-  static const double reduced2 = 7.0;
+  static const double reduced = 13.0;
+  static const double reduced2 = 9.0;
+  static const double reduced3 = 7.0;
   static const double exempt = 0.0;
-  static const List<double> all = [19.0, 9.0, 7.0, 0.0];
+  static const List<double> all = [19.0, 13.0, 9.0, 7.0, 0.0];
 }
 
 // ─── Document Number Prefixes ─────────────────────────────────────

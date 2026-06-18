@@ -60,7 +60,7 @@ class _SyncIndicatorState extends State<SyncIndicator> with SingleTickerProvider
     } else if (status == SyncStatus.success) {
       color = AppColors.success;
       icon = Icons.cloud_done_rounded;
-      label = 'Synchronisé';
+      label = 'Synchronise';
     } else if (status == SyncStatus.error) {
       color = AppColors.error;
       icon = Icons.cloud_off_rounded;

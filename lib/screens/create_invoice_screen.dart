@@ -168,9 +168,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             setState(() => _status = InvoiceStatus.draft);
           }),
           const SizedBox(width: 8),
-          _buildHeaderButton(Icons.visibility_rounded, 'Aperçu', () {}),
+          _buildHeaderButton(Icons.visibility_rounded, 'Apercu', () {}),
           const SizedBox(width: 8),
-          _buildHeaderButton(Icons.settings_rounded, 'Paramètres', () {}),
+          _buildHeaderButton(Icons.settings_rounded, 'Parametres', () {}),
           const SizedBox(width: 8),
           SizedBox(
             height: 36,
@@ -222,8 +222,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Date d'émission
-          const Text("Date d'émission", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          // Date d'emission
+          const Text("Date d'emission", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
           const SizedBox(height: 6),
           GestureDetector(
             onTap: () async {
@@ -292,9 +292,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         return DropdownButtonFormField<String>(
                           value: _selectedProjectId,
                           isExpanded: true,
-                          hint: const Text('Projet par défaut', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
+                          hint: const Text('Projet par defaut', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
                           items: [
-                            const DropdownMenuItem<String>(value: null, child: Text('Projet par défaut', style: TextStyle(fontSize: 13))),
+                            const DropdownMenuItem<String>(value: null, child: Text('Projet par defaut', style: TextStyle(fontSize: 13))),
                             ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: const TextStyle(fontSize: 13)))),
                           ],
                           onChanged: (v) => setState(() => _selectedProjectId = v),
@@ -375,8 +375,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             ),
             child: Row(
               children: [
-                Expanded(flex: 3, child: Text('Désignation', style: _tableHeaderStyle())),
-                SizedBox(width: 120, child: Text('Quantité', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
+                Expanded(flex: 3, child: Text('Designation', style: _tableHeaderStyle())),
+                SizedBox(width: 120, child: Text('Quantite', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 130, child: Text('P.U', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 100, child: Text('TVA', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 140, child: Text('Total HT', style: _tableHeaderStyle(), textAlign: TextAlign.right)),
@@ -412,7 +412,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         children: [
           Row(
             children: [
-              // Désignation
+              // Designation
               Expanded(
                 flex: 3,
                 child: TextFormField(
@@ -423,7 +423,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              // Quantité with + button
+              // Quantite with + button
               SizedBox(
                 width: 120,
                 child: Row(
@@ -460,7 +460,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   children: [
                     Expanded(
                       child: TextFormField(
-                        key: ValueKey('pu_${item.id}_init'),
+                        key: ValueKey('pu_${item.id}_${item.productId}'),
                         initialValue: item.unitPrice > 0 ? item.unitPrice.toStringAsFixed(0) : '',
                         decoration: _itemInputDecoration(''),
                         style: const TextStyle(fontSize: 13),
@@ -631,7 +631,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   border: Border.all(color: AppColors.border),
                 ),
                 child: DropdownButtonFormField<String>(
-                  hint: const Text('Sélectionner un article...', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
+                  hint: const Text('Selectionner un article...', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
                   isExpanded: true,
                   items: products.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: const TextStyle(fontSize: 13)))).toList(),
                   onChanged: (v) {
@@ -808,13 +808,13 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Conditions Générales', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              const Text('Conditions Generales', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _conditionsCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText: 'Conditions générales pour ce document',
+                  hintText: 'Conditions generales pour ce document',
                   hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.surface,
@@ -865,7 +865,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   void _save() {
     if (_selectedCustomer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error),
+        const SnackBar(content: Text('Veuillez selectionner un client'), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -904,8 +904,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(_isEditing
-            ? 'Facture ${invoice.number} mise à jour'
-            : 'Facture ${invoice.number} créée avec succès'),
+            ? 'Facture ${invoice.number} mise a jour'
+            : 'Facture ${invoice.number} creee avec succes'),
         backgroundColor: AppColors.success,
       ),
     );

@@ -31,79 +31,37 @@ class _CustomersScreenState extends State<CustomersScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Page Header & KPIs
-        Padding(
+        // Modern Action Bar
+        Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Gestion des Clients', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              const SizedBox(height: 4),
-              const Text('Gérez vos clients, leurs coordonnées et soldes.', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-              const SizedBox(height: 24),
-              BlocBuilder<CustomersBloc, CustomersState>(
-                builder: (context, state) {
-                  int totalClients = 0;
-                  double totalBalance = 0;
-                  int debtors = 0;
-
-                  if (state is CustomersLoaded) {
-                    totalClients = state.customers.length;
-                    totalBalance = state.customers.fold(0, (sum, c) => sum + c.balance);
-                    debtors = state.customers.where((c) => c.balance < 0).length;
-                  }
-
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: DashboardCard(
-                          title: 'Total Clients',
-                          value: totalClients.toString(),
-                          icon: Icons.people_alt_rounded,
-                          gradientColors: const [Color(0xFF1a56db), Color(0xFF3B82F6)],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        child: DashboardCard(
-                          title: 'Solde Total',
-                          value: formatCurrency(totalBalance),
-                          icon: Icons.account_balance_wallet_rounded,
-                          gradientColors: const [Color(0xFF059669), Color(0xFF10B981)],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      Expanded(
-                        child: DashboardCard(
-                          title: 'Clients Débiteurs',
-                          value: debtors.toString(),
-                          icon: Icons.warning_amber_rounded,
-                          gradientColors: const [Color(0xFFDC2626), Color(0xFFEF4444)],
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ],
+          decoration: const BoxDecoration(
+            color: Colors.transparent,
+            border: Border(bottom: BorderSide(color: Colors.transparent)),
           ),
-        ),
-        // Action Bar
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Row(
             children: [
-              AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
+              const Text('Clients', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const Spacer(),
-              AppButton(
-                label: 'Nouveau client',
-                icon: Icons.add_rounded,
+              SizedBox(
+                width: 300,
+                child: AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              ElevatedButton.icon(
                 onPressed: () => _showDialog(context, null),
+                icon: const Icon(Icons.person_add_alt_1_rounded, size: 20, color: Colors.white),
+                label: const Text('Nouveau Client', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        
         Expanded(
           child: BlocBuilder<CustomersBloc, CustomersState>(
             builder: (context, state) {
@@ -113,43 +71,178 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 final filtered = _search.isEmpty
                     ? state.customers
                     : state.customers.where((c) => c.name.toLowerCase().contains(_search) || c.code.toLowerCase().contains(_search) || (c.phone ?? '').contains(_search)).toList();
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                  child: AppCard(
-                    padding: EdgeInsets.zero,
-                    child: DataTableWidget<Customer>(
-                      columns: const ['Code', 'Client', 'Téléphone', 'Email', 'Ville', 'Solde'],
-                      rows: filtered,
-                      emptyMessage: 'Aucun client trouvé',
-                      cellBuilder: (c) => [
-                        DataCell(Text(c.code, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 12))),
-                        DataCell(Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 14,
-                              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                              child: Text(c.name.isNotEmpty ? c.name[0].toUpperCase() : '?', style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold)),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(c.name, style: const TextStyle(fontWeight: FontWeight.w500)),
-                          ],
-                        )),
-                        DataCell(Text(c.phone ?? '—')),
-                        DataCell(Text(c.email ?? '—')),
-                        DataCell(Text(c.city ?? '—')),
-                        DataCell(Text(formatCurrency(c.balance), style: TextStyle(color: c.balance < 0 ? AppColors.error : AppColors.textPrimary, fontWeight: FontWeight.w600))),
+                
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.people_outline_rounded, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
+                        const SizedBox(height: 16),
+                        const Text('Aucun client trouve', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
                       ],
-                      onEdit: (c) => _showDialog(context, c),
-                      onDelete: (c) => context.read<CustomersBloc>().add(DeleteCustomer(c.id)),
                     ),
-                  ),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  itemCount: filtered.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final c = filtered[index];
+                    final isEntreprise = c.customerType == 'entreprise';
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.01), blurRadius: 4, offset: const Offset(0, 2)),
+                        ],
+                        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          onTap: () => _showDialog(context, c),
+                          hoverColor: AppColors.primary.withValues(alpha: 0.02),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Row(
+                              children: [
+                                // Avatar
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    gradient: isEntreprise 
+                                      ? const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)])
+                                      : const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)]),
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: [
+                                      BoxShadow(color: (isEntreprise ? const Color(0xFF3B82F6) : const Color(0xFF8B5CF6)).withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3)),
+                                    ]
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      c.name.isNotEmpty ? c.name[0].toUpperCase() : '?',
+                                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                
+                                // Info
+                                Expanded(
+                                  flex: 3,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            c.name,
+                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: isEntreprise ? AppColors.infoLight : Colors.purple.shade50,
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: isEntreprise ? AppColors.info.withValues(alpha: 0.2) : Colors.purple.withValues(alpha: 0.2)),
+                                            ),
+                                            child: Text(
+                                              isEntreprise ? 'Entreprise' : 'Particulier',
+                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: isEntreprise ? AppColors.info : Colors.purple),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.tag_rounded, size: 14, color: AppColors.textTertiary),
+                                          const SizedBox(width: 4),
+                                          Text(c.code, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+                                          if (c.email != null && c.email!.isNotEmpty) ...[
+                                            const SizedBox(width: 12),
+                                            const Icon(Icons.email_outlined, size: 14, color: AppColors.textTertiary),
+                                            const SizedBox(width: 4),
+                                            Text(c.email!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                          ],
+                                          if (c.phone != null && c.phone!.isNotEmpty) ...[
+                                            const SizedBox(width: 12),
+                                            const Icon(Icons.phone_outlined, size: 14, color: AppColors.textTertiary),
+                                            const SizedBox(width: 4),
+                                            Text(c.phone!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                // Solde
+                                Expanded(
+                                  flex: 1,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      const Text('Solde Actuel', style: TextStyle(fontSize: 11, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: c.balance < 0 ? AppColors.errorLight : AppColors.successLight.withValues(alpha: 0.5),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          formatCurrency(c.balance),
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: c.balance < 0 ? AppColors.error : AppColors.success,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                // Actions
+                                const SizedBox(width: 16),
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert_rounded, color: AppColors.textTertiary),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  elevation: 4,
+                                  onSelected: (val) {
+                                    if (val == 'edit') _showDialog(context, c);
+                                    if (val == 'delete') context.read<CustomersBloc>().add(DeleteCustomer(c.id));
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')])),
+                                    const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))])),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 );
               }
               return const SizedBox();
             },
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
       ],
     );
   }
@@ -173,13 +266,13 @@ class _CustomerDialog extends StatefulWidget {
   State<_CustomerDialog> createState() => _CustomerDialogState();
 }
 
-class _CustomerDialogState extends State<_CustomerDialog> {
+class _CustomerDialogState extends State<_CustomerDialog> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late String _customerType;
   late bool _deliverySameAsBilling;
   late bool _tvaSuspension;
   late String _selectedPriceList;
-  List<String> _priceLists = ['Prix par défaut'];
+  List<String> _priceLists = ['Prix par defaut'];
   Map<String, Map<String, double>> _customPriceLists = {}; // priceListName -> {productId -> customPrice}
 
   late final TextEditingController _codeCtrl;
@@ -208,15 +301,17 @@ class _CustomerDialogState extends State<_CustomerDialog> {
 
   late final TextEditingController _bankAccountCtrl;
   late final TextEditingController _privateNoteCtrl;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     final c = widget.existing;
     _customerType = c?.customerType ?? 'entreprise';
     _deliverySameAsBilling = c?.deliverySameAsBilling ?? true;
     _tvaSuspension = c?.tvaSuspension ?? false;
-    _selectedPriceList = 'Prix par défaut';
+    _selectedPriceList = 'Prix par defaut';
 
     _codeCtrl = TextEditingController(text: c?.code ?? 'CLI-${DateTime.now().millisecondsSinceEpoch % 10000}');
     _companyNameCtrl = TextEditingController(text: c?.companyName ?? '');
@@ -297,6 +392,7 @@ class _CustomerDialogState extends State<_CustomerDialog> {
     ]) {
       c.dispose();
     }
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -331,7 +427,7 @@ class _CustomerDialogState extends State<_CustomerDialog> {
               child: Row(
                 children: [
                   Text(
-                    widget.existing == null ? 'Créer un Nouveau Client' : 'Modifier le Client',
+                    widget.existing == null ? 'Creer un Nouveau Client' : 'Modifier le Client',
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -345,7 +441,7 @@ class _CustomerDialogState extends State<_CustomerDialog> {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Scanner avec l\'IA bientôt disponible !')),
+                          const SnackBar(content: Text('Scanner avec l\'IA bientot disponible !')),
                         );
                       },
                       icon: const Icon(Icons.auto_awesome_rounded, size: 16, color: Colors.purple),
@@ -388,11 +484,11 @@ class _CustomerDialogState extends State<_CustomerDialog> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Créer / Enregistrer Button
+                  // Creer / Enregistrer Button
                   ElevatedButton.icon(
                     onPressed: _save,
                     icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
-                    label: Text(widget.existing == null ? 'Créer' : 'Enregistrer', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    label: Text(widget.existing == null ? 'Creer' : 'Enregistrer', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       elevation: 0,
@@ -404,346 +500,388 @@ class _CustomerDialogState extends State<_CustomerDialog> {
               ),
             ),
             
-            // Scrollable Form Content
+            // TabBar Header
+            Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(bottom: BorderSide(color: AppColors.border)),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                labelColor: AppColors.primary,
+                unselectedLabelColor: AppColors.textTertiary,
+                indicatorColor: AppColors.primary,
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                tabs: const [
+                  Tab(text: 'Informations', icon: Icon(Icons.info_outline_rounded, size: 20)),
+                  Tab(text: 'Adresses', icon: Icon(Icons.location_on_outlined, size: 20)),
+                  Tab(text: 'Financier', icon: Icon(Icons.account_balance_wallet_outlined, size: 20)),
+                ],
+              ),
+            ),
+            
+            // TabBarView Content
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Section 1: Type d'Entreprise
-                      const Text(
-                        "Type d'Entreprise",
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
+              child: Form(
+                key: _formKey,
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // TAB 1: Informations
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(
-                            child: _buildTypeButton(
-                              label: 'Entreprise',
-                              value: 'entreprise',
-                              isSelected: _customerType == 'entreprise',
-                              onTap: () => setState(() => _customerType = 'entreprise'),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTypeButton(
-                              label: 'Particulier',
-                              value: 'particulier',
-                              isSelected: _customerType == 'particulier',
-                              onTap: () => setState(() => _customerType = 'particulier'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Section 2: Conditional Fields (Company vs Individual)
-                      if (_customerType == 'entreprise') ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              child: AppTextField(
-                                label: 'Nom de l\'Entreprise *',
-                                hint: 'Saisissez le nom de l\'entreprise',
-                                controller: _companyNameCtrl,
-                                validator: (v) => v!.trim().isEmpty ? 'Le nom de l\'entreprise est requis' : null,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: AppTextField(
-                                label: 'Nom du responsable',
-                                hint: 'Saisissez le nom du responsable',
-                                controller: _responsibleNameCtrl,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: AppTextField(
-                                label: 'Email Personnel *',
-                                hint: 'Saisissez l\'email personnel',
-                                controller: _emailCtrl,
-                                keyboardType: TextInputType.emailAddress,
-                                validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: AppTextField(
-                                label: 'Référence',
-                                hint: 'Saisissez le code de référence',
-                                controller: _referenceCtrl,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: AppTextField(
-                                label: 'Matricule Fiscal',
-                                hint: '1234567X/X/X/000',
-                                controller: _taxCtrl,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            const Spacer(),
-                          ],
-                        ),
-                      ] else ...[
-                        Row(
-                          children: [
-                            Expanded(
-                              child: AppTextField(
-                                label: 'Nom du responsable *',
-                                hint: 'Saisissez le nom du responsable',
-                                controller: _responsibleNameCtrl,
-                                validator: (v) => v!.trim().isEmpty ? 'Le nom du responsable est requis' : null,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: AppTextField(
-                                label: 'Email Personnel *',
-                                hint: 'Saisissez l\'email personnel',
-                                controller: _emailCtrl,
-                                keyboardType: TextInputType.emailAddress,
-                                validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: AppTextField(
-                                label: 'Référence',
-                                hint: 'Saisissez le code de référence',
-                                controller: _referenceCtrl,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: AppTextField(
-                                label: 'Numéro CIN',
-                                hint: 'Saisissez le numéro CIN (8 chiffres)',
-                                controller: _cinCtrl,
-                                keyboardType: TextInputType.number,
-                                validator: (v) {
-                                  if (v!.trim().isNotEmpty && v.trim().length != 8) {
-                                    return 'Le CIN doit contenir exactement 8 chiffres';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: AppTextField(
-                                label: 'Date de Naissance',
-                                hint: 'JJ/MM/AAAA',
-                                controller: _birthDateCtrl,
-                                readOnly: true,
-                                suffix: const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
-                                onTap: _selectBirthDate,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            const Spacer(),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-
-                      // Numéro de Téléphone (with flag & +216 prefix)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                          // Section 1: Type d'Entreprise
                           const Text(
-                            'Numéro de Téléphone',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                            "Type d'Entreprise",
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
                           Row(
                             children: [
-                              // Country dropdown styled simulator
-                              Container(
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  border: Border.all(color: AppColors.border),
-                                ),
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: const Row(
-                                  children: [
-                                    Text('🇹🇳', style: TextStyle(fontSize: 18)),
-                                    SizedBox(width: 6),
-                                    Text('+216', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                                    SizedBox(width: 4),
-                                    Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textSecondary),
-                                  ],
+                              Expanded(
+                                child: _buildTypeButton(
+                                  label: 'Entreprise',
+                                  value: 'entreprise',
+                                  isSelected: _customerType == 'entreprise',
+                                  onTap: () => setState(() => _customerType = 'entreprise'),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 16),
                               Expanded(
-                                child: TextFormField(
-                                  controller: _phoneCtrl,
-                                  keyboardType: TextInputType.phone,
-                                  style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
-                                  decoration: InputDecoration(
-                                    hintText: 'Saisissez le numéro de téléphone',
-                                    hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                                    filled: true,
-                                    fillColor: AppColors.surfaceAlt,
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(AppRadius.md),
-                                      borderSide: BorderSide(color: AppColors.border),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(AppRadius.md),
-                                      borderSide: BorderSide(color: AppColors.border),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(AppRadius.md),
-                                      borderSide: BorderSide(color: AppColors.primary, width: 2),
-                                    ),
-                                  ),
+                                child: _buildTypeButton(
+                                  label: 'Particulier',
+                                  value: 'particulier',
+                                  isSelected: _customerType == 'particulier',
+                                  onTap: () => setState(() => _customerType = 'particulier'),
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      const Divider(height: 1, color: AppColors.border),
-                      const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                      // Section 3: Shared Fields (Billing Address)
-                      _buildBillingAddressSection(),
-                      const SizedBox(height: 20),
-
-                      // Delivery Address Section (Collapsible)
-                      _buildDeliveryAddressSection(),
-                      const SizedBox(height: 20),
-
-                      // Bank Accounts Section (Collapsible)
-                      _buildBankAccountSection(),
-                      const SizedBox(height: 24),
-
-                      // TVA suspension checkbox
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: _tvaSuspension,
-                            activeColor: AppColors.primary,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            onChanged: (v) => setState(() => _tvaSuspension = v ?? false),
-                          ),
-                          const Expanded(
-                            child: Text(
-                              'Ce client possède un permis de suspension de TVA',
-                              style: TextStyle(fontSize: 14, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Price List Dropdown + Create Price List
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Liste de Prix',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surfaceAlt,
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
-                                    border: Border.all(color: AppColors.border),
+                          // Section 2: Conditional Fields (Company vs Individual)
+                          if (_customerType == 'entreprise') ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: AppTextField(
+                                    label: 'Nom de l\'Entreprise *',
+                                    hint: 'Saisissez le nom de l\'entreprise',
+                                    controller: _companyNameCtrl,
+                                    validator: (v) => v!.trim().isEmpty ? 'Le nom de l\'entreprise est requis' : null,
                                   ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: _selectedPriceList,
-                                      isExpanded: true,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: AppTextField(
+                                    label: 'Nom du responsable',
+                                    hint: 'Saisissez le nom du responsable',
+                                    controller: _responsibleNameCtrl,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: AppTextField(
+                                    label: 'Email Personnel *',
+                                    hint: 'Saisissez l\'email personnel',
+                                    controller: _emailCtrl,
+                                    keyboardType: TextInputType.emailAddress,
+                                    validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: AppTextField(
+                                    label: 'Reference',
+                                    hint: 'Saisissez le code de reference',
+                                    controller: _referenceCtrl,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: AppTextField(
+                                    label: 'Matricule Fiscal',
+                                    hint: '1234567X/X/X/000',
+                                    controller: _taxCtrl,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                const Spacer(),
+                              ],
+                            ),
+                          ] else ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: AppTextField(
+                                    label: 'Nom du responsable *',
+                                    hint: 'Saisissez le nom du responsable',
+                                    controller: _responsibleNameCtrl,
+                                    validator: (v) => v!.trim().isEmpty ? 'Le nom du responsable est requis' : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: AppTextField(
+                                    label: 'Email Personnel *',
+                                    hint: 'Saisissez l\'email personnel',
+                                    controller: _emailCtrl,
+                                    keyboardType: TextInputType.emailAddress,
+                                    validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: AppTextField(
+                                    label: 'Reference',
+                                    hint: 'Saisissez le code de reference',
+                                    controller: _referenceCtrl,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: AppTextField(
+                                    label: 'Numero CIN',
+                                    hint: 'Saisissez le numero CIN (8 chiffres)',
+                                    controller: _cinCtrl,
+                                    keyboardType: TextInputType.number,
+                                    validator: (v) {
+                                      if (v!.trim().isNotEmpty && v.trim().length != 8) {
+                                        return 'Le CIN doit contenir exactement 8 chiffres';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: AppTextField(
+                                    label: 'Date de Naissance',
+                                    hint: 'JJ/MM/AAAA',
+                                    controller: _birthDateCtrl,
+                                    readOnly: true,
+                                    suffix: const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
+                                    onTap: _selectBirthDate,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                const Spacer(),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+
+                          // Numero de Telephone (with flag & +216 prefix)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Numero de Telephone',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  // Country dropdown styled simulator
+                                  Container(
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surfaceAlt,
+                                      borderRadius: BorderRadius.circular(AppRadius.md),
+                                      border: Border.all(color: AppColors.border),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: const Row(
+                                      children: [
+                                        Text('🇹🇳', style: TextStyle(fontSize: 18)),
+                                        SizedBox(width: 6),
+                                        Text('+216', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                                        SizedBox(width: 4),
+                                        Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textSecondary),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _phoneCtrl,
+                                      keyboardType: TextInputType.phone,
                                       style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
-                                      items: _priceLists.map((name) => DropdownMenuItem(
-                                        value: name,
-                                        child: Text(name),
-                                      )).toList(),
-                                      onChanged: (val) {
-                                        if (val != null) {
-                                          setState(() => _selectedPriceList = val);
-                                        }
-                                      },
+                                      decoration: InputDecoration(
+                                        hintText: 'Saisissez le numero de telephone',
+                                        hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                                        filled: true,
+                                        fillColor: AppColors.surfaceAlt,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(AppRadius.md),
+                                          borderSide: BorderSide(color: AppColors.border),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(AppRadius.md),
+                                          borderSide: BorderSide(color: AppColors.border),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(AppRadius.md),
+                                          borderSide: BorderSide(color: AppColors.primary, width: 2),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
-                              const SizedBox(width: 12),
-                              // "+" Button
-                              SizedBox(
-                                height: 44,
-                                width: 44,
-                                child: ElevatedButton(
-                                  onPressed: _showAddPriceListDialog,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.surfaceAlt,
-                                    foregroundColor: AppColors.textPrimary,
-                                    elevation: 0,
-                                    padding: EdgeInsets.zero,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(AppRadius.md),
-                                      side: const BorderSide(color: AppColors.border),
-                                    ),
-                                  ),
-                                  child: const Icon(Icons.add_rounded, size: 20),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    // TAB 2: Adresses
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Section 3: Shared Fields (Billing Address)
+                          _buildBillingAddressSection(),
+                          const SizedBox(height: 20),
+
+                          // Delivery Address Section (Collapsible)
+                          _buildDeliveryAddressSection(),
+                        ],
+                      ),
+                    ),
+                    
+                    // TAB 3: Financier
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Bank Accounts Section (Collapsible)
+                          _buildBankAccountSection(),
+                          const SizedBox(height: 24),
+
+                          // TVA suspension checkbox
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: _tvaSuspension,
+                                activeColor: AppColors.primary,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                onChanged: (v) => setState(() => _tvaSuspension = v ?? false),
+                              ),
+                              const Expanded(
+                                child: Text(
+                                  'Ce client possede un permis de suspension de TVA',
+                                  style: TextStyle(fontSize: 14, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Choisissez une liste de prix par défaut pour ce client',
-                            style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                          const SizedBox(height: 24),
+
+                          // Price List Dropdown + Create Price List
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Liste de Prix',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceAlt,
+                                        borderRadius: BorderRadius.circular(AppRadius.md),
+                                        border: Border.all(color: AppColors.border),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<String>(
+                                          value: _selectedPriceList,
+                                          isExpanded: true,
+                                          style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                                          items: _priceLists.map((name) => DropdownMenuItem(
+                                            value: name,
+                                            child: Text(name),
+                                          )).toList(),
+                                          onChanged: (val) {
+                                            if (val != null) {
+                                              setState(() => _selectedPriceList = val);
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  // "+" Button
+                                  SizedBox(
+                                    height: 44,
+                                    width: 44,
+                                    child: ElevatedButton(
+                                      onPressed: _showAddPriceListDialog,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.surfaceAlt,
+                                        foregroundColor: AppColors.textPrimary,
+                                        elevation: 0,
+                                        padding: EdgeInsets.zero,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppRadius.md),
+                                          side: const BorderSide(color: AppColors.border),
+                                        ),
+                                      ),
+                                      child: const Icon(Icons.add_rounded, size: 20),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Choisissez une liste de prix par defaut pour ce client',
+                                style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Private Note (3-4 lines height)
+                          AppTextField(
+                            label: 'Note privee',
+                            hint: 'Saisissez une note privee concernant ce client',
+                            controller: _privateNoteCtrl,
+                            maxLines: 4,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
-
-                      // Private Note (3-4 lines height)
-                      AppTextField(
-                        label: 'Note privée',
-                        hint: 'Saisissez une note privée concernant ce client',
-                        controller: _privateNoteCtrl,
-                        maxLines: 4,
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -933,7 +1071,7 @@ class _CustomerDialogState extends State<_CustomerDialog> {
                       ),
                       const Expanded(
                         child: Text(
-                          'Identique à l\'adresse de facturation',
+                          'Identique a l\'adresse de facturation',
                           style: TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
                         ),
                       ),
@@ -1043,7 +1181,7 @@ class _CustomerDialogState extends State<_CustomerDialog> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: AppTextField(
-                label: 'Numéro de compte / IBAN',
+                label: 'Numero de compte / IBAN',
                 hint: 'Saisissez le compte bancaire',
                 controller: _bankAccountCtrl,
               ),
@@ -1117,7 +1255,7 @@ class _CustomerDialogState extends State<_CustomerDialog> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  'Créer une liste de prix personnalisée',
+                  'Creer une liste de prix personnalisee',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 const SizedBox(height: 16),
@@ -1128,7 +1266,7 @@ class _CustomerDialogState extends State<_CustomerDialog> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Définir les tarifs des articles :',
+                  'Definir les tarifs des articles :',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 8),
@@ -1228,7 +1366,7 @@ class _CustomerDialogState extends State<_CustomerDialog> {
 
     // Serialize custom price list to JSON string if it's not default
     String priceListVal = 'default';
-    if (_selectedPriceList != 'Prix par défaut') {
+    if (_selectedPriceList != 'Prix par defaut') {
       final customPrices = _customPriceLists[_selectedPriceList] ?? {};
       priceListVal = jsonEncode({
         'name': _selectedPriceList,

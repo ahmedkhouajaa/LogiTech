@@ -60,7 +60,7 @@ class ReturnNotesBloc extends Bloc<ReturnNotesEvent, ReturnNotesState> {
       await DatabaseHelper.instance.updateReturnNote(event.note);
       add(const LoadReturnNotes());
     } catch (e) {
-      emit(ReturnNotesError('Erreur de mise à jour: $e'));
+      emit(ReturnNotesError('Erreur de mise a jour: $e'));
     }
   }
 

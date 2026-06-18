@@ -23,6 +23,7 @@ import '../database/database_helper.dart';
 import 'create_invoice_screen.dart';
 import 'create_customer_order_screen.dart';
 import 'create_delivery_note_screen.dart';
+import 'create_quote_screen.dart';
 
 class QuotesScreen extends StatefulWidget {
   const QuotesScreen({super.key});
@@ -48,7 +49,23 @@ class _QuotesScreenState extends State<QuotesScreen> {
           child: Row(children: [
             AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
             const Spacer(),
-            AppButton(label: 'Nouveau devis', icon: Icons.add_rounded, onPressed: () => _showCreateDialog(context)),
+            AppButton(
+              label: 'Nouveau devis', 
+              icon: Icons.add_rounded, 
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MultiBlocProvider(
+                    providers: [
+                      BlocProvider.value(value: context.read<QuotesBloc>()),
+                      BlocProvider.value(value: context.read<CustomersBloc>()),
+                      BlocProvider.value(value: context.read<ProductsBloc>()),
+                    ],
+                    child: const CreateQuoteScreen(),
+                  ),
+                ),
+              ),
+            ),
           ]),
         ),
         Expanded(
@@ -64,9 +81,9 @@ class _QuotesScreenState extends State<QuotesScreen> {
                   child: AppCard(
                     padding: EdgeInsets.zero,
                     child: DataTableWidget<Quote>(
-                      columns: const ['N°', 'Client', 'Date', 'Validité', 'Total TTC', 'Statut'],
+                      columns: const ['N°', 'Client', 'Date', 'Validite', 'Total TTC', 'Statut'],
                       rows: filtered,
-                      emptyMessage: 'Aucun devis trouvé',
+                      emptyMessage: 'Aucun devis trouve',
                       cellBuilder: (q) => [
                         DataCell(Text(q.number, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 12))),
                         DataCell(Text(q.customerName ?? '—')),
@@ -97,19 +114,19 @@ class _QuotesScreenState extends State<QuotesScreen> {
                             const PopupMenuDivider(height: 1),
                           ] else ...[
                             if (q.isConverted && q.convertedTo == 'invoice') ...[
-                              _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture créée'),
+                              _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture creee'),
                               const PopupMenuDivider(height: 1),
                             ],
                             if (q.isConvertedToOrder) ...[
-                              _buildMenuItem('view_order', Icons.shopping_cart_outlined, AppColors.success, 'Voir la commande client créée'),
+                              _buildMenuItem('view_order', Icons.shopping_cart_outlined, AppColors.success, 'Voir la commande client creee'),
                               const PopupMenuDivider(height: 1),
                             ],
                             if (q.isConvertedToDelivery) ...[
-                              _buildMenuItem('view_delivery', Icons.local_shipping_outlined, AppColors.success, 'Voir le bon de livraison créé'),
+                              _buildMenuItem('view_delivery', Icons.local_shipping_outlined, AppColors.success, 'Voir le bon de livraison cree'),
                               const PopupMenuDivider(height: 1),
                             ],
                           ],
-                          _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
+                          _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
                           const PopupMenuDivider(height: 1),
                           _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
                           const PopupMenuDivider(height: 1),
@@ -119,7 +136,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
                           const PopupMenuDivider(height: 1),
                           _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
                           const PopupMenuDivider(height: 1),
-                          _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'),
+                          _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
                         ],
                       ),
                       onDelete: (q) => context.read<QuotesBloc>().add(DeleteQuote(q.id)),
@@ -150,25 +167,25 @@ class _QuotesScreenState extends State<QuotesScreen> {
     );
   }
 
-  void _showCreateDialog(BuildContext context) {
-    showDialog(context: context, builder: (_) => MultiBlocProvider(
-      providers: [
-        BlocProvider.value(value: context.read<QuotesBloc>()),
-        BlocProvider.value(value: context.read<CustomersBloc>()),
-        BlocProvider.value(value: context.read<ProductsBloc>()),
-      ],
-      child: const _QuoteDialog(),
-    ));
-  }
-
   void _handleAction(BuildContext context, String action, Quote quote) {
     switch (action) {
       case 'view':
         // TODO: View quote details
         break;
       case 'edit':
-        // TODO: Edit quote
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Modification non implémentée')));
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: context.read<QuotesBloc>()),
+                BlocProvider.value(value: context.read<CustomersBloc>()),
+                BlocProvider.value(value: context.read<ProductsBloc>()),
+              ],
+              child: CreateQuoteScreen(existing: quote),
+            ),
+          ),
+        );
         break;
       case 'delete':
         showDialog(
@@ -215,7 +232,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
         // TODO: Duplicate quote
         break;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action non implémentée')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action non implementee')));
     }
   }
 
@@ -388,7 +405,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Devis converti en facture avec succès'),
+        content: Text('Devis converti en facture avec succes'),
         backgroundColor: AppColors.success,
       ));
     }
@@ -526,7 +543,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Devis converti en commande client avec succès'),
+        content: Text('Devis converti en commande client avec succes'),
         backgroundColor: AppColors.success,
       ));
     }
@@ -657,7 +674,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Devis converti en bon de livraison avec succès'),
+        content: Text('Devis converti en bon de livraison avec succes'),
         backgroundColor: AppColors.success,
       ));
     }
@@ -703,236 +720,3 @@ class _QuotesScreenState extends State<QuotesScreen> {
 }
 
 
-class _QuoteDialog extends StatefulWidget {
-  const _QuoteDialog();
-  @override
-  State<_QuoteDialog> createState() => _QuoteDialogState();
-}class _QuoteDialogState extends State<_QuoteDialog> {
-  final Uuid _uuid = const Uuid();
-  Customer? _selectedCustomer;
-  String? _selectedProject;
-  final List<String> _projects = [];
-  DateTime _date = DateTime.now();
-  DateTime _validityDate = DateTime.now().add(const Duration(days: 30));
-  String _priceType = 'Hors taxes';
-  final List<QuoteItem> _items = [];
-
-  @override
-  void initState() {
-    super.initState();
-    // TODO: Load projects if needed
-  }
-
-  void _showAddArticleDialog() async {
-    final ctx = context;
-    final product = await showDialog<Product>(
-      context: ctx,
-      builder: (dialogCtx) => SimpleDialog(
-        title: const Text('Ajouter un article'),
-        children: [
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(
-              dialogCtx,
-              Product(id: '1', code: 'PRD-A', name: 'Produit A', sellingPrice: 10.0, tvaRate: 19),
-            ),
-            child: const Text('Produit A'),
-          ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(
-              dialogCtx,
-              Product(id: '2', code: 'PRD-B', name: 'Produit B', sellingPrice: 20.0, tvaRate: 19),
-            ),
-            child: const Text('Produit B'),
-          ),
-        ],
-      ),
-    );
-    if (product != null) {
-      setState(() {
-        _items.add(QuoteItem(
-          id: _uuid.v4(),
-          quoteId: '',
-          productId: product.id,
-          productName: product.name,
-          quantity: 1,
-          unitPrice: product.sellingPrice,
-          tvaRate: product.tvaRate,
-          totalHT: product.sellingPrice,
-        ));
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Nouveau devis'),
-      content: SizedBox(
-        width: 1200,
-        child: SingleChildScrollView(
-          child: BlocBuilder<CustomersBloc, CustomersState>(
-            builder: (context, state) {
-              final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header row: client and project
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppDropdown<String>(
-                          label: 'Client *',
-                          value: _selectedCustomer?.id,
-                          hint: 'Rechercher des clients...',
-                          items: customers
-                              .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
-                              .toList(),
-                          onChanged: (v) => setState(() => _selectedCustomer = customers.firstWhere((c) => c.id == v)),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: AppDropdown<String>(
-                          label: 'Projet',
-                          value: _selectedProject,
-                          hint: 'Projet par défaut',
-                          items: _projects.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
-                          onChanged: (v) => setState(() => _selectedProject = v),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Dates row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text('Date d\'émission: ${formatDate(_date)}'),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          final d = await showDatePicker(
-                            context: context,
-                            initialDate: _date,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2030),
-                          );
-                          if (d != null) setState(() => _date = d);
-                        },
-                        child: const Text('Changer'),
-                      ),
-                      const Spacer(),
-                      Expanded(
-                        child: Text('Date d\'échéance: ${formatDate(_validityDate)}'),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          final d = await showDatePicker(
-                            context: context,
-                            initialDate: _validityDate,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2030),
-                          );
-                          if (d != null) setState(() => _validityDate = d);
-                        },
-                        child: const Text('Changer'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Price type radio group
-                  Row(
-                    children: [
-                      const Text('Les prix des articles sont en:'),
-                      const SizedBox(width: 16),
-                      SizedBox(
-                        width: 160,
-                        child: RadioListTile<String>(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Hors taxes'),
-                          value: 'Hors taxes',
-                          groupValue: _priceType,
-                          onChanged: (v) => setState(() => _priceType = v!),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 160,
-                        child: RadioListTile<String>(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Taxe incluse'),
-                          value: 'Taxe incluse',
-                          groupValue: _priceType,
-                          onChanged: (v) => setState(() => _priceType = v!),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Articles table
-                  const Text('Articles', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      columns: const [
-                        DataColumn(label: Text('Produit')),
-                        DataColumn(label: Text('Qté')),
-                        DataColumn(label: Text('Prix U')),
-                        DataColumn(label: Text('TVA %')),
-                        DataColumn(label: Text('Total HT')),
-                        DataColumn(label: Text('Action')),
-                      ],
-                      rows: _items.asMap().entries.map((e) {
-                        final item = e.value;
-                        return DataRow(cells: [
-                          DataCell(Text(item.productName ?? '—')),
-                          DataCell(Text(item.quantity.toString())),
-                          DataCell(Text(item.unitPrice.toStringAsFixed(2))),
-                          DataCell(Text(item.tvaRate.toString())),
-                          DataCell(Text(item.totalHT.toStringAsFixed(2))),
-                          DataCell(IconButton(
-                            icon: const Icon(Icons.delete, size: 20),
-                            onPressed: () => setState(() => _items.removeAt(e.key)),
-                          )),
-                        ]);
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: _showAddArticleDialog,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Ajouter un article'),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-        AppButton(
-          label: 'Créer',
-          onPressed: () {
-            if (_selectedCustomer == null) return;
-            final quote = Quote(
-              id: _uuid.v4(),
-              number: generateDocNumber(DocPrefix.quote, DateTime.now().millisecondsSinceEpoch % 100000),
-              customerId: _selectedCustomer!.id,
-              customerName: _selectedCustomer!.name,
-              date: _date,
-              validityDate: _validityDate,
-              // Additional fields can be added here: project, priceType, items
-            );
-            context.read<QuotesBloc>().add(AddQuote(quote));
-            Navigator.pop(context);
-          },
-        ),
-      ],
-    );
-  }
-}

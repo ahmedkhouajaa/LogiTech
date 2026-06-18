@@ -26,6 +26,7 @@ class Invoice {
   final String? conditionsGenerales;
   final List<InvoiceItem> items;
   final String? firebaseUid;
+  final String? creditNoteId;
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -56,6 +57,7 @@ class Invoice {
     this.conditionsGenerales,
     this.items = const [],
     this.firebaseUid,
+    this.creditNoteId,
     this.isDeleted = false,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -76,8 +78,10 @@ class Invoice {
         'global_discount_percent': globalDiscountPercent,
         'global_discount_amount': globalDiscountAmount,
         'pricing_mode': pricingMode,
-        'notes': notes, 'conditions': conditionsGenerales,
+        'notes': notes,
+        'conditions': conditionsGenerales,
         'firebase_uid': firebaseUid,
+        'credit_note_id': creditNoteId,
         'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
@@ -109,6 +113,7 @@ class Invoice {
         notes: map['notes'] as String?,
         conditionsGenerales: map['conditions'] as String?,
         firebaseUid: map['firebase_uid'] as String?,
+        creditNoteId: map['credit_note_id'] as String?,
         isDeleted: map['is_deleted'] == 1,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
@@ -124,7 +129,7 @@ class Invoice {
     double? globalDiscountPercent, double? globalDiscountAmount,
     String? pricingMode, String? notes, String? conditionsGenerales,
     List<InvoiceItem>? items,
-    String? firebaseUid, bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
+    String? firebaseUid, String? creditNoteId, bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
   }) => Invoice(
         id: id ?? this.id, number: number ?? this.number,
         customerId: customerId ?? this.customerId,
@@ -142,10 +147,9 @@ class Invoice {
         globalDiscountPercent: globalDiscountPercent ?? this.globalDiscountPercent,
         globalDiscountAmount: globalDiscountAmount ?? this.globalDiscountAmount,
         pricingMode: pricingMode ?? this.pricingMode,
-        notes: notes ?? this.notes,
-        conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
+        notes: notes ?? this.notes, conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
         items: items ?? this.items,
-        firebaseUid: firebaseUid ?? this.firebaseUid,
+        firebaseUid: firebaseUid ?? this.firebaseUid, creditNoteId: creditNoteId ?? this.creditNoteId,
         isDeleted: isDeleted ?? this.isDeleted,
         createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
       );

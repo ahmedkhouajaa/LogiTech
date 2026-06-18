@@ -61,7 +61,7 @@ class PdfService {
             pw.SizedBox(height: 4),
             if (settings.address != null) pw.Text(settings.address!),
             if (settings.city != null) pw.Text(settings.city!),
-            if (settings.phone != null) pw.Text('Tél: ${settings.phone}'),
+            if (settings.phone != null) pw.Text('Tel: ${settings.phone}'),
             if (settings.email != null) pw.Text('Email: ${settings.email}'),
             if (settings.taxId != null) pw.Text('NIF: ${settings.taxId}'),
             if (settings.rcNumber != null) pw.Text('RC: ${settings.rcNumber}'),
@@ -76,7 +76,7 @@ class PdfService {
             pw.Text('N° ${invoice.number}', style: const pw.TextStyle(fontSize: 16)),
             pw.SizedBox(height: 4),
             pw.Text('Date: ${formatDate(invoice.date)}'),
-            pw.Text('Échéance: ${formatDate(invoice.dueDate)}'),
+            pw.Text('Echeance: ${formatDate(invoice.dueDate)}'),
           ],
         ),
       ],
@@ -107,7 +107,7 @@ class PdfService {
   }
 
   pw.Widget _buildItemsTable(Invoice invoice) {
-    final headers = ['Désignation', 'Qté', 'Prix Unitaire', 'TVA', 'Remise', 'Total HT'];
+    final headers = ['Designation', 'Qte', 'Prix Unitaire', 'TVA', 'Remise', 'Total HT'];
     final data = invoice.items.map((item) {
       return [
         item.productName ?? 'Produit Inconnu',
@@ -187,7 +187,7 @@ class PdfService {
         ),
         if (settings.bankName != null && settings.bankAccount != null) ...[
           pw.SizedBox(height: 4),
-          pw.Text('Règlement par virement bancaire sur le compte:'),
+          pw.Text('Reglement par virement bancaire sur le compte:'),
           pw.Text('${settings.bankName} - RIB: ${settings.rib ?? settings.bankAccount}'),
         ]
       ],

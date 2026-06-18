@@ -90,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           const Text('Bienvenue !', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                           const SizedBox(height: 8),
-                          const Text('Connectez-vous à votre espace', style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+                          const Text('Connectez-vous a votre espace', style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
                           const SizedBox(height: 40),
                           Form(
                             key: _formKey,

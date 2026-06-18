@@ -5,6 +5,12 @@ import '../models/treasury_account.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/data_table_widget.dart';
+import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
+import '../blocs/projects/projects_bloc.dart';
+import '../models/treasury_transaction.dart';
+import '../models/project.dart';
+import '../services/expense_category_service.dart';
+import 'package:intl/intl.dart';
 
 class TreasuryAccountsScreen extends StatefulWidget {
   const TreasuryAccountsScreen({super.key});
@@ -33,6 +39,30 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
     );
   }
 
+  void _showExpenseDialog(BuildContext context) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+          BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+          BlocProvider.value(value: context.read<ProjectsBloc>()),
+        ],
+        child: const _CreateExpenseDialog(),
+      ),
+    );
+    
+    // Refresh accounts list to reflect any balance changes
+    if (context.mounted) {
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (context.mounted) {
+          context.read<TreasuryAccountsBloc>().add(LoadTreasuryAccounts());
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -44,7 +74,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
           child: Row(
             children: [
               const Text(
-                'Comptes de Trésorerie',
+                'Comptes de Tresorerie',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
               const SizedBox(width: 8),
@@ -62,11 +92,9 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
               ),
               const SizedBox(width: 12),
               ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Navigate to create expense (will be added in next step)
-                },
+                onPressed: () => _showExpenseDialog(context),
                 icon: const Icon(Icons.attach_money_rounded, size: 18),
-                label: const Text('Ajouter une Dépense'),
+                label: const Text('Ajouter une Depense'),
               ),
             ],
           ),
@@ -94,7 +122,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                     child: DataTableWidget<TreasuryAccount>(
                       columns: const ['Nom du Compte', 'Type', 'Solde', 'Actions'],
                       rows: filtered,
-                      emptyMessage: 'Aucun compte trouvé',
+                      emptyMessage: 'Aucun compte trouve',
                       cellBuilder: (acc) => [
                         DataCell(Text(acc.name, style: const TextStyle(fontWeight: FontWeight.w600))),
                         DataCell(Text(acc.type == 'bank' ? 'Compte Bancaire' : 'Caisse')),
@@ -152,28 +180,69 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
   final _formKey = GlobalKey<FormState>();
   late String _type;
   late final TextEditingController _nameCtrl;
-  late final TextEditingController _internalNameCtrl;
-  late final TextEditingController _bankNameCtrl;
   late final TextEditingController _agencyCtrl;
   late final TextEditingController _ibanCtrl;
+  String? _selectedBank;
+  late String _selectedCurrency;
+
+  final List<String> _tunisianBanks = [
+    'Al Baraka Bank',
+    'Amen Bank',
+    'Arab Tunisian Bank (ATB)',
+    'Attijari Bank',
+    'Banque de l\'Habitat (BH)',
+    'Banque Internationale Arabe de Tunisie (BIAT)',
+    'Banque Nationale Agricole (BNA)',
+    'Banque de Tunisie (BT)',
+    'Banque de Tunisie et des Emirats (BTE)',
+    'Banque Zitouna',
+    'Banque Tuniso-Libyenne (BTL)',
+    'Banque Tuniso-Koweitienne (BTK)',
+    'Citi Bank',
+    'Qatar National Bank (QNB)',
+    'Société Tunisienne de Banque (STB)',
+    'Union Bancaire pour le Commerce et l\'Industrie (UBCI)',
+    'Union Internationale de Banques (UIB)',
+    'Wifak Bank'
+  ];
+
+  final List<Map<String, String>> _worldCurrencies = [
+    {'code': 'TND', 'name': 'Tunisian Dinar', 'flag': '🇹🇳'},
+    {'code': 'USD', 'name': 'US Dollar', 'flag': '🇺🇸'},
+    {'code': 'EUR', 'name': 'Euro', 'flag': '🇪🇺'},
+    {'code': 'GBP', 'name': 'British Pound', 'flag': '🇬🇧'},
+    {'code': 'CAD', 'name': 'Canadian Dollar', 'flag': '🇨🇦'},
+    {'code': 'AUD', 'name': 'Australian Dollar', 'flag': '🇦🇺'},
+    {'code': 'CHF', 'name': 'Swiss Franc', 'flag': '🇨🇭'},
+    {'code': 'JPY', 'name': 'Japanese Yen', 'flag': '🇯🇵'},
+    {'code': 'CNY', 'name': 'Chinese Yuan', 'flag': '🇨🇳'},
+    {'code': 'AED', 'name': 'UAE Dirham', 'flag': '🇦🇪'},
+    {'code': 'SAR', 'name': 'Saudi Riyal', 'flag': '🇸🇦'},
+    {'code': 'DZD', 'name': 'Algerian Dinar', 'flag': '🇩🇿'},
+    {'code': 'MAD', 'name': 'Moroccan Dirham', 'flag': '🇲🇦'},
+  ];
 
   @override
   void initState() {
     super.initState();
     final e = widget.existing;
     _type = e?.type ?? 'cash';
+    _selectedCurrency = e?.currency ?? 'TND';
+    if (!_worldCurrencies.any((c) => c['code'] == _selectedCurrency)) {
+      _worldCurrencies.add({'code': _selectedCurrency, 'name': _selectedCurrency, 'flag': '🏳️'});
+    }
     _nameCtrl = TextEditingController(text: e?.name ?? '');
-    _internalNameCtrl = TextEditingController(text: e?.internalName ?? '');
-    _bankNameCtrl = TextEditingController(text: e?.bankName ?? '');
     _agencyCtrl = TextEditingController(text: e?.agency ?? '');
     _ibanCtrl = TextEditingController(text: e?.iban ?? '');
+    _selectedBank = e?.bankName;
+    if (_selectedBank != null && !_tunisianBanks.contains(_selectedBank)) {
+      _tunisianBanks.add(_selectedBank!);
+    }
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _internalNameCtrl.dispose();
-    _bankNameCtrl.dispose();
     _agencyCtrl.dispose();
     _ibanCtrl.dispose();
     super.dispose();
@@ -184,12 +253,12 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
       final acc = TreasuryAccount(
         id: widget.existing?.id,
         name: _nameCtrl.text.trim(),
-        internalName: _internalNameCtrl.text.trim(),
+        internalName: _nameCtrl.text.trim(), // Use name as internal name
         type: _type,
-        bankName: _type == 'bank' ? _bankNameCtrl.text.trim() : null,
+        bankName: _type == 'bank' ? _selectedBank : null,
         agency: _type == 'bank' ? _agencyCtrl.text.trim() : null,
         iban: _type == 'bank' ? _ibanCtrl.text.trim() : null,
-        currency: 'TND',
+        currency: _selectedCurrency,
         balance: widget.existing?.balance ?? 0.0,
       );
 
@@ -211,18 +280,24 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    widget.existing == null ? 'Créer un Compte de Trésorerie' : 'Modifier le Compte',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Expanded(
+                    child: Text(
+                      widget.existing == null ? 'Creer un Compte de Tresorerie' : 'Modifier le Compte',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                  const SizedBox(width: 16),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       OutlinedButton.icon(
                         onPressed: () => Navigator.pop(context),
@@ -233,7 +308,7 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
                       ElevatedButton.icon(
                         onPressed: _save,
                         icon: const Icon(Icons.save_rounded, size: 16),
-                        label: const Text('Créer'),
+                        label: const Text('Creer'),
                       ),
                     ],
                   ),
@@ -242,7 +317,7 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
               const SizedBox(height: 24),
 
               // Type Selector
-              const Text('Type de Compte', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)),
+              const Text('Type de Compte', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -257,56 +332,104 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
               ),
               const SizedBox(height: 16),
 
+              const Text('Nom du Compte', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: _nameCtrl,
-                decoration: const InputDecoration(labelText: 'Nom du Compte *', hintText: 'Entrez le nom du compte'),
+                decoration: InputDecoration(
+                  hintText: 'Entrez le nom du compte',
+                  hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                ),
+                style: const TextStyle(fontSize: 13),
                 validator: (v) => v!.trim().isEmpty ? 'Requis' : null,
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _internalNameCtrl,
-                decoration: const InputDecoration(labelText: 'Nom interne visible uniquement par vous'),
-              ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
+              const Text('Nom interne visible uniquement par vous', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+              const SizedBox(height: 16),
 
               if (_type == 'bank') ...[
-                TextFormField(
-                  controller: _bankNameCtrl,
-                  decoration: const InputDecoration(labelText: 'Banque', hintText: 'Sélectionnez une banque'),
+                const Text('Banque', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _selectedBank,
+                  hint: const Text('Sélectionnez une banque', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                  icon: const Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                  ),
+                  style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                  items: _tunisianBanks.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                  onChanged: (v) => setState(() => _selectedBank = v),
+                  validator: (v) => v == null ? 'Requis' : null,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+
+                const Text('Agence', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _agencyCtrl,
-                  decoration: const InputDecoration(labelText: 'Agence', hintText: "Entrez le nom de l'agence"),
+                  decoration: InputDecoration(
+                    hintText: "Entrez le nom de l'agence",
+                    hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                  ),
+                  style: const TextStyle(fontSize: 13),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+
+                const Text('IBAN', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _ibanCtrl,
-                  decoration: const InputDecoration(labelText: 'IBAN', hintText: 'TN59XXXXXXXXXXXXXXXXXXXX'),
+                  decoration: InputDecoration(
+                    hintText: 'TN59XXXXXXXXXXXXXXXXXXXX',
+                    hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                  ),
+                  style: const TextStyle(fontSize: 13),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
               ],
 
               // Currency indicator
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceAlt,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: AppColors.border),
+              const Text('Devise', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _selectedCurrency,
+                icon: const Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
                 ),
-                child: Row(
-                  children: const [
-                    Text('🇹🇳', style: TextStyle(fontSize: 18)),
-                    SizedBox(width: 8),
-                    Text('TND - Tunisian Dinar', style: TextStyle(fontWeight: FontWeight.w500)),
-                    Spacer(),
-                    Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
-                  ],
-                ),
+                style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                items: _worldCurrencies.map((c) {
+                  return DropdownMenuItem(
+                    value: c['code'],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(c['flag']!, style: const TextStyle(fontSize: 16)),
+                        const SizedBox(width: 8),
+                        Text('${c['code']} - ${c['name']}', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (v) => setState(() => _selectedCurrency = v!),
               ),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -331,6 +454,513 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
               const SizedBox(width: 8),
               const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 16),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CreateExpenseDialog extends StatefulWidget {
+  const _CreateExpenseDialog();
+
+  @override
+  State<_CreateExpenseDialog> createState() => _CreateExpenseDialogState();
+}
+
+class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _amountCtrl;
+  late TextEditingController _reasonCtrl;
+  late TextEditingController _withholdingTaxRateCtrl;
+  DateTime _date = DateTime.now();
+  String? _selectedAccountId;
+  String _selectedCategory = 'salaries';
+  bool _applyWithholdingTax = false;
+  String? _selectedProjectId;
+
+  Map<String, String> _categories = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _amountCtrl = TextEditingController(text: '0');
+    _reasonCtrl = TextEditingController();
+    _withholdingTaxRateCtrl = TextEditingController(text: '0');
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final cats = await ExpenseCategoryService.loadCategories();
+    setState(() {
+      _categories = cats;
+      if (cats.isNotEmpty && !cats.containsKey(_selectedCategory)) {
+        _selectedCategory = cats.keys.first;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _reasonCtrl.dispose();
+    _withholdingTaxRateCtrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    if (_formKey.currentState!.validate() && _selectedAccountId != null) {
+      final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 0.0;
+      final rate = _applyWithholdingTax ? (double.tryParse(_withholdingTaxRateCtrl.text.replaceAll(',', '.')) ?? 0.0) : 0.0;
+
+      final transaction = TreasuryTransaction(
+        transactionNumber: 'DEP-${DateTime.now().millisecondsSinceEpoch}',
+        accountId: _selectedAccountId!,
+        type: 'expense',
+        amount: amount,
+        category: _selectedCategory,
+        dateTransaction: _date,
+        description: _reasonCtrl.text.trim().isEmpty ? null : _reasonCtrl.text.trim(),
+        projectId: _selectedProjectId,
+        withholdingTaxRate: rate,
+        withholdingTax: amount * (rate / 100),
+      );
+
+      context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(transaction));
+      Navigator.pop(context);
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() => _date = picked);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+      child: Container(
+        width: 500,
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Nouvelle Dépense',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close_rounded, size: 16),
+                          label: const Text('Fermer'),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: _save,
+                          icon: const Icon(Icons.save_rounded, size: 16),
+                          label: const Text('Créer'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Amount and Date
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Montant', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _amountCtrl,
+                            decoration: InputDecoration(
+                              suffixText: 'DT',
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                            ),
+                            style: const TextStyle(fontSize: 13),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'Requis';
+                              if (double.tryParse(v.replaceAll(',', '.')) == null) return 'Invalide';
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Date', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                          const SizedBox(height: 8),
+                          InkWell(
+                            onTap: _pickDate,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                border: Border.all(color: AppColors.border),
+                                color: Colors.white,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_date), style: const TextStyle(fontSize: 13)),
+                                  const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Account
+                const Text('Compte de Trésorerie', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+                  builder: (context, state) {
+                    List<TreasuryAccount> accounts = [];
+                    if (state is TreasuryAccountsLoaded) {
+                      accounts = state.accounts;
+                    }
+                    return DropdownButtonFormField<String>(
+                      value: _selectedAccountId,
+                      hint: const Text('Sélectionner un compte de trésorerie', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textTertiary),
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                      ),
+                      style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                      items: accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))).toList(),
+                      onChanged: (v) => setState(() => _selectedAccountId = v),
+                      validator: (v) => v == null ? 'Requis' : null,
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                // Category
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Catégorie de Dépense', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final updated = await showDialog<Map<String, String>>(
+                          context: context,
+                          builder: (_) => _ManageExpenseCategoriesDialog(initialCategories: _categories),
+                        );
+                        if (updated != null) {
+                          setState(() {
+                            _categories = updated;
+                            if (updated.isNotEmpty && !updated.containsKey(_selectedCategory)) {
+                              _selectedCategory = updated.keys.first;
+                            }
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.edit_rounded, size: 14, color: AppColors.textSecondary),
+                      label: const Text('Modifier les catégories de dépense', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (_categories.isEmpty)
+                  const Text('Aucune catégorie.', style: TextStyle(color: AppColors.textTertiary, fontSize: 13))
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _categories.keys.map((k) => IntrinsicWidth(child: _buildCategoryButton(k))).toList(),
+                  ),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 24),
+
+                // Withholding Tax
+                Row(
+                  children: [
+                    const Expanded(
+                      flex: 2,
+                      child: Text('Appliquer une retenue à la source ?', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildTypeButton('Non', false, !_applyWithholdingTax, () => setState(() => _applyWithholdingTax = false)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildTypeButton('Oui', true, _applyWithholdingTax, () => setState(() => _applyWithholdingTax = true)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (_applyWithholdingTax) ...[
+                  const SizedBox(height: 16),
+                  const Text('Taux de Retenue (%)', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _withholdingTaxRateCtrl,
+                    decoration: InputDecoration(
+                      suffixText: '%',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                    ),
+                    style: const TextStyle(fontSize: 13),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Requis';
+                      if (double.tryParse(v.replaceAll(',', '.')) == null) return 'Invalide';
+                      return null;
+                    },
+                  ),
+                ],
+                const SizedBox(height: 24),
+
+                // Project
+                const Text('Projet (Optionnel)', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                BlocBuilder<ProjectsBloc, ProjectsState>(
+                  builder: (context, state) {
+                    List<Project> projects = [];
+                    if (state is ProjectsLoaded) {
+                      projects = state.projects;
+                    }
+                    return DropdownButtonFormField<String>(
+                      value: _selectedProjectId,
+                      hint: const Text('Sélectionner un projet', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                      icon: const Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                      ),
+                      style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                      items: projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))).toList(),
+                      onChanged: (v) => setState(() => _selectedProjectId = v),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Reason
+                const Text('Raison (Optionnel)', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _reasonCtrl,
+                  decoration: InputDecoration(
+                    hintText: 'Entrez la raison ou la description de la dépense',
+                    hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                  ),
+                  style: const TextStyle(fontSize: 13),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryButton(String key) {
+    final isSelected = _selectedCategory == key;
+    return InkWell(
+      onTap: () => setState(() => _selectedCategory = key),
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: isSelected ? AppColors.primary : AppColors.border, width: 1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                _categories[key]!,
+                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: isSelected ? AppColors.primary : AppColors.textSecondary),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.check_circle_outline_rounded, color: AppColors.primary, size: 14),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypeButton(String label, bool value, bool isSelected, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: isSelected ? AppColors.primary : AppColors.border, width: 1),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(label, style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: isSelected ? AppColors.primary : AppColors.textSecondary)),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              const Icon(Icons.check_circle_outline_rounded, color: AppColors.primary, size: 16),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ManageExpenseCategoriesDialog extends StatefulWidget {
+  final Map<String, String> initialCategories;
+  const _ManageExpenseCategoriesDialog({required this.initialCategories});
+
+  @override
+  State<_ManageExpenseCategoriesDialog> createState() => _ManageExpenseCategoriesDialogState();
+}
+
+class _ManageExpenseCategoriesDialogState extends State<_ManageExpenseCategoriesDialog> {
+  late Map<String, String> _categories;
+  final TextEditingController _newCategoryCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _categories = Map.from(widget.initialCategories);
+  }
+
+  void _save() async {
+    await ExpenseCategoryService.saveCategories(_categories);
+    if (mounted) Navigator.pop(context, _categories);
+  }
+
+  void _add() {
+    final text = _newCategoryCtrl.text.trim();
+    if (text.isNotEmpty) {
+      final key = text.toLowerCase().replaceAll(' ', '_');
+      if (!_categories.containsKey(key)) {
+        setState(() {
+          _categories[key] = text;
+          _newCategoryCtrl.clear();
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+      child: Container(
+        width: 400,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Catégories de Dépense', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 250,
+              child: ListView(
+                children: _categories.entries.map((e) {
+                  return ListTile(
+                    title: Text(e.value),
+                    trailing: e.key == 'other'
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
+                            onPressed: () => setState(() => _categories.remove(e.key)),
+                          ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _newCategoryCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'Nouvelle catégorie (ex: 🚕 Transport)',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                    ),
+                    onSubmitted: (_) => _add(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(onPressed: _add, child: const Text('Ajouter')),
+              ],
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(onPressed: _save, child: const Text('Enregistrer')),
           ],
         ),
       ),

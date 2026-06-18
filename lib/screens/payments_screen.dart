@@ -111,12 +111,12 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                       const SizedBox(width: 12),
                       // Method filter
                       _FilterDropdown(
-                        label: 'Méthode',
+                        label: 'Methode',
                         value: _methodFilter,
                         items: const {
                           'tous': 'Tous',
-                          'especes': 'Espèces',
-                          'cheque': 'Chèque',
+                          'especes': 'Especes',
+                          'cheque': 'Cheque',
                           'virement': 'Virement',
                           'carte': 'Carte',
                         },
@@ -132,9 +132,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         value: _statusFilter,
                         items: const {
                           'tous': 'Tous',
-                          'paid': 'Payé',
+                          'paid': 'Paye',
                           'pending': 'En attente',
-                          'cancelled': 'Annulé',
+                          'cancelled': 'Annule',
                         },
                         onChanged: (v) => setState(() {
                           _statusFilter = v!;
@@ -195,7 +195,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                                 content: Text(
-                                    '${val == 'export' ? 'Export' : 'Impression'} bientôt disponible')),
+                                    '${val == 'export' ? 'Export' : 'Impression'} bientot disponible')),
                           );
                         },
                       ),
@@ -279,13 +279,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 size: 40, color: AppColors.primary),
           ),
           const SizedBox(height: 16),
-          const Text('Aucun paiement trouvé',
+          const Text('Aucun paiement trouve',
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary)),
           const SizedBox(height: 6),
-          const Text('Créez votre premier paiement en cliquant sur le bouton ci-dessus.',
+          const Text('Creez votre premier paiement en cliquant sur le bouton ci-dessus.',
               style: TextStyle(
                   fontSize: 13, color: AppColors.textSecondary)),
         ],
@@ -308,7 +308,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         children: [
           Expanded(
               flex: 3,
-              child: Text('Référence',
+              child: Text('Reference',
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -329,7 +329,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                       color: AppColors.textSecondary))),
           Expanded(
               flex: 2,
-              child: Text('Méthode',
+              child: Text('Methode',
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -360,7 +360,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       case 'paid':
         statusColor = AppColors.success;
         statusBg = AppColors.successLight;
-        statusLabel = 'Payé';
+        statusLabel = 'Paye';
         break;
       case 'pending':
         statusColor = AppColors.warning;
@@ -370,7 +370,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       case 'cancelled':
         statusColor = AppColors.error;
         statusBg = AppColors.errorLight;
-        statusLabel = 'Annulé';
+        statusLabel = 'Annule';
         break;
       default:
         statusColor = AppColors.textSecondary;
@@ -381,10 +381,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     String methodLabel;
     switch (p.method) {
       case 'especes':
-        methodLabel = 'Espèces';
+        methodLabel = 'Especes';
         break;
       case 'cheque':
-        methodLabel = 'Chèque';
+        methodLabel = 'Cheque';
         break;
       case 'virement':
         methodLabel = 'Virement';
@@ -560,7 +560,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
               style: const TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
           const Spacer(),
-          Text('Affichage de $start à $end sur $total résultats',
+          Text('Affichage de $start a $end sur $total resultats',
               style: const TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(width: 16),
@@ -586,7 +586,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       builder: (_) => AlertDialog(
         title: const Text('Supprimer le paiement'),
         content: Text(
-            'Êtes-vous sûr de vouloir supprimer le paiement ${p.paymentNumber} ?'),
+            'Etes-vous sur de vouloir supprimer le paiement ${p.paymentNumber} ?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
@@ -719,7 +719,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     if (_selectedContactId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Veuillez sélectionner un contact'),
+            content: Text('Veuillez selectionner un contact'),
             backgroundColor: AppColors.error),
       );
       return;
@@ -757,7 +757,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Paiement $paymentNumber créé avec succès'),
+        content: Text('Paiement $paymentNumber cree avec succes'),
         backgroundColor: AppColors.success,
       ),
     );
@@ -860,7 +860,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary)),
-              Text('Enregistrer un encaissement ou décaissement',
+              Text('Enregistrer un encaissement ou decaissement',
                   style: TextStyle(
                       fontSize: 12, color: AppColors.textSecondary)),
             ],
@@ -929,7 +929,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
             const SizedBox(width: 12),
             Expanded(
               child: _DirectionButton(
-                label: 'Décaissement',
+                label: 'Decaissement',
                 subtitle: 'Argent sortant',
                 icon: Icons.arrow_upward_rounded,
                 color: AppColors.error,
@@ -1155,7 +1155,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Méthode *',
+        const Text('Methode *',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -1177,9 +1177,9 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                   fontSize: 14, color: AppColors.textPrimary),
               items: const [
                 DropdownMenuItem(
-                    value: 'especes', child: Text('Espèces')),
+                    value: 'especes', child: Text('Especes')),
                 DropdownMenuItem(
-                    value: 'cheque', child: Text('Chèque')),
+                    value: 'cheque', child: Text('Cheque')),
                 DropdownMenuItem(
                     value: 'virement', child: Text('Virement')),
                 DropdownMenuItem(value: 'carte', child: Text('Carte')),
@@ -1205,7 +1205,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
         Row(
           children: [
             _StatusChip(
-              label: 'Payé',
+              label: 'Paye',
               value: 'paid',
               selected: _status == 'paid',
               color: AppColors.success,
@@ -1223,7 +1223,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
             ),
             const SizedBox(width: 8),
             _StatusChip(
-              label: 'Annulé',
+              label: 'Annule',
               value: 'cancelled',
               selected: _status == 'cancelled',
               color: AppColors.error,
@@ -1258,7 +1258,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                       size: 16, color: AppColors.primary),
                   const SizedBox(width: 10),
                   const Expanded(
-                    child: Text('Détails de la méthode de paiement',
+                    child: Text('Details de la methode de paiement',
                         style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -1286,7 +1286,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Compte de trésorerie',
+                      const Text('Compte de tresorerie',
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -1315,7 +1315,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                               child: DropdownButton<String>(
                                 value: _selectedAccountId,
                                 isExpanded: true,
-                                hint: const Text('Sélectionner un compte',
+                                hint: const Text('Selectionner un compte',
                                     style: TextStyle(
                                         fontSize: 13,
                                         color: AppColors.textTertiary)),
@@ -1354,7 +1354,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Référence externe (optionnel)',
+                      const Text('Reference externe (optionnel)',
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -1365,7 +1365,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                         style: const TextStyle(fontSize: 14),
                         decoration: const InputDecoration(
                           hintText:
-                              'N° de chèque, référence de virement...',
+                              'N° de cheque, reference de virement...',
                           hintStyle: TextStyle(
                               color: AppColors.textTertiary, fontSize: 13),
                           prefixIcon: Icon(Icons.tag_rounded,

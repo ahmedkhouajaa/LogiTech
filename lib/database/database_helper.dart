@@ -19,6 +19,8 @@ import '../models/customer_order.dart';
 import '../models/stock_withdrawal.dart';
 import '../models/return_note.dart';
 import '../models/supplier_order.dart';
+import '../models/product_family.dart';
+import '../models/credit_note.dart';
 import '../utils/constants.dart';
 
 class DatabaseHelper {
@@ -42,7 +44,7 @@ class DatabaseHelper {
     return await databaseFactoryFfi.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 19,
+        version: 21,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       ),
@@ -477,6 +479,20 @@ class DatabaseHelper {
         )
       ''');
     }
+
+    if (oldVersion < 21) {
+      final columns = [
+        "ALTER TABLE invoices ADD COLUMN credit_note_id TEXT",
+        "ALTER TABLE credit_notes ADD COLUMN status TEXT DEFAULT 'unused'",
+      ];
+      for (final sql in columns) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
+    }
   }
 
   Future<void> _createProductRelatedTables(Database db) async {
@@ -547,12 +563,12 @@ class DatabaseHelper {
     // Seed default data
     final hasUnits = (await db.rawQuery('SELECT COUNT(*) FROM product_units')).first.values.first as int;
     if (hasUnits == 0) {
-      await db.execute("INSERT INTO product_units (id, name, symbol) VALUES ('1', 'Pièce', 'pc'), ('2', 'Kilogramme', 'kg'), ('3', 'Litre', 'L'), ('4', 'Mètre', 'm'), ('5', 'Heure', 'h'), ('6', 'Jour', 'j'), ('7', 'Mois', 'mois')");
+      await db.execute("INSERT INTO product_units (id, name, symbol) VALUES ('1', 'Piece', 'pc'), ('2', 'Kilogramme', 'kg'), ('3', 'Litre', 'L'), ('4', 'Metre', 'm'), ('5', 'Heure', 'h'), ('6', 'Jour', 'j'), ('7', 'Mois', 'mois')");
     }
 
     final hasFamilies = (await db.rawQuery('SELECT COUNT(*) FROM product_families')).first.values.first as int;
     if (hasFamilies == 0) {
-      await db.execute("INSERT INTO product_families (id, name) VALUES ('1', 'Électronique'), ('2', 'Informatique'), ('3', 'Bureau'), ('4', 'Mobilier'), ('5', 'Vêtements'), ('6', 'Alimentation')");
+      await db.execute("INSERT INTO product_families (id, name, created_at) VALUES ('1', 'Electronique', '${DateTime.now().toIso8601String()}'), ('2', 'Informatique', '${DateTime.now().toIso8601String()}'), ('3', 'Bureau', '${DateTime.now().toIso8601String()}'), ('4', 'Mobilier', '${DateTime.now().toIso8601String()}'), ('5', 'Vetements', '${DateTime.now().toIso8601String()}'), ('6', 'Alimentation', '${DateTime.now().toIso8601String()}')");
     }
   }
 
@@ -633,7 +649,7 @@ class DatabaseHelper {
     await db.execute('''
       INSERT INTO transaction_categories (id, name, type, is_default, created_at) VALUES 
       ('cat_salaries', 'Salaires', 'expense', 1, ${DateTime.now().millisecondsSinceEpoch}),
-      ('cat_taxes', 'Impôts', 'expense', 1, ${DateTime.now().millisecondsSinceEpoch}),
+      ('cat_taxes', 'Impots', 'expense', 1, ${DateTime.now().millisecondsSinceEpoch}),
       ('cat_rent', 'Loyer', 'expense', 1, ${DateTime.now().millisecondsSinceEpoch}),
       ('cat_other_exp', 'Autre', 'expense', 1, ${DateTime.now().millisecondsSinceEpoch}),
       ('cat_sales', 'Ventes', 'income', 1, ${DateTime.now().millisecondsSinceEpoch}),
@@ -790,7 +806,7 @@ class DatabaseHelper {
         family_id TEXT,
         sub_family_id TEXT,
         brand_id TEXT,
-        unit TEXT DEFAULT 'Unité',
+        unit TEXT DEFAULT 'Unite',
         purchase_price REAL DEFAULT 0,
         selling_price REAL DEFAULT 0,
         usual_discount REAL DEFAULT 0,
@@ -832,7 +848,7 @@ class DatabaseHelper {
     // Insert default warehouse
     await db.insert('warehouses', {
       'id': const Uuid().v4(),
-      'name': 'Entrepôt Principal',
+      'name': 'Entrepot Principal',
       'is_default': 1,
       'is_deleted': 0,
       'created_at': DateTime.now().toIso8601String(),
@@ -1082,6 +1098,7 @@ class DatabaseHelper {
         notes TEXT,
         conditions TEXT,
         firebase_uid TEXT,
+        credit_note_id TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -1116,6 +1133,7 @@ class DatabaseHelper {
         total_ht REAL DEFAULT 0,
         total_tva REAL DEFAULT 0,
         total_ttc REAL DEFAULT 0,
+        status TEXT DEFAULT 'unused',
         notes TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
@@ -1907,6 +1925,97 @@ class DatabaseHelper {
     return result.first['next'] as int;
   }
 
+  // ─── Credit Notes ────────────────────────────────────────────────
+  Future<List<CreditNote>> getCreditNotes() async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT cn.*, c.name as customerName
+      FROM credit_notes cn
+      LEFT JOIN customers c ON cn.customer_id = c.id
+      WHERE cn.is_deleted = 0
+      ORDER BY cn.created_at DESC
+    ''');
+    
+    final creditNotes = <CreditNote>[];
+    for (final map in maps) {
+      final itemsMap = await db.query(
+        'credit_note_items',
+        where: 'credit_note_id = ?',
+        whereArgs: [map['id']],
+      );
+      final items = itemsMap.map((m) => CreditNoteItem.fromMap(m)).toList();
+      creditNotes.add(CreditNote.fromMap(map, items: items));
+    }
+    return creditNotes;
+  }
+
+  Future<CreditNote?> getCreditNote(String id) async {
+    final db = await database;
+    final maps = await db.query(
+      'credit_notes',
+      where: 'id = ? AND is_deleted = 0',
+      whereArgs: [id],
+    );
+    if (maps.isEmpty) return null;
+    
+    final itemsMap = await db.query(
+      'credit_note_items',
+      where: 'credit_note_id = ?',
+      whereArgs: [id],
+    );
+    final items = itemsMap.map((m) => CreditNoteItem.fromMap(m)).toList();
+    return CreditNote.fromMap(maps.first, items: items);
+  }
+
+  Future<void> insertCreditNote(CreditNote cn) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('credit_notes', cn.toMap());
+      for (final item in cn.items) {
+        await txn.insert('credit_note_items', item.toMap(cn.id));
+      }
+      
+      if (cn.invoiceId.isNotEmpty) {
+        await txn.rawUpdate(
+          'UPDATE invoices SET credit_note_id = ? WHERE id = ?',
+          [cn.id, cn.invoiceId],
+        );
+      }
+    });
+  }
+
+  Future<void> updateCreditNote(CreditNote cn) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'credit_notes',
+        cn.toMap(),
+        where: 'id = ?',
+        whereArgs: [cn.id],
+      );
+      
+      await txn.delete(
+        'credit_note_items',
+        where: 'credit_note_id = ?',
+        whereArgs: [cn.id],
+      );
+      
+      for (final item in cn.items) {
+        await txn.insert('credit_note_items', item.toMap(cn.id));
+      }
+    });
+  }
+
+  Future<void> deleteCreditNote(String id) async {
+    await softDelete('credit_notes', id);
+  }
+
+  Future<int> getNextCreditNoteNumber() async {
+    final db = await database;
+    final result = await db.rawQuery('SELECT COUNT(*) + 1 as next FROM credit_notes');
+    return result.first['next'] as int;
+  }
+
   // ─── Dashboard Aggregates ──────────────────────────────────────
   Future<double> getTotalInvoiced() async {
     final db = await database;
@@ -2492,6 +2601,38 @@ class DatabaseHelper {
     return maps.map((m) => ActivityLog.fromMap(m)).toList();
   }
 
+  // ─── Families ───────────────────────────────────────────────────
+  Future<List<ProductFamily>> getProductFamilies() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'product_families',
+      orderBy: 'name ASC',
+    );
+    return maps.map((m) => ProductFamily.fromMap(m)).toList();
+  }
+
+  Future<void> insertProductFamily(ProductFamily family) async {
+    final db = await database;
+    await db.insert('product_families', family.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> updateProductFamily(ProductFamily family) async {
+    final db = await database;
+    await db.update(
+      'product_families',
+      family.toMap(),
+      where: 'id = ?',
+      whereArgs: [family.id],
+    );
+  }
+
+  Future<void> deleteProductFamily(String id) async {
+    final db = await database;
+    // Delete sub-families first if any
+    await db.delete('product_families', where: 'parent_id = ?', whereArgs: [id]);
+    await db.delete('product_families', where: 'id = ?', whereArgs: [id]);
+  }
+
   // ─── Company Settings ──────────────────────────────────────────
   Future<CompanySettings> getCompanySettings() async {
     final db = await database;
@@ -2781,6 +2922,16 @@ class DatabaseHelper {
     final result = await db.rawQuery(
       'SELECT COUNT(*) + 1 as next FROM customer_orders WHERE number LIKE ?',
       ['CC-$year-%'],
+    );
+    return result.first['next'] as int? ?? 1;
+  }
+
+  Future<int> getNextQuoteSequence() async {
+    final db = await database;
+    final year = DateTime.now().year;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) + 1 as next FROM quotes WHERE number LIKE ?',
+      ['DV-$year-%'],
     );
     return result.first['next'] as int? ?? 1;
   }

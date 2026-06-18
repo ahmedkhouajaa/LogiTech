@@ -29,6 +29,7 @@ enum AppModule {
   customers,
   suppliers,
   products,
+  productSettings,
   // Stock
   stockDashboard,
   stockMovements,
@@ -39,7 +40,7 @@ enum AppModule {
   warehouses,
   // Projets
   projects,
-  // Paramètres
+  // Parametres
   settings,
 }
 
@@ -92,7 +93,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
                   ]),
                   _buildGroup('achats', Icons.local_shipping_rounded, 'Achats', [
                     _buildSubItem(AppModule.supplierOrders, 'Commandes fournisseur'),
-                    _buildSubItem(AppModule.receivingVouchers, 'Bons de réception'),
+                    _buildSubItem(AppModule.receivingVouchers, 'Bons de reception'),
                     _buildSubItem(AppModule.purchaseInvoices, 'Factures d\'achat'),
                     _buildSubItem(AppModule.supplierCreditNotes, 'Avoirs fournisseur'),
                     _buildSubItem(AppModule.supplierReturns, 'Retours fournisseur'),
@@ -102,29 +103,32 @@ class _SidebarMenuState extends State<SidebarMenu> {
                     _buildSubItem(AppModule.withholdingTaxSales, 'Retenue (ventes)'),
                     _buildSubItem(AppModule.withholdingTaxPurchase, 'Retenue (achats)'),
                   ]),
-                  _buildGroup('tresorerie', Icons.account_balance_rounded, 'Trésorerie', [
+                  _buildGroup('tresorerie', Icons.account_balance_rounded, 'Tresorerie', [
                     _buildSubItem(AppModule.accounts, 'Comptes'),
                     _buildSubItem(AppModule.transactions, 'Transactions'),
-                    _buildSubItem(AppModule.checksTraites, 'Chèques & Traites'),
+                    _buildSubItem(AppModule.checksTraites, 'Cheques & Traites'),
                   ]),
                   const _SidebarDivider(),
                   _buildItem(AppModule.customers, Icons.people_rounded, 'Clients'),
                   _buildItem(AppModule.suppliers, Icons.factory_rounded, 'Fournisseurs'),
-                  _buildItem(AppModule.products, Icons.inventory_2_rounded, 'Articles'),
+                  _buildGroup('articles', Icons.inventory_2_rounded, 'Articles', [
+                    _buildSubItem(AppModule.products, 'Liste des articles'),
+                    _buildSubItem(AppModule.productSettings, 'Parametres des articles'),
+                  ]),
                   const _SidebarDivider(),
                   _buildGroup('stock', Icons.warehouse_rounded, 'Stock', [
                     _buildSubItem(AppModule.stockDashboard, 'Vue d\'ensemble'),
                     _buildSubItem(AppModule.stockMovements, 'Mouvements'),
-                    _buildSubItem(AppModule.stockEntry, 'Bons d\'entrée'),
-                    _buildSubItem(AppModule.stockWithdrawal, 'Bons de prélèvement'),
+                    _buildSubItem(AppModule.stockEntry, 'Bons d\'entree'),
+                    _buildSubItem(AppModule.stockWithdrawal, 'Bons de prelevement'),
                     _buildSubItem(AppModule.stockTransfer, 'Bons de transfert'),
                     _buildSubItem(AppModule.inventorySheet, 'Fiche d\'inventaire'),
-                    _buildSubItem(AppModule.warehouses, 'Entrepôts'),
+                    _buildSubItem(AppModule.warehouses, 'Entrepots'),
                   ]),
                   const _SidebarDivider(),
                   _buildItem(AppModule.projects, Icons.folder_rounded, 'Projets'),
                   const _SidebarDivider(),
-                  _buildItem(AppModule.settings, Icons.settings_rounded, 'Paramètres'),
+                  _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
                   const SizedBox(height: 16),
                 ],
               ),

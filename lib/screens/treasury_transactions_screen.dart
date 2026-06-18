@@ -67,7 +67,7 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Consultez et gérez toutes les transactions de trésorerie',
+                      'Consultez et gerez toutes les transactions de tresorerie',
                       style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
                     ),
                   ],
@@ -109,7 +109,7 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Compte de Trésorerie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      const Text('Compte de Tresorerie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                       const SizedBox(height: 8),
                       BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
                         builder: (context, state) {
@@ -139,12 +139,12 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Catégorie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      const Text('Categorie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                       const SizedBox(height: 8),
                       BlocBuilder<TreasuryTransactionsBloc, TreasuryTransactionsState>(
                         builder: (context, state) {
                           List<DropdownMenuItem<String>> items = [
-                            const DropdownMenuItem(value: 'all', child: Text('Toutes les Catégories')),
+                            const DropdownMenuItem(value: 'all', child: Text('Toutes les Categories')),
                           ];
                           if (state is TreasuryTransactionsLoaded) {
                             items.addAll(state.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))));
@@ -169,7 +169,7 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Date de début', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      const Text('Date de debut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                       const SizedBox(height: 8),
                       TextFormField(
                         readOnly: true,
@@ -225,7 +225,7 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                   child: IconButton(
                     icon: const Icon(Icons.tune_rounded, color: AppColors.textSecondary),
                     onPressed: _resetFilters,
-                    tooltip: 'Réinitialiser les filtres',
+                    tooltip: 'Reinitialiser les filtres',
                   ),
                 ),
               ],
@@ -258,12 +258,12 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                       border: Border.all(color: AppColors.border),
                     ),
                     child: DataTableWidget<TreasuryTransaction>(
-                      columns: const ['Référence', 'Compte', 'Débit', 'Crédit', 'Solde', 'Motif', 'Actions'],
+                      columns: const ['Reference', 'Compte', 'Debit', 'Credit', 'Solde', 'Motif', 'Actions'],
                       rows: filtered,
-                      emptyMessage: 'Aucune transaction trouvée',
+                      emptyMessage: 'Aucune transaction trouvee',
                       cellBuilder: (tx) {
                         final isDebit = tx.type == 'income'; // Encaissement (incoming) = Debit transaction
-                        final isCredit = tx.type == 'expense'; // Décaissement (outgoing) = Credit transaction
+                        final isCredit = tx.type == 'expense'; // Decaissement (outgoing) = Credit transaction
                         
                         final balance = tx.balance ?? 0.0;
                         final balanceColor = balance < 0 ? AppColors.error : AppColors.textPrimary;
@@ -342,7 +342,7 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmer la suppression'),
-        content: const Text('Voulez-vous vraiment supprimer cette transaction ? Le solde du compte sera recalculé automatiquement.'),
+        content: const Text('Voulez-vous vraiment supprimer cette transaction ? Le solde du compte sera recalcule automatiquement.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
           TextButton(

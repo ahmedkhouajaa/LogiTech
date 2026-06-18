@@ -46,13 +46,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   child: AppCard(
                     padding: EdgeInsets.zero,
                     child: DataTableWidget<TransactionModel>(
-                      columns: const ['Date', 'Compte', 'Type', 'Montant', 'Méthode', 'Référence', 'Notes'],
+                      columns: const ['Date', 'Compte', 'Type', 'Montant', 'Methode', 'Reference', 'Notes'],
                       rows: state.transactions,
                       emptyMessage: 'Aucune transaction',
                       cellBuilder: (t) => [
                         DataCell(Text(formatDate(t.date))),
                         DataCell(Text(t.accountId)), // Should map to name ideally
-                        DataCell(StatusBadge(label: t.type == TransactionType.income ? 'Revenu' : 'Dépense', color: t.type == TransactionType.income ? AppColors.success : AppColors.error)),
+                        DataCell(StatusBadge(label: t.type == TransactionType.income ? 'Revenu' : 'Depense', color: t.type == TransactionType.income ? AppColors.success : AppColors.error)),
                         DataCell(Text(formatCurrency(t.amount), style: TextStyle(fontWeight: FontWeight.bold, color: t.type == TransactionType.income ? AppColors.success : AppColors.error))),
                         DataCell(Text(t.category ?? '—')),
                         DataCell(Text(t.reference ?? '—')),

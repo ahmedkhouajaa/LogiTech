@@ -34,7 +34,7 @@ class AuthService {
       return false;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
-        throw 'Aucun utilisateur trouvé pour cet email.';
+        throw 'Aucun utilisateur trouve pour cet email.';
       } else if (e.code == 'wrong-password') {
         throw 'Mot de passe incorrect.';
       } else {

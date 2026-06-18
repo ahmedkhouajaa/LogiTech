@@ -15,6 +15,7 @@ import 'blocs/customer_orders/customer_orders_bloc.dart';
 import 'blocs/delivery_notes/delivery_notes_bloc.dart';
 import 'blocs/supplier_orders/supplier_orders_bloc.dart';
 import 'blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
+import 'blocs/credit_notes/credit_notes_bloc.dart';
 import 'blocs/quotes/quotes_bloc.dart';
 import 'blocs/stock/stock_bloc.dart';
 import 'blocs/dashboard/dashboard_bloc.dart';
@@ -25,6 +26,8 @@ import 'blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import 'blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import 'blocs/checks_traites/checks_traites_bloc.dart';
 import 'blocs/return_notes/return_notes_bloc.dart';
+import 'blocs/product_settings/product_settings_bloc.dart';
+import 'blocs/product_settings/product_settings_event.dart';
 import 'services/auth_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_service.dart';
@@ -81,6 +84,8 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => TreasuryTransactionsBloc(databaseHelper: DatabaseHelper.instance)..add(const LoadTreasuryTransactions())),
         BlocProvider(create: (_) => ChecksTraitesBloc(databaseHelper: DatabaseHelper.instance)..add(LoadChecksTraites())),
         BlocProvider(create: (_) => ReturnNotesBloc()),
+        BlocProvider(create: (_) => CreditNotesBloc()..add(LoadCreditNotes())),
+        BlocProvider(create: (_) => ProductSettingsBloc()..add(LoadFamilies())),
       ],
       child: MaterialApp(
         title: 'Business Manager Pro',

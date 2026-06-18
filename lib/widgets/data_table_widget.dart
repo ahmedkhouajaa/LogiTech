@@ -174,7 +174,7 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
             ),
           ),
           const SizedBox(width: 24),
-          Text('Affichage de $startItem à $endItem sur ${widget.rows.length} résultats', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Text('Affichage de $startItem a $endItem sur ${widget.rows.length} resultats', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const Spacer(),
           Text('Page ${_page + 1} sur $_totalPages', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(width: 16),

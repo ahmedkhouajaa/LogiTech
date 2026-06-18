@@ -119,12 +119,12 @@ class _CreateReturnNoteScreenState
     super.dispose();
   }
 
-  // â”€â”€ Save â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // a”€a”€ Save a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
   Future<void> _save() async {
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Veuillez sélectionner un client'),
+            content: Text('Veuillez selectionner un client'),
             backgroundColor: AppColors.error),
       );
       return;
@@ -172,7 +172,7 @@ class _CreateReturnNoteScreenState
     messenger.showSnackBar(SnackBar(
       content: Text(_isEditing
           ? 'Bon ${note.returnNumber} mis Ã  jour'
-          : 'Bon ${note.returnNumber} créé avec succès'),
+          : 'Bon ${note.returnNumber} cree avec succes'),
       backgroundColor: AppColors.success,
     ));
   }
@@ -192,10 +192,10 @@ class _CreateReturnNoteScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // â”€â”€ Form Card (Date, Client, Project, Custom fields, Mode) â”€â”€
+                    // a”€a”€ Form Card (Date, Client, Project, Custom fields, Mode) a”€a”€
                     _buildFormCard(),
                     const SizedBox(height: AppSpacing.lg),
-                    // â”€â”€ Articles â”€â”€
+                    // a”€a”€ Articles a”€a”€
                     _buildArticlesSection(),
                     const SizedBox(height: AppSpacing.md),
                     _buildArticleActions(),
@@ -216,7 +216,7 @@ class _CreateReturnNoteScreenState
     );
   }
 
-  // â”€â”€ Top Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // a”€a”€ Top Bar a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
   Widget _buildTopBar() {
     return Container(
       height: 56,
@@ -245,9 +245,9 @@ class _CreateReturnNoteScreenState
             setState(() => _status = ReturnNoteStatus.draft);
           }),
           const SizedBox(width: 8),
-          _buildHeaderButton(Icons.visibility_rounded, 'Aperçu', () {}),
+          _buildHeaderButton(Icons.visibility_rounded, 'Apercu', () {}),
           const SizedBox(width: 8),
-          _buildHeaderButton(Icons.settings_rounded, 'Paramètres', () {}),
+          _buildHeaderButton(Icons.settings_rounded, 'Parametres', () {}),
           const SizedBox(width: 8),
           SizedBox(
             height: 36,
@@ -293,7 +293,7 @@ class _CreateReturnNoteScreenState
     );
   }
 
-  // â”€â”€ Form Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // a”€a”€ Form Card a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
   Widget _buildFormCard() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -307,7 +307,7 @@ class _CreateReturnNoteScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Date
-          const Text("Date d'émission",
+          const Text("Date d'emission",
               style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -412,14 +412,14 @@ class _CreateReturnNoteScreenState
                         return DropdownButtonFormField<String>(
                           value: _selectedProjectId,
                           isExpanded: true,
-                          hint: const Text('Projet par défaut',
+                          hint: const Text('Projet par defaut',
                               style: TextStyle(
                                   fontSize: 13,
                                   color: AppColors.textTertiary)),
                           items: [
                             const DropdownMenuItem<String>(
                                 value: null,
-                                child: Text('Projet par défaut',
+                                child: Text('Projet par defaut',
                                     style: TextStyle(fontSize: 13))),
                             ...projects.map((p) => DropdownMenuItem(
                                 value: p.id,
@@ -440,7 +440,7 @@ class _CreateReturnNoteScreenState
           ),
           const SizedBox(height: 20),
 
-          // Champs Personnalisés
+          // Champs Personnalises
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -451,14 +451,14 @@ class _CreateReturnNoteScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Champs Personnalisés',
+                const Text('Champs Personnalises',
                     style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary)),
                 const SizedBox(height: 4),
                 const Text(
-                    'Informations supplémentaires spécifiques Ã  ce document',
+                    'Informations supplementaires specifiques Ã  ce document',
                     style: TextStyle(
                         fontSize: 11, color: AppColors.textSecondary)),
                 const SizedBox(height: 12),
@@ -468,7 +468,7 @@ class _CreateReturnNoteScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Matricule du véhicule',
+                          const Text('Matricule du vehicule',
                               style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -563,7 +563,7 @@ class _CreateReturnNoteScreenState
     );
   }
 
-  // â”€â”€ Articles Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // a”€a”€ Articles Section a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
   Widget _buildArticlesSection() {
     return Container(
       decoration: BoxDecoration(
@@ -598,11 +598,11 @@ class _CreateReturnNoteScreenState
               children: [
                 Expanded(
                     flex: 3,
-                    child: Text('Désignation',
+                    child: Text('Designation',
                         style: _tableHeaderStyle())),
                 SizedBox(
                     width: 120,
-                    child: Text('Quantité',
+                    child: Text('Quantite',
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
@@ -660,7 +660,7 @@ class _CreateReturnNoteScreenState
         children: [
           Row(
             children: [
-              // Désignation
+              // Designation
               Expanded(
                 flex: 3,
                 child: TextFormField(
@@ -672,7 +672,7 @@ class _CreateReturnNoteScreenState
                 ),
               ),
               const SizedBox(width: 8),
-              // Quantité with + button
+              // Quantite with + button
               SizedBox(
                 width: 120,
                 child: Row(
@@ -719,7 +719,7 @@ class _CreateReturnNoteScreenState
                   children: [
                     Expanded(
                       child: TextFormField(
-                        key: ValueKey('pu_${item.id}_init'),
+                        key: ValueKey('pu_${item.id}_${item.productId}'),
                         initialValue: item.unitPrice > 0
                             ? item.unitPrice.toStringAsFixed(0)
                             : '',
@@ -829,7 +829,7 @@ class _CreateReturnNoteScreenState
     );
   }
 
-  // â”€â”€ Article Actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // a”€a”€ Article Actions a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
   Widget _buildArticleActions() {
     return Row(
       children: [
@@ -846,7 +846,7 @@ class _CreateReturnNoteScreenState
                   border: Border.all(color: AppColors.border),
                 ),
                 child: DropdownButtonFormField<String>(
-                  hint: const Text('Sélectionner un article...',
+                  hint: const Text('Selectionner un article...',
                       style: TextStyle(
                           fontSize: 13,
                           color: AppColors.textTertiary)),
@@ -926,7 +926,7 @@ class _CreateReturnNoteScreenState
     );
   }
 
-  // â”€â”€ Global Discount Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // a”€a”€ Global Discount Section a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
   Widget _buildGlobalDiscountSection() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -994,7 +994,7 @@ class _CreateReturnNoteScreenState
     );
   }
 
-  // â”€â”€ Totals Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // a”€a”€ Totals Section a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
   Widget _buildTotalsSection() {
     return Align(
       alignment: Alignment.centerRight,
@@ -1088,7 +1088,7 @@ class _CreateReturnNoteScreenState
     );
   }
 
-  // â”€â”€ Notes Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // a”€a”€ Notes Section a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
   Widget _buildNotesSection() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1136,7 +1136,7 @@ class _CreateReturnNoteScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Conditions Générales',
+              const Text('Conditions Generales',
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1146,7 +1146,7 @@ class _CreateReturnNoteScreenState
                 controller: _conditionsCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText: 'Conditions générales pour ce document',
+                  hintText: 'Conditions generales pour ce document',
                   hintStyle: const TextStyle(
                       color: AppColors.textTertiary, fontSize: 13),
                   filled: true,

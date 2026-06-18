@@ -123,7 +123,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Veuillez sélectionner un client'),
+            content: Text('Veuillez selectionner un client'),
             backgroundColor: AppColors.error),
       );
       return;
@@ -177,8 +177,8 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
     nav.pop();
     messenger.showSnackBar(SnackBar(
       content: Text(_isEditing
-          ? 'Commande ${order.number} mise à jour'
-          : 'Commande ${order.number} créée avec succès'),
+          ? 'Commande ${order.number} mise a jour'
+          : 'Commande ${order.number} creee avec succes'),
       backgroundColor: AppColors.success,
     ));
   }
@@ -249,9 +249,9 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
             setState(() => _status = CustomerOrderStatus.draft);
           }),
           const SizedBox(width: 8),
-          _buildHeaderButton(Icons.visibility_rounded, 'Aperçu', () {}),
+          _buildHeaderButton(Icons.visibility_rounded, 'Apercu', () {}),
           const SizedBox(width: 8),
-          _buildHeaderButton(Icons.settings_rounded, 'Paramètres', () {}),
+          _buildHeaderButton(Icons.settings_rounded, 'Parametres', () {}),
           const SizedBox(width: 8),
           SizedBox(
             height: 36,
@@ -311,7 +311,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Date
-          const Text("Date d'émission",
+          const Text("Date d'emission",
               style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -416,14 +416,14 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                         return DropdownButtonFormField<String>(
                           value: _selectedProjectId,
                           isExpanded: true,
-                          hint: const Text('Projet par défaut',
+                          hint: const Text('Projet par defaut',
                               style: TextStyle(
                                   fontSize: 13,
                                   color: AppColors.textTertiary)),
                           items: [
                             const DropdownMenuItem<String>(
                                 value: null,
-                                child: Text('Projet par défaut',
+                                child: Text('Projet par defaut',
                                     style: TextStyle(fontSize: 13))),
                             ...projects.map((p) => DropdownMenuItem(
                                 value: p.id,
@@ -532,11 +532,11 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
               children: [
                 Expanded(
                     flex: 3,
-                    child: Text('Désignation',
+                    child: Text('Designation',
                         style: _tableHeaderStyle())),
                 SizedBox(
                     width: 120,
-                    child: Text('Quantité',
+                    child: Text('Quantite',
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
                 SizedBox(
@@ -594,19 +594,75 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
         children: [
           Row(
             children: [
-              // Désignation
+              // Designation
               Expanded(
                 flex: 3,
-                child: TextFormField(
-                  initialValue: item.description ?? '',
-                  decoration: _itemInputDecoration(''),
-                  style: const TextStyle(fontSize: 13),
-                  onChanged: (v) => setState(() =>
-                      _items[index] = item.copyWith(description: v)),
+                child: BlocBuilder<ProductsBloc, ProductsState>(
+                  builder: (context, state) {
+                    final products = state is ProductsLoaded ? state.products : <Product>[];
+                    return Autocomplete<Product>(
+                      initialValue: TextEditingValue(text: item.description ?? ''),
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
+                        return products.where((Product p) => 
+                          p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
+                          (p.reference?.toLowerCase().contains(textEditingValue.text.toLowerCase()) ?? false)
+                        );
+                      },
+                      displayStringForOption: (Product option) => option.name,
+                      fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                        return TextFormField(
+                          controller: textEditingController,
+                          focusNode: focusNode,
+                          decoration: _itemInputDecoration('Rechercher un article...'),
+                          style: const TextStyle(fontSize: 13),
+                          onChanged: (v) => setState(() =>
+                              _items[index] = item.copyWith(description: v)),
+                        );
+                      },
+                      optionsViewBuilder: (context, onSelected, options) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
+                              child: ListView.builder(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                itemCount: options.length,
+                                itemBuilder: (context, i) {
+                                  final option = options.elementAt(i);
+                                  return ListTile(
+                                    title: Text(option.name, style: const TextStyle(fontSize: 13)),
+                                    subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
+                                    trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    onTap: () => onSelected(option),
+                                    dense: true,
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      onSelected: (Product selection) {
+                        setState(() {
+                          _items[index] = item.copyWith(
+                            productId: selection.id,
+                            description: selection.name,
+                            unitPrice: selection.sellingPrice,
+                            tvaRate: selection.tvaRate,
+                          );
+                        });
+                      },
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 8),
-              // Quantité with + button
+              // Quantite with + button
               SizedBox(
                 width: 120,
                 child: Row(
@@ -653,7 +709,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                   children: [
                     Expanded(
                       child: TextFormField(
-                        key: ValueKey('pu_${item.id}_init'),
+                        key: ValueKey('pu_${item.id}_${item.productId}'),
                         initialValue: item.unitPrice > 0
                             ? item.unitPrice.toStringAsFixed(0)
                             : '',
@@ -682,7 +738,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                 width: 100,
                 child: DropdownButtonFormField<double>(
                   value: item.tvaRate,
-                  items: TvaRates.all
+                  items: (TvaRates.all.contains(item.tvaRate) ? TvaRates.all : [...TvaRates.all, item.tvaRate])
                       .map((r) => DropdownMenuItem(
                           value: r,
                           child: Text('${r.toInt()}%',
@@ -879,7 +935,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                   border: Border.all(color: AppColors.border),
                 ),
                 child: DropdownButtonFormField<String>(
-                  hint: const Text('Sélectionner un article...',
+                  hint: const Text('Selectionner un article...',
                       style: TextStyle(
                           fontSize: 13,
                           color: AppColors.textTertiary)),
@@ -1167,7 +1223,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Conditions Générales',
+              const Text('Conditions Generales',
                   style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1177,7 +1233,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                 controller: _conditionsCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
-                  hintText: 'Conditions générales pour ce document',
+                  hintText: 'Conditions generales pour ce document',
                   hintStyle: const TextStyle(
                       color: AppColors.textTertiary, fontSize: 13),
                   filled: true,

@@ -10,7 +10,7 @@ class ReportsScreen extends StatelessWidget {
     return const EmptyState(
       icon: Icons.bar_chart_rounded,
       title: 'Rapports et statistiques',
-      subtitle: 'Les tableaux de bord analytiques seront bientôt disponibles',
+      subtitle: 'Les tableaux de bord analytiques seront bientot disponibles',
     );
   }
 }
@@ -23,7 +23,7 @@ class PurchaseInvoicesScreen extends StatelessWidget {
     return const EmptyState(
       icon: Icons.receipt_long_rounded,
       title: 'Factures d\'achat',
-      subtitle: 'La gestion des achats sera bientôt disponible',
+      subtitle: 'La gestion des achats sera bientot disponible',
     );
   }
 }
@@ -36,8 +36,8 @@ class WithholdingTaxScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return EmptyState(
       icon: Icons.account_balance_rounded,
-      title: isSales ? 'Retenue à la source (Ventes)' : 'Retenue à la source (Achats)',
-      subtitle: 'La gestion des retenues sera bientôt disponible',
+      title: isSales ? 'Retenue a la source (Ventes)' : 'Retenue a la source (Achats)',
+      subtitle: 'La gestion des retenues sera bientot disponible',
     );
   }
 }
@@ -49,8 +49,8 @@ class WarehousesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const EmptyState(
       icon: Icons.warehouse_rounded,
-      title: 'Gestion des entrepôts',
-      subtitle: 'La création et configuration des entrepôts sera bientôt disponible',
+      title: 'Gestion des entrepots',
+      subtitle: 'La creation et configuration des entrepots sera bientot disponible',
     );
   }
 }
