@@ -19,8 +19,10 @@ import '../models/customer_order.dart';
 import '../models/stock_withdrawal.dart';
 import '../models/return_note.dart';
 import '../models/supplier_order.dart';
+import '../models/receiving_voucher.dart';
 import '../models/product_family.dart';
 import '../models/credit_note.dart';
+import '../models/purchase_invoice.dart';
 import '../utils/constants.dart';
 
 class DatabaseHelper {
@@ -44,7 +46,7 @@ class DatabaseHelper {
     return await databaseFactoryFfi.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 21,
+        version: 28,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       ),
@@ -491,6 +493,163 @@ class DatabaseHelper {
         } catch (e) {
           // Ignore if the column already exists
         }
+      }
+    }
+
+    if (oldVersion < 22) {
+      final columns = [
+        "ALTER TABLE supplier_order_items ADD COLUMN total_ht REAL DEFAULT 0",
+      ];
+      for (final sql in columns) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
+    }
+
+    if (oldVersion < 23) {
+      final columns = [
+        "ALTER TABLE supplier_orders ADD COLUMN is_converted_to_receipt INTEGER DEFAULT 0",
+        "ALTER TABLE supplier_orders ADD COLUMN converted_to_receipt_id TEXT",
+        "ALTER TABLE supplier_orders ADD COLUMN is_converted_to_invoice INTEGER DEFAULT 0",
+        "ALTER TABLE supplier_orders ADD COLUMN converted_to_invoice_id TEXT",
+      ];
+      for (final sql in columns) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          // Ignore if the column already exists
+        }
+      }
+    }
+    
+    if (oldVersion < 24) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS receiving_vouchers (
+          id TEXT PRIMARY KEY,
+          number TEXT NOT NULL,
+          supplier_id TEXT NOT NULL,
+          order_id TEXT,
+          date TEXT NOT NULL,
+          status TEXT DEFAULT 'draft',
+          notes TEXT,
+          firebase_uid TEXT,
+          is_deleted INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+          FOREIGN KEY (order_id) REFERENCES supplier_orders(id)
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS receiving_voucher_items (
+          id TEXT PRIMARY KEY,
+          voucher_id TEXT NOT NULL,
+          product_id TEXT NOT NULL,
+          quantity_expected REAL DEFAULT 0,
+          quantity_received REAL DEFAULT 0,
+          notes TEXT,
+          FOREIGN KEY (voucher_id) REFERENCES receiving_vouchers(id)
+        )
+      ''');
+
+      try {
+        await db.execute("ALTER TABLE supplier_orders ADD COLUMN is_converted_to_receipt INTEGER DEFAULT 0");
+        await db.execute("ALTER TABLE supplier_orders ADD COLUMN converted_to_receipt_id TEXT");
+      } catch (e) {
+        // Ignore if exists
+      }
+      
+      try {
+        await db.execute("ALTER TABLE supplier_orders ADD COLUMN is_converted_to_receipt INTEGER DEFAULT 0");
+        await db.execute("ALTER TABLE supplier_orders ADD COLUMN converted_to_receipt_id TEXT");
+      } catch (e) {
+        // Ignore if exists
+      }
+    }
+
+    if (oldVersion < 25) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS purchase_invoices (
+          id TEXT PRIMARY KEY,
+          number TEXT NOT NULL,
+          supplier_id TEXT NOT NULL,
+          order_id TEXT,
+          delivery_note_id TEXT,
+          project_id TEXT,
+          devis_id TEXT,
+          date TEXT NOT NULL,
+          due_date TEXT NOT NULL,
+          status TEXT DEFAULT 'draft',
+          total_ht REAL DEFAULT 0,
+          total_tva REAL DEFAULT 0,
+          total_ttc REAL DEFAULT 0,
+          amount_paid REAL DEFAULT 0,
+          stamp_tax REAL DEFAULT 0,
+          timbre_fiscal REAL DEFAULT 0,
+          global_discount_percent REAL DEFAULT 0,
+          global_discount_amount REAL DEFAULT 0,
+          pricing_mode TEXT DEFAULT 'ht',
+          notes TEXT,
+          conditions TEXT,
+          firebase_uid TEXT,
+          credit_note_id TEXT,
+          is_deleted INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS purchase_invoice_items (
+          id TEXT PRIMARY KEY,
+          invoice_id TEXT NOT NULL,
+          product_id TEXT NOT NULL,
+          description TEXT,
+          quantity REAL DEFAULT 1,
+          unit_price REAL DEFAULT 0,
+          tva_rate REAL DEFAULT 19,
+          discount_percent REAL DEFAULT 0,
+          total_ht REAL DEFAULT 0,
+          FOREIGN KEY (invoice_id) REFERENCES purchase_invoices(id)
+        )
+      ''');
+    }
+
+    if (oldVersion < 26) {
+      try {
+        await db.execute("ALTER TABLE supplier_orders ADD COLUMN is_converted_to_invoice INTEGER DEFAULT 0");
+        await db.execute("ALTER TABLE supplier_orders ADD COLUMN converted_to_invoice_id TEXT");
+      } catch (e) {
+        // Ignore if exists
+      }
+    }
+
+    if (oldVersion < 27) {
+      try {
+        await db.execute("ALTER TABLE purchase_invoices ADD COLUMN delivery_note_id TEXT");
+        await db.execute("ALTER TABLE purchase_invoices ADD COLUMN project_id TEXT");
+        await db.execute("ALTER TABLE purchase_invoices ADD COLUMN devis_id TEXT");
+        await db.execute("ALTER TABLE purchase_invoices ADD COLUMN credit_note_id TEXT");
+      } catch (e) {
+        // Ignore if exists
+      }
+    }
+
+    if (oldVersion < 28) {
+      try {
+        await db.execute("ALTER TABLE purchase_invoices ADD COLUMN stamp_tax REAL DEFAULT 0");
+        await db.execute("ALTER TABLE purchase_invoices ADD COLUMN timbre_fiscal REAL DEFAULT 0");
+        await db.execute("ALTER TABLE purchase_invoices ADD COLUMN global_discount_percent REAL DEFAULT 0");
+        await db.execute("ALTER TABLE purchase_invoices ADD COLUMN global_discount_amount REAL DEFAULT 0");
+        await db.execute("ALTER TABLE purchase_invoices ADD COLUMN pricing_mode TEXT DEFAULT 'ht'");
+        await db.execute("ALTER TABLE purchase_invoices ADD COLUMN conditions TEXT");
+      } catch (e) {
+        // Ignore if exists
       }
     }
   }
@@ -1230,6 +1389,10 @@ class DatabaseHelper {
         global_discount_amount REAL DEFAULT 0,
         timbre_fiscal REAL DEFAULT 1.000,
         conditions TEXT,
+        is_converted_to_receipt INTEGER DEFAULT 0,
+        converted_to_receipt_id TEXT,
+        is_converted_to_invoice INTEGER DEFAULT 0,
+        converted_to_invoice_id TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
@@ -1248,6 +1411,7 @@ class DatabaseHelper {
         unit_price REAL DEFAULT 0,
         tva_rate REAL DEFAULT 19,
         discount_percent REAL DEFAULT 0,
+        total_ht REAL DEFAULT 0,
         show_description INTEGER DEFAULT 0,
         show_discount INTEGER DEFAULT 0,
         FOREIGN KEY (order_id) REFERENCES supplier_orders(id)
@@ -1262,12 +1426,14 @@ class DatabaseHelper {
         supplier_id TEXT NOT NULL,
         order_id TEXT,
         date TEXT NOT NULL,
-        warehouse_id TEXT,
         status TEXT DEFAULT 'draft',
+        notes TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+        FOREIGN KEY (order_id) REFERENCES supplier_orders(id)
       )
     ''');
 
@@ -1278,6 +1444,7 @@ class DatabaseHelper {
         product_id TEXT NOT NULL,
         quantity_expected REAL DEFAULT 0,
         quantity_received REAL DEFAULT 0,
+        notes TEXT,
         FOREIGN KEY (voucher_id) REFERENCES receiving_vouchers(id)
       )
     ''');
@@ -1289,6 +1456,9 @@ class DatabaseHelper {
         number TEXT NOT NULL,
         supplier_id TEXT NOT NULL,
         order_id TEXT,
+        delivery_note_id TEXT,
+        project_id TEXT,
+        devis_id TEXT,
         date TEXT NOT NULL,
         due_date TEXT NOT NULL,
         status TEXT DEFAULT 'draft',
@@ -1296,8 +1466,15 @@ class DatabaseHelper {
         total_tva REAL DEFAULT 0,
         total_ttc REAL DEFAULT 0,
         amount_paid REAL DEFAULT 0,
+        stamp_tax REAL DEFAULT 0,
+        timbre_fiscal REAL DEFAULT 0,
+        global_discount_percent REAL DEFAULT 0,
+        global_discount_amount REAL DEFAULT 0,
+        pricing_mode TEXT DEFAULT 'ht',
         notes TEXT,
+        conditions TEXT,
         firebase_uid TEXT,
+        credit_note_id TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -1310,9 +1487,11 @@ class DatabaseHelper {
         id TEXT PRIMARY KEY,
         invoice_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
+        description TEXT,
         quantity REAL DEFAULT 1,
         unit_price REAL DEFAULT 0,
         tva_rate REAL DEFAULT 19,
+        discount_percent REAL DEFAULT 0,
         total_ht REAL DEFAULT 0,
         FOREIGN KEY (invoice_id) REFERENCES purchase_invoices(id)
       )
@@ -2571,15 +2750,75 @@ class DatabaseHelper {
       WHERE pi.is_deleted = 0
       ORDER BY pi.created_at DESC
     ''');
-    return maps.map((m) => PurchaseInvoice.fromMap(m)).toList();
+    
+    List<PurchaseInvoice> invoices = [];
+    for (var map in maps) {
+      final itemsMap = await db.query(
+        'purchase_invoice_items',
+        where: 'invoice_id = ?',
+        whereArgs: [map['id']],
+      );
+      final items = itemsMap.map((m) => PurchaseInvoiceItem.fromMap(m)).toList();
+      invoices.add(PurchaseInvoice.fromMap(map).copyWith(items: items));
+    }
+    return invoices;
+  }
+
+  Future<PurchaseInvoice?> getPurchaseInvoice(String id) async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT pi.*, s.name as supplier_name
+      FROM purchase_invoices pi
+      LEFT JOIN suppliers s ON pi.supplier_id = s.id
+      WHERE pi.id = ? AND pi.is_deleted = 0
+    ''', [id]);
+
+    if (maps.isEmpty) return null;
+
+    final itemsMap = await db.query(
+      'purchase_invoice_items',
+      where: 'invoice_id = ?',
+      whereArgs: [id],
+    );
+    final items = itemsMap.map((m) => PurchaseInvoiceItem.fromMap(m)).toList();
+    
+    return PurchaseInvoice.fromMap(maps.first).copyWith(items: items);
   }
 
   Future<void> insertPurchaseInvoice(PurchaseInvoice invoice) async {
-    await insert('purchase_invoices', invoice.toMap());
     final db = await database;
+    await db.insert('purchase_invoices', invoice.toMap());
     for (final item in invoice.items) {
       await db.insert('purchase_invoice_items', item.toMap());
     }
+  }
+
+  Future<void> updatePurchaseInvoice(PurchaseInvoice invoice) async {
+    final db = await database;
+    await db.update(
+      'purchase_invoices',
+      invoice.toMap(),
+      where: 'id = ?',
+      whereArgs: [invoice.id],
+    );
+    
+    // Delete old items
+    await db.delete('purchase_invoice_items', where: 'invoice_id = ?', whereArgs: [invoice.id]);
+    
+    // Insert new items
+    for (final item in invoice.items) {
+      await db.insert('purchase_invoice_items', item.toMap());
+    }
+  }
+
+  Future<void> deletePurchaseInvoice(String id) async {
+    final db = await database;
+    await db.update(
+      'purchase_invoices',
+      {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   // ─── Activity Log ──────────────────────────────────────────────
@@ -2665,6 +2904,55 @@ class DatabaseHelper {
     final db = await database;
     db.close();
     _database = null;
+  }
+
+  // ─── Receiving Vouchers ──────────────────────────────────────────
+  Future<List<ReceivingVoucher>> getReceivingVouchers() async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT rv.*,
+        (SELECT name FROM suppliers WHERE id = rv.supplier_id AND is_deleted = 0 LIMIT 1) as supplier_name
+      FROM receiving_vouchers rv
+      WHERE rv.is_deleted = 0
+      ORDER BY rv.created_at DESC
+    ''');
+    return maps.map((m) => ReceivingVoucher.fromMap(m, [])).toList();
+  }
+
+  Future<Map<String, dynamic>?> getReceivingVoucher(String id) async {
+    final db = await database;
+    final rvResult = await db.query(
+      'receiving_vouchers',
+      where: 'id = ? AND is_deleted = 0',
+      whereArgs: [id],
+    );
+    if (rvResult.isEmpty) return null;
+    final itemsResult = await db.query(
+      'receiving_voucher_items',
+      where: 'voucher_id = ?',
+      whereArgs: [id],
+    );
+    final data = Map<String, dynamic>.from(rvResult.first);
+    data['items'] = itemsResult;
+    return data;
+  }
+
+  Future<void> insertReceivingVoucher(Map<String, dynamic> voucherMap, List<Map<String, dynamic>> itemsMap) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('receiving_vouchers', voucherMap);
+      for (var item in itemsMap) {
+        await txn.insert('receiving_voucher_items', item);
+      }
+    });
+    await _addToSyncQueue('receiving_vouchers', voucherMap['id'], 'INSERT', voucherMap);
+  }
+
+  Future<void> deleteReceivingVoucher(String id) async {
+    final db = await database;
+    final data = {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()};
+    await db.update('receiving_vouchers', data, where: 'id = ?', whereArgs: [id]);
+    await _addToSyncQueue('receiving_vouchers', id, 'DELETE', data);
   }
 
   // ─── Payment Accounts ──────────────────────────────────────────

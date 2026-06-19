@@ -16,7 +16,9 @@ import '../widgets/dashboard_card.dart';
 
 class CreateSupplierOrderScreen extends StatefulWidget {
   final SupplierOrder? existing;
-  const CreateSupplierOrderScreen({super.key, this.existing});
+  final bool isReadOnly;
+  final String? overrideTitle;
+  const CreateSupplierOrderScreen({super.key, this.existing, this.isReadOnly = false, this.overrideTitle});
 
   @override
   State<CreateSupplierOrderScreen> createState() =>
@@ -120,6 +122,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
 
   // ── Save ──────────────────────────────────────────────────────────
   Future<void> _save() async {
+    if (widget.isReadOnly) return;
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -195,22 +198,27 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
               key: _formKey,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFormCard(),
-                    const SizedBox(height: AppSpacing.lg),
-                    _buildArticlesSection(),
-                    const SizedBox(height: AppSpacing.md),
-                    _buildArticleActions(),
-                    const SizedBox(height: AppSpacing.md),
-                    _buildGlobalDiscountSection(),
-                    const SizedBox(height: AppSpacing.lg),
-                    _buildTotalsSection(),
-                    const SizedBox(height: AppSpacing.lg),
-                    _buildNotesSection(),
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
+                child: AbsorbPointer(
+                  absorbing: widget.isReadOnly,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildFormCard(),
+                      const SizedBox(height: AppSpacing.lg),
+                      _buildArticlesSection(),
+                      if (!widget.isReadOnly) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        _buildArticleActions(),
+                      ],
+                      const SizedBox(height: AppSpacing.md),
+                      _buildGlobalDiscountSection(),
+                      const SizedBox(height: AppSpacing.lg),
+                      _buildTotalsSection(),
+                      const SizedBox(height: AppSpacing.lg),
+                      _buildNotesSection(),
+                      const SizedBox(height: AppSpacing.xl),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -233,7 +241,9 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
       child: Row(
         children: [
           Text(
-            _isEditing ? 'Modifier la commande fournisseur' : 'Ajouter une commande fournisseur',
+            widget.overrideTitle ?? (widget.isReadOnly 
+                ? 'Détails de la commande fournisseur' 
+                : (_isEditing ? 'Modifier la commande fournisseur' : 'Ajouter une commande fournisseur')),
             style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -244,32 +254,34 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
           const Spacer(),
           _buildHeaderButton(
               Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
-          const SizedBox(width: 8),
-          _buildHeaderButton(Icons.description_rounded, 'Brouillon', () {
-            setState(() => _status = SupplierOrderStatus.draft);
-          }),
-          const SizedBox(width: 8),
-          _buildHeaderButton(Icons.send_rounded, 'Envoyer', () {
-            setState(() => _status = SupplierOrderStatus.sent);
-          }, color: AppColors.info),
-          const SizedBox(width: 8),
-          _buildHeaderButton(Icons.check_circle_rounded, 'Valider', () {
-            setState(() => _status = SupplierOrderStatus.validated);
-          }, color: AppColors.success),
-          const SizedBox(width: 16),
-          ElevatedButton.icon(
-            onPressed: _save,
-            icon: const Icon(Icons.save_rounded, size: 18),
-            label: const Text('Enregistrer'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md)),
+          if (!widget.isReadOnly) ...[
+            const SizedBox(width: 8),
+            _buildHeaderButton(Icons.description_rounded, 'Brouillon', () {
+              setState(() => _status = SupplierOrderStatus.draft);
+            }),
+            const SizedBox(width: 8),
+            _buildHeaderButton(Icons.send_rounded, 'Envoyer', () {
+              setState(() => _status = SupplierOrderStatus.sent);
+            }, color: AppColors.info),
+            const SizedBox(width: 8),
+            _buildHeaderButton(Icons.check_circle_rounded, 'Valider', () {
+              setState(() => _status = SupplierOrderStatus.validated);
+            }, color: AppColors.success),
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: _save,
+              icon: const Icon(Icons.save_rounded, size: 18),
+              label: const Text('Enregistrer'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md)),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -738,36 +750,37 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
           ),
           const SizedBox(width: 8),
           // Actions
-          SizedBox(
-            width: 80,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    item.showDescription ? Icons.description : Icons.description_outlined,
-                    color: item.showDescription ? AppColors.primary : AppColors.textSecondary,
-                    size: 20,
+          if (!widget.isReadOnly)
+            SizedBox(
+              width: 80,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      item.showDescription ? Icons.description : Icons.description_outlined,
+                      color: item.showDescription ? AppColors.primary : AppColors.textSecondary,
+                      size: 20,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _items[index] = item.copyWith(showDescription: !item.showDescription);
+                      });
+                    },
+                    tooltip: 'Description',
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _items[index] = item.copyWith(showDescription: !item.showDescription);
-                    });
-                  },
-                  tooltip: 'Description',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
-                  onPressed: () {
-                    setState(() {
-                      _items.removeAt(index);
-                    });
-                  },
-                  tooltip: 'Supprimer',
-                ),
-              ],
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        _items.removeAt(index);
+                      });
+                    },
+                    tooltip: 'Supprimer',
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

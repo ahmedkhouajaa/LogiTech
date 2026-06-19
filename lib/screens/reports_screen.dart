@@ -15,18 +15,6 @@ class ReportsScreen extends StatelessWidget {
   }
 }
 
-class PurchaseInvoicesScreen extends StatelessWidget {
-  const PurchaseInvoicesScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const EmptyState(
-      icon: Icons.receipt_long_rounded,
-      title: 'Factures d\'achat',
-      subtitle: 'La gestion des achats sera bientot disponible',
-    );
-  }
-}
 
 class WithholdingTaxScreen extends StatelessWidget {
   final bool isSales;

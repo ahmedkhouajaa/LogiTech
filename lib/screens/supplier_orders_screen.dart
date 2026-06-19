@@ -10,6 +10,14 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import 'create_supplier_order_screen.dart';
+import 'package:uuid/uuid.dart';
+import '../models/purchase_invoice.dart';
+import '../blocs/purchase_invoices/purchase_invoices_bloc.dart';
+import '../database/database_helper.dart';
+import 'create_purchase_invoice_screen.dart';
+import '../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
+import 'create_receiving_voucher_screen.dart';
+import '../models/receiving_voucher.dart';
 
 class SupplierOrdersScreen extends StatefulWidget {
   const SupplierOrdersScreen({super.key});
@@ -484,35 +492,58 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                               child: PopupMenuButton<String>(
                                                 icon: const Icon(Icons.more_horiz, color: AppColors.textSecondary),
                                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                                color: AppColors.surface,
+                                                color: const Color(0xFFF8FAFC), // Light gray background
+                                                elevation: 4,
+                                                padding: EdgeInsets.zero,
+                                                itemBuilder: (ctx) => _buildActionMenu(context, order),
                                                 onSelected: (val) {
-                                                  switch (val) {
-                                                    case 'edit':
-                                                      Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                          builder: (_) => MultiBlocProvider(
-                                                            providers: [
-                                                              BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
-                                                              BlocProvider.value(value: context.read<SuppliersBloc>()),
-                                                              BlocProvider.value(value: context.read<ProductsBloc>()),
-                                                              BlocProvider.value(value: context.read<ProjectsBloc>()),
-                                                            ],
-                                                            child: CreateSupplierOrderScreen(existing: order),
-                                                          ),
+                                                  if (val == 'view') {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) => MultiBlocProvider(
+                                                          providers: [
+                                                            BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
+                                                            BlocProvider.value(value: context.read<SuppliersBloc>()),
+                                                            BlocProvider.value(value: context.read<ProductsBloc>()),
+                                                            BlocProvider.value(value: context.read<ProjectsBloc>()),
+                                                          ],
+                                                          child: CreateSupplierOrderScreen(existing: order, isReadOnly: true),
                                                         ),
-                                                      );
-                                                      break;
-                                                    case 'delete':
-                                                      _confirmDelete(order);
-                                                      break;
+                                                      ),
+                                                    );
+                                                  } else if (val == 'to_invoice') {
+                                                    _showConversionDialog(context, order, true);
+                                                  } else if (val == 'to_receipt') {
+                                                    _showConversionDialog(context, order, false);
+                                                  } else if (val == 'view_invoice') {
+                                                    _openConvertedInvoice(context, order.convertedToInvoiceId!, order);
+                                                  } else if (val == 'view_receipt') {
+                                                    _openConvertedReceipt(context, order.convertedToReceiptId!, order);
+                                                  } else if (val == 'edit') {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) => MultiBlocProvider(
+                                                          providers: [
+                                                            BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
+                                                            BlocProvider.value(value: context.read<SuppliersBloc>()),
+                                                            BlocProvider.value(value: context.read<ProductsBloc>()),
+                                                            BlocProvider.value(value: context.read<ProjectsBloc>()),
+                                                          ],
+                                                          child: CreateSupplierOrderScreen(existing: order),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  } else if (val == 'delete') {
+                                                    _confirmDelete(order);
+                                                  } else if (val == 'print' || val == 'payment' || val == 'credit_note' || val == 'pdf' || val == 'email' || val == 'whatsapp' || val == 'status' || val == 'duplicate' || val == 'attachments') {
+                                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                                      content: Text('Cette fonctionnalité sera disponible prochainement'),
+                                                      backgroundColor: AppColors.info,
+                                                    ));
                                                   }
                                                 },
-                                                itemBuilder: (_) => [
-                                                  const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_rounded, size: 16, color: AppColors.primary), SizedBox(width: 8), Text('Modifier')])),
-                                                  const PopupMenuItem(value: 'print', child: Row(children: [Icon(Icons.print_rounded, size: 16, color: AppColors.textSecondary), SizedBox(width: 8), Text('Imprimer')])),
-                                                  const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_rounded, size: 16, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))])),
-                                                ],
                                               ),
                                             ),
                                           ),
@@ -630,5 +661,169 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
         ],
       ),
     );
+  }
+
+  PopupMenuItem<String> _buildMenuItem(String value, IconData icon, String label, Color iconColor, {bool showBorder = true}) {
+    return PopupMenuItem<String>(
+      value: value,
+      height: 40,
+      padding: EdgeInsets.zero,
+      child: Container(
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+          border: showBorder ? const Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)) : null,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: iconColor),
+            const SizedBox(width: 12),
+            Text(label, style: const TextStyle(color: Color(0xFF334155), fontSize: 13, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<PopupMenuEntry<String>> _buildActionMenu(BuildContext context, SupplierOrder order) {
+    final List<PopupMenuEntry<String>> items = [];
+
+    items.add(_buildMenuItem('view', Icons.visibility_outlined, 'Voir', const Color(0xFF6366F1)));
+    items.add(_buildMenuItem('edit', Icons.edit_outlined, 'Modifier', const Color(0xFF2563EB)));
+    items.add(_buildMenuItem('delete', Icons.delete_outline, 'Supprimer', const Color(0xFFEF4444)));
+    items.add(_buildMenuItem('print', Icons.print_outlined, 'Imprimer', const Color(0xFF475569)));
+    items.add(_buildMenuItem('payment', Icons.credit_card_outlined, 'Ajouter un paiement', const Color(0xFF10B981)));
+
+    if (!order.isConvertedToInvoice && !order.isConvertedToReceipt) {
+      items.add(_buildMenuItem('to_invoice', Icons.receipt_long_outlined, 'Transformer en facture d\'achat', const Color(0xFF475569)));
+      items.add(_buildMenuItem('to_receipt', Icons.local_shipping_outlined, 'Transformer en bon de réception', const Color(0xFF475569)));
+    }
+    if (order.isConvertedToInvoice) {
+      items.add(_buildMenuItem('view_invoice', Icons.visibility_outlined, 'Voir la facture d\'achat creee', const Color(0xFF475569)));
+    }
+    if (order.isConvertedToReceipt) {
+      items.add(_buildMenuItem('view_receipt', Icons.visibility_outlined, 'Voir le bon de reception cree', const Color(0xFF475569)));
+    }
+    
+    items.add(_buildMenuItem('credit_note', Icons.receipt_outlined, 'Transformer en Avoir', const Color(0xFF475569)));
+    items.add(_buildMenuItem('pdf', Icons.picture_as_pdf_outlined, 'Telecharger PDF', const Color(0xFFEF4444)));
+    items.add(_buildMenuItem('email', Icons.email_outlined, 'Envoyer par email', const Color(0xFF2563EB)));
+    items.add(_buildMenuItem('whatsapp', Icons.chat_bubble_outline, 'Envoyer par WhatsApp', const Color(0xFF10B981)));
+    items.add(_buildMenuItem('status', Icons.swap_horiz_outlined, 'Changer le statut', const Color(0xFFF59E0B)));
+    items.add(_buildMenuItem('duplicate', Icons.content_copy_outlined, 'Dupliquer', const Color(0xFF475569)));
+    items.add(_buildMenuItem('attachments', Icons.attach_file_outlined, 'Gerer les pieces jointes', const Color(0xFF475569), showBorder: false));
+
+    return items;
+  }
+
+  void _showConversionDialog(BuildContext context, SupplierOrder order, bool toInvoice) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(toInvoice ? 'Transformer en facture d\'achat' : 'Transformer en bon de réception'),
+        content: Text('Voulez-vous transformer la commande ${order.number} en ${toInvoice ? 'facture d\'achat' : 'bon de réception'} ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              if (toInvoice) {
+                _convertToInvoice(context, order);
+              } else {
+                // _convertToReceipt(context, order);
+              }
+            },
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _convertToInvoice(BuildContext context, SupplierOrder order) {
+    final invoiceId = const Uuid().v4();
+    final newInvoice = PurchaseInvoice(
+      id: invoiceId,
+      number: 'FA-${order.number.replaceAll("CMD-", "")}',
+      supplierId: order.supplierId,
+      supplierName: order.supplierName,
+      orderId: order.id,
+      date: DateTime.now(),
+      dueDate: DateTime.now().add(const Duration(days: 30)),
+      status: InvoiceStatus.unpaid,
+      totalHT: order.subTotalHT,
+      totalTva: order.totalTVA,
+      totalTTC: order.subTotalTTC,
+      items: order.items.map((i) => PurchaseInvoiceItem(
+        id: const Uuid().v4(),
+        purchaseInvoiceId: invoiceId,
+        productId: i.productId,
+        productName: i.description,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        tvaRate: i.tvaRate,
+        totalHT: i.totalHT,
+      )).toList(),
+    );
+
+    context.read<PurchaseInvoicesBloc>().add(AddPurchaseInvoice(newInvoice));
+
+    final updatedOrder = order.copyWith(
+      isConvertedToInvoice: true,
+      convertedToInvoiceId: invoiceId,
+      status: 'validated',
+    );
+    context.read<SupplierOrdersBloc>().add(UpdateSupplierOrder(updatedOrder));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Commande transformée en facture d'achat avec succès")),
+    );
+  }
+
+  void _openConvertedInvoice(BuildContext context, String invoiceId, SupplierOrder originalOrder) async {
+    final invoice = await DatabaseHelper.instance.getPurchaseInvoice(invoiceId);
+    if (invoice != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: context.read<PurchaseInvoicesBloc>()),
+              BlocProvider.value(value: context.read<SuppliersBloc>()),
+              BlocProvider.value(value: context.read<ProductsBloc>()),
+              BlocProvider.value(value: context.read<ProjectsBloc>()),
+            ],
+            child: CreatePurchaseInvoiceScreen(existing: invoice, isReadOnly: true),
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Facture introuvable', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
+    }
+  }
+
+  void _openConvertedReceipt(BuildContext context, String receiptId, SupplierOrder originalOrder) async {
+    final receiptData = await DatabaseHelper.instance.getReceivingVoucher(receiptId);
+    if (receiptData != null) {
+      final receipt = ReceivingVoucher.fromMap(receiptData);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
+              BlocProvider.value(value: context.read<SuppliersBloc>()),
+              BlocProvider.value(value: context.read<ProductsBloc>()),
+            ],
+            child: CreateReceivingVoucherScreen(existing: receipt, isReadOnly: true),
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bon de réception introuvable', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
+    }
   }
 }

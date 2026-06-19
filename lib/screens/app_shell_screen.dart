@@ -27,6 +27,7 @@ import 'settings_screen.dart';
 import 'credit_notes_screen.dart';
 import 'purchase_invoices_screen.dart';
 import 'supplier_orders_screen.dart';
+import 'receiving_vouchers_screen.dart';
 import 'withholding_tax_screen.dart';
 import 'warehouses_screen.dart';
 import 'payments_screen.dart';
@@ -91,6 +92,8 @@ class _AppShellScreenState extends State<AppShellScreen> {
         return const PurchaseInvoicesScreen();
       case AppModule.supplierOrders:
         return const SupplierOrdersScreen();
+      case AppModule.receivingVouchers:
+        return const ReceivingVouchersScreen();
       case AppModule.withholdingTaxSales:
       case AppModule.withholdingTaxPurchase:
         return WithholdingTaxScreen(isSales: _activeModule == AppModule.withholdingTaxSales);

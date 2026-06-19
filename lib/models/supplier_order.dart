@@ -19,6 +19,10 @@ class SupplierOrder {
   final String? conditionsGenerales;
   final String? firebaseUid;
   final bool isDeleted;
+  final bool isConvertedToReceipt;
+  final String? convertedToReceiptId;
+  final bool isConvertedToInvoice;
+  final String? convertedToInvoiceId;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<SupplierOrderItem> items;
@@ -42,6 +46,10 @@ class SupplierOrder {
     this.conditionsGenerales,
     this.firebaseUid,
     this.isDeleted = false,
+    this.isConvertedToReceipt = false,
+    this.convertedToReceiptId,
+    this.isConvertedToInvoice = false,
+    this.convertedToInvoiceId,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.items = const [],
@@ -123,6 +131,10 @@ class SupplierOrder {
     String? conditionsGenerales,
     String? firebaseUid,
     bool? isDeleted,
+    bool? isConvertedToReceipt,
+    String? convertedToReceiptId,
+    bool? isConvertedToInvoice,
+    String? convertedToInvoiceId,
     DateTime? createdAt,
     DateTime? updatedAt,
     List<SupplierOrderItem>? items,
@@ -146,6 +158,10 @@ class SupplierOrder {
       conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
       firebaseUid: firebaseUid ?? this.firebaseUid,
       isDeleted: isDeleted ?? this.isDeleted,
+      isConvertedToReceipt: isConvertedToReceipt ?? this.isConvertedToReceipt,
+      convertedToReceiptId: convertedToReceiptId ?? this.convertedToReceiptId,
+      isConvertedToInvoice: isConvertedToInvoice ?? this.isConvertedToInvoice,
+      convertedToInvoiceId: convertedToInvoiceId ?? this.convertedToInvoiceId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       items: items ?? this.items,
@@ -172,6 +188,10 @@ class SupplierOrder {
       'total_ttc': totalTTC,
       'firebase_uid': firebaseUid,
       'is_deleted': isDeleted ? 1 : 0,
+      'is_converted_to_receipt': isConvertedToReceipt ? 1 : 0,
+      'converted_to_receipt_id': convertedToReceiptId,
+      'is_converted_to_invoice': isConvertedToInvoice ? 1 : 0,
+      'converted_to_invoice_id': convertedToInvoiceId,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -197,6 +217,10 @@ class SupplierOrder {
       conditionsGenerales: map['conditions'],
       firebaseUid: map['firebase_uid'],
       isDeleted: map['is_deleted'] == 1,
+      isConvertedToReceipt: map['is_converted_to_receipt'] == 1,
+      convertedToReceiptId: map['converted_to_receipt_id'],
+      isConvertedToInvoice: map['is_converted_to_invoice'] == 1,
+      convertedToInvoiceId: map['converted_to_invoice_id'],
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
       items: items,
