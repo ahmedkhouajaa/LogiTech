@@ -11,6 +11,16 @@ import 'create_receiving_voucher_screen.dart';
 import 'create_supplier_order_screen.dart';
 import '../models/supplier_order.dart';
 import '../blocs/supplier_orders/supplier_orders_bloc.dart';
+import '../blocs/purchase_invoices/purchase_invoices_bloc.dart';
+import '../models/purchase_invoice.dart';
+import '../blocs/products/products_bloc.dart';
+import '../models/product.dart';
+import 'package:uuid/uuid.dart';
+import '../blocs/supplier_returns/supplier_returns_bloc.dart';
+import '../blocs/supplier_returns/supplier_returns_event.dart';
+import '../models/supplier_return.dart';
+import 'app_shell_screen.dart';
+import '../widgets/sidebar_menu.dart';
 
 enum ReceivingVoucherStatus {
   draft('Brouillon', AppColors.textSecondary),
@@ -470,10 +480,11 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                               alignment: Alignment.centerRight,
                                               child: PopupMenuButton<String>(
                                                 icon: const Icon(Icons.more_horiz, color: AppColors.textSecondary),
-                                                tooltip: 'Actions',
-                                                elevation: 4,
                                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                                color: AppColors.surface,
+                                                color: const Color(0xFFF8FAFC),
+                                                elevation: 4,
+                                                padding: EdgeInsets.zero,
+                                                itemBuilder: (ctx) => _buildActionMenu(context, voucher),
                                                 onSelected: (val) {
                                                   if (val == 'view') {
                                                     if (voucher.orderId != null) {
@@ -507,20 +518,27 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                         builder: (_) => CreateReceivingVoucherScreen(existing: voucher),
                                                       ),
                                                     );
+                                                  } else if (val == 'convert_invoice') {
+                                                    _showConvertToInvoiceDialog(voucher);
+                                                  } else if (val == 'convert_return') {
+                                                    _showConvertToReturnDialog(voucher);
+                                                  } else if (val == 'view_invoice_created') {
+                                                    final shellState = context.findAncestorStateOfType<AppShellScreenState>();
+                                                    if (shellState != null) {
+                                                      shellState.setActiveModule(AppModule.purchaseInvoices);
+                                                    }
+                                                  } else if (val == 'view_return_created') {
+                                                    final shellState = context.findAncestorStateOfType<AppShellScreenState>();
+                                                    if (shellState != null) {
+                                                      shellState.setActiveModule(AppModule.supplierReturns);
+                                                    }
+                                                  } else {
+                                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                                      content: Text('Cette fonctionnalité sera disponible prochainement'),
+                                                      backgroundColor: AppColors.info,
+                                                    ));
                                                   }
                                                 },
-                                                itemBuilder: (_) => [
-                                                  PopupMenuItem(
-                                                    value: 'view',
-                                                    child: Row(
-                                                      children: const [
-                                                        Icon(Icons.visibility_outlined, size: 18, color: AppColors.info),
-                                                        SizedBox(width: 8),
-                                                        Text('Voir les détails', style: TextStyle(fontSize: 13)),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ],
                                               ),
                                             ),
                                           ),
@@ -616,5 +634,321 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
         return const SizedBox();
       },
     );
+  }
+
+  void _showConvertToInvoiceDialog(ReceivingVoucher voucher) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 28),
+              SizedBox(width: 12),
+              Text('Confirmation', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Voulez-vous transformer ce bon de réception en facture d\'achat ?', style: TextStyle(fontSize: 15)),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('BR: ${voucher.number}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    const SizedBox(height: 4),
+                    Text('Fournisseur: ${voucher.supplierName ?? 'Inconnu'}', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _executeConversion(voucher);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              ),
+              child: const Text('Confirmer', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _executeConversion(ReceivingVoucher voucher) {
+    // We get products to map prices
+    final productsState = context.read<ProductsBloc>().state;
+    List<Product> products = [];
+    if (productsState is ProductsLoaded) {
+      products = productsState.products;
+    }
+
+    final newInvoiceId = const Uuid().v4();
+    final invoiceNumber = 'FA-${voucher.number.replaceAll("BR-", "")}';
+
+    List<PurchaseInvoiceItem> newItems = [];
+    double totalHT = 0;
+    double totalTva = 0;
+
+    for (var vItem in voucher.items) {
+      if (vItem.quantityReceived <= 0) continue;
+      
+      final product = products.where((p) => p.id == vItem.productId).firstOrNull;
+      final price = product?.purchasePrice ?? 0;
+      final tvaRate = product?.tvaRate ?? 19;
+      final lineHT = vItem.quantityReceived * price;
+      final lineTva = lineHT * (tvaRate / 100);
+
+      totalHT += lineHT;
+      totalTva += lineTva;
+
+      newItems.add(PurchaseInvoiceItem(
+        id: const Uuid().v4(),
+        purchaseInvoiceId: newInvoiceId,
+        productId: vItem.productId,
+        productName: product?.name ?? 'Article inconnu',
+        quantity: vItem.quantityReceived,
+        unitPrice: price,
+        tvaRate: tvaRate,
+        totalHT: lineHT,
+      ));
+    }
+
+    final timbreFiscal = 1.0; // Default timbre fiscal
+    final totalTTC = totalHT + totalTva + timbreFiscal;
+
+    final newInvoice = PurchaseInvoice(
+      id: newInvoiceId,
+      number: invoiceNumber,
+      supplierId: voucher.supplierId,
+      supplierName: voucher.supplierName,
+      receivingVoucherId: voucher.id,
+      orderId: voucher.orderId,
+      date: DateTime.now(),
+      dueDate: DateTime.now().add(const Duration(days: 30)),
+      status: InvoiceStatus.unpaid,
+      totalHT: totalHT,
+      totalTva: totalTva,
+      totalTTC: totalTTC,
+      timbreFiscal: timbreFiscal,
+      amountPaid: 0,
+      items: newItems,
+      notes: voucher.notes,
+    );
+
+    // Save invoice
+    context.read<PurchaseInvoicesBloc>().add(AddPurchaseInvoice(newInvoice));
+
+    // Update Receiving Voucher
+    final updatedVoucher = voucher.copyWith(
+      status: ReceivingVoucherStatus.validated.name,
+      isConvertedToPurchaseInvoice: true,
+      convertedToPurchaseInvoiceId: newInvoiceId,
+    );
+    context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedVoucher));
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Facture d\'achat créée avec succès ($invoiceNumber)'),
+      backgroundColor: AppColors.success,
+    ));
+  }
+
+  void _showConvertToReturnDialog(ReceivingVoucher voucher) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 28),
+              SizedBox(width: 12),
+              Text('Confirmation', style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Voulez-vous transformer ce bon de réception en bon de retour fournisseur ?', style: TextStyle(fontSize: 15)),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('BR: ${voucher.number}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    const SizedBox(height: 4),
+                    Text('Fournisseur: ${voucher.supplierName ?? 'Inconnu'}', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _executeConvertToReturn(voucher);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              ),
+              child: const Text('Confirmer', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _executeConvertToReturn(ReceivingVoucher voucher) {
+    final productsState = context.read<ProductsBloc>().state;
+    List<Product> products = [];
+    if (productsState is ProductsLoaded) {
+      products = productsState.products;
+    }
+
+    final newReturnId = const Uuid().v4();
+    final returnNumber = 'BRF-${voucher.number.replaceAll("BR-", "")}';
+
+    List<SupplierReturnItem> newItems = [];
+
+    for (var vItem in voucher.items) {
+      if (vItem.quantityReceived <= 0) continue;
+      
+      final product = products.where((p) => p.id == vItem.productId).firstOrNull;
+      final price = product?.purchasePrice ?? 0;
+      final tvaRate = product?.tvaRate ?? 19;
+      final lineHT = vItem.quantityReceived * price;
+
+      newItems.add(SupplierReturnItem(
+        id: const Uuid().v4(),
+        supplierReturnId: newReturnId,
+        productId: vItem.productId,
+        designation: product?.name ?? 'Article inconnu',
+        quantity: vItem.quantityReceived,
+        unitPrice: price,
+        tvaRate: tvaRate,
+        totalHT: lineHT,
+        reason: 'Retour après réception',
+      ));
+    }
+
+    final newReturn = SupplierReturn(
+      id: newReturnId,
+      number: returnNumber,
+      supplierId: voucher.supplierId,
+      supplierName: voucher.supplierName,
+      receivingVoucherId: voucher.id,
+      date: DateTime.now(),
+      status: 'validated',
+      isDeleted: false,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      items: newItems,
+    );
+
+    // Save return
+    context.read<SupplierReturnsBloc>().add(AddSupplierReturn(newReturn));
+
+    // Update Receiving Voucher
+    final updatedVoucher = voucher.copyWith(
+      isConvertedToSupplierReturn: true,
+      convertedToSupplierReturnId: newReturnId,
+    );
+    context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedVoucher));
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Bon de retour créé avec succès ($returnNumber)'),
+      backgroundColor: AppColors.success,
+    ));
+  }
+
+  PopupMenuItem<String> _buildMenuItem(String value, IconData icon, String label, Color iconColor, {bool showBorder = true}) {
+    return PopupMenuItem<String>(
+      value: value,
+      height: 40,
+      padding: EdgeInsets.zero,
+      child: Container(
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+          border: showBorder ? const Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)) : null,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: iconColor),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label, 
+                style: const TextStyle(color: Color(0xFF334155), fontSize: 13, fontWeight: FontWeight.w500),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<PopupMenuEntry<String>> _buildActionMenu(BuildContext context, ReceivingVoucher voucher) {
+    final List<PopupMenuEntry<String>> items = [];
+
+    items.add(_buildMenuItem('view', Icons.visibility_outlined, 'Voir', const Color(0xFF6366F1)));
+    items.add(_buildMenuItem('edit', Icons.edit_outlined, 'Modifier', const Color(0xFF2563EB)));
+    items.add(_buildMenuItem('delete', Icons.delete_outline, 'Supprimer', const Color(0xFFEF4444)));
+    items.add(_buildMenuItem('print', Icons.print_outlined, 'Imprimer', const Color(0xFF475569)));
+    items.add(_buildMenuItem('payment', Icons.credit_card_outlined, 'Ajouter un paiement', const Color(0xFF10B981)));
+    
+    // Mutually exclusive conversion logic
+    if (voucher.isConvertedToPurchaseInvoice) {
+      items.add(_buildMenuItem('view_invoice_created', Icons.visibility_outlined, 'Voir la facture créée', const Color(0xFF6366F1)));
+    } else if (voucher.isConvertedToSupplierReturn) {
+      items.add(_buildMenuItem('view_return_created', Icons.visibility_outlined, 'Voir le bon de retour créé', const Color(0xFF6366F1)));
+    } else {
+      items.add(_buildMenuItem('convert_invoice', Icons.receipt_long_outlined, 'Transformer en facture d\'achat', const Color(0xFF475569)));
+      items.add(_buildMenuItem('convert_return', Icons.assignment_return_outlined, 'Transformer en Bon de retour', const Color(0xFF475569)));
+    }
+
+    items.add(_buildMenuItem('pdf', Icons.picture_as_pdf_outlined, 'Telecharger PDF', const Color(0xFFEF4444)));
+    items.add(_buildMenuItem('email', Icons.email_outlined, 'Envoyer par email', const Color(0xFF2563EB)));
+    items.add(_buildMenuItem('whatsapp', Icons.chat_bubble_outline, 'Envoyer par WhatsApp', const Color(0xFF10B981)));
+    items.add(_buildMenuItem('status', Icons.swap_horiz_outlined, 'Changer le statut', const Color(0xFFF59E0B)));
+    items.add(_buildMenuItem('duplicate', Icons.content_copy_outlined, 'Dupliquer', const Color(0xFF475569)));
+    items.add(_buildMenuItem('attachments', Icons.attach_file_outlined, 'Gerer les pieces jointes', const Color(0xFF475569), showBorder: false));
+
+    return items;
   }
 }

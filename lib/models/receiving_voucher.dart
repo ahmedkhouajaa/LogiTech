@@ -11,6 +11,11 @@ class ReceivingVoucher {
   final String status;
   final String? firebaseUid;
   final bool isDeleted;
+  final bool isConvertedToPurchaseInvoice;
+  final String? convertedToPurchaseInvoiceId;
+  final bool isConvertedToSupplierReturn;
+  final String? convertedToSupplierReturnId;
+  final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<ReceivingVoucherItem> items;
@@ -26,6 +31,11 @@ class ReceivingVoucher {
     this.status = 'draft',
     this.firebaseUid,
     this.isDeleted = false,
+    this.isConvertedToPurchaseInvoice = false,
+    this.convertedToPurchaseInvoiceId,
+    this.isConvertedToSupplierReturn = false,
+    this.convertedToSupplierReturnId,
+    this.notes,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.items = const [],
@@ -44,6 +54,11 @@ class ReceivingVoucher {
     String? status,
     String? firebaseUid,
     bool? isDeleted,
+    bool? isConvertedToPurchaseInvoice,
+    String? convertedToPurchaseInvoiceId,
+    bool? isConvertedToSupplierReturn,
+    String? convertedToSupplierReturnId,
+    String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
     List<ReceivingVoucherItem>? items,
@@ -59,6 +74,11 @@ class ReceivingVoucher {
       status: status ?? this.status,
       firebaseUid: firebaseUid ?? this.firebaseUid,
       isDeleted: isDeleted ?? this.isDeleted,
+      isConvertedToPurchaseInvoice: isConvertedToPurchaseInvoice ?? this.isConvertedToPurchaseInvoice,
+      convertedToPurchaseInvoiceId: convertedToPurchaseInvoiceId ?? this.convertedToPurchaseInvoiceId,
+      isConvertedToSupplierReturn: isConvertedToSupplierReturn ?? this.isConvertedToSupplierReturn,
+      convertedToSupplierReturnId: convertedToSupplierReturnId ?? this.convertedToSupplierReturnId,
+      notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       items: items ?? this.items,
@@ -76,6 +96,11 @@ class ReceivingVoucher {
       'status': status,
       'firebase_uid': firebaseUid,
       'is_deleted': isDeleted ? 1 : 0,
+      'is_converted_to_purchase_invoice': isConvertedToPurchaseInvoice ? 1 : 0,
+      'converted_to_purchase_invoice_id': convertedToPurchaseInvoiceId,
+      'is_converted_to_supplier_return': isConvertedToSupplierReturn ? 1 : 0,
+      'converted_to_supplier_return_id': convertedToSupplierReturnId,
+      'notes': notes,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -93,6 +118,11 @@ class ReceivingVoucher {
       status: map['status'] ?? 'draft',
       firebaseUid: map['firebase_uid'],
       isDeleted: map['is_deleted'] == 1,
+      isConvertedToPurchaseInvoice: map['is_converted_to_purchase_invoice'] == 1,
+      convertedToPurchaseInvoiceId: map['converted_to_purchase_invoice_id'],
+      isConvertedToSupplierReturn: map['is_converted_to_supplier_return'] == 1,
+      convertedToSupplierReturnId: map['converted_to_supplier_return_id'],
+      notes: map['notes'],
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
       items: items,

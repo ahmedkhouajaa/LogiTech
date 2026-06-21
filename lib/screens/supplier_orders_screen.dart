@@ -678,7 +678,13 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
           children: [
             Icon(icon, size: 18, color: iconColor),
             const SizedBox(width: 12),
-            Text(label, style: const TextStyle(color: Color(0xFF334155), fontSize: 13, fontWeight: FontWeight.w500)),
+            Expanded(
+              child: Text(
+                label, 
+                style: const TextStyle(color: Color(0xFF334155), fontSize: 13, fontWeight: FontWeight.w500),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
       ),
@@ -733,7 +739,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               if (toInvoice) {
                 _convertToInvoice(context, order);
               } else {
-                // _convertToReceipt(context, order);
+                _convertToReceipt(context, order);
               }
             },
             child: const Text('Confirmer'),
@@ -780,6 +786,39 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Commande transformée en facture d'achat avec succès")),
+    );
+  }
+
+  void _convertToReceipt(BuildContext context, SupplierOrder order) {
+    final receiptId = const Uuid().v4();
+    final newReceipt = ReceivingVoucher(
+      id: receiptId,
+      number: 'BR-${order.number.replaceAll("CMD-", "")}',
+      supplierId: order.supplierId,
+      supplierName: order.supplierName,
+      orderId: order.id,
+      date: DateTime.now(),
+      status: 'validated',
+      items: order.items.map((i) => ReceivingVoucherItem(
+        id: const Uuid().v4(),
+        voucherId: receiptId,
+        productId: i.productId,
+        quantityExpected: i.quantity,
+        quantityReceived: i.quantity,
+      )).toList(),
+    );
+
+    context.read<ReceivingVouchersBloc>().add(AddReceivingVoucher(newReceipt));
+
+    final updatedOrder = order.copyWith(
+      isConvertedToReceipt: true,
+      convertedToReceiptId: receiptId,
+      status: 'validated',
+    );
+    context.read<SupplierOrdersBloc>().add(UpdateSupplierOrder(updatedOrder));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Commande transformée en bon de réception avec succès")),
     );
   }
 

@@ -10,6 +10,7 @@ class PurchaseInvoice {
   final String? projectId;
   final String? projectName;
   final String? devisId;
+  final String? receivingVoucherId;
   final DateTime date;
   final DateTime dueDate;
   final InvoiceStatus status;
@@ -41,6 +42,7 @@ class PurchaseInvoice {
     this.projectId,
     this.projectName,
     this.devisId,
+    this.receivingVoucherId,
     required this.date,
     required this.dueDate,
     this.status = InvoiceStatus.draft,
@@ -71,6 +73,7 @@ class PurchaseInvoice {
         'id': id, 'number': number, 'supplier_id': supplierId,
         'order_id': orderId, 'delivery_note_id': deliveryNoteId,
         'project_id': projectId, 'devis_id': devisId,
+        'receiving_voucher_id': receivingVoucherId,
         'date': date.toIso8601String(), 'due_date': dueDate.toIso8601String(),
         'status': status.name, 'total_ht': totalHT, 'total_tva': totalTva,
         'total_ttc': totalTTC, 'amount_paid': amountPaid, 'stamp_tax': stampTax,
@@ -96,6 +99,7 @@ class PurchaseInvoice {
         projectId: map['project_id'] as String?,
         projectName: map['project_name'] as String?,
         devisId: map['devis_id'] as String?,
+        receivingVoucherId: map['receiving_voucher_id'] as String?,
         date: DateTime.parse(map['date'] as String),
         dueDate: DateTime.parse(map['due_date'] as String),
         status: InvoiceStatus.values.firstWhere(
@@ -122,7 +126,7 @@ class PurchaseInvoice {
   PurchaseInvoice copyWith({
     String? id, String? number, String? supplierId, String? supplierName,
     String? orderId, String? deliveryNoteId, String? projectId, String? projectName,
-    String? devisId,
+    String? devisId, String? receivingVoucherId,
     DateTime? date, DateTime? dueDate,
     InvoiceStatus? status, double? totalHT, double? totalTva, double? totalTTC,
     double? amountPaid, double? stampTax, double? timbreFiscal,
@@ -139,6 +143,7 @@ class PurchaseInvoice {
         projectId: projectId ?? this.projectId,
         projectName: projectName ?? this.projectName,
         devisId: devisId ?? this.devisId,
+        receivingVoucherId: receivingVoucherId ?? this.receivingVoucherId,
         date: date ?? this.date, dueDate: dueDate ?? this.dueDate,
         status: status ?? this.status, totalHT: totalHT ?? this.totalHT,
         totalTva: totalTva ?? this.totalTva, totalTTC: totalTTC ?? this.totalTTC,

@@ -11,13 +11,14 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/dashboard_card.dart';
-// import '../widgets/purchase_invoice_payment_dialog.dart';
+import '../widgets/purchase_invoice_payment_dialog.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import '../blocs/purchase_invoices/purchase_invoices_bloc.dart';
-import '../blocs/credit_notes/credit_notes_bloc.dart';
-import '../models/credit_note.dart';
+import '../blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
+import '../blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
+import '../models/supplier_credit_note.dart';
 import 'create_purchase_invoice_screen.dart';
 
 class PurchaseInvoicesScreen extends StatefulWidget {
@@ -568,22 +569,19 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               final now = DateTime.now();
               final String cnId = Uuid().v4();
 
-              final String cnNumber = 'AV-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
+              final String cnNumber = 'AVF-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
               
-              final creditNote = CreditNote(
+              final creditNote = SupplierCreditNote(
                 id: cnId,
                 number: cnNumber,
-                invoiceId: inv.id,
-                customerId: inv.supplierId,
-                customerName: inv.supplierName,
+                supplierId: inv.supplierId,
                 date: now,
-                status: CreditNoteStatus.unused,
-                totalHT: inv.totalHT,
-                totalTva: inv.totalTva,
-                totalTTC: inv.totalTTC,
-                items: inv.items.map((i) => CreditNoteItem(
-                  id: Uuid().v4(),
+                status: 'Brouillon',
+                items: inv.items.map((i) => SupplierCreditNoteItem(
+                  id: const Uuid().v4(),
+                  supplierCreditNoteId: cnId,
                   productId: i.productId,
+                  
                   quantity: i.quantity,
                   unitPrice: i.unitPrice,
                   tvaRate: i.tvaRate,
@@ -594,7 +592,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               );
 
               // Create the credit note
-              context.read<CreditNotesBloc>().add(AddCreditNote(creditNote));
+              context.read<SupplierCreditNotesBloc>().add(AddSupplierCreditNote(creditNote));
               
               // Update the purchaseInvoice to link it
               final updatedPurchaseInvoice = inv.copyWith(creditNoteId: cnId);
@@ -602,7 +600,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Avoir $cnNumber créé avec succès'),
+                  content: Text('Avoir fournisseur $cnNumber créé avec succès'),
                   backgroundColor: AppColors.success,
                 ),
               );
@@ -665,8 +663,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
               BlocProvider.value(value: context.read<PurchaseInvoicesBloc>()),
             ],
-              // child: PurchaseInvoicePaymentDialog(purchaseInvoice: inv),
-              child: const SizedBox(),
+              child: PurchaseInvoicePaymentDialog(purchaseInvoice: inv),
           ),
         ).then((created) {
           if (created == true && context.mounted) {

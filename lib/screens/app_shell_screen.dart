@@ -24,6 +24,9 @@ import 'treasury_accounts_screen.dart';
 import 'projects_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
+import 'package:business_manager_pro/screens/return_notes_screen.dart';
+import 'package:business_manager_pro/screens/supplier_returns_screen.dart';
+import 'package:business_manager_pro/screens/supplier_credit_notes_screen.dart';
 import 'credit_notes_screen.dart';
 import 'purchase_invoices_screen.dart';
 import 'supplier_orders_screen.dart';
@@ -32,17 +35,23 @@ import 'withholding_tax_screen.dart';
 import 'warehouses_screen.dart';
 import 'payments_screen.dart';
 import 'stock_withdrawals_screen.dart';
-
+import 'company_info_screen.dart';
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
 
   @override
-  State<AppShellScreen> createState() => _AppShellScreenState();
+  State<AppShellScreen> createState() => AppShellScreenState();
 }
 
-class _AppShellScreenState extends State<AppShellScreen> {
+class AppShellScreenState extends State<AppShellScreen> {
   AppModule _activeModule = AppModule.dashboard;
   bool _isSidebarCollapsed = false;
+
+  void setActiveModule(AppModule module) {
+    setState(() {
+      _activeModule = module;
+    });
+  }
 
   @override
   void initState() {
@@ -105,6 +114,12 @@ class _AppShellScreenState extends State<AppShellScreen> {
         return const ReturnNotesScreen();
       case AppModule.creditNotes:
         return const CreditNotesScreen();
+      case AppModule.supplierReturns:
+        return const SupplierReturnsScreen();
+      case AppModule.supplierCreditNotes:
+        return const SupplierCreditNotesScreen();
+      case AppModule.companyInfo:
+        return const CompanyInfoScreen();
       default:
         return _ComingSoonScreen(module: _activeModule);
     }
@@ -145,6 +160,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
       case AppModule.stockTransfer: return 'Bons de transfert';
       case AppModule.inventorySheet: return 'Fiche d\'inventaire';
       case AppModule.payments: return 'Paiements';
+      case AppModule.companyInfo: return 'Informations sur la societe';
     }
   }
 

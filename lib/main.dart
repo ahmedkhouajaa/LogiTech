@@ -28,6 +28,10 @@ import 'blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import 'blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import 'blocs/checks_traites/checks_traites_bloc.dart';
 import 'blocs/return_notes/return_notes_bloc.dart';
+import 'blocs/supplier_returns/supplier_returns_bloc.dart';
+import 'blocs/supplier_returns/supplier_returns_event.dart';
+import 'blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
+import 'blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
 import 'blocs/product_settings/product_settings_bloc.dart';
 import 'blocs/product_settings/product_settings_event.dart';
 import 'services/auth_service.dart';
@@ -88,6 +92,8 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => TreasuryTransactionsBloc(databaseHelper: DatabaseHelper.instance)..add(const LoadTreasuryTransactions())),
         BlocProvider(create: (_) => ChecksTraitesBloc(databaseHelper: DatabaseHelper.instance)..add(LoadChecksTraites())),
         BlocProvider(create: (_) => ReturnNotesBloc()),
+        BlocProvider(create: (_) => SupplierReturnsBloc(DatabaseHelper.instance)..add(LoadSupplierReturns())),
+        BlocProvider(create: (_) => SupplierCreditNotesBloc(DatabaseHelper.instance)..add(LoadSupplierCreditNotes())),
         BlocProvider(create: (_) => CreditNotesBloc()..add(LoadCreditNotes())),
         BlocProvider(create: (_) => ProductSettingsBloc()..add(LoadFamilies())),
       ],

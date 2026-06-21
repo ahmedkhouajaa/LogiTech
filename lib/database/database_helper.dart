@@ -23,6 +23,8 @@ import '../models/receiving_voucher.dart';
 import '../models/product_family.dart';
 import '../models/credit_note.dart';
 import '../models/purchase_invoice.dart';
+import '../models/supplier_return.dart';
+import '../models/supplier_credit_note.dart';
 import '../utils/constants.dart';
 
 class DatabaseHelper {
@@ -46,7 +48,7 @@ class DatabaseHelper {
     return await databaseFactoryFfi.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 28,
+        version: 36,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       ),
@@ -651,6 +653,124 @@ class DatabaseHelper {
       } catch (e) {
         // Ignore if exists
       }
+    }
+
+    if (oldVersion < 29) {
+      try {
+        await db.execute("ALTER TABLE receiving_vouchers ADD COLUMN notes TEXT");
+      } catch (e) {
+        // Ignore if exists
+      }
+      try {
+        await db.execute("ALTER TABLE receiving_vouchers ADD COLUMN is_converted_to_purchase_invoice INTEGER DEFAULT 0");
+        await db.execute("ALTER TABLE receiving_vouchers ADD COLUMN converted_to_purchase_invoice_id TEXT");
+        await db.execute("ALTER TABLE receiving_vouchers ADD COLUMN is_converted_to_supplier_return INTEGER DEFAULT 0");
+        await db.execute("ALTER TABLE receiving_vouchers ADD COLUMN converted_to_supplier_return_id TEXT");
+        await db.execute("ALTER TABLE purchase_invoices ADD COLUMN receiving_voucher_id TEXT");
+        await db.execute("ALTER TABLE supplier_returns ADD COLUMN receiving_voucher_id TEXT");
+      } catch (e) {
+        // Ignore if exists
+      }
+    }
+
+    if (oldVersion < 30) {
+      try {
+        await db.execute("ALTER TABLE receiving_vouchers ADD COLUMN notes TEXT");
+      } catch (e) {
+        // Ignore if exists
+      }
+    }
+
+    if (oldVersion < 31) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS supplier_return_items (
+          id TEXT PRIMARY KEY,
+          return_id TEXT NOT NULL,
+          product_id TEXT,
+          designation TEXT NOT NULL,
+          quantity REAL NOT NULL,
+          unit_price REAL NOT NULL,
+          tva_rate REAL NOT NULL,
+          total_ht REAL NOT NULL,
+          reason TEXT,
+          FOREIGN KEY (return_id) REFERENCES supplier_returns(id) ON DELETE CASCADE
+        )
+      ''');
+    }
+    if (oldVersion < 32) {
+      try {
+        await db.execute('ALTER TABLE supplier_credit_notes ADD COLUMN status TEXT');
+      } catch (e) {
+        // Ignore if already exists
+      }
+      try {
+        await db.execute('ALTER TABLE supplier_credit_notes ADD COLUMN reason TEXT');
+      } catch (e) {
+        // Ignore if already exists
+      }
+      
+      try {
+        await db.execute('''
+          CREATE TABLE supplier_credit_note_items(
+            id TEXT PRIMARY KEY,
+            supplier_credit_note_id TEXT,
+            product_id TEXT,
+            designation TEXT,
+            quantity REAL,
+            unit_price REAL,
+            tva_rate REAL,
+            total_ht REAL,
+            total_ttc REAL,
+            FOREIGN KEY (supplier_credit_note_id) REFERENCES supplier_credit_notes(id) ON DELETE CASCADE,
+            FOREIGN KEY (product_id) REFERENCES products(id)
+          )
+        ''');
+      } catch (e) {
+        // Ignore if already exists
+      }
+    }
+    if (oldVersion < 33) {
+      try {
+        await db.execute('ALTER TABLE supplier_credit_notes ADD COLUMN status TEXT');
+      } catch (e) {}
+      try {
+        await db.execute('ALTER TABLE supplier_credit_notes ADD COLUMN reason TEXT');
+      } catch (e) {}
+    }
+    if (oldVersion < 34) {
+      try {
+        await db.execute('ALTER TABLE supplier_credit_notes ADD COLUMN status TEXT');
+      } catch (e) {}
+      try {
+        await db.execute('ALTER TABLE supplier_credit_notes ADD COLUMN reason TEXT');
+      } catch (e) {}
+      try {
+        await db.execute('''
+          CREATE TABLE supplier_credit_note_items(
+            id TEXT PRIMARY KEY,
+            supplier_credit_note_id TEXT,
+            product_id TEXT,
+            designation TEXT,
+            quantity REAL,
+            unit_price REAL,
+            tva_rate REAL,
+            total_ht REAL,
+            total_ttc REAL,
+            FOREIGN KEY (supplier_credit_note_id) REFERENCES supplier_credit_notes(id) ON DELETE CASCADE,
+            FOREIGN KEY (product_id) REFERENCES products(id)
+          )
+        ''');
+      } catch (e) {}
+    }
+    if (oldVersion < 35) {
+      try {
+        await db.execute('ALTER TABLE purchase_invoice_items ADD COLUMN description TEXT');
+      } catch (e) {}
+    }
+    if (oldVersion < 36) {
+      try {
+        await db.execute('ALTER TABLE purchase_invoice_items ADD COLUMN discount_percent REAL DEFAULT 0');
+      } catch (e) {}
     }
   }
 
@@ -1430,6 +1550,10 @@ class DatabaseHelper {
         notes TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
+        is_converted_to_purchase_invoice INTEGER DEFAULT 0,
+        converted_to_purchase_invoice_id TEXT,
+        is_converted_to_supplier_return INTEGER DEFAULT 0,
+        converted_to_supplier_return_id TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
@@ -1459,6 +1583,7 @@ class DatabaseHelper {
         delivery_note_id TEXT,
         project_id TEXT,
         devis_id TEXT,
+        receiving_voucher_id TEXT,
         date TEXT NOT NULL,
         due_date TEXT NOT NULL,
         status TEXT DEFAULT 'draft',
@@ -1505,6 +1630,8 @@ class DatabaseHelper {
         purchase_invoice_id TEXT,
         supplier_id TEXT NOT NULL,
         date TEXT NOT NULL,
+        status TEXT,
+        reason TEXT,
         total_ht REAL DEFAULT 0,
         total_tva REAL DEFAULT 0,
         total_ttc REAL DEFAULT 0,
@@ -1522,6 +1649,7 @@ class DatabaseHelper {
         number TEXT NOT NULL,
         supplier_id TEXT NOT NULL,
         purchase_invoice_id TEXT,
+        receiving_voucher_id TEXT,
         date TEXT NOT NULL,
         reason TEXT,
         status TEXT DEFAULT 'draft',
@@ -1529,6 +1657,21 @@ class DatabaseHelper {
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE supplier_return_items (
+        id TEXT PRIMARY KEY,
+        return_id TEXT NOT NULL,
+        product_id TEXT,
+        designation TEXT NOT NULL,
+        quantity REAL NOT NULL,
+        unit_price REAL NOT NULL,
+        tva_rate REAL NOT NULL,
+        total_ht REAL NOT NULL,
+        reason TEXT,
+        FOREIGN KEY (return_id) REFERENCES supplier_returns(id) ON DELETE CASCADE
       )
     ''');
 
@@ -2883,6 +3026,7 @@ class DatabaseHelper {
   Future<void> updateCompanySettings(CompanySettings settings) async {
     final db = await database;
     await db.update('company_settings', settings.toMap(), where: 'id = ?', whereArgs: [settings.id]);
+    await _addToSyncQueue('company_settings', settings.id, 'UPDATE', settings.toMap());
   }
 
   // ─── Search ─────────────────────────────────────────────────────
@@ -2948,11 +3092,111 @@ class DatabaseHelper {
     await _addToSyncQueue('receiving_vouchers', voucherMap['id'], 'INSERT', voucherMap);
   }
 
+  Future<void> updateReceivingVoucher(Map<String, dynamic> voucherMap, List<Map<String, dynamic>> itemsMap) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update('receiving_vouchers', voucherMap, where: 'id = ?', whereArgs: [voucherMap['id']]);
+      await txn.delete('receiving_voucher_items', where: 'voucher_id = ?', whereArgs: [voucherMap['id']]);
+      for (var item in itemsMap) {
+        await txn.insert('receiving_voucher_items', item);
+      }
+    });
+    await _addToSyncQueue('receiving_vouchers', voucherMap['id'], 'UPDATE', voucherMap);
+  }
+
   Future<void> deleteReceivingVoucher(String id) async {
     final db = await database;
     final data = {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()};
     await db.update('receiving_vouchers', data, where: 'id = ?', whereArgs: [id]);
     await _addToSyncQueue('receiving_vouchers', id, 'DELETE', data);
+  }
+
+  // ─── Supplier Returns ──────────────────────────────────────────
+  Future<List<SupplierReturn>> getSupplierReturns() async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT sr.*, s.name as supplier_name 
+      FROM supplier_returns sr
+      LEFT JOIN suppliers s ON sr.supplier_id = s.id
+      WHERE sr.is_deleted = 0
+      ORDER BY sr.date DESC
+    ''');
+
+    List<SupplierReturn> returns = [];
+    for (var map in maps) {
+      final itemsMap = await db.query(
+        'supplier_return_items',
+        where: 'return_id = ?',
+        whereArgs: [map['id']],
+      );
+      final items = itemsMap.map((m) => SupplierReturnItem.fromMap(m)).toList();
+      returns.add(SupplierReturn.fromMap(map, items: items, supplierName: map['supplier_name'] as String?));
+    }
+    return returns;
+  }
+
+  Future<SupplierReturn?> getSupplierReturn(String id) async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT sr.*, s.name as supplier_name 
+      FROM supplier_returns sr
+      LEFT JOIN suppliers s ON sr.supplier_id = s.id
+      WHERE sr.id = ? AND sr.is_deleted = 0
+    ''', [id]);
+
+    if (maps.isNotEmpty) {
+      final itemsMap = await db.query(
+        'supplier_return_items',
+        where: 'return_id = ?',
+        whereArgs: [id],
+      );
+      final items = itemsMap.map((m) => SupplierReturnItem.fromMap(m)).toList();
+      return SupplierReturn.fromMap(maps.first, items: items, supplierName: maps.first['supplier_name'] as String?);
+    }
+    return null;
+  }
+
+  Future<void> insertSupplierReturn(SupplierReturn sr) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('supplier_returns', sr.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      for (var item in sr.items) {
+        await txn.insert('supplier_return_items', item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+    await _addToSyncQueue('supplier_returns', sr.id, 'INSERT', sr.toMap());
+  }
+
+  Future<void> updateSupplierReturn(SupplierReturn sr) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      final map = sr.toMap();
+      map['updated_at'] = DateTime.now().toIso8601String();
+      await txn.update('supplier_returns', map, where: 'id = ?', whereArgs: [sr.id]);
+      
+      await txn.delete('supplier_return_items', where: 'return_id = ?', whereArgs: [sr.id]);
+      for (var item in sr.items) {
+        await txn.insert('supplier_return_items', item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+    await _addToSyncQueue('supplier_returns', sr.id, 'UPDATE', sr.toMap());
+  }
+
+  Future<void> deleteSupplierReturn(String id) async {
+    final db = await database;
+    final data = {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()};
+    await db.update('supplier_returns', data, where: 'id = ?', whereArgs: [id]);
+    await _addToSyncQueue('supplier_returns', id, 'DELETE', data);
+  }
+
+  Future<int> getNextSupplierReturnSequence() async {
+    final db = await database;
+    final year = DateTime.now().year;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) + 1 AS next FROM supplier_returns WHERE number LIKE ?',
+      ['BRF-$year-%'],
+    );
+    return result.first['next'] as int;
   }
 
   // ─── Payment Accounts ──────────────────────────────────────────
@@ -3462,6 +3706,86 @@ class DatabaseHelper {
   Future<void> deleteTransactionCategory(String id) async {
     final db = await database;
     await db.delete('transaction_categories', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+  // Supplier Credit Notes (Avoirs Fournisseur)
+  // ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+
+  Future<int> getNextSupplierCreditNoteSequence() async {
+    final db = await database;
+    final result = await db.rawQuery(
+        "SELECT COUNT(*) as count FROM supplier_credit_notes WHERE date LIKE ?",
+        ['${DateTime.now().year}-%']);
+    return (((result.first['count'] ?? 0) as int) ?? 0) + 1;
+  }
+
+  Future<List<SupplierCreditNote>> getSupplierCreditNotes() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'supplier_credit_notes',
+      where: 'is_deleted = 0',
+      orderBy: 'date DESC',
+    );
+    
+    List<SupplierCreditNote> notes = [];
+    for (var map in maps) {
+      final items = await _getSupplierCreditNoteItems(map['id']);
+      notes.add(SupplierCreditNote.fromMap(map, items));
+    }
+    return notes;
+  }
+
+  Future<List<SupplierCreditNoteItem>> _getSupplierCreditNoteItems(String noteId) async {
+    final db = await database;
+    final maps = await db.query(
+      'supplier_credit_note_items',
+      where: 'supplier_credit_note_id = ?',
+      whereArgs: [noteId],
+    );
+    return maps.map((e) => SupplierCreditNoteItem.fromMap(e)).toList();
+  }
+
+  Future<void> insertSupplierCreditNote(SupplierCreditNote note) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('supplier_credit_notes', note.toMap());
+      for (var item in note.items) {
+        await txn.insert('supplier_credit_note_items', item.toMap());
+      }
+    });
+  }
+
+  Future<void> updateSupplierCreditNote(SupplierCreditNote note) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'supplier_credit_notes',
+        {...note.toMap(), 'updated_at': DateTime.now().toIso8601String()},
+        where: 'id = ?',
+        whereArgs: [note.id],
+      );
+      
+      await txn.delete(
+        'supplier_credit_note_items',
+        where: 'supplier_credit_note_id = ?',
+        whereArgs: [note.id],
+      );
+      
+      for (var item in note.items) {
+        await txn.insert('supplier_credit_note_items', item.toMap());
+      }
+    });
+  }
+
+  Future<void> deleteSupplierCreditNote(String id) async {
+    final db = await database;
+    await db.update(
+      'supplier_credit_notes',
+      {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
 }

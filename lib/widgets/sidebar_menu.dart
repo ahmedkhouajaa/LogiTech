@@ -42,6 +42,7 @@ enum AppModule {
   projects,
   // Parametres
   settings,
+  companyInfo,
 }
 
 class SidebarMenu extends StatefulWidget {
@@ -129,6 +130,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
                   _buildItem(AppModule.projects, Icons.folder_rounded, 'Projets'),
                   const _SidebarDivider(),
                   _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
+                  _buildItem(AppModule.companyInfo, Icons.business_rounded, 'Informations de la societe'),
                   const SizedBox(height: 16),
                 ],
               ),
