@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../models/document_template.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common/sqlite_api.dart';
 import 'package:path/path.dart' as p;
@@ -48,7 +49,7 @@ class DatabaseHelper {
     return await databaseFactoryFfi.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 36,
+        version: 38,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       ),
@@ -771,6 +772,19 @@ class DatabaseHelper {
       try {
         await db.execute('ALTER TABLE purchase_invoice_items ADD COLUMN discount_percent REAL DEFAULT 0');
       } catch (e) {}
+    }
+    if (oldVersion < 37) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS document_templates (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          document_type TEXT DEFAULT 'invoice',
+          is_default INTEGER DEFAULT 0,
+          config_json TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
     }
   }
 
@@ -1959,6 +1973,19 @@ class DatabaseHelper {
     ''');
 
     await _createPaymentTables(db);
+
+    // ─── Document Templates ──────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS document_templates (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        document_type TEXT DEFAULT 'invoice',
+        is_default INTEGER DEFAULT 0,
+        config_json TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _createPaymentTables(Database db) async {
@@ -3786,6 +3813,74 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // ─── DOCUMENT TEMPLATES ─────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+
+  Future<List<DocumentTemplate>> getDocumentTemplates() async {
+    final db = await database;
+    final maps = await db.query('document_templates', orderBy: 'created_at DESC');
+    return maps.map((m) => DocumentTemplate.fromMap(m)).toList();
+  }
+
+  Future<DocumentTemplate?> getDocumentTemplate(String id) async {
+    final db = await database;
+    final maps = await db.query('document_templates', where: 'id = ?', whereArgs: [id]);
+    if (maps.isEmpty) return null;
+    return DocumentTemplate.fromMap(maps.first);
+  }
+
+  Future<DocumentTemplate?> getDefaultTemplate(String documentType) async {
+    final db = await database;
+    final maps = await db.query(
+      'document_templates',
+      where: 'document_type = ? AND is_default = 1',
+      whereArgs: [documentType],
+    );
+    if (maps.isEmpty) return null;
+    return DocumentTemplate.fromMap(maps.first);
+  }
+
+  Future<void> insertDocumentTemplate(DocumentTemplate template) async {
+    final db = await database;
+    await db.insert('document_templates', template.toMap());
+  }
+
+  Future<void> updateDocumentTemplate(DocumentTemplate template) async {
+    final db = await database;
+    await db.update(
+      'document_templates',
+      {...template.toMap(), 'updated_at': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [template.id],
+    );
+  }
+
+  Future<void> deleteDocumentTemplate(String id) async {
+    final db = await database;
+    await db.delete('document_templates', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> setDefaultTemplate(String id, String documentType) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      // Clear all defaults for this document type
+      await txn.update(
+        'document_templates',
+        {'is_default': 0},
+        where: 'document_type = ?',
+        whereArgs: [documentType],
+      );
+      // Set the new default
+      await txn.update(
+        'document_templates',
+        {'is_default': 1},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
   }
 
 }

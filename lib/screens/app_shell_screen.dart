@@ -36,6 +36,7 @@ import 'warehouses_screen.dart';
 import 'payments_screen.dart';
 import 'stock_withdrawals_screen.dart';
 import 'company_info_screen.dart';
+import 'document_templates_screen.dart';
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
 
@@ -120,6 +121,8 @@ class AppShellScreenState extends State<AppShellScreen> {
         return const SupplierCreditNotesScreen();
       case AppModule.companyInfo:
         return const CompanyInfoScreen();
+      case AppModule.documentTemplates:
+        return const DocumentTemplatesScreen();
       default:
         return _ComingSoonScreen(module: _activeModule);
     }
@@ -161,6 +164,7 @@ class AppShellScreenState extends State<AppShellScreen> {
       case AppModule.inventorySheet: return 'Fiche d\'inventaire';
       case AppModule.payments: return 'Paiements';
       case AppModule.companyInfo: return 'Informations sur la societe';
+      case AppModule.documentTemplates: return 'Modeles de documents';
     }
   }
 

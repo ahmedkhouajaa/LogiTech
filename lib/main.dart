@@ -34,6 +34,7 @@ import 'blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
 import 'blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
 import 'blocs/product_settings/product_settings_bloc.dart';
 import 'blocs/product_settings/product_settings_event.dart';
+import 'blocs/document_templates/document_templates_bloc.dart';
 import 'services/auth_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_service.dart';
@@ -96,6 +97,7 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => SupplierCreditNotesBloc(DatabaseHelper.instance)..add(LoadSupplierCreditNotes())),
         BlocProvider(create: (_) => CreditNotesBloc()..add(LoadCreditNotes())),
         BlocProvider(create: (_) => ProductSettingsBloc()..add(LoadFamilies())),
+        BlocProvider(create: (_) => DocumentTemplatesBloc()..add(LoadDocumentTemplates())),
       ],
       child: MaterialApp(
         title: 'Business Manager Pro',

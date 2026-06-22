@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../utils/constants.dart';
 
 class Invoice {
@@ -168,6 +169,7 @@ class InvoiceItem {
   final double totalHT;
   final bool showDescription;
   final bool showDiscount;
+  final Map<String, String> customFields;
 
   InvoiceItem({
     required this.id,
@@ -182,6 +184,7 @@ class InvoiceItem {
     this.totalHT = 0,
     this.showDescription = false,
     this.showDiscount = false,
+    this.customFields = const {},
   });
 
   double get computedTotalHT {
@@ -197,6 +200,7 @@ class InvoiceItem {
         'description': description, 'quantity': quantity,
         'unit_price': unitPrice, 'tva_rate': tvaRate,
         'discount_percent': discountPercent, 'total_ht': computedTotalHT,
+        'custom_fields_json': jsonEncode(customFields),
       };
 
   factory InvoiceItem.fromMap(Map<String, dynamic> map) => InvoiceItem(
@@ -209,12 +213,24 @@ class InvoiceItem {
         tvaRate: (map['tva_rate'] as num?)?.toDouble() ?? 19,
         discountPercent: (map['discount_percent'] as num?)?.toDouble() ?? 0,
         totalHT: (map['total_ht'] as num?)?.toDouble() ?? 0,
+        customFields: _parseCustomFields(map['custom_fields_json'] as String?),
       );
+
+  static Map<String, String> _parseCustomFields(String? jsonStr) {
+    if (jsonStr == null || jsonStr.isEmpty) return {};
+    try {
+      final decoded = jsonDecode(jsonStr) as Map<String, dynamic>;
+      return decoded.map((k, v) => MapEntry(k, v.toString()));
+    } catch (_) {
+      return {};
+    }
+  }
 
   InvoiceItem copyWith({
     String? id, String? invoiceId, String? productId, String? productName,
     String? description, double? quantity, double? unitPrice, double? tvaRate,
     double? discountPercent, double? totalHT, bool? showDescription, bool? showDiscount,
+    Map<String, String>? customFields,
   }) => InvoiceItem(
         id: id ?? this.id, invoiceId: invoiceId ?? this.invoiceId,
         productId: productId ?? this.productId,
@@ -226,5 +242,6 @@ class InvoiceItem {
         totalHT: totalHT ?? this.totalHT,
         showDescription: showDescription ?? this.showDescription,
         showDiscount: showDiscount ?? this.showDiscount,
+        customFields: customFields ?? this.customFields,
       );
 }

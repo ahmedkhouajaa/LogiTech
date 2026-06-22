@@ -43,6 +43,7 @@ enum AppModule {
   // Parametres
   settings,
   companyInfo,
+  documentTemplates,
 }
 
 class SidebarMenu extends StatefulWidget {
@@ -131,6 +132,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
                   const _SidebarDivider(),
                   _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
                   _buildItem(AppModule.companyInfo, Icons.business_rounded, 'Informations de la societe'),
+                  _buildItem(AppModule.documentTemplates, Icons.description_rounded, 'Modeles de documents'),
                   const SizedBox(height: 16),
                 ],
               ),

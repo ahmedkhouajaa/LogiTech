@@ -9,6 +9,8 @@ import '../models/invoice.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/project.dart';
+import '../models/document_template.dart';
+import '../database/database_helper.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/dashboard_card.dart';
@@ -37,6 +39,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
   InvoiceStatus _status = InvoiceStatus.draft;
+
+  List<Map<String, dynamic>> _customColumns = [];
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
@@ -79,6 +83,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
+    _loadTemplate();
 
     // Load existing invoice data if editing
     if (widget.existing != null) {
@@ -94,6 +99,18 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       _globalDiscountPercent = inv.globalDiscountPercent;
       _selectedProjectId = inv.projectId;
       _items = inv.items.toList();
+    }
+  }
+
+  Future<void> _loadTemplate() async {
+    final template = await DatabaseHelper.instance.getDefaultTemplate('invoice');
+    final config = template?.config ?? DocumentTemplate.defaultConfig();
+    final cols = (config['tableColumns'] as List?) ?? DocumentTemplate.defaultConfig()['tableColumns'] as List;
+    
+    if (mounted) {
+      setState(() {
+        _customColumns = cols.where((c) => c['type'] == 'custom' && c['visible'] == true).cast<Map<String, dynamic>>().toList();
+      });
     }
   }
 
@@ -594,6 +611,31 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          // Custom Columns fields
+          if (_customColumns.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Wrap(
+                spacing: 16,
+                runSpacing: 8,
+                children: _customColumns.map((col) {
+                  final id = col['id'] as String;
+                  return SizedBox(
+                    width: 200,
+                    child: TextFormField(
+                      initialValue: item.customFields[id] ?? '',
+                      decoration: _itemInputDecoration(col['label'] as String),
+                      style: const TextStyle(fontSize: 12),
+                      onChanged: (v) {
+                        final newFields = Map<String, String>.from(item.customFields);
+                        newFields[id] = v;
+                        setState(() => _items[index] = item.copyWith(customFields: newFields));
+                      },
+                    ),
+                  );
+                }).toList(),
               ),
             ),
         ],

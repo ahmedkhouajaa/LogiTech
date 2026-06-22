@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
+import '../widgets/sidebar_menu.dart';
+import 'app_shell_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -20,6 +22,21 @@ class SettingsScreen extends StatelessWidget {
               _buildSettingItem(Icons.business_rounded, 'Informations de l\'entreprise', 'Gerer les details de la societe, logo, NIF, RC'),
               _buildSettingItem(Icons.palette_rounded, 'Apparence', 'Theme clair/sombre, couleurs de l\'interface'),
               _buildSettingItem(Icons.language_rounded, 'Langue et region', 'Francais (Algerie), devise par defaut'),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _buildSettingsGroup(
+            'Documents',
+            [
+              _buildSettingItem(
+                Icons.description_rounded,
+                'Modèles de documents',
+                'Personnaliser les modèles de factures et documents',
+                onTap: () {
+                  final shell = context.findAncestorStateOfType<AppShellScreenState>();
+                  shell?.setActiveModule(AppModule.documentTemplates);
+                },
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -73,7 +90,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSettingItem(IconData icon, String title, String subtitle, {bool isAction = false}) {
+  Widget _buildSettingItem(IconData icon, String title, String subtitle, {bool isAction = false, VoidCallback? onTap}) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: Container(
@@ -86,7 +103,7 @@ class SettingsScreen extends StatelessWidget {
       trailing: isAction
           ? AppButton(label: 'Forcer la synchro', isSmall: true, onPressed: () {})
           : const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
-      onTap: () {},
+      onTap: onTap ?? () {},
     );
   }
 }
