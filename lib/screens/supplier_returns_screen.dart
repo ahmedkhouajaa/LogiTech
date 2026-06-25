@@ -17,7 +17,10 @@ import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../blocs/invoices/invoices_bloc.dart';
 import '../models/invoice.dart';
+import '../models/invoice.dart';
 import 'create_invoice_screen.dart';
+import '../services/pdf_service.dart';
+import '../models/document_wrapper.dart';
 
 enum SupplierReturnStatus {
   draft('Brouillon', AppColors.textSecondary),
@@ -801,6 +804,10 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
         break;
       case 'status':
         _showChangeStatusDialog(context, note);
+        break;
+      case 'pdf':
+        final doc = DocumentWrapper.fromSupplierReturn(note);
+        PdfService.instance.generateAndOpenDocument(doc);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));

@@ -57,7 +57,7 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
   void _updateAmountField() {
     double amount = widget.purchaseInvoice.totalTTC + widget.purchaseInvoice.timbreFiscal - widget.purchaseInvoice.amountPaid;
     if (_applyWithholdingTax) {
-      double taxAmount = (widget.purchaseInvoice.totalHT * _withholdingTaxRate) / 100;
+      double taxAmount = ((widget.purchaseInvoice.totalTTC + widget.purchaseInvoice.timbreFiscal) * _withholdingTaxRate) / 100;
       amount -= taxAmount;
     }
     _amountCtrl = TextEditingController(text: amount.toStringAsFixed(3).replaceAll('.', ','));
@@ -122,7 +122,50 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
     context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(treasuryTx));
 
     // Update Invoice status and amount paid
-    double taxAmount = _applyWithholdingTax ? (widget.purchaseInvoice.totalHT * _withholdingTaxRate) / 100 : 0;
+    double taxAmount = _applyWithholdingTax ? ((widget.purchaseInvoice.totalTTC + widget.purchaseInvoice.timbreFiscal) * _withholdingTaxRate) / 100 : 0;
+
+    if (_applyWithholdingTax && taxAmount > 0) {
+      final rsPaymentNumber = 'RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0');
+      
+      final rsPayment = Payment(
+        id: const Uuid().v4(),
+        paymentNumber: rsPaymentNumber,
+        direction: 'decaissement',
+        contactId: widget.purchaseInvoice.supplierId,
+        contactType: 'supplier',
+        contactName: widget.purchaseInvoice.supplierName,
+        amount: taxAmount,
+        method: 'retenue_source',
+        accountId: _selectedAccountId,
+        reference: widget.purchaseInvoice.number,
+        paymentDate: _withholdingTaxDate,
+        notes: 'Retenue à la source ($_withholdingTaxRate%)',
+        status: 'paid',
+        relatedInvoiceId: widget.purchaseInvoice.id,
+        createdAt: now.add(const Duration(seconds: 1)),
+        updatedAt: now.add(const Duration(seconds: 1)),
+      );
+      
+      db.add(AddPayment(rsPayment));
+
+      final rsTreasuryTx = TreasuryTransaction(
+        id: const Uuid().v4(),
+        transactionNumber: 'TR-RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0'),
+        accountId: _selectedAccountId!,
+        amount: taxAmount,
+        type: 'expense',
+        category: 'Retenue à la source (Achats)',
+        dateTransaction: _withholdingTaxDate,
+        description: 'Retenue à la source ($_withholdingTaxRate%) pour la facture ${widget.purchaseInvoice.number}',
+        paymentId: rsPayment.id,
+        withholdingTax: taxAmount,
+        withholdingTaxRate: _withholdingTaxRate,
+        createdAt: now.add(const Duration(seconds: 1)),
+        updatedAt: now.add(const Duration(seconds: 1)),
+      );
+      context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(rsTreasuryTx));
+    }
+
     double newAmountPaid = widget.purchaseInvoice.amountPaid + parsedAmount + taxAmount;
     
     InvoiceStatus newStatus = widget.purchaseInvoice.status;
@@ -146,7 +189,7 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
   @override
   Widget build(BuildContext context) {
     double remainingAmount = widget.purchaseInvoice.totalTTC + widget.purchaseInvoice.timbreFiscal - widget.purchaseInvoice.amountPaid;
-    double taxAmount = _applyWithholdingTax ? (widget.purchaseInvoice.totalHT * _withholdingTaxRate) / 100 : 0;
+    double taxAmount = _applyWithholdingTax ? ((widget.purchaseInvoice.totalTTC + widget.purchaseInvoice.timbreFiscal) * _withholdingTaxRate) / 100 : 0;
     double netAmount = remainingAmount - taxAmount;
 
     return Dialog(

@@ -16,19 +16,6 @@ class ReportsScreen extends StatelessWidget {
 }
 
 
-class WithholdingTaxScreen extends StatelessWidget {
-  final bool isSales;
-  const WithholdingTaxScreen({super.key, required this.isSales});
-
-  @override
-  Widget build(BuildContext context) {
-    return EmptyState(
-      icon: Icons.account_balance_rounded,
-      title: isSales ? 'Retenue a la source (Ventes)' : 'Retenue a la source (Achats)',
-      subtitle: 'La gestion des retenues sera bientot disponible',
-    );
-  }
-}
 
 class WarehousesScreen extends StatelessWidget {
   const WarehousesScreen({super.key});

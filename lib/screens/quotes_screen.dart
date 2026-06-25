@@ -24,6 +24,8 @@ import 'create_invoice_screen.dart';
 import 'create_customer_order_screen.dart';
 import 'create_delivery_note_screen.dart';
 import 'create_quote_screen.dart';
+import '../services/pdf_service.dart';
+import '../models/document_wrapper.dart';
 
 class QuotesScreen extends StatefulWidget {
   const QuotesScreen({super.key});
@@ -230,6 +232,10 @@ class _QuotesScreenState extends State<QuotesScreen> {
         break;
       case 'duplicate':
         // TODO: Duplicate quote
+        break;
+      case 'pdf':
+        final doc = DocumentWrapper.fromQuote(quote);
+        PdfService.instance.generateAndOpenDocument(doc);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action non implementee')));

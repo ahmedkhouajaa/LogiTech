@@ -20,6 +20,8 @@ import '../blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
 import '../blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
 import '../models/supplier_credit_note.dart';
 import 'create_purchase_invoice_screen.dart';
+import '../services/pdf_service.dart';
+import '../models/document_wrapper.dart';
 
 class PurchaseInvoicesScreen extends StatefulWidget {
   const PurchaseInvoicesScreen({super.key});
@@ -682,6 +684,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         break;
       case 'status':
         _showChangeStatusDialog(context, inv);
+        break;
+      case 'pdf':
+        final doc = DocumentWrapper.fromPurchaseInvoice(inv);
+        PdfService.instance.generateAndOpenDocument(doc);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));

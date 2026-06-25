@@ -1,1 +1,395 @@
-export 'reports_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../blocs/payments/payments_bloc.dart';
+import '../models/payment_model.dart';
+import '../utils/constants.dart';
+import '../utils/helpers.dart';
+import '../widgets/dashboard_card.dart';
+
+class WithholdingTaxScreen extends StatefulWidget {
+  final bool isSales;
+  const WithholdingTaxScreen({super.key, required this.isSales});
+
+  @override
+  State<WithholdingTaxScreen> createState() => _WithholdingTaxScreenState();
+}
+
+class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
+  String _searchQuery = '';
+  int _rowsPerPage = 20;
+  int _page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<PaymentsBloc>().add(LoadPayments());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<PaymentsBloc, PaymentsState>(
+      builder: (context, state) {
+        List<Payment> payments = [];
+
+        if (state is PaymentsLoaded) {
+          payments = state.payments;
+        }
+
+        // Apply filters
+        final filtered = payments.where((p) {
+          // Only Retenue à la source
+          if (p.method != 'retenue_source') return false;
+          
+          // Direction
+          if (widget.isSales && p.direction != 'encaissement') return false;
+          if (!widget.isSales && p.direction != 'decaissement') return false;
+
+          final matchesSearch = _searchQuery.isEmpty ||
+              (p.reference?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
+              p.paymentNumber.toLowerCase().contains(_searchQuery.toLowerCase()) || 
+              (p.contactName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+
+          return matchesSearch;
+        }).toList();
+
+        final totalPages = (_rowsPerPage > 0 && filtered.isNotEmpty)
+            ? (filtered.length / _rowsPerPage).ceil()
+            : 1;
+        final start = _page * _rowsPerPage;
+        final end = (start + _rowsPerPage).clamp(0, filtered.length);
+        final pageRows = start < filtered.length ? filtered.sublist(start, end) : <Payment>[];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Toolbar
+            Container(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
+              color: AppColors.surface,
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: _SearchField(
+                          hint: 'Rechercher par ref. facture ou certificat..',
+                          icon: Icons.search_rounded,
+                          value: _searchQuery,
+                          onChanged: (v) => setState(() {
+                            _searchQuery = v;
+                            _page = 0;
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Dummy dropdowns and date pickers to match screenshot
+                      Expanded(
+                        flex: 3,
+                        child: Container(
+                          height: 40,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            border: Border.all(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  widget.isSales ? 'Rechercher un client...' : 'Rechercher un fournisseur...',
+                                  style: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                                ),
+                              ),
+                              const Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Date Du
+                      Expanded(
+                        flex: 2,
+                        child: _buildDateDummy('Choisir une date', Icons.calendar_today_rounded),
+                      ),
+                      const SizedBox(width: 12),
+                      // Date Au
+                      Expanded(
+                        flex: 2,
+                        child: _buildDateDummy('Choisir une date', Icons.calendar_today_rounded),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Bottom toolbar row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Export Button
+                      ElevatedButton.icon(
+                        onPressed: () {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             const SnackBar(content: Text('Export TEJ bientôt disponible')),
+                           );
+                        },
+                        icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.textSecondary),
+                        label: const Text('Export TEJ', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.surfaceAlt,
+                          elevation: 0,
+                          side: const BorderSide(color: AppColors.border),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Table
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+                child: AppCard(
+                  padding: EdgeInsets.zero,
+                  child: state is PaymentsLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : filtered.isEmpty
+                          ? _buildEmpty()
+                          : Column(
+                              children: [
+                                _buildTableHeader(),
+                                Expanded(
+                                  child: ListView.separated(
+                                    itemCount: pageRows.length,
+                                    separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                                    itemBuilder: (context, index) => _buildRow(pageRows[index]),
+                                  ),
+                                ),
+                                _buildPagination(filtered.length, totalPages),
+                              ],
+                            ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDateDummy(String hint, IconData icon) {
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.textTertiary),
+          const SizedBox(width: 8),
+          Text(hint, style: const TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), shape: BoxShape.circle),
+            child: const Icon(Icons.account_balance_rounded, size: 40, color: AppColors.primary),
+          ),
+          const SizedBox(height: 16),
+          const Text('Aucun certificat trouvé', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          const SizedBox(height: 6),
+          const Text('Les retenues à la source s\'afficheront ici', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTableHeader() {
+    return Container(
+      height: 44,
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(AppRadius.lg), topRight: Radius.circular(AppRadius.lg)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          const Expanded(flex: 3, child: Text('Facture / Réf', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+          Expanded(flex: 3, child: Text(widget.isSales ? 'Client' : 'Fournisseur', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+          const Expanded(flex: 2, child: Text('Date', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+          const Expanded(flex: 2, child: Text('Montant RS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+          const SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRow(Payment p) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Row(
+              children: [
+                const Icon(Icons.description_outlined, size: 16, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(p.reference ?? p.paymentNumber, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Row(
+              children: [
+                Icon(widget.isSales ? Icons.person_outline : Icons.business_outlined, size: 16, color: AppColors.textSecondary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(p.contactName ?? '—', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+                      Text(widget.isSales ? 'Client' : 'Fournisseur', style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(formatDate(p.paymentDate), style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text('${formatCurrency(p.amount, symbol: '')} DT', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+          ),
+          SizedBox(
+            width: 60,
+            child: IconButton(
+              icon: const Icon(Icons.more_horiz_rounded, color: AppColors.textSecondary),
+              onPressed: () {},
+              splashRadius: 20,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPagination(int total, int totalPages) {
+    final start = _page * _rowsPerPage + 1;
+    final end = ((_page + 1) * _rowsPerPage).clamp(0, total);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.border))),
+      child: Row(
+        children: [
+          const Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const SizedBox(width: 8),
+          Container(
+            height: 30,
+            decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.sm)),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: _rowsPerPage,
+                style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                items: [10, 20, 50, 100].map((n) => DropdownMenuItem(value: n, child: Text('$n'))).toList(),
+                onChanged: (v) => setState(() {
+                  _rowsPerPage = v!;
+                  _page = 0;
+                }),
+              ),
+            ),
+          ),
+          const SizedBox(width: 24),
+          Text('Page ${_page + 1} sur $totalPages', style: const TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+          const Spacer(),
+          Text('Affichage de $start à $end sur $total résultats', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const SizedBox(width: 16),
+          _PaginationButton(icon: Icons.chevron_left_rounded, enabled: _page > 0, onTap: () => setState(() => _page--)),
+          const SizedBox(width: 4),
+          _PaginationButton(icon: Icons.chevron_right_rounded, enabled: _page < totalPages - 1, onTap: () => setState(() => _page++)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  final String hint;
+  final IconData icon;
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  const _SearchField({required this.hint, required this.icon, required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: TextField(
+        controller: TextEditingController.fromValue(TextEditingValue(text: value, selection: TextSelection.collapsed(offset: value.length))),
+        onChanged: onChanged,
+        style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: AppColors.textTertiary),
+          prefixIcon: Icon(icon, size: 16, color: AppColors.textTertiary),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaginationButton extends StatelessWidget {
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _PaginationButton({required this.icon, required this.enabled, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          border: Border.all(color: enabled ? AppColors.border : AppColors.border.withValues(alpha: 0.5)),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: Icon(icon, size: 18, color: enabled ? AppColors.textSecondary : AppColors.textTertiary),
+      ),
+    );
+  }
+}

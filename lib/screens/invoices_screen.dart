@@ -19,6 +19,8 @@ import '../blocs/invoices/invoices_bloc.dart';
 import '../blocs/credit_notes/credit_notes_bloc.dart';
 import '../models/credit_note.dart';
 import 'create_invoice_screen.dart';
+import '../services/pdf_service.dart';
+import '../models/document_wrapper.dart';
 
 class InvoicesScreen extends StatefulWidget {
   const InvoicesScreen({super.key});
@@ -684,6 +686,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         break;
       case 'status':
         _showChangeStatusDialog(context, inv);
+        break;
+      case 'pdf':
+        final doc = DocumentWrapper.fromInvoice(inv);
+        PdfService.instance.generateAndOpenDocument(doc);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));

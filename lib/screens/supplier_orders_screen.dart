@@ -17,6 +17,8 @@ import '../database/database_helper.dart';
 import 'create_purchase_invoice_screen.dart';
 import '../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import 'create_receiving_voucher_screen.dart';
+import '../services/pdf_service.dart';
+import '../models/document_wrapper.dart';
 import '../models/receiving_voucher.dart';
 
 class SupplierOrdersScreen extends StatefulWidget {
@@ -537,7 +539,10 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                                     );
                                                   } else if (val == 'delete') {
                                                     _confirmDelete(order);
-                                                  } else if (val == 'print' || val == 'payment' || val == 'credit_note' || val == 'pdf' || val == 'email' || val == 'whatsapp' || val == 'status' || val == 'duplicate' || val == 'attachments') {
+                                                  } else if (val == 'pdf') {
+                                                    final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                    PdfService.instance.generateAndOpenDocument(doc);
+                                                  } else if (val == 'print' || val == 'payment' || val == 'credit_note' || val == 'email' || val == 'whatsapp' || val == 'status' || val == 'duplicate' || val == 'attachments') {
                                                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                                                       content: Text('Cette fonctionnalité sera disponible prochainement'),
                                                       backgroundColor: AppColors.info,

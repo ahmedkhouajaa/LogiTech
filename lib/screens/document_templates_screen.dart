@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/document_templates/document_templates_bloc.dart';
 import '../models/document_template.dart';
+import '../models/canvas/canvas_element.dart';
 import '../database/database_helper.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
 import 'document_template_editor_screen.dart';
+import 'designer/invoice_designer_screen.dart';
 
 class DocumentTemplatesScreen extends StatelessWidget {
   const DocumentTemplatesScreen({super.key});
@@ -45,6 +47,31 @@ class _DocumentTemplatesBody extends StatelessWidget {
                 style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
               const Spacer(),
+              AppButton(
+                label: 'Designer avancé',
+                icon: Icons.design_services_rounded,
+                isPrimary: false,
+                onPressed: () {
+                  final newTemplate = DocumentTemplate(
+                    id: DatabaseHelper.instance.newId,
+                    name: 'Modèle visuel ${templates.length + 1}',
+                    documentType: 'invoice',
+                    config: {
+                      'canvas_document': CanvasDocument.defaultInvoiceTemplate().toJson(),
+                    },
+                  );
+                  context.read<DocumentTemplatesBloc>().add(AddDocumentTemplate(newTemplate));
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<DocumentTemplatesBloc>(),
+                        child: InvoiceDesignerScreen(initialTemplate: newTemplate),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 10),
               AppButton(
                 label: 'Nouveau modèle',
                 icon: Icons.add_rounded,
@@ -216,7 +243,9 @@ class _TemplateCardState extends State<_TemplateCard> {
                 // Actions
                 Row(
                   children: [
-                    _actionBtn(Icons.edit_rounded, 'Modifier', () => _openEditor(context, t)),
+                    _actionBtn(Icons.edit_rounded, 'Modifier (Config)', () => _openEditor(context, t)),
+                    const SizedBox(width: 8),
+                    _actionBtn(Icons.design_services_rounded, 'Designer visuel', () => _openVisualDesigner(context, t)),
                     const SizedBox(width: 8),
                     _actionBtn(Icons.copy_rounded, 'Dupliquer', () {
                       context.read<DocumentTemplatesBloc>().add(DuplicateDocumentTemplate(t));
@@ -274,6 +303,17 @@ class _TemplateCardState extends State<_TemplateCard> {
         builder: (_) => BlocProvider.value(
           value: context.read<DocumentTemplatesBloc>(),
           child: DocumentTemplateEditorScreen(template: template),
+        ),
+      ),
+    );
+  }
+
+  void _openVisualDesigner(BuildContext context, DocumentTemplate template) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<DocumentTemplatesBloc>(),
+          child: InvoiceDesignerScreen(initialTemplate: template),
         ),
       ),
     );

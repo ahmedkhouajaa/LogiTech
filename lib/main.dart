@@ -44,23 +44,59 @@ import 'utils/constants.dart';
 import 'screens/login_screen.dart';
 import 'screens/app_shell_screen.dart';
 
+import 'dart:ui';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  FlutterError.onError = (FlutterErrorDetails details) {
+    print('FLUTTER ERROR: ${details.exception}');
+    print(details.stack);
+  };
+  
+  PlatformDispatcher.instance.onError = (error, stack) {
+    print('PLATFORM ERROR: $error');
+    print(stack);
+    return true;
+  };
+
   await initializeDateFormatting('fr_FR', null);
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e, stack) {
+    print('FIREBASE INIT ERROR: $e');
+    print(stack);
+  }
 
   // Initialize services
-  await ConnectivityService.instance.initialize();
-  SyncService.instance.startPeriodicSync();
+  try {
+    await ConnectivityService.instance.initialize();
+  } catch (e, stack) {
+    print('CONNECTIVITY INIT ERROR: $e');
+    print(stack);
+  }
+  
+  try {
+    SyncService.instance.startPeriodicSync();
+  } catch (e, stack) {
+    print('SYNC INIT ERROR: $e');
+    print(stack);
+  }
 
   // Warm up the database
-  await DatabaseHelper.instance.database;
+  try {
+    await DatabaseHelper.instance.database;
+    print('Database initialized successfully.');
+  } catch (e, stack) {
+    print('DATABASE INIT ERROR: $e');
+    print(stack);
+  }
 
   runApp(const BusinessManagerApp());
 }

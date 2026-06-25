@@ -3,23 +3,33 @@ import 'dart:io';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart'; // Will need to add to pubspec
-import '../models/invoice.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:printing/printing.dart';
+import '../models/document_wrapper.dart';
 import '../models/project.dart'; // Contains CompanySettings
 import '../models/document_template.dart';
+import '../models/canvas/canvas_element.dart';
 import '../utils/helpers.dart';
 import '../database/database_helper.dart';
+import 'canvas_pdf_generator.dart';
 
 class PdfService {
   static final PdfService instance = PdfService._();
   PdfService._();
 
-  Future<void> generateAndOpenInvoice(Invoice invoice, {DocumentTemplate? template}) async {
+  Future<void> generateAndOpenDocument(DocumentWrapper document, {DocumentTemplate? template}) async {
     final companySettings = await DatabaseHelper.instance.getCompanySettings();
 
     // Load template: use provided, or default, or built-in defaults
     template ??= await DatabaseHelper.instance.getDefaultTemplate('invoice');
     final config = template?.config ?? DocumentTemplate.defaultConfig();
+
+    if (config.containsKey('canvas_document')) {
+      final jsonStr = config['canvas_document'] as String;
+      final canvasDoc = CanvasDocument.fromJson(jsonStr);
+      await CanvasPdfGenerator.generateAndOpenDocument(document, canvasDoc);
+      return;
+    }
 
     final pdf = pw.Document();
 
@@ -29,18 +39,34 @@ class PdfService {
     final fontSize = (config['fontSize'] as num?)?.toDouble() ?? 10.0;
     final rowHeight = (config['rowHeight'] as num?)?.toDouble() ?? 8.0;
 
+    // Load fonts
+    final fontRegular = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+    
+    // Force currency to TND if requested, or use settings if not DZD
+    final currency = companySettings.currency == 'DZD' || companySettings.currency.isEmpty ? 'TND' : companySettings.currency;
+
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
+        theme: pw.ThemeData.withFont(
+          base: fontRegular,
+          bold: fontBold,
+        ),
+        header: (context) {
+          return pw.Column(
+            children: [
+              _buildProfessionalHeader(document, companySettings, headerBgColor, headerTextColor, fontRegular, fontBold),
+              pw.SizedBox(height: 20),
+            ]
+          );
+        },
         build: (context) {
           return [
-          return [
-            _buildAbsoluteHeaderStack(invoice, companySettings, config, headerBgColor, headerTextColor),
+            _buildItemsTable(document, headerBgColor, headerTextColor, config, fontSize, rowHeight),
             pw.SizedBox(height: 20),
-            _buildItemsTable(invoice, headerBgColor, headerTextColor, config, fontSize, rowHeight),
-            pw.SizedBox(height: 20),
-            _buildTotals(invoice, companySettings, config),
+            _buildTotals(document, companySettings, config, currency),
             pw.SizedBox(height: 40),
             _buildFooter(companySettings),
           ];
@@ -49,135 +75,100 @@ class PdfService {
     );
 
     final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/${invoice.number}.pdf');
+    final file = File('${dir.path}/${document.number}.pdf');
     await file.writeAsBytes(await pdf.save());
     
     // Open the generated PDF (requires open_filex package)
-    // await OpenFilex.open(file.path);
+    await OpenFilex.open(file.path);
   }
 
-  pw.Widget _buildAbsoluteHeaderStack(Invoice invoice, CompanySettings settings, Map<String, dynamic> config, PdfColor headerBg, PdfColor headerText) {
-    double toPt(double mm) => mm * 2.83465;
-    
-    // The margin in MultiPage is 32. So we need to offset coordinates.
-    // X=0 in config means left edge of page. But Stack is inside the margin.
-    // So Stack's 0 is at page's 32pt (11.3mm). 
-    // Left = toPt(X) - 32.
-    final margin = 32.0;
-
-    final logoCfg = config['logo'] as Map<String, dynamic>? ?? {};
-    final compNameCfg = config['companyName'] as Map<String, dynamic>? ?? {};
-    final compDetCfg = config['companyDetails'] as Map<String, dynamic>? ?? {};
-    final titleCfg = config['documentTitle'] as Map<String, dynamic>? ?? {};
-    final clientCfg = config['clientDetails'] as Map<String, dynamic>? ?? {};
-
-    return pw.SizedBox(
-      height: toPt(85) - margin, // Reserve space, adjusting for top margin
-      child: pw.Stack(
-        children: [
-          // Logo
-          pw.Positioned(
-            left: toPt((logoCfg['positionX'] as num?)?.toDouble() ?? 15) - margin,
-            top: toPt((logoCfg['positionY'] as num?)?.toDouble() ?? 15) - margin,
-            child: pw.Container(
-              width: toPt((logoCfg['width'] as num?)?.toDouble() ?? 20),
-              height: toPt((logoCfg['height'] as num?)?.toDouble() ?? 15),
-              decoration: pw.BoxDecoration(
-                color: PdfColors.grey200,
-                border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
-              ),
-              child: pw.Center(child: pw.Text('Logo', style: const pw.TextStyle(color: PdfColors.grey600))),
-            ),
-          ),
-          
-          // Company Name
-          pw.Positioned(
-            left: toPt((compNameCfg['positionX'] as num?)?.toDouble() ?? 40) - margin,
-            top: toPt((compNameCfg['positionY'] as num?)?.toDouble() ?? 15) - margin,
-            child: pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: pw.BoxDecoration(
-                color: PdfColor(headerBg.red, headerBg.green, headerBg.blue, 0.1),
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
-              ),
-              child: pw.Text(
-                settings.name,
-                style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: headerBg),
-              ),
-            ),
-          ),
-
-          // Company Details
-          pw.Positioned(
-            left: toPt((compDetCfg['positionX'] as num?)?.toDouble() ?? 40) - margin,
-            top: toPt((compDetCfg['positionY'] as num?)?.toDouble() ?? 22) - margin,
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                if (settings.address != null) pw.Text(settings.address!, style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                if (settings.city != null) pw.Text(settings.city!, style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                if (settings.phone != null) pw.Text('Tel: ${settings.phone}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                if (settings.email != null) pw.Text('Email: ${settings.email}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                if (settings.taxId != null) pw.Text('NIF: ${settings.taxId}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                if (settings.rcNumber != null) pw.Text('RC: ${settings.rcNumber}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-              ],
-            ),
-          ),
-
-          // Document Title
-          pw.Positioned(
-            left: toPt((titleCfg['positionX'] as num?)?.toDouble() ?? 140) - margin,
-            top: toPt((titleCfg['positionY'] as num?)?.toDouble() ?? 15) - margin,
-            child: pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: pw.BoxDecoration(
-                color: headerBg,
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
-              ),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.end,
-                children: [
-                  pw.Text('FACTURE', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: headerText)),
-                  pw.SizedBox(height: 2),
-                  pw.Text('N° ${invoice.number}', style: pw.TextStyle(fontSize: 10, color: headerText)),
-                ],
-              ),
-            ),
-          ),
-
-          // Client Details
-          pw.Positioned(
-            left: toPt((clientCfg['positionX'] as num?)?.toDouble() ?? 15) - margin,
-            top: toPt((clientCfg['positionY'] as num?)?.toDouble() ?? 45) - margin,
-            child: pw.Container(
-              width: toPt((clientCfg['width'] as num?)?.toDouble() ?? 180),
-              padding: const pw.EdgeInsets.all(8),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
-              ),
+  pw.Widget _buildProfessionalHeader(DocumentWrapper document, CompanySettings settings, PdfColor headerBg, PdfColor headerText, pw.Font font, pw.Font fontBold) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            // Left side: Company Info
+            pw.Expanded(
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('Client:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                  pw.Text(invoice.customerName ?? 'Client Inconnu', style: const pw.TextStyle(fontSize: 10)),
+                  pw.Text(
+                    settings.name.isNotEmpty ? settings.name : 'Ma Société',
+                    style: pw.TextStyle(font: fontBold, fontSize: 24, color: headerBg),
+                  ),
+                  pw.SizedBox(height: 6),
+                  if (settings.address != null && settings.address!.isNotEmpty) pw.Text(settings.address!, style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700)),
+                  if (settings.city != null && settings.city!.isNotEmpty) pw.Text(settings.city!, style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700)),
+                  pw.SizedBox(height: 4),
+                  if (settings.phone != null && settings.phone!.isNotEmpty) pw.Text('Tel: ${settings.phone}', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700)),
+                  if (settings.email != null && settings.email!.isNotEmpty) pw.Text('Email: ${settings.email}', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700)),
+                  if (settings.taxId != null && settings.taxId!.isNotEmpty) pw.Text('NIF: ${settings.taxId}', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700)),
+                  if (settings.rcNumber != null && settings.rcNumber!.isNotEmpty) pw.Text('RC: ${settings.rcNumber}', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700)),
                 ],
               ),
             ),
+            
+            // Right side: Document Title and Details
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: pw.BoxDecoration(
+                    color: headerBg,
+                    borderRadius: pw.BorderRadius.circular(6),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text(document.documentTitle, style: pw.TextStyle(font: fontBold, fontSize: 22, color: headerText, letterSpacing: 1.2)),
+                      pw.SizedBox(height: 4),
+                      pw.Text('N° ${document.number}', style: pw.TextStyle(font: font, fontSize: 12, color: headerText)),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(height: 12),
+                pw.Text('Date: ${formatDate(document.date)}', style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColors.grey800)),
+                if (document.dueDate != null)
+                  pw.Text('Echéance: ${formatDate(document.dueDate!)}', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey800)),
+              ],
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 30),
+        // Client Details
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(12),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+            borderRadius: pw.BorderRadius.circular(6),
+            border: pw.Border.all(color: PdfColors.grey300),
           ),
-        ],
-      ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Adressé à :', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey600)),
+              pw.SizedBox(height: 4),
+              pw.Text(document.customerName ?? 'Client Inconnu', style: pw.TextStyle(font: fontBold, fontSize: 14, color: PdfColors.black)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  pw.Widget _buildItemsTable(Invoice invoice, PdfColor headerBg, PdfColor headerText, Map<String, dynamic> config, double fontSize, double rowHeight) {
+  pw.Widget _buildItemsTable(DocumentWrapper document, PdfColor headerBg, PdfColor headerText, Map<String, dynamic> config, double fontSize, double rowHeight) {
     final defaultCols = DocumentTemplate.defaultConfig()['tableColumns'] as List;
     final columnsConfig = (config['tableColumns'] as List?) ?? defaultCols;
     
     final activeColumns = columnsConfig.where((c) => c['visible'] == true).toList();
     final headers = activeColumns.map((c) => c['label'] as String).toList();
 
-    final data = invoice.items.map((item) {
+    final data = document.items.map((item) {
       return activeColumns.map((c) {
         final id = c['id'] as String;
         final type = c['type'] as String?;
@@ -185,12 +176,12 @@ class PdfService {
           return item.customFields[id] ?? '';
         }
         switch (id) {
-          case 'designation': return item.productName ?? 'Produit Inconnu';
+          case 'designation': return item.productName;
           case 'quantity': return formatQuantity(item.quantity);
           case 'unitPrice': return formatCurrency(item.unitPrice, symbol: '');
           case 'tva': return formatPercentage(item.tvaRate);
           case 'discount': return item.discountPercent > 0 ? formatPercentage(item.discountPercent) : '-';
-          case 'totalHT': return formatCurrency(item.computedTotalHT, symbol: '');
+          case 'totalHT': return formatCurrency(item.totalHT, symbol: '');
           default: return '';
         }
       }).toList();
@@ -226,8 +217,7 @@ class PdfService {
     );
   }
 
-  pw.Widget _buildTotals(Invoice invoice, CompanySettings settings, Map<String, dynamic> config) {
-    final totalsConfig = config['totals'] as Map<String, dynamic>? ?? {};
+  pw.Widget _buildTotals(DocumentWrapper document, CompanySettings settings, Map<String, dynamic> config, String currency) {
     final totalTTCConfig = config['totalTTC'] as Map<String, dynamic>? ?? {};
     final isBoldTTC = totalTTCConfig['style'] == 'Gras';
 
@@ -238,16 +228,26 @@ class PdfService {
           pw.Spacer(flex: 6),
           pw.Expanded(
             flex: 4,
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                _buildTotalRow('Total HT', formatCurrency(invoice.totalHT, symbol: settings.currency)),
-                _buildTotalRow('Total TVA', formatCurrency(invoice.totalTva, symbol: settings.currency)),
-                if (invoice.stampTax > 0)
-                  _buildTotalRow('Droit de Timbre', formatCurrency(invoice.stampTax, symbol: settings.currency)),
-                pw.Divider(color: PdfColors.grey400),
-                _buildTotalRow('Total TTC', formatCurrency(invoice.totalTTC + invoice.stampTax, symbol: settings.currency), isBold: isBoldTTC),
-              ],
+            child: pw.Container(
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.grey100,
+                borderRadius: pw.BorderRadius.circular(6),
+                border: pw.Border.all(color: PdfColors.grey300),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  _buildTotalRow('Total HT', formatCurrency(document.totalHT, symbol: currency)),
+                  _buildTotalRow('Total TVA', formatCurrency(document.totalTva, symbol: currency)),
+                  if (document.stampTax > 0)
+                    _buildTotalRow('Droit de Timbre', formatCurrency(document.stampTax, symbol: currency)),
+                  pw.SizedBox(height: 8),
+                  pw.Divider(color: PdfColors.grey400, thickness: 1),
+                  pw.SizedBox(height: 4),
+                  _buildTotalRow('Total TTC', formatCurrency(document.totalTTC + document.stampTax, symbol: currency), isBold: true, size: 14),
+                ],
+              ),
             ),
           ),
         ],
@@ -255,14 +255,14 @@ class PdfService {
     );
   }
 
-  pw.Widget _buildTotalRow(String title, String amount, {bool isBold = false}) {
+  pw.Widget _buildTotalRow(String title, String amount, {bool isBold = false, double size = 10}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 4),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text(title, style: pw.TextStyle(fontWeight: isBold ? pw.FontWeight.bold : null)),
-          pw.Text(amount, style: pw.TextStyle(fontWeight: isBold ? pw.FontWeight.bold : null)),
+          pw.Text(title, style: pw.TextStyle(fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal, fontSize: size)),
+          pw.Text(amount, style: pw.TextStyle(fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal, fontSize: size)),
         ],
       ),
     );

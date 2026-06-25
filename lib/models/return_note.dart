@@ -183,6 +183,8 @@ class ReturnNote extends Equatable {
       id: map['id'] as String,
       returnNumber: map['return_number'] as String,
       customerId: map['customer_id'] as String,
+      customerName: map['customer_name'] as String?,
+      customerCompany: map['customer_company'] as String?,
       deliveryNoteId: map['delivery_note_id'] as String?,
       dateEmission: DateTime.parse(map['date_emission'] as String),
       subtotalHT: (map['subtotal_ht'] as num?)?.toDouble() ?? 0,

@@ -49,7 +49,7 @@ class DatabaseHelper {
     return await databaseFactoryFfi.openDatabase(
       path,
       options: OpenDatabaseOptions(
-        version: 38,
+        version: 40,
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       ),
@@ -786,6 +786,39 @@ class DatabaseHelper {
         )
       ''');
     }
+    if (oldVersion < 39) {
+      try {
+        await db.execute('ALTER TABLE invoice_items ADD COLUMN custom_fields_json TEXT');
+      } catch (e) {}
+    }
+    if (oldVersion < 40) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS projects (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT,
+          customer_id TEXT,
+          start_date TEXT NOT NULL,
+          end_date TEXT,
+          budget REAL DEFAULT 0,
+          spent REAL DEFAULT 0,
+          status TEXT DEFAULT 'planning',
+          progress REAL DEFAULT 0,
+          notes TEXT,
+          firebase_uid TEXT,
+          is_deleted INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS project_invoices (
+          project_id TEXT NOT NULL,
+          invoice_id TEXT NOT NULL,
+          PRIMARY KEY (project_id, invoice_id)
+        )
+      ''');
+    }
   }
 
   Future<void> _createProductRelatedTables(Database db) async {
@@ -1410,6 +1443,7 @@ class DatabaseHelper {
         tva_rate REAL DEFAULT 19,
         discount_percent REAL DEFAULT 0,
         total_ht REAL DEFAULT 0,
+        custom_fields_json TEXT,
         FOREIGN KEY (invoice_id) REFERENCES invoices(id)
       )
     ''');

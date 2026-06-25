@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/return_notes/return_notes_bloc.dart';
 import '../blocs/return_notes/return_notes_event.dart';
@@ -11,6 +11,8 @@ import '../models/customer.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'create_return_note_screen.dart';
+import '../services/pdf_service.dart';
+import '../models/document_wrapper.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../models/payment_model.dart';
 import 'package:uuid/uuid.dart';
@@ -791,6 +793,10 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
         break;
       case 'status':
         _showChangeStatusDialog(context, note);
+        break;
+      case 'pdf':
+        final doc = DocumentWrapper.fromReturnNote(note);
+        PdfService.instance.generateAndOpenDocument(doc);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));

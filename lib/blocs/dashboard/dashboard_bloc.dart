@@ -72,30 +72,31 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     try {
       final db = DatabaseHelper.instance;
       
-      final results = await Future.wait([
-        db.getTotalInvoiced(),
-        db.getTotalPaid(),
-        db.getTotalDeliveryNotes(),
-        db.getTotalTvaCollected(),
-        db.getTotalTvaDeductible(),
-        db.getInvoiceStatusBreakdown(),
-        db.getRecentInvoices(limit: 5),
-        db.getLowStockProducts(),
-        db.getUpcomingChecksTraites(),
-      ]);
+      final totalInvoiced = await db.getTotalInvoiced();
+      final totalPaid = await db.getTotalPaid();
+      final totalDeliveryNotes = await db.getTotalDeliveryNotes();
+      final totalTvaCollected = await db.getTotalTvaCollected();
+      final totalTvaDeductible = await db.getTotalTvaDeductible();
+      final invoiceStatusBreakdown = await db.getInvoiceStatusBreakdown();
+      final recentInvoices = await db.getRecentInvoices(limit: 5);
+      final lowStockProducts = await db.getLowStockProducts();
+      final upcomingChecks = await db.getUpcomingChecksTraites();
 
+      print('DashboardBloc: all queries completed, emitting DashboardLoaded!');
       emit(DashboardLoaded(
-        totalInvoiced: results[0] as double,
-        totalPaid: results[1] as double,
-        totalDeliveryNotes: results[2] as double,
-        totalTvaCollected: results[3] as double,
-        totalTvaDeductible: results[4] as double,
-        invoiceStatusBreakdown: results[5] as Map<String, double>,
-        recentInvoices: results[6] as List<Invoice>,
-        lowStockProducts: results[7] as List<Product>,
-        upcomingChecks: results[8] as List<CheckTraite>,
+        totalInvoiced: totalInvoiced,
+        totalPaid: totalPaid,
+        totalDeliveryNotes: totalDeliveryNotes,
+        totalTvaCollected: totalTvaCollected,
+        totalTvaDeductible: totalTvaDeductible,
+        invoiceStatusBreakdown: invoiceStatusBreakdown,
+        recentInvoices: recentInvoices,
+        lowStockProducts: lowStockProducts,
+        upcomingChecks: upcomingChecks,
       ));
+      print('DashboardBloc: emitted DashboardLoaded!');
     } catch (e) {
+      print('DashboardBloc: Error: $e');
       emit(DashboardError(e.toString()));
     }
   }

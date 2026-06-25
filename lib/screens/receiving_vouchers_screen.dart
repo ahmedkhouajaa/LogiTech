@@ -21,7 +21,8 @@ import '../blocs/supplier_returns/supplier_returns_event.dart';
 import '../models/supplier_return.dart';
 import 'app_shell_screen.dart';
 import '../widgets/sidebar_menu.dart';
-
+import '../services/pdf_service.dart';
+import '../models/document_wrapper.dart';
 enum ReceivingVoucherStatus {
   draft('Brouillon', AppColors.textSecondary),
   validated('Validé', AppColors.success),
@@ -532,6 +533,9 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                     if (shellState != null) {
                                                       shellState.setActiveModule(AppModule.supplierReturns);
                                                     }
+                                                  } else if (val == 'pdf') {
+                                                    final doc = DocumentWrapper.fromReceivingVoucher(voucher);
+                                                    PdfService.instance.generateAndOpenDocument(doc);
                                                   } else {
                                                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                                                       content: Text('Cette fonctionnalité sera disponible prochainement'),

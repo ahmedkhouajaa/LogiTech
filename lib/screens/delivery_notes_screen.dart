@@ -20,6 +20,8 @@ import '../models/invoice.dart';
 import '../models/return_note.dart';
 import 'create_invoice_screen.dart';
 import 'create_return_note_screen.dart';
+import '../services/pdf_service.dart';
+import '../models/document_wrapper.dart';
 
 class DeliveryNotesScreen extends StatefulWidget {
   const DeliveryNotesScreen({super.key});
@@ -789,6 +791,13 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
         break;
       case 'edit':
         _navigate(context, note);
+        break;
+      case 'duplicate':
+        // TODO: Duplicate logic
+        break;
+      case 'pdf':
+        final doc = DocumentWrapper.fromDeliveryNote(note);
+        PdfService.instance.generateAndOpenDocument(doc);
         break;
       case 'print':
         // TODO: Print logic

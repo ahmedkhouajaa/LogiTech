@@ -21,9 +21,13 @@ class SyncService {
     _syncTimer?.cancel();
     _syncTimer = Timer.periodic(const Duration(minutes: 5), (_) => triggerSync());
     
-    // Trigger sync when coming online
+    // Trigger sync when coming online, with a delay to let native network adapters stabilize
     ConnectivityService.instance.onConnectivityChanged.listen((isOnline) {
-      if (isOnline) triggerSync();
+      if (isOnline) {
+        Future.delayed(const Duration(seconds: 3), () {
+          triggerSync();
+        });
+      }
     });
   }
 

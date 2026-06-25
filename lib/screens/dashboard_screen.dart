@@ -22,6 +22,7 @@ class DashboardScreen extends StatelessWidget {
           return Center(child: Text('Erreur: ${state.message}'));
         }
         if (state is DashboardLoaded) {
+          print('DashboardScreen: received DashboardLoaded!');
           return _buildDashboard(context, state);
         }
         return const SizedBox();

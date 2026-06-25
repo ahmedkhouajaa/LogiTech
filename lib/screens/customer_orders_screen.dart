@@ -17,8 +17,10 @@ import '../models/invoice.dart';
 import '../models/delivery_note.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
-import 'create_invoice_screen.dart';
 import 'create_delivery_note_screen.dart';
+import 'create_invoice_screen.dart';
+import '../services/pdf_service.dart';
+import '../models/document_wrapper.dart';
 class CustomerOrdersScreen extends StatefulWidget {
   const CustomerOrdersScreen({super.key});
   @override
@@ -714,6 +716,10 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         break;
       case 'view_delivery':
         _openConvertedDelivery(context, order.convertedToDeliveryId);
+        break;
+      case 'pdf':
+        final doc = DocumentWrapper.fromCustomerOrder(order);
+        PdfService.instance.generateAndOpenDocument(doc);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));
