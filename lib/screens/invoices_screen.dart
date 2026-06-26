@@ -21,6 +21,7 @@ import '../models/credit_note.dart';
 import 'create_invoice_screen.dart';
 import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
+import 'document_preview_screen.dart';
 
 class InvoicesScreen extends StatefulWidget {
   const InvoicesScreen({super.key});
@@ -653,9 +654,14 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           ),
         );
         break;
-      case 'print':
-        // TODO: Print logic
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impression non implementee')));
+            case 'print':
+        final doc = DocumentWrapper.fromInvoice(inv);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DocumentPreviewScreen(document: doc),
+          ),
+        );
         break;
       case 'add_payment':
         showDialog(

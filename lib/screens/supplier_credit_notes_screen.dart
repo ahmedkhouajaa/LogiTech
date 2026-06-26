@@ -21,6 +21,7 @@ import '../models/invoice.dart';
 import 'create_invoice_screen.dart';
 import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
+import 'document_preview_screen.dart';
 
 enum SupplierCreditNoteStatus {
   draft('Brouillon', AppColors.textSecondary),
@@ -792,9 +793,14 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
       case 'edit':
         _navigate(context, note);
         break;
-      case 'print':
-        // TODO: Print logic
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impression non implementee')));
+            case 'print':
+        final doc = DocumentWrapper.fromSupplierCreditNote(note);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DocumentPreviewScreen(document: doc),
+          ),
+        );
         break;
       case 'add_payment':
         _showAddPaymentDialog(context, note);

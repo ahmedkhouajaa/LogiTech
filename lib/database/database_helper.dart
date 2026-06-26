@@ -2,6 +2,7 @@ import 'dart:convert';
 import '../models/document_template.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common/sqlite_api.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -46,13 +47,11 @@ class DatabaseHelper {
   Future<Database> _initDB() async {
     final dir = await getApplicationDocumentsDirectory();
     final path = p.join(dir.path, 'business_manager_pro.db');
-    return await databaseFactoryFfi.openDatabase(
+    return await openDatabase(
       path,
-      options: OpenDatabaseOptions(
-        version: 40,
-        onCreate: _createDB,
-        onUpgrade: _upgradeDB,
-      ),
+      version: 40,
+      onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
   }
 
@@ -712,7 +711,7 @@ class DatabaseHelper {
       
       try {
         await db.execute('''
-          CREATE TABLE supplier_credit_note_items(
+          CREATE TABLE IF NOT EXISTS supplier_credit_note_items(
             id TEXT PRIMARY KEY,
             supplier_credit_note_id TEXT,
             product_id TEXT,
@@ -747,7 +746,7 @@ class DatabaseHelper {
       } catch (e) {}
       try {
         await db.execute('''
-          CREATE TABLE supplier_credit_note_items(
+          CREATE TABLE IF NOT EXISTS supplier_credit_note_items(
             id TEXT PRIMARY KEY,
             supplier_credit_note_id TEXT,
             product_id TEXT,
@@ -987,7 +986,7 @@ class DatabaseHelper {
     await _createTreasuryTables(db);
     // ─── Company Settings ─────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE company_settings (
+      CREATE TABLE IF NOT EXISTS company_settings (
         id TEXT PRIMARY KEY DEFAULT '1',
         name TEXT NOT NULL DEFAULT 'Mon Entreprise',
         logo_path TEXT,
@@ -1025,7 +1024,7 @@ class DatabaseHelper {
 
     // ─── Customers ────────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE customers (
+      CREATE TABLE IF NOT EXISTS customers (
         id TEXT PRIMARY KEY,
         code TEXT NOT NULL,
         name TEXT NOT NULL,
@@ -1100,7 +1099,7 @@ class DatabaseHelper {
 
     // ─── Suppliers ────────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE suppliers (
+      CREATE TABLE IF NOT EXISTS suppliers (
         id TEXT PRIMARY KEY,
         code TEXT NOT NULL,
         name TEXT NOT NULL,
@@ -1121,7 +1120,7 @@ class DatabaseHelper {
 
     // ─── Products ─────────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE products (
+      CREATE TABLE IF NOT EXISTS products (
         id TEXT PRIMARY KEY,
         code TEXT NOT NULL,
         name TEXT NOT NULL,
@@ -1159,7 +1158,7 @@ class DatabaseHelper {
 
     // ─── Warehouses ───────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE warehouses (
+      CREATE TABLE IF NOT EXISTS warehouses (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         address TEXT,
@@ -1183,7 +1182,7 @@ class DatabaseHelper {
 
     // ─── Quotes ───────────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE quotes (
+      CREATE TABLE IF NOT EXISTS quotes (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         customer_id TEXT NOT NULL,
@@ -1210,7 +1209,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE quote_items (
+      CREATE TABLE IF NOT EXISTS quote_items (
         id TEXT PRIMARY KEY,
         quote_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1226,7 +1225,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE quote_status_history (
+      CREATE TABLE IF NOT EXISTS quote_status_history (
         id TEXT PRIMARY KEY,
         quote_id TEXT NOT NULL,
         old_status TEXT,
@@ -1239,7 +1238,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE quote_attachments (
+      CREATE TABLE IF NOT EXISTS quote_attachments (
         id TEXT PRIMARY KEY,
         quote_id TEXT NOT NULL,
         file_name TEXT NOT NULL,
@@ -1254,7 +1253,7 @@ class DatabaseHelper {
 
     // ─── Customer Orders ──────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE customer_orders (
+      CREATE TABLE IF NOT EXISTS customer_orders (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         customer_id TEXT NOT NULL,
@@ -1285,7 +1284,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE customer_order_items (
+      CREATE TABLE IF NOT EXISTS customer_order_items (
         id TEXT PRIMARY KEY,
         order_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1303,7 +1302,7 @@ class DatabaseHelper {
 
     // ─── Delivery Notes ───────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE delivery_notes (
+      CREATE TABLE IF NOT EXISTS delivery_notes (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         customer_id TEXT NOT NULL,
@@ -1337,7 +1336,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE delivery_note_items (
+      CREATE TABLE IF NOT EXISTS delivery_note_items (
         id TEXT PRIMARY KEY,
         delivery_note_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1401,7 +1400,7 @@ class DatabaseHelper {
 
     // ─── Invoices ─────────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE invoices (
+      CREATE TABLE IF NOT EXISTS invoices (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         customer_id TEXT NOT NULL,
@@ -1433,7 +1432,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE invoice_items (
+      CREATE TABLE IF NOT EXISTS invoice_items (
         id TEXT PRIMARY KEY,
         invoice_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1450,7 +1449,7 @@ class DatabaseHelper {
 
     // ─── Credit Notes ─────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE credit_notes (
+      CREATE TABLE IF NOT EXISTS credit_notes (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         invoice_id TEXT,
@@ -1471,7 +1470,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE credit_note_items (
+      CREATE TABLE IF NOT EXISTS credit_note_items (
         id TEXT PRIMARY KEY,
         credit_note_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1485,7 +1484,7 @@ class DatabaseHelper {
 
     // ─── Exit Vouchers ────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE exit_vouchers (
+      CREATE TABLE IF NOT EXISTS exit_vouchers (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         customer_id TEXT,
@@ -1501,7 +1500,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE exit_voucher_items (
+      CREATE TABLE IF NOT EXISTS exit_voucher_items (
         id TEXT PRIMARY KEY,
         voucher_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1512,7 +1511,7 @@ class DatabaseHelper {
 
     // ─── Return Vouchers ──────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE return_vouchers (
+      CREATE TABLE IF NOT EXISTS return_vouchers (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         customer_id TEXT NOT NULL,
@@ -1528,7 +1527,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE return_voucher_items (
+      CREATE TABLE IF NOT EXISTS return_voucher_items (
         id TEXT PRIMARY KEY,
         voucher_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1540,7 +1539,7 @@ class DatabaseHelper {
 
     // ─── Supplier Orders ──────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE supplier_orders (
+      CREATE TABLE IF NOT EXISTS supplier_orders (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         supplier_id TEXT NOT NULL,
@@ -1570,7 +1569,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE supplier_order_items (
+      CREATE TABLE IF NOT EXISTS supplier_order_items (
         id TEXT PRIMARY KEY,
         order_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1588,7 +1587,7 @@ class DatabaseHelper {
 
     // ─── Receiving Vouchers ───────────────────────────────────────
     await db.execute('''
-      CREATE TABLE receiving_vouchers (
+      CREATE TABLE IF NOT EXISTS receiving_vouchers (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         supplier_id TEXT NOT NULL,
@@ -1610,7 +1609,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE receiving_voucher_items (
+      CREATE TABLE IF NOT EXISTS receiving_voucher_items (
         id TEXT PRIMARY KEY,
         voucher_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1623,7 +1622,7 @@ class DatabaseHelper {
 
     // ─── Purchase Invoices ────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE purchase_invoices (
+      CREATE TABLE IF NOT EXISTS purchase_invoices (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         supplier_id TEXT NOT NULL,
@@ -1656,7 +1655,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE purchase_invoice_items (
+      CREATE TABLE IF NOT EXISTS purchase_invoice_items (
         id TEXT PRIMARY KEY,
         invoice_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1672,7 +1671,7 @@ class DatabaseHelper {
 
     // ─── Supplier Credit Notes ────────────────────────────────────
     await db.execute('''
-      CREATE TABLE supplier_credit_notes (
+      CREATE TABLE IF NOT EXISTS supplier_credit_notes (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         purchase_invoice_id TEXT,
@@ -1692,7 +1691,7 @@ class DatabaseHelper {
 
     // ─── Supplier Returns ─────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE supplier_returns (
+      CREATE TABLE IF NOT EXISTS supplier_returns (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         supplier_id TEXT NOT NULL,
@@ -1709,7 +1708,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE supplier_return_items (
+      CREATE TABLE IF NOT EXISTS supplier_return_items (
         id TEXT PRIMARY KEY,
         return_id TEXT NOT NULL,
         product_id TEXT,
@@ -1725,7 +1724,7 @@ class DatabaseHelper {
 
     // ─── Accounts ─────────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE accounts (
+      CREATE TABLE IF NOT EXISTS accounts (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         type TEXT DEFAULT 'cash',
@@ -1754,7 +1753,7 @@ class DatabaseHelper {
 
     // ─── Transactions ─────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE transactions (
+      CREATE TABLE IF NOT EXISTS transactions (
         id TEXT PRIMARY KEY,
         account_id TEXT NOT NULL,
         type TEXT NOT NULL,
@@ -1774,7 +1773,7 @@ class DatabaseHelper {
 
     // ─── Checks & Traites ─────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE checks_traites (
+      CREATE TABLE IF NOT EXISTS checks_traites (
         id TEXT PRIMARY KEY,
         type TEXT NOT NULL,
         number TEXT NOT NULL,
@@ -1795,7 +1794,7 @@ class DatabaseHelper {
 
     // ─── Withholding Tax ──────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE withholding_tax (
+      CREATE TABLE IF NOT EXISTS withholding_tax (
         id TEXT PRIMARY KEY,
         type TEXT NOT NULL,
         invoice_id TEXT,
@@ -1812,7 +1811,7 @@ class DatabaseHelper {
 
     // ─── Stock Movements ──────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE stock_movements (
+      CREATE TABLE IF NOT EXISTS stock_movements (
         id TEXT PRIMARY KEY,
         product_id TEXT NOT NULL,
         warehouse_id TEXT NOT NULL,
@@ -1832,7 +1831,7 @@ class DatabaseHelper {
 
     // ─── Stock Entries ────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE stock_entries (
+      CREATE TABLE IF NOT EXISTS stock_entries (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         warehouse_id TEXT NOT NULL,
@@ -1848,7 +1847,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE stock_entry_items (
+      CREATE TABLE IF NOT EXISTS stock_entry_items (
         id TEXT PRIMARY KEY,
         entry_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1860,7 +1859,7 @@ class DatabaseHelper {
 
     // ─── Stock Withdrawals ────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE stock_withdrawals (
+      CREATE TABLE IF NOT EXISTS stock_withdrawals (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         warehouse_id TEXT NOT NULL,
@@ -1876,7 +1875,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE stock_withdrawal_items (
+      CREATE TABLE IF NOT EXISTS stock_withdrawal_items (
         id TEXT PRIMARY KEY,
         withdrawal_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1887,7 +1886,7 @@ class DatabaseHelper {
 
     // ─── Stock Transfers ──────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE stock_transfers (
+      CREATE TABLE IF NOT EXISTS stock_transfers (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         from_warehouse_id TEXT NOT NULL,
@@ -1903,7 +1902,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE stock_transfer_items (
+      CREATE TABLE IF NOT EXISTS stock_transfer_items (
         id TEXT PRIMARY KEY,
         transfer_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1914,7 +1913,7 @@ class DatabaseHelper {
 
     // ─── Inventory Sheets ─────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE inventory_sheets (
+      CREATE TABLE IF NOT EXISTS inventory_sheets (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         warehouse_id TEXT NOT NULL,
@@ -1928,7 +1927,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE inventory_sheet_items (
+      CREATE TABLE IF NOT EXISTS inventory_sheet_items (
         id TEXT PRIMARY KEY,
         sheet_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
@@ -1941,7 +1940,7 @@ class DatabaseHelper {
 
     // ─── Projects ─────────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE projects (
+      CREATE TABLE IF NOT EXISTS projects (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT,
@@ -1961,7 +1960,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE project_invoices (
+      CREATE TABLE IF NOT EXISTS project_invoices (
         project_id TEXT NOT NULL,
         invoice_id TEXT NOT NULL,
         PRIMARY KEY (project_id, invoice_id)
@@ -1970,7 +1969,7 @@ class DatabaseHelper {
 
     // ─── Sync Queue ───────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE sync_queue (
+      CREATE TABLE IF NOT EXISTS sync_queue (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         table_name TEXT NOT NULL,
         record_id TEXT NOT NULL,
@@ -1985,7 +1984,7 @@ class DatabaseHelper {
 
     // ─── Activity Log ─────────────────────────────────────────────
     await db.execute('''
-      CREATE TABLE activity_log (
+      CREATE TABLE IF NOT EXISTS activity_log (
         id TEXT PRIMARY KEY,
         action TEXT NOT NULL,
         description TEXT NOT NULL,
@@ -1998,7 +1997,7 @@ class DatabaseHelper {
 
     // ─── Product Warehouse Stock ──────────────────────────────────
     await db.execute('''
-      CREATE TABLE product_warehouse_stock (
+      CREATE TABLE IF NOT EXISTS product_warehouse_stock (
         product_id TEXT NOT NULL,
         warehouse_id TEXT NOT NULL,
         quantity REAL DEFAULT 0,

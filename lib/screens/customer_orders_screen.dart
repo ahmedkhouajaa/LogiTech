@@ -21,6 +21,7 @@ import 'create_delivery_note_screen.dart';
 import 'create_invoice_screen.dart';
 import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
+import 'document_preview_screen.dart';
 class CustomerOrdersScreen extends StatefulWidget {
   const CustomerOrdersScreen({super.key});
   @override
@@ -695,9 +696,14 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
           ),
         );
         break;
-      case 'print':
-        // TODO: Print logic
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impression non implementee')));
+            case 'print':
+        final doc = DocumentWrapper.fromCustomerOrder(order);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DocumentPreviewScreen(document: doc),
+          ),
+        );
         break;
       case 'delete':
         _confirmDelete(order);

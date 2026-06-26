@@ -24,10 +24,7 @@ class DefaultFirebaseOptions {
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for android - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return android;
       case TargetPlatform.iOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for ios - '
@@ -58,6 +55,13 @@ class DefaultFirebaseOptions {
     messagingSenderId: '300906049669',
     projectId: 'logitech-37369',
     authDomain: 'logitech-37369.firebaseapp.com',
+    storageBucket: 'logitech-37369.firebasestorage.app',
+  );
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyAGgj2ARiK9WAC45UtkO4eppF53nfAoSIo',
+    appId: '1:300906049669:android:90a3ed294951644b1679ec',
+    messagingSenderId: '300906049669',
+    projectId: 'logitech-37369',
     storageBucket: 'logitech-37369.firebasestorage.app',
   );
 }

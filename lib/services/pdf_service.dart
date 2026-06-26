@@ -1,5 +1,5 @@
 import 'dart:io';
-
+import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
@@ -17,7 +17,7 @@ class PdfService {
   static final PdfService instance = PdfService._();
   PdfService._();
 
-  Future<void> generateAndOpenDocument(DocumentWrapper document, {DocumentTemplate? template}) async {
+  Future<Uint8List> generateDocumentBytes(DocumentWrapper document, {DocumentTemplate? template}) async {
     final companySettings = await DatabaseHelper.instance.getCompanySettings();
 
     // Load template: use provided, or default, or built-in defaults
@@ -27,8 +27,7 @@ class PdfService {
     if (config.containsKey('canvas_document')) {
       final jsonStr = config['canvas_document'] as String;
       final canvasDoc = CanvasDocument.fromJson(jsonStr);
-      await CanvasPdfGenerator.generateAndOpenDocument(document, canvasDoc);
-      return;
+      return await CanvasPdfGenerator.generateDocumentBytes(document, canvasDoc);
     }
 
     final pdf = pw.Document();
@@ -36,7 +35,7 @@ class PdfService {
     // Extract template colors
     final headerBgColor = PdfColor.fromInt(config['headerBgColor'] as int? ?? 0xFF1a56db);
     final headerTextColor = PdfColor.fromInt(config['headerTextColor'] as int? ?? 0xFFFFFFFF);
-    final fontSize = (config['fontSize'] as num?)?.toDouble() ?? 10.0;
+    final fontSize = (config['fontSize'] as num?)?.toDouble() ?? 11.0;
     final rowHeight = (config['rowHeight'] as num?)?.toDouble() ?? 8.0;
 
     // Load fonts
@@ -74,12 +73,25 @@ class PdfService {
       ),
     );
 
+    return await pdf.save();
+  }
+
+  Future<void> generateAndOpenDocument(DocumentWrapper document, {DocumentTemplate? template}) async {
+    final bytes = await generateDocumentBytes(document, template: template);
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/${document.number}.pdf');
-    await file.writeAsBytes(await pdf.save());
+    await file.writeAsBytes(bytes);
     
     // Open the generated PDF (requires open_filex package)
     await OpenFilex.open(file.path);
+  }
+
+  Future<void> printDocument(DocumentWrapper document, {DocumentTemplate? template}) async {
+    final bytes = await generateDocumentBytes(document, template: template);
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => bytes,
+      name: '${document.documentTitle}_${document.number}.pdf',
+    );
   }
 
   pw.Widget _buildProfessionalHeader(DocumentWrapper document, CompanySettings settings, PdfColor headerBg, PdfColor headerText, pw.Font font, pw.Font fontBold) {
@@ -97,16 +109,16 @@ class PdfService {
                 children: [
                   pw.Text(
                     settings.name.isNotEmpty ? settings.name : 'Ma Société',
-                    style: pw.TextStyle(font: fontBold, fontSize: 24, color: headerBg),
+                    style: pw.TextStyle(font: fontBold, fontSize: 28, color: headerBg),
                   ),
                   pw.SizedBox(height: 6),
-                  if (settings.address != null && settings.address!.isNotEmpty) pw.Text(settings.address!, style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700)),
-                  if (settings.city != null && settings.city!.isNotEmpty) pw.Text(settings.city!, style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700)),
+                  if (settings.address != null && settings.address!.isNotEmpty) pw.Text(settings.address!, style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.grey700)),
+                  if (settings.city != null && settings.city!.isNotEmpty) pw.Text(settings.city!, style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.grey700)),
                   pw.SizedBox(height: 4),
-                  if (settings.phone != null && settings.phone!.isNotEmpty) pw.Text('Tel: ${settings.phone}', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700)),
-                  if (settings.email != null && settings.email!.isNotEmpty) pw.Text('Email: ${settings.email}', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700)),
-                  if (settings.taxId != null && settings.taxId!.isNotEmpty) pw.Text('NIF: ${settings.taxId}', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700)),
-                  if (settings.rcNumber != null && settings.rcNumber!.isNotEmpty) pw.Text('RC: ${settings.rcNumber}', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700)),
+                  if (settings.phone != null && settings.phone!.isNotEmpty) pw.Text('Tel: ${settings.phone}', style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.grey700)),
+                  if (settings.email != null && settings.email!.isNotEmpty) pw.Text('Email: ${settings.email}', style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.grey700)),
+                  if (settings.taxId != null && settings.taxId!.isNotEmpty) pw.Text('NIF: ${settings.taxId}', style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.grey700)),
+                  if (settings.rcNumber != null && settings.rcNumber!.isNotEmpty) pw.Text('RC: ${settings.rcNumber}', style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.grey700)),
                 ],
               ),
             ),
@@ -124,16 +136,16 @@ class PdfService {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
-                      pw.Text(document.documentTitle, style: pw.TextStyle(font: fontBold, fontSize: 22, color: headerText, letterSpacing: 1.2)),
+                      pw.Text(document.documentTitle, style: pw.TextStyle(font: fontBold, fontSize: 26, color: headerText, letterSpacing: 1.2)),
                       pw.SizedBox(height: 4),
-                      pw.Text('N° ${document.number}', style: pw.TextStyle(font: font, fontSize: 12, color: headerText)),
+                      pw.Text('N° ${document.number}', style: pw.TextStyle(font: font, fontSize: 14, color: headerText)),
                     ],
                   ),
                 ),
                 pw.SizedBox(height: 12),
-                pw.Text('Date: ${formatDate(document.date)}', style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColors.grey800)),
+                pw.Text('Date: ${formatDate(document.date)}', style: pw.TextStyle(font: fontBold, fontSize: 12, color: PdfColors.grey800)),
                 if (document.dueDate != null)
-                  pw.Text('Echéance: ${formatDate(document.dueDate!)}', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey800)),
+                  pw.Text('Echéance: ${formatDate(document.dueDate!)}', style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.grey800)),
               ],
             ),
           ],
@@ -151,9 +163,9 @@ class PdfService {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('Adressé à :', style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey600)),
+              pw.Text('Adressé à :', style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.grey600)),
               pw.SizedBox(height: 4),
-              pw.Text(document.customerName ?? 'Client Inconnu', style: pw.TextStyle(font: fontBold, fontSize: 14, color: PdfColors.black)),
+              pw.Text(document.customerName ?? 'Client Inconnu', style: pw.TextStyle(font: fontBold, fontSize: 16, color: PdfColors.black)),
             ],
           ),
         ),
@@ -245,7 +257,7 @@ class PdfService {
                   pw.SizedBox(height: 8),
                   pw.Divider(color: PdfColors.grey400, thickness: 1),
                   pw.SizedBox(height: 4),
-                  _buildTotalRow('Total TTC', formatCurrency(document.totalTTC + document.stampTax, symbol: currency), isBold: true, size: 14),
+                  _buildTotalRow('Total TTC', formatCurrency(document.totalTTC + document.stampTax, symbol: currency), isBold: true, size: 16),
                 ],
               ),
             ),
@@ -255,7 +267,7 @@ class PdfService {
     );
   }
 
-  pw.Widget _buildTotalRow(String title, String amount, {bool isBold = false, double size = 10}) {
+  pw.Widget _buildTotalRow(String title, String amount, {bool isBold = false, double size = 11}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 4),
       child: pw.Row(
@@ -276,7 +288,7 @@ class PdfService {
         pw.SizedBox(height: 8),
         pw.Text(
           'Merci de votre confiance!',
-          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
+          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14),
         ),
         if (settings.bankName != null && settings.bankAccount != null) ...[
           pw.SizedBox(height: 4),

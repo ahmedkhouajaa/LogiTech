@@ -171,7 +171,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Business Manager', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text('LogiTech', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                   Text('Pro', style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w600)),
                 ],
               ),

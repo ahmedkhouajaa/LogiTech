@@ -1,5 +1,5 @@
 name: business_manager_pro
-description: Business Manager Pro - ERP/CRM/Invoicing/Inventory Management
+description: LogiTech Pro - ERP/CRM/Invoicing/Inventory Management
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -12,6 +12,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   sqflite_common_ffi: ^2.3.4+5
   sqflite_common: ^2.5.4+5
+  sqflite: ^2.3.0
   path: ^1.9.1
   path_provider: ^2.1.5
   flutter_bloc: ^9.1.0
@@ -25,7 +26,7 @@ dependencies:
   shared_preferences: ^2.5.3
   fl_chart: any
   google_fonts: any
-  file_picker: any
+  file_picker: ^8.1.4
   excel: any
   url_launcher: ^6.3.1
   provider: ^6.1.4

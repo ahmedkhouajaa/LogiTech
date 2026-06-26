@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
@@ -10,7 +11,7 @@ import '../utils/helpers.dart';
 import '../database/database_helper.dart';
 
 class CanvasPdfGenerator {
-  static Future<void> generateAndOpenDocument(DocumentWrapper document, CanvasDocument doc) async {
+  static Future<Uint8List> generateDocumentBytes(DocumentWrapper document, CanvasDocument doc) async {
     final companySettings = await DatabaseHelper.instance.getCompanySettings();
     final pdf = pw.Document();
     
@@ -112,9 +113,14 @@ class CanvasPdfGenerator {
       );
     }
 
+    return await pdf.save();
+  }
+
+  static Future<void> generateAndOpenDocument(DocumentWrapper document, CanvasDocument doc) async {
+    final bytes = await generateDocumentBytes(document, doc);
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/${document.number}.pdf');
-    await file.writeAsBytes(await pdf.save());
+    await file.writeAsBytes(bytes);
     
     // Open the PDF using OpenFilex
     await OpenFilex.open(file.path);

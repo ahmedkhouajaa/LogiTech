@@ -1,1 +1,1 @@
-{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"logitech-37369","configurations":{"windows":"1:300906049669:web:e64927fc5bcefb4d1679ec"}}}}}}
+{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"logitech-37369","configurations":{"android":"1:300906049669:android:90a3ed294951644b1679ec","windows":"1:300906049669:web:e64927fc5bcefb4d1679ec"}}},"android":{"default":{"projectId":"logitech-37369","appId":"1:300906049669:android:90a3ed294951644b1679ec","fileOutput":"android/app/google-services.json"}}}}}

@@ -170,77 +170,111 @@ class AppShellScreenState extends State<AppShellScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Row(
-        children: [
-          SidebarMenu(
-            activeModule: _activeModule,
-            isCollapsed: _isSidebarCollapsed,
-            onToggleCollapse: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
-            onModuleSelected: (module) => setState(() => _activeModule = module),
-          ),
-          Expanded(
-            child: Column(
-              children: [
-                // Top bar
-                Container(
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    border: Border(bottom: BorderSide(color: AppColors.border)),
-                    boxShadow: AppShadows.sm,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth <= 800;
+        
+        final sidebar = SidebarMenu(
+          activeModule: _activeModule,
+          isCollapsed: isMobile ? false : _isSidebarCollapsed,
+          onToggleCollapse: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
+          onModuleSelected: (module) {
+            setState(() => _activeModule = module);
+            if (isMobile) {
+              Navigator.pop(context); // Close drawer
+            }
+          },
+        );
+
+        final contentArea = Column(
+          children: [
+            // Top bar
+            Container(
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                border: Border(bottom: BorderSide(color: AppColors.border)),
+                boxShadow: AppShadows.sm,
+              ),
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 24),
+              child: Row(
+                children: [
+                  if (isMobile)
+                    Builder(
+                      builder: (ctx) => IconButton(
+                        icon: const Icon(Icons.menu),
+                        onPressed: () => Scaffold.of(ctx).openDrawer(),
+                      ),
+                    ),
+                  Expanded(
+                    child: Text(
+                      _getModuleTitle(), 
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Row(
-                    children: [
-                      Text(_getModuleTitle(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                      const Spacer(),
-                      const SyncIndicator(),
-                      const SizedBox(width: 16),
-                      // User menu
-                      PopupMenuButton(
-                        offset: const Offset(0, 40),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceAlt,
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: const Row(
-                            children: [
-                              CircleAvatar(backgroundColor: AppColors.primary, radius: 14, child: Text('A', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
-                              SizedBox(width: 8),
-                              Text('Admin', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                              SizedBox(width: 4),
-                              Icon(Icons.keyboard_arrow_down_rounded, size: 16),
-                            ],
-                          ),
-                        ),
-                        itemBuilder: (_) => [
-                          PopupMenuItem(
-                            onTap: () => setState(() => _activeModule = AppModule.settings),
-                            child: const Row(children: [Icon(Icons.settings_rounded, size: 16), SizedBox(width: 8), Text('Parametres')]),
-                          ),
-                          PopupMenuItem(
-                            onTap: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
-                            child: const Row(children: [Icon(Icons.logout_rounded, size: 16, color: AppColors.error), SizedBox(width: 8), Text('Deconnexion', style: TextStyle(color: AppColors.error))]),
-                          ),
+                  const SyncIndicator(),
+                  const SizedBox(width: 8),
+                  // User menu
+                  PopupMenuButton(
+                    offset: const Offset(0, 40),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          const CircleAvatar(backgroundColor: AppColors.primary, radius: 14, child: Text('A', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
+                          if (!isMobile) const SizedBox(width: 8),
+                          if (!isMobile) const Text('Admin', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          if (!isMobile) const SizedBox(width: 4),
+                          if (!isMobile) const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
                         ],
+                      ),
+                    ),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        onTap: () => setState(() => _activeModule = AppModule.settings),
+                        child: const Row(children: [Icon(Icons.settings_rounded, size: 16), SizedBox(width: 8), Text('Parametres')]),
+                      ),
+                      PopupMenuItem(
+                        onTap: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
+                        child: const Row(children: [Icon(Icons.logout_rounded, size: 16, color: AppColors.error), SizedBox(width: 8), Text('Deconnexion', style: TextStyle(color: AppColors.error))]),
                       ),
                     ],
                   ),
-                ),
-                // Content area
-                Expanded(
-                  child: _buildContent(),
-                ),
-              ],
+                ],
+              ),
             ),
+            // Content area
+            Expanded(
+              child: _buildContent(),
+            ),
+          ],
+        );
+
+        if (isMobile) {
+          return Scaffold(
+            drawer: Drawer(
+              child: SafeArea(child: sidebar),
+            ),
+            body: contentArea,
+          );
+        }
+
+        return Scaffold(
+          body: Row(
+            children: [
+              sidebar,
+              Expanded(child: contentArea),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Icon(Icons.business_center_rounded, color: Colors.white, size: 40),
                     ),
                     const SizedBox(height: 24),
-                    const Text('Business Manager Pro', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                    const Text('LogiTech Pro', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     Text('ERP · CRM · Facturation · Stock', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14)),
                     const SizedBox(height: 48),

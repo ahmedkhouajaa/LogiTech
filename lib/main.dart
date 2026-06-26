@@ -44,8 +44,10 @@ import 'utils/constants.dart';
 import 'screens/login_screen.dart';
 import 'screens/app_shell_screen.dart';
 
-import 'dart:ui';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
+import 'dart:ui';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -61,8 +63,11 @@ void main() async {
   };
 
   await initializeDateFormatting('fr_FR', null);
-  sqfliteFfiInit();
-  databaseFactory = databaseFactoryFfi;
+  
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
 
   // Initialize Firebase
   try {
@@ -136,7 +141,7 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => DocumentTemplatesBloc()..add(LoadDocumentTemplates())),
       ],
       child: MaterialApp(
-        title: 'Business Manager Pro',
+        title: 'LogiTech Pro',
         debugShowCheckedModeBanner: false,
         theme: _buildTheme(),
         localizationsDelegates: const [

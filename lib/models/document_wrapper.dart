@@ -84,7 +84,7 @@ class DocumentWrapper {
     return DocumentWrapper(
       id: doc.id,
       number: doc.number,
-      documentTitle: 'BON DE LIVRAISON',
+      documentTitle: 'BON DE SORTIE',
       customerName: doc.customerName,
       date: doc.date,
       totalHT: doc.totalHTAfterDiscount,
@@ -108,7 +108,7 @@ class DocumentWrapper {
     return DocumentWrapper(
       id: inv.id,
       number: inv.number,
-      documentTitle: 'FACTURE FOURNISSEUR',
+      documentTitle: 'FACTURE D\'ACHAT',
       customerName: inv.supplierName,
       date: inv.date,
       dueDate: inv.dueDate,
@@ -259,6 +259,52 @@ class DocumentWrapper {
         discountPercent: 0,
         totalHT: i.totalHT ?? 0,
       )).toList(),
+    );
+  }
+
+  static DocumentWrapper fromCreditNote(dynamic note) {
+    return DocumentWrapper(
+      id: note.id,
+      number: note.number,
+      documentTitle: 'AVOIR',
+      customerName: note.customerName ?? 'Client Inconnu',
+      date: note.date,
+      totalHT: note.totalHT ?? 0,
+      totalTva: note.totalTva ?? 0,
+      totalTTC: note.totalTTC ?? 0,
+      notes: note.notes,
+      items: (note.items as List).map((i) => DocumentItemWrapper(
+        productName: i.productName ?? 'Produit Inconnu',
+        quantity: i.quantity,
+        unitPrice: i.unitPrice ?? 0,
+        tvaRate: i.tvaRate ?? 0,
+        discountPercent: i.discountPercent ?? 0,
+        totalHT: (i.runtimeType.toString() == 'CreditNoteItem') ? i.computedTotalHT : i.totalHT,
+      )).toList(),
+    );
+  }
+
+  static DocumentWrapper fromWithholdingTax(dynamic payment, bool isSales) {
+    return DocumentWrapper(
+      id: payment.id,
+      number: payment.reference ?? payment.paymentNumber,
+      documentTitle: isSales ? 'RETENUE A LA SOURCE' : 'CERTIFICAT DE RETENUE',
+      customerName: payment.contactName ?? 'Inconnu',
+      date: payment.paymentDate,
+      totalHT: 0,
+      totalTva: 0,
+      totalTTC: payment.amount,
+      notes: payment.notes,
+      items: [
+        DocumentItemWrapper(
+          productName: 'Retenue à la source',
+          quantity: 1,
+          unitPrice: payment.amount,
+          tvaRate: 0,
+          discountPercent: 0,
+          totalHT: payment.amount,
+        ),
+      ],
     );
   }
 }

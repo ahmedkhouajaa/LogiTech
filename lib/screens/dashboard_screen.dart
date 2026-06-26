@@ -31,117 +31,149 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildDashboard(BuildContext context, DashboardLoaded state) {
+    final isMobile = MediaQuery.of(context).size.width < 800;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Welcome header
-          _buildWelcomeHeader(),
+          _buildWelcomeHeader(isMobile),
           const SizedBox(height: AppSpacing.lg),
           // KPI cards
-          _buildKpiRow(state),
+          _buildKpiRow(state, isMobile),
           const SizedBox(height: AppSpacing.lg),
           // Charts + upcoming
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(flex: 3, child: _buildCashFlowChart()),
-              const SizedBox(width: AppSpacing.lg),
-              Expanded(flex: 2, child: _buildUpcomingChecks(state.upcomingChecks)),
-            ],
-          ),
+          if (isMobile) ...[
+            _buildCashFlowChart(),
+            const SizedBox(height: AppSpacing.lg),
+            _buildUpcomingChecks(state.upcomingChecks),
+          ] else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: _buildCashFlowChart()),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(flex: 2, child: _buildUpcomingChecks(state.upcomingChecks)),
+              ],
+            ),
           const SizedBox(height: AppSpacing.lg),
           // Bottom row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(flex: 3, child: _buildRecentInvoices(state.recentInvoices)),
-              const SizedBox(width: AppSpacing.lg),
-              Expanded(flex: 2, child: _buildLowStockAlerts(state)),
-            ],
-          ),
+          if (isMobile) ...[
+            _buildRecentInvoices(state.recentInvoices),
+            const SizedBox(height: AppSpacing.lg),
+            _buildLowStockAlerts(state),
+          ] else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: _buildRecentInvoices(state.recentInvoices)),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(flex: 2, child: _buildLowStockAlerts(state)),
+              ],
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildWelcomeHeader() {
+  Widget _buildWelcomeHeader(bool isMobile) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         gradient: AppGradients.primary,
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
-      child: Row(
-        children: [
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Bienvenue !', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-              SizedBox(height: 4),
-              Text('Voici le resume de votre activite', style: TextStyle(color: Colors.white70, fontSize: 13)),
-            ],
-          ),
-          const Spacer(),
-          OutlinedButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.bar_chart_rounded, size: 16, color: Colors.white),
-            label: const Text('Voir Rapports', style: TextStyle(color: Colors.white)),
-            style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.white.withValues(alpha: 0.5))),
-          ),
-        ],
-      ),
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Bienvenue !', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                const SizedBox(height: 4),
+                const Text('Voici le resume de votre activite', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.bar_chart_rounded, size: 16, color: Colors.white),
+                  label: const Text('Voir Rapports', style: TextStyle(color: Colors.white)),
+                  style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.white.withValues(alpha: 0.5))),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Bienvenue !', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                    SizedBox(height: 4),
+                    Text('Voici le resume de votre activite', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  ],
+                ),
+                const Spacer(),
+                OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.bar_chart_rounded, size: 16, color: Colors.white),
+                  label: const Text('Voir Rapports', style: TextStyle(color: Colors.white)),
+                  style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.white.withValues(alpha: 0.5))),
+                ),
+              ],
+            ),
     );
   }
 
-  Widget _buildKpiRow(DashboardLoaded state) {
+  Widget _buildKpiRow(DashboardLoaded state, bool isMobile) {
     final totalInvoiced = state.totalInvoiced;
     final paid = state.invoiceStatusBreakdown['paid'] ?? 0;
     final partial = state.invoiceStatusBreakdown['partial'] ?? 0;
     final unpaid = state.invoiceStatusBreakdown['unpaid'] ?? 0;
 
+    final cards = [
+      DashboardCard(
+        title: 'Montant Facture',
+        value: formatCurrencyCompact(totalInvoiced),
+        subtitle: 'Paye ${paid.toStringAsFixed(0)}% · En cours ${partial.toStringAsFixed(0)}% · Impaye ${unpaid.toStringAsFixed(0)}%',
+        icon: Icons.receipt_long_rounded,
+        gradientColors: const [Color(0xFF1a56db), Color(0xFF3B82F6)],
+      ),
+      DashboardCard(
+        title: 'Bons de Livraison',
+        value: state.totalDeliveryNotes.toInt().toString(),
+        subtitle: 'Bons actifs ce mois',
+        icon: Icons.local_shipping_rounded,
+        gradientColors: const [Color(0xFF7C3AED), Color(0xFF8B5CF6)],
+      ),
+      DashboardCard(
+        title: 'Paiements recus',
+        value: formatCurrencyCompact(state.totalPaid),
+        subtitle: 'Encaissements total',
+        icon: Icons.payments_rounded,
+        gradientColors: const [Color(0xFF059669), Color(0xFF10B981)],
+      ),
+      DashboardCard(
+        title: 'TVA Collectee',
+        value: formatCurrencyCompact(state.totalTvaCollected),
+        subtitle: 'TVA deductible: ${formatCurrencyCompact(state.totalTvaDeductible)}',
+        icon: Icons.calculate_rounded,
+        gradientColors: const [Color(0xFFD97706), Color(0xFFF59E0B)],
+      ),
+    ];
+
+    if (isMobile) {
+      return Column(
+        children: cards.map((c) => Padding(padding: const EdgeInsets.only(bottom: AppSpacing.md), child: c)).toList(),
+      );
+    }
+
     return Row(
       children: [
-        Expanded(
-          child: DashboardCard(
-            title: 'Montant Facture',
-            value: formatCurrencyCompact(totalInvoiced),
-            subtitle: 'Paye ${paid.toStringAsFixed(0)}% · En cours ${partial.toStringAsFixed(0)}% · Impaye ${unpaid.toStringAsFixed(0)}%',
-            icon: Icons.receipt_long_rounded,
-            gradientColors: const [Color(0xFF1a56db), Color(0xFF3B82F6)],
-          ),
-        ),
+        Expanded(child: cards[0]),
         const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: DashboardCard(
-            title: 'Bons de Livraison',
-            value: state.totalDeliveryNotes.toInt().toString(),
-            subtitle: 'Bons actifs ce mois',
-            icon: Icons.local_shipping_rounded,
-            gradientColors: const [Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-          ),
-        ),
+        Expanded(child: cards[1]),
         const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: DashboardCard(
-            title: 'Paiements recus',
-            value: formatCurrencyCompact(state.totalPaid),
-            subtitle: 'Encaissements total',
-            icon: Icons.payments_rounded,
-            gradientColors: const [Color(0xFF059669), Color(0xFF10B981)],
-          ),
-        ),
+        Expanded(child: cards[2]),
         const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: DashboardCard(
-            title: 'TVA Collectee',
-            value: formatCurrencyCompact(state.totalTvaCollected),
-            subtitle: 'TVA deductible: ${formatCurrencyCompact(state.totalTvaDeductible)}',
-            icon: Icons.calculate_rounded,
-            gradientColors: const [Color(0xFFD97706), Color(0xFFF59E0B)],
-          ),
-        ),
+        Expanded(child: cards[3]),
       ],
     );
   }

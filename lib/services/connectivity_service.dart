@@ -19,10 +19,14 @@ class ConnectivityService {
       _isOnline = await _checkInternetAccess();
       _controller.add(_isOnline);
       Timer.periodic(const Duration(seconds: 10), (_) async {
-        final online = await _checkInternetAccess();
-        if (online != _isOnline) {
-          _isOnline = online;
-          _controller.add(_isOnline);
+        try {
+          final online = await _checkInternetAccess();
+          if (online != _isOnline) {
+            _isOnline = online;
+            _controller.add(_isOnline);
+          }
+        } catch (_) {
+          // Ignore errors during periodic check
         }
       });
     } else {
@@ -59,7 +63,7 @@ class ConnectivityService {
     try {
       final result = await InternetAddress.lookup('google.com');
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } on SocketException catch (_) {
+    } catch (_) {
       return false;
     }
   }

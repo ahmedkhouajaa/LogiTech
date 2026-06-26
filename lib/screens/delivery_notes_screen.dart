@@ -22,6 +22,7 @@ import 'create_invoice_screen.dart';
 import 'create_return_note_screen.dart';
 import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
+import 'document_preview_screen.dart';
 
 class DeliveryNotesScreen extends StatefulWidget {
   const DeliveryNotesScreen({super.key});
@@ -799,9 +800,14 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
         final doc = DocumentWrapper.fromDeliveryNote(note);
         PdfService.instance.generateAndOpenDocument(doc);
         break;
-      case 'print':
-        // TODO: Print logic
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impression non implementee')));
+            case 'print':
+        final doc = DocumentWrapper.fromDeliveryNote(note);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DocumentPreviewScreen(document: doc),
+          ),
+        );
         break;
       case 'to_invoice':
         _showInvoiceConversionDialog(context, note);

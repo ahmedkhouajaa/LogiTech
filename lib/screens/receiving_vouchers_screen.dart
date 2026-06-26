@@ -23,6 +23,7 @@ import 'app_shell_screen.dart';
 import '../widgets/sidebar_menu.dart';
 import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
+import 'document_preview_screen.dart';
 enum ReceivingVoucherStatus {
   draft('Brouillon', AppColors.textSecondary),
   validated('Validé', AppColors.success),
