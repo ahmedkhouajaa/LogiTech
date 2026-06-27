@@ -462,38 +462,48 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           // Method badge
           Expanded(
             flex: 2,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceAlt,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Text(
-                methodLabel,
-                style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      p.method == 'especes' ? Icons.money_rounded
+                          : p.method == 'cheque' ? Icons.account_balance_wallet_rounded
+                          : p.method == 'virement' ? Icons.account_balance_rounded
+                          : p.method == 'carte' ? Icons.credit_card_rounded
+                          : Icons.payment_rounded,
+                      size: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      methodLabel,
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
           // Status badge
           Expanded(
             flex: 2,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: statusBg,
-                borderRadius: BorderRadius.circular(AppRadius.full),
-              ),
-              child: Text(
-                statusLabel,
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: statusColor),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: StatusBadge(
+                label: statusLabel,
+                color: statusColor,
               ),
             ),
           ),

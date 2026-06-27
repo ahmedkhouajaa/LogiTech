@@ -48,6 +48,9 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'dart:ui';
+import 'utils/platform_utils.dart';
+import 'mobile/mobile_login_screen.dart';
+import 'mobile/mobile_shell_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -229,9 +232,9 @@ class _AppGate extends StatelessWidget {
           );
         }
         if (state is AuthAuthenticated) {
-          return const AppShellScreen();
+          return PlatformUtils.isAndroid ? const MobileShellScreen() : const AppShellScreen();
         }
-        return const LoginScreen();
+        return PlatformUtils.isAndroid ? const MobileLoginScreen() : const LoginScreen();
       },
     );
   }

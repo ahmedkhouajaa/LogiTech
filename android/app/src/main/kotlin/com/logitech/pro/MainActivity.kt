@@ -1,4 +1,4 @@
-package com.example.business_manager_pro
+package com.logitech.pro
 
 import io.flutter.embedding.android.FlutterActivity
 

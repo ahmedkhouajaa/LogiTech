@@ -142,25 +142,31 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                       if (state is SuppliersLoaded) {
                         suppliers = state.suppliers;
                       }
-                      return DropdownButtonFormField<String>(
-                        value: _selectedSupplierId,
-                        decoration: InputDecoration(
-                          hintText: 'Sélectionner un fournisseur...',
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.primary)),
+                      return Container(
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.border),
                         ),
-                        icon: const Icon(Icons.unfold_more, size: 16),
-                        style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                        items: [
-                          const DropdownMenuItem(value: 'all', child: Text('Tous les fournisseurs', style: TextStyle(color: AppColors.textSecondary))),
-                          ...suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))),
-                        ],
-                        onChanged: (val) {
-                          setState(() => _selectedSupplierId = val == 'all' ? null : val);
-                          _applyFilters();
-                        },
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedSupplierId,
+                            hint: const Text('Sélectionner un fournisseur...', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                            isExpanded: true,
+                            icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                            style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                            items: [
+                              const DropdownMenuItem(value: 'all', child: Text('Tous les fournisseurs', style: TextStyle(color: AppColors.textSecondary))),
+                              ...suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))),
+                            ],
+                            onChanged: (val) {
+                              setState(() => _selectedSupplierId = val == 'all' ? null : val);
+                              _applyFilters();
+                            },
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -278,24 +284,31 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 const SizedBox(height: 8),
                 SizedBox(
                   height: 40,
-                  child: DropdownButtonFormField<ReceivingVoucherStatus?>(
-                    value: _statusFilter,
-                    decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.primary)),
+                  child: Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(color: AppColors.border),
                     ),
-                    icon: const Icon(Icons.expand_more, size: 16),
-                    style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('Tous', style: TextStyle(color: AppColors.textPrimary))),
-                      ...ReceivingVoucherStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.label))),
-                    ],
-                    onChanged: (val) {
-                      setState(() => _statusFilter = val);
-                      _applyFilters();
-                    },
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<ReceivingVoucherStatus?>(
+                        value: _statusFilter,
+                        hint: const Text('Tous', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                        isExpanded: true,
+                        icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                        style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                        items: [
+                          const DropdownMenuItem(value: null, child: Text('Tous', style: TextStyle(color: AppColors.textPrimary))),
+                          ...ReceivingVoucherStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.label))),
+                        ],
+                        onChanged: (val) {
+                          setState(() => _statusFilter = val);
+                          _applyFilters();
+                        },
+                      ),
+                    ),
                   ),
                 ),
               ],

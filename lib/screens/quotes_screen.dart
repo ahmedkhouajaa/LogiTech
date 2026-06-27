@@ -153,25 +153,31 @@ class _QuotesScreenState extends State<QuotesScreen> {
                       if (state is CustomersLoaded) {
                         customers = state.customers;
                       }
-                      return DropdownButtonFormField<String>(
-                        value: _selectedClientId,
-                        decoration: InputDecoration(
-                          hintText: 'Selectionner un client...',
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.primary)),
+                      return Container(
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.border),
                         ),
-                        icon: const Icon(Icons.unfold_more, size: 16),
-                        style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                        items: [
-                          const DropdownMenuItem(value: 'all', child: Text('Tous les clients', style: TextStyle(color: AppColors.textSecondary))),
-                          ...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.companyName ?? c.responsibleName ?? 'Inconnu'))),
-                        ],
-                        onChanged: (val) {
-                          setState(() => _selectedClientId = val);
-                          _applyFilters();
-                        },
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedClientId,
+                            hint: const Text('Selectionner un client...', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                            isExpanded: true,
+                            icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                            style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                            items: [
+                              const DropdownMenuItem(value: 'all', child: Text('Tous les clients', style: TextStyle(color: AppColors.textSecondary))),
+                              ...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.companyName ?? c.responsibleName ?? 'Inconnu'))),
+                            ],
+                            onChanged: (val) {
+                              setState(() => _selectedClientId = val);
+                              _applyFilters();
+                            },
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -289,24 +295,31 @@ class _QuotesScreenState extends State<QuotesScreen> {
                 const SizedBox(height: 8),
                 SizedBox(
                   height: 40,
-                  child: DropdownButtonFormField<DocumentStatus?>(
-                    value: _statusFilter,
-                    decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.primary)),
+                  child: Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(color: AppColors.border),
                     ),
-                    icon: const Icon(Icons.expand_more, size: 16),
-                    style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('Tous', style: TextStyle(color: AppColors.textPrimary))),
-                      ...DocumentStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.label))),
-                    ],
-                    onChanged: (val) {
-                      setState(() => _statusFilter = val);
-                      _applyFilters();
-                    },
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<DocumentStatus?>(
+                        value: _statusFilter,
+                        hint: const Text('Tous', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                        isExpanded: true,
+                        icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                        style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                        items: [
+                          const DropdownMenuItem(value: null, child: Text('Tous', style: TextStyle(color: AppColors.textPrimary))),
+                          ...DocumentStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.label))),
+                        ],
+                        onChanged: (val) {
+                          setState(() => _statusFilter = val);
+                          _applyFilters();
+                        },
+                      ),
+                    ),
                   ),
                 ),
               ],

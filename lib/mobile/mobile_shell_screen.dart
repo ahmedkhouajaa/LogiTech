@@ -1,0 +1,316 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../blocs/dashboard/dashboard_bloc.dart';
+import '../blocs/auth/auth_bloc.dart';
+import '../widgets/sidebar_menu.dart';
+import '../widgets/sync_indicator.dart';
+import '../utils/constants.dart';
+import 'mobile_drawer.dart';
+import 'mobile_dashboard_screen.dart';
+
+// Placeholder screens for bottom nav tabs until full mobile screens are built
+// These reuse the existing desktop screens which already handle isMobile layout
+import '../screens/invoices_screen.dart';
+import '../screens/purchase_invoices_screen.dart';
+import '../screens/customers_screen.dart';
+import '../screens/suppliers_screen.dart';
+import '../screens/products_screen.dart';
+import '../screens/quotes_screen.dart';
+import '../screens/customer_orders_screen.dart';
+import '../screens/delivery_notes_screen.dart';
+import '../screens/stock_screen.dart';
+import '../screens/payments_screen.dart';
+import '../screens/treasury_accounts_screen.dart';
+import '../screens/treasury_transactions_screen.dart';
+import '../screens/checks_traites_screen.dart';
+import '../screens/projects_screen.dart';
+import '../screens/reports_screen.dart';
+import '../screens/settings_screen.dart';
+import '../screens/stock_withdrawals_screen.dart';
+import '../screens/return_notes_screen.dart';
+import '../screens/credit_notes_screen.dart';
+import '../screens/supplier_orders_screen.dart';
+import '../screens/receiving_vouchers_screen.dart';
+import '../screens/supplier_returns_screen.dart';
+import '../screens/supplier_credit_notes_screen.dart';
+import '../screens/company_info_screen.dart';
+import '../screens/document_templates_screen.dart';
+import '../screens/withholding_tax_screen.dart';
+import '../screens/warehouses_screen.dart';
+import '../screens/product_settings_screen.dart';
+
+class MobileShellScreen extends StatefulWidget {
+  const MobileShellScreen({super.key});
+
+  @override
+  State<MobileShellScreen> createState() => _MobileShellScreenState();
+}
+
+class _MobileShellScreenState extends State<MobileShellScreen> {
+  int _bottomNavIndex = 0;
+  AppModule _activeModule = AppModule.dashboard;
+
+  // Maps bottom nav index to module
+  static const _bottomNavModules = [
+    AppModule.dashboard,
+    AppModule.invoices,
+    AppModule.purchaseInvoices,
+    AppModule.customers,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<DashboardBloc>().add(DashboardRefreshRequested());
+  }
+
+  void _onModuleSelected(AppModule module) {
+    setState(() {
+      _activeModule = module;
+      // Update bottom nav if the module matches a tab
+      final navIndex = _bottomNavModules.indexOf(module);
+      if (navIndex >= 0) {
+        _bottomNavIndex = navIndex;
+      } else {
+        _bottomNavIndex = -1; // No tab selected
+      }
+    });
+  }
+
+  void _onBottomNavTapped(int index) {
+    if (index == 4) {
+      // "Plus" tab → open drawer
+      Scaffold.of(context).openDrawer();
+      return;
+    }
+    setState(() {
+      _bottomNavIndex = index;
+      _activeModule = _bottomNavModules[index];
+    });
+  }
+
+  Widget _buildContent() {
+    switch (_activeModule) {
+      case AppModule.dashboard:
+        return const MobileDashboardScreen();
+      case AppModule.customers:
+        return const CustomersScreen();
+      case AppModule.suppliers:
+        return const SuppliersScreen();
+      case AppModule.products:
+        return const ProductsScreen();
+      case AppModule.productSettings:
+        return const ProductSettingsScreen();
+      case AppModule.invoices:
+        return const InvoicesScreen();
+      case AppModule.customerOrders:
+        return const CustomerOrdersScreen();
+      case AppModule.quotes:
+        return const QuotesScreen();
+      case AppModule.deliveryNotes:
+        return const DeliveryNotesScreen();
+      case AppModule.stockDashboard:
+      case AppModule.stockMovements:
+        return const StockScreen();
+      case AppModule.transactions:
+        return const TreasuryTransactionsScreen();
+      case AppModule.checksTraites:
+        return const ChecksTraitesScreen();
+      case AppModule.projects:
+        return const ProjectsScreen();
+      case AppModule.reports:
+        return const ReportsScreen();
+      case AppModule.settings:
+        return const SettingsScreen();
+      case AppModule.payments:
+        return const PaymentsScreen();
+      case AppModule.purchaseInvoices:
+        return const PurchaseInvoicesScreen();
+      case AppModule.supplierOrders:
+        return const SupplierOrdersScreen();
+      case AppModule.receivingVouchers:
+        return const ReceivingVouchersScreen();
+      case AppModule.withholdingTaxSales:
+      case AppModule.withholdingTaxPurchase:
+        return WithholdingTaxScreen(isSales: _activeModule == AppModule.withholdingTaxSales);
+      case AppModule.warehouses:
+        return const WarehousesScreen();
+      case AppModule.exitVouchers:
+        return const StockWithdrawalsScreen();
+      case AppModule.returnVouchers:
+        return const ReturnNotesScreen();
+      case AppModule.creditNotes:
+        return const CreditNotesScreen();
+      case AppModule.supplierReturns:
+        return const SupplierReturnsScreen();
+      case AppModule.supplierCreditNotes:
+        return const SupplierCreditNotesScreen();
+      case AppModule.accounts:
+        return const TreasuryAccountsScreen();
+      case AppModule.companyInfo:
+        return const CompanyInfoScreen();
+      case AppModule.documentTemplates:
+        return const DocumentTemplatesScreen();
+      default:
+        return _ComingSoonMobile(module: _activeModule);
+    }
+  }
+
+  String _getModuleTitle() {
+    switch (_activeModule) {
+      case AppModule.dashboard: return 'Tableau de bord';
+      case AppModule.customers: return 'Clients';
+      case AppModule.suppliers: return 'Fournisseurs';
+      case AppModule.products: return 'Articles';
+      case AppModule.productSettings: return 'Parametres Articles';
+      case AppModule.invoices: return 'Factures';
+      case AppModule.quotes: return 'Devis';
+      case AppModule.deliveryNotes: return 'Bons de livraison';
+      case AppModule.stockDashboard: return 'Stock';
+      case AppModule.stockMovements: return 'Mouvements';
+      case AppModule.transactions: return 'Transactions';
+      case AppModule.checksTraites: return 'Cheques & Traites';
+      case AppModule.projects: return 'Projets';
+      case AppModule.reports: return 'Rapports';
+      case AppModule.settings: return 'Parametres';
+      case AppModule.purchaseInvoices: return 'Factures d\'achat';
+      case AppModule.warehouses: return 'Entrepots';
+      case AppModule.exitVouchers: return 'Bons de sortie';
+      case AppModule.creditNotes: return 'Avoirs Client';
+      case AppModule.returnVouchers: return 'Bons de retour';
+      case AppModule.supplierOrders: return 'Commandes Fournisseur';
+      case AppModule.receivingVouchers: return 'Bons de reception';
+      case AppModule.supplierCreditNotes: return 'Avoirs Fournisseur';
+      case AppModule.supplierReturns: return 'Retours Fournisseur';
+      case AppModule.customerOrders: return 'Commandes Client';
+      case AppModule.accounts: return 'Comptes';
+      case AppModule.payments: return 'Paiements';
+      case AppModule.companyInfo: return 'Ma Societe';
+      case AppModule.documentTemplates: return 'Modeles';
+      default: return 'LogiTech Pro';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      drawer: MobileDrawer(
+        activeModule: _activeModule,
+        onModuleSelected: _onModuleSelected,
+      ),
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        leading: Builder(
+          builder: (ctx) => IconButton(
+            icon: const Icon(Icons.menu_rounded, color: AppColors.textPrimary),
+            onPressed: () => Scaffold.of(ctx).openDrawer(),
+          ),
+        ),
+        title: Text(
+          _getModuleTitle(),
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        centerTitle: false,
+        actions: const [
+          SyncIndicator(),
+          SizedBox(width: 8),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: AppColors.border),
+        ),
+      ),
+      body: _buildContent(),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.border)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: _bottomNavIndex >= 0 ? _bottomNavIndex : 0,
+          onDestinationSelected: _onBottomNavTapped,
+          backgroundColor: AppColors.surface,
+          surfaceTintColor: Colors.transparent,
+          indicatorColor: AppColors.primary.withValues(alpha: 0.1),
+          height: 64,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.dashboard_outlined, size: 22),
+              selectedIcon: Icon(Icons.dashboard_rounded, size: 22, color: AppColors.primary),
+              label: 'Accueil',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.receipt_outlined, size: 22),
+              selectedIcon: Icon(Icons.receipt_rounded, size: 22, color: AppColors.primary),
+              label: 'Ventes',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.shopping_bag_outlined, size: 22),
+              selectedIcon: Icon(Icons.shopping_bag_rounded, size: 22, color: AppColors.primary),
+              label: 'Achats',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.people_outline_rounded, size: 22),
+              selectedIcon: Icon(Icons.people_rounded, size: 22, color: AppColors.primary),
+              label: 'Tiers',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.more_horiz_rounded, size: 22),
+              selectedIcon: Icon(Icons.more_horiz_rounded, size: 22, color: AppColors.primary),
+              label: 'Plus',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ComingSoonMobile extends StatelessWidget {
+  final AppModule module;
+  const _ComingSoonMobile({required this.module});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppColors.warningLight,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(Icons.construction_rounded, size: 32, color: AppColors.warning),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Module en developpement',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Disponible prochainement',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+}

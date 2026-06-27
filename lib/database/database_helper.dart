@@ -2814,11 +2814,11 @@ class DatabaseHelper {
 
   Future<List<CheckTraite>> getUpcomingChecksTraites({int days = 30}) async {
     final db = await database;
-    final now = DateTime.now().toIso8601String();
-    final future = DateTime.now().add(Duration(days: days)).toIso8601String();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final future = DateTime.now().add(Duration(days: days)).millisecondsSinceEpoch;
     final maps = await db.rawQuery('''
       SELECT * FROM checks_traites 
-      WHERE is_deleted = 0 AND status = 'pending' 
+      WHERE status = 'pending' 
       AND maturity_date BETWEEN ? AND ?
       ORDER BY maturity_date ASC
     ''', [now, future]);

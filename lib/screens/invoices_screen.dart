@@ -66,7 +66,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
             children: [
-              Text('Gerer vos factures', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+              Text('Gerer vos factures',style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const Spacer(),
               AppButton(
                 label: 'Nouvelle facture',
@@ -127,19 +127,31 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               child: BlocBuilder<CustomersBloc, CustomersState>(
                 builder: (context, state) {
                   final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                  return DropdownButtonFormField<String>(
-                    value: _selectedClientId,
-                    isExpanded: true,
-                    hint: const Text('Selectionner un client...', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
-                    items: [
-                      const DropdownMenuItem<String>(value: null, child: Text('Tous les clients', style: TextStyle(fontSize: 13))),
-                      ...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))),
-                    ],
-                    onChanged: (v) {
-                      setState(() => _selectedClientId = v);
-                      _applyFilters();
-                    },
-                    decoration: _filterInputDecoration(),
+                  return Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedClientId,
+                        hint: const Text('Selectionner un client...', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
+                        isExpanded: true,
+                        icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                        style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                        items: [
+                          const DropdownMenuItem<String>(value: null, child: Text('Tous les clients', style: TextStyle(fontSize: 13))),
+                          ...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))),
+                        ],
+                        onChanged: (v) {
+                          setState(() => _selectedClientId = v);
+                          _applyFilters();
+                        },
+                      ),
+                    ),
                   );
                 },
               ),
@@ -183,18 +195,31 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             width: 150,
             child: _buildFilterField(
               label: 'Statut',
-              child: DropdownButtonFormField<InvoiceStatus?>(
-                value: _statusFilter,
-                isExpanded: true,
-                items: [
-                  const DropdownMenuItem<InvoiceStatus?>(value: null, child: Text('Tous', style: TextStyle(fontSize: 13))),
-                  ...InvoiceStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.label, style: const TextStyle(fontSize: 13)))),
-                ],
-                onChanged: (v) {
-                  setState(() => _statusFilter = v);
-                  _applyFilters();
-                },
-                decoration: _filterInputDecoration(),
+              child: Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.border),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<InvoiceStatus?>(
+                    value: _statusFilter,
+                    hint: const Text('Tous', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
+                    isExpanded: true,
+                    icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                    style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                    items: [
+                      const DropdownMenuItem<InvoiceStatus?>(value: null, child: Text('Tous', style: TextStyle(fontSize: 13))),
+                      ...InvoiceStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.label, style: const TextStyle(fontSize: 13)))),
+                    ],
+                    onChanged: (v) {
+                      setState(() => _statusFilter = v);
+                      _applyFilters();
+                    },
+                  ),
+                ),
               ),
             ),
           ),
@@ -329,13 +354,21 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                               dividerThickness: 0.5,
                               columnSpacing: 24,
                               horizontalMargin: 16,
-                              columns: const [
-                                DataColumn(label: SizedBox(width: 20)),
-                                DataColumn(label: Text('Reference')),
-                                DataColumn(label: Text('Client')),
-                                DataColumn(label: Text('Statut')),
-                                DataColumn(label: Text('Montant')),
-                                DataColumn(label: Text('Actions')),
+                              columns: [
+                                DataColumn(
+                                  label: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const SizedBox(width: 24), // Spacer for Checkbox
+                                      const SizedBox(width: 12),
+                                      const Text('Reference'),
+                                    ],
+                                  ),
+                                ),
+                                const DataColumn(label: Text('Client')),
+                                const DataColumn(label: Text('Statut')),
+                                const DataColumn(label: Text('Montant')),
+                                const DataColumn(label: Text('Actions')),
                               ],
                               rows: pageInvoices.map((inv) => _buildInvoiceRow(inv)).toList(),
                             ),
@@ -356,26 +389,32 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   DataRow _buildInvoiceRow(Invoice inv) {
     return DataRow(
       cells: [
-        // Checkbox
+        // Checkbox & Reference (number + date)
         DataCell(
-          Checkbox(
-            value: false,
-            onChanged: (_) {},
-            side: BorderSide(color: AppColors.border),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
-          ),
-        ),
-        // Reference (number + date)
-        DataCell(
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
+          Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(inv.number, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary)),
-              const SizedBox(height: 2),
-              Text(
-                formatDateTimeLong(inv.createdAt),
-                style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+              SizedBox(
+                width: 24,
+                child: Checkbox(
+                  value: false,
+                  onChanged: (_) {},
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(inv.number, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary)),
+                  const SizedBox(height: 2),
+                  Text(
+                    formatDateTimeLong(inv.createdAt),
+                    style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                  ),
+                ],
               ),
             ],
           ),

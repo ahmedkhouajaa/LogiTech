@@ -291,27 +291,25 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
     required List<DropdownMenuItem<T>> items,
     required ValueChanged<T?> onChanged,
   }) {
-    return DropdownButtonFormField<T>(
-      value: value,
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            borderSide: const BorderSide(color: AppColors.border)),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            borderSide: const BorderSide(color: AppColors.border)),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            borderSide: const BorderSide(color: AppColors.primary)),
-        isDense: true,
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
       ),
-      icon: const Icon(Icons.expand_more, size: 16),
-      style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-      items: items,
-      onChanged: onChanged,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          hint: Text(hint, style: const TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+          isExpanded: true,
+          icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+          style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          items: items,
+          onChanged: onChanged,
+        ),
+      ),
     );
   }
 
