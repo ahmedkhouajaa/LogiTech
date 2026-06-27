@@ -4,8 +4,9 @@ import '../../utils/constants.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
-import '../../widgets/sidebar_menu.dart';
+import 'forms/mobile_product_form_screen.dart';
 import '../../blocs/products/products_bloc.dart';
+import '../../widgets/sidebar_menu.dart';
 
 
 class MobileProductsScreen extends StatefulWidget {
@@ -142,6 +143,12 @@ class _MobileProductsScreenState extends State<MobileProductsScreen> {
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileProductFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<ProductsBloc>().add(LoadProducts());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -164,7 +171,14 @@ class _MobileProductsScreenState extends State<MobileProductsScreen> {
           isEmpty: isEmpty,
           emptyMessage: 'Aucun élément trouvé.',
           fabText: _config.fabText,
-          onFabPressed: () {},
+          onFabPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MobileProductFormScreen()),
+            ).then((_) {
+              context.read<ProductsBloc>().add(LoadProducts());
+            });
+          },
           child: ListView(
             padding: const EdgeInsets.only(bottom: 80),
             children: cards,

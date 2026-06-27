@@ -6,6 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/suppliers/suppliers_bloc.dart';
+import 'forms/mobile_supplier_form_screen.dart';
 
 
 class MobileSuppliersScreen extends StatefulWidget {
@@ -142,6 +143,12 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileSupplierFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<SuppliersBloc>().add(LoadSuppliers());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -164,7 +171,14 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
           isEmpty: isEmpty,
           emptyMessage: 'Aucun élément trouvé.',
           fabText: _config.fabText,
-          onFabPressed: () {},
+          onFabPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MobileSupplierFormScreen()),
+            ).then((_) {
+              context.read<SuppliersBloc>().add(LoadSuppliers());
+            });
+          },
           child: ListView(
             padding: const EdgeInsets.only(bottom: 80),
             children: cards,

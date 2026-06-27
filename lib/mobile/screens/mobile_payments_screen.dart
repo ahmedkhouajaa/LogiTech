@@ -6,6 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/payments/payments_bloc.dart';
+import 'forms/mobile_payment_form_screen.dart';
 
 
 class MobilePaymentsScreen extends StatefulWidget {
@@ -142,6 +143,12 @@ class _MobilePaymentsScreenState extends State<MobilePaymentsScreen> {
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobilePaymentFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<PaymentsBloc>().add(LoadPayments());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -164,7 +171,14 @@ class _MobilePaymentsScreenState extends State<MobilePaymentsScreen> {
           isEmpty: isEmpty,
           emptyMessage: 'Aucun élément trouvé.',
           fabText: _config.fabText,
-          onFabPressed: () {},
+          onFabPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MobilePaymentFormScreen()),
+            ).then((_) {
+              context.read<PaymentsBloc>().add(LoadPayments());
+            });
+          },
           child: ListView(
             padding: const EdgeInsets.only(bottom: 80),
             children: cards,

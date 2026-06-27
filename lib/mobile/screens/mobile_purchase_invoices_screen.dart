@@ -6,7 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/purchase_invoices/purchase_invoices_bloc.dart';
-import '../../screens/create_purchase_invoice_screen.dart';
+import 'forms/mobile_purchase_invoice_form_screen.dart';
 
 
 class MobilePurchaseInvoicesScreen extends StatefulWidget {
@@ -143,6 +143,12 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobilePurchaseInvoiceFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -168,7 +174,7 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
           onFabPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CreatePurchaseInvoiceScreen()),
+                MaterialPageRoute(builder: (_) => const MobilePurchaseInvoiceFormScreen()),
               ).then((_) {
                 context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
               });

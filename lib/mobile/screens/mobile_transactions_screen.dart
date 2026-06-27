@@ -6,6 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/treasury_transactions/treasury_transactions_bloc.dart';
+import 'forms/mobile_transaction_form_screen.dart';
 
 
 class MobileTreasuryTransactionsScreen extends StatefulWidget {
@@ -142,6 +143,12 @@ class _MobileTreasuryTransactionsScreenState extends State<MobileTreasuryTransac
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileTransactionFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<TreasuryTransactionsBloc>().add(LoadTreasuryTransactions());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -164,7 +171,14 @@ class _MobileTreasuryTransactionsScreenState extends State<MobileTreasuryTransac
           isEmpty: isEmpty,
           emptyMessage: 'Aucun élément trouvé.',
           fabText: _config.fabText,
-          onFabPressed: () {},
+          onFabPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MobileTransactionFormScreen()),
+            ).then((_) {
+              context.read<TreasuryTransactionsBloc>().add(LoadTreasuryTransactions());
+            });
+          },
           child: ListView(
             padding: const EdgeInsets.only(bottom: 80),
             children: cards,

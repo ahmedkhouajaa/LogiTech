@@ -30,6 +30,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
   DateTime _validityDate = DateTime.now().add(const Duration(days: 30));
   final _notesCtrl = TextEditingController();
   DocumentStatus _status = DocumentStatus.draft;
+  bool _withTimbreFiscal = true;
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
@@ -50,7 +51,9 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     return total;
   }
 
-  double get _totalTTC => _totalHT + _totalTva;
+  double get _timbreFiscal => _withTimbreFiscal ? 1.0 : 0.0;
+
+  double get _totalTTC => _totalHT + _totalTva + _timbreFiscal;
 
   bool get _isEditing => widget.existing != null;
 
@@ -886,6 +889,36 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
             const SizedBox(height: 8),
           ],
           _buildTotalRow('Total TVA', _totalTva),
+          const Divider(height: 24, color: AppColors.border),
+          InkWell(
+            onTap: () => setState(() => _withTimbreFiscal = !_withTimbreFiscal),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Checkbox(
+                      value: _withTimbreFiscal,
+                      onChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
+                      activeColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text('Timbre fiscal', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  ),
+                  Text(
+                    formatCurrencyDT(_withTimbreFiscal ? 1.0 : 0),
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const Divider(height: 24, color: AppColors.border),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

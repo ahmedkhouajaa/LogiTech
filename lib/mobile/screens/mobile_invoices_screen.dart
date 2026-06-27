@@ -6,7 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/invoices/invoices_bloc.dart';
-import '../../screens/create_invoice_screen.dart';
+import 'forms/mobile_invoice_form_screen.dart';
 
 
 class MobileInvoicesScreen extends StatefulWidget {
@@ -143,6 +143,12 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileInvoiceFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<InvoicesBloc>().add(LoadInvoices());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -168,7 +174,7 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
           onFabPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CreateInvoiceScreen()),
+                MaterialPageRoute(builder: (_) => const MobileInvoiceFormScreen()),
               ).then((_) {
                 context.read<InvoicesBloc>().add(LoadInvoices());
               });

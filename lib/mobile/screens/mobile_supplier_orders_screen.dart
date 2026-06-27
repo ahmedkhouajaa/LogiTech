@@ -6,7 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/supplier_orders/supplier_orders_bloc.dart';
-import '../../screens/create_supplier_order_screen.dart';
+import 'forms/mobile_supplier_order_form_screen.dart';
 
 
 class MobileSupplierOrdersScreen extends StatefulWidget {
@@ -143,6 +143,12 @@ class _MobileSupplierOrdersScreenState extends State<MobileSupplierOrdersScreen>
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileSupplierOrderFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<SupplierOrdersBloc>().add(LoadSupplierOrders());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -168,7 +174,7 @@ class _MobileSupplierOrdersScreenState extends State<MobileSupplierOrdersScreen>
           onFabPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CreateSupplierOrderScreen()),
+                MaterialPageRoute(builder: (_) => const MobileSupplierOrderFormScreen()),
               ).then((_) {
                 context.read<SupplierOrdersBloc>().add(LoadSupplierOrders());
               });

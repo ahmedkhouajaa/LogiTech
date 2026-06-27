@@ -8,7 +8,7 @@ import '../../widgets/sidebar_menu.dart';
 import '../../blocs/return_notes/return_notes_bloc.dart';
 import '../../blocs/return_notes/return_notes_state.dart';
 import '../../blocs/return_notes/return_notes_event.dart';
-import '../../screens/create_return_note_screen.dart';
+import 'forms/mobile_return_voucher_form_screen.dart';
 
 
 class MobileReturnNotesScreen extends StatefulWidget {
@@ -145,6 +145,12 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileReturnVoucherFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<ReturnNotesBloc>().add(LoadReturnNotes());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -170,7 +176,7 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
           onFabPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CreateReturnNoteScreen()),
+                MaterialPageRoute(builder: (_) => const MobileReturnVoucherFormScreen()),
               ).then((_) {
                 context.read<ReturnNotesBloc>().add(LoadReturnNotes());
               });

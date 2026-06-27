@@ -6,6 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/checks_traites/checks_traites_bloc.dart';
+import 'forms/mobile_check_traite_form_screen.dart';
 
 
 class MobileChecksTraitesScreen extends StatefulWidget {
@@ -142,6 +143,12 @@ class _MobileChecksTraitesScreenState extends State<MobileChecksTraitesScreen> {
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileCheckTraiteFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<ChecksTraitesBloc>().add(LoadChecksTraites());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -164,7 +171,14 @@ class _MobileChecksTraitesScreenState extends State<MobileChecksTraitesScreen> {
           isEmpty: isEmpty,
           emptyMessage: 'Aucun élément trouvé.',
           fabText: _config.fabText,
-          onFabPressed: () {},
+          onFabPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MobileCheckTraiteFormScreen()),
+            ).then((_) {
+              context.read<ChecksTraitesBloc>().add(LoadChecksTraites());
+            });
+          },
           child: ListView(
             padding: const EdgeInsets.only(bottom: 80),
             children: cards,

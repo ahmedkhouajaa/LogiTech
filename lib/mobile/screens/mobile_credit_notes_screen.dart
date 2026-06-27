@@ -6,6 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/credit_notes/credit_notes_bloc.dart';
+import 'forms/mobile_credit_note_form_screen.dart';
 
 
 class MobileCreditNotesScreen extends StatefulWidget {
@@ -142,6 +143,12 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileCreditNoteFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<CreditNotesBloc>().add(LoadCreditNotes());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -164,7 +171,14 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
           isEmpty: isEmpty,
           emptyMessage: 'Aucun élément trouvé.',
           fabText: _config.fabText,
-          onFabPressed: () {},
+          onFabPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MobileCreditNoteFormScreen()),
+            ).then((_) {
+              context.read<CreditNotesBloc>().add(LoadCreditNotes());
+            });
+          },
           child: ListView(
             padding: const EdgeInsets.only(bottom: 80),
             children: cards,

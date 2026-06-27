@@ -6,7 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/customer_orders/customer_orders_bloc.dart';
-import '../../screens/create_customer_order_screen.dart';
+import 'forms/mobile_customer_order_form_screen.dart';
 
 
 class MobileCustomerOrdersScreen extends StatefulWidget {
@@ -143,6 +143,12 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileCustomerOrderFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<CustomerOrdersBloc>().add(LoadCustomerOrders());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -168,7 +174,7 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
           onFabPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CreateCustomerOrderScreen()),
+                MaterialPageRoute(builder: (_) => const MobileCustomerOrderFormScreen()),
               ).then((_) {
                 context.read<CustomerOrdersBloc>().add(LoadCustomerOrders());
               });

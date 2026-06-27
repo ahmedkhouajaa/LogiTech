@@ -6,7 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/delivery_notes/delivery_notes_bloc.dart';
-import '../../screens/create_delivery_note_screen.dart';
+import 'forms/mobile_delivery_note_form_screen.dart';
 
 
 class MobileDeliveryNotesScreen extends StatefulWidget {
@@ -143,6 +143,12 @@ class _MobileDeliveryNotesScreenState extends State<MobileDeliveryNotesScreen> {
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileDeliveryNoteFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<DeliveryNotesBloc>().add(LoadDeliveryNotes());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -168,7 +174,7 @@ class _MobileDeliveryNotesScreenState extends State<MobileDeliveryNotesScreen> {
           onFabPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CreateDeliveryNoteScreen()),
+                MaterialPageRoute(builder: (_) => const MobileDeliveryNoteFormScreen()),
               ).then((_) {
                 context.read<DeliveryNotesBloc>().add(LoadDeliveryNotes());
               });

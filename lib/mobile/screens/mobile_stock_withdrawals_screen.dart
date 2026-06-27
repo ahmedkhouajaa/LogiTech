@@ -6,7 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
-import '../../screens/create_stock_withdrawal_screen.dart';
+import 'forms/mobile_exit_voucher_form_screen.dart';
 
 
 class MobileStockWithdrawalsScreen extends StatefulWidget {
@@ -143,6 +143,12 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileExitVoucherFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<StockWithdrawalsBloc>().add(LoadStockWithdrawals());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -168,7 +174,7 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
           onFabPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CreateStockWithdrawalScreen()),
+                MaterialPageRoute(builder: (_) => const MobileExitVoucherFormScreen()),
               ).then((_) {
                 context.read<StockWithdrawalsBloc>().add(LoadStockWithdrawals());
               });

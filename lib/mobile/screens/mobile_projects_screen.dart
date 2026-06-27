@@ -6,6 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/projects/projects_bloc.dart';
+import 'forms/mobile_project_form_screen.dart';
 
 
 class MobileProjectsScreen extends StatefulWidget {
@@ -142,6 +143,12 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileProjectFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<ProjectsBloc>().add(LoadProjects());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -164,7 +171,14 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
           isEmpty: isEmpty,
           emptyMessage: 'Aucun élément trouvé.',
           fabText: _config.fabText,
-          onFabPressed: () {},
+          onFabPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MobileProjectFormScreen()),
+            ).then((_) {
+              context.read<ProjectsBloc>().add(LoadProjects());
+            });
+          },
           child: ListView(
             padding: const EdgeInsets.only(bottom: 80),
             children: cards,

@@ -6,6 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/customers/customers_bloc.dart';
+import 'forms/mobile_customer_form_screen.dart';
 
 
 class MobileCustomersScreen extends StatefulWidget {
@@ -142,6 +143,12 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileCustomerFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<CustomersBloc>().add(LoadCustomers());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -164,7 +171,14 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
           isEmpty: isEmpty,
           emptyMessage: 'Aucun élément trouvé.',
           fabText: _config.fabText,
-          onFabPressed: () {},
+          onFabPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MobileCustomerFormScreen()),
+            ).then((_) {
+              context.read<CustomersBloc>().add(LoadCustomers());
+            });
+          },
           child: ListView(
             padding: const EdgeInsets.only(bottom: 80),
             children: cards,

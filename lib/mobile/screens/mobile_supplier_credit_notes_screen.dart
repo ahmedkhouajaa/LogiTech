@@ -8,7 +8,7 @@ import '../../widgets/sidebar_menu.dart';
 import '../../blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
 import '../../blocs/supplier_credit_notes/supplier_credit_notes_state.dart';
 import '../../blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
-import '../../screens/create_supplier_credit_note_screen.dart';
+import 'forms/mobile_supplier_credit_note_form_screen.dart';
 
 
 class MobileSupplierCreditNotesScreen extends StatefulWidget {
@@ -145,6 +145,12 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileSupplierCreditNoteFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<SupplierCreditNotesBloc>().add(LoadSupplierCreditNotes());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -170,7 +176,7 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
           onFabPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CreateSupplierCreditNoteScreen()),
+                MaterialPageRoute(builder: (_) => const MobileSupplierCreditNoteFormScreen()),
               ).then((_) {
                 context.read<SupplierCreditNotesBloc>().add(LoadSupplierCreditNotes());
               });

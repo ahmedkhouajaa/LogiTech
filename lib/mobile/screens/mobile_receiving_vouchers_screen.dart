@@ -6,7 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
-import '../../screens/create_receiving_voucher_screen.dart';
+import 'forms/mobile_receiving_voucher_form_screen.dart';
 
 
 class MobileReceivingVouchersScreen extends StatefulWidget {
@@ -124,6 +124,12 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileReceivingVoucherFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<ReceivingVouchersBloc>().add(LoadReceivingVouchers());
+                });
               },
               onDelete: null,
             );
@@ -149,7 +155,7 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
           onFabPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CreateReceivingVoucherScreen()),
+                MaterialPageRoute(builder: (_) => const MobileReceivingVoucherFormScreen()),
               ).then((_) {
                 context.read<ReceivingVouchersBloc>().add(LoadReceivingVouchers());
               });

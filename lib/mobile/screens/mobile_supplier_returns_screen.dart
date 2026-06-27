@@ -8,7 +8,7 @@ import '../../widgets/sidebar_menu.dart';
 import '../../blocs/supplier_returns/supplier_returns_bloc.dart';
 import '../../blocs/supplier_returns/supplier_returns_state.dart';
 import '../../blocs/supplier_returns/supplier_returns_event.dart';
-import '../../screens/create_supplier_return_screen.dart';
+import 'forms/mobile_supplier_return_form_screen.dart';
 
 
 class MobileSupplierReturnsScreen extends StatefulWidget {
@@ -145,6 +145,12 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileSupplierReturnFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<SupplierReturnsBloc>().add(LoadSupplierReturns());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -170,7 +176,7 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
           onFabPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CreateSupplierReturnScreen()),
+                MaterialPageRoute(builder: (_) => const MobileSupplierReturnFormScreen()),
               ).then((_) {
                 context.read<SupplierReturnsBloc>().add(LoadSupplierReturns());
               });

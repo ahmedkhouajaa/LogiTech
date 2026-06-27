@@ -6,7 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/quotes/quotes_bloc.dart';
-import '../../screens/create_quote_screen.dart';
+import 'forms/mobile_quote_form_screen.dart';
 
 
 class MobileQuotesScreen extends StatefulWidget {
@@ -143,6 +143,12 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
               onTap: () {
               },
               onEdit: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileQuoteFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<QuotesBloc>().add(LoadQuotes());
+                });
               },
               onDelete: () => _handleDelete(id),
             );
@@ -168,7 +174,7 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
           onFabPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const CreateQuoteScreen()),
+                MaterialPageRoute(builder: (_) => const MobileQuoteFormScreen()),
               ).then((_) {
                 context.read<QuotesBloc>().add(LoadQuotes());
               });
