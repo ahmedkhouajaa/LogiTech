@@ -8,6 +8,29 @@ import '../utils/constants.dart';
 import 'mobile_drawer.dart';
 import 'mobile_dashboard_screen.dart';
 
+import 'screens/mobile_quotes_screen.dart';
+import 'screens/mobile_customer_orders_screen.dart';
+import 'screens/mobile_delivery_notes_screen.dart';
+import 'screens/mobile_invoices_screen.dart';
+import 'screens/mobile_stock_withdrawals_screen.dart';
+import 'screens/mobile_credit_notes_screen.dart';
+import 'screens/mobile_return_notes_screen.dart';
+import 'screens/mobile_supplier_orders_screen.dart';
+import 'screens/mobile_receiving_vouchers_screen.dart';
+import 'screens/mobile_purchase_invoices_screen.dart';
+import 'screens/mobile_supplier_credit_notes_screen.dart';
+import 'screens/mobile_supplier_returns_screen.dart';
+import 'screens/mobile_payments_screen.dart';
+import 'screens/mobile_transactions_screen.dart';
+import 'screens/mobile_checks_traites_screen.dart';
+import 'screens/mobile_customers_screen.dart';
+import 'screens/mobile_suppliers_screen.dart';
+import 'screens/mobile_products_screen.dart';
+import 'screens/mobile_stock_screen.dart';
+import 'screens/mobile_projects_screen.dart';
+import 'screens/mobile_withholding_tax_screen.dart';
+
+
 // Placeholder screens for bottom nav tabs until full mobile screens are built
 // These reuse the existing desktop screens which already handle isMobile layout
 import '../screens/invoices_screen.dart';
@@ -94,57 +117,57 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.dashboard:
         return const MobileDashboardScreen();
       case AppModule.customers:
-        return const CustomersScreen();
+        return const MobileCustomersScreen();
       case AppModule.suppliers:
-        return const SuppliersScreen();
+        return const MobileSuppliersScreen();
       case AppModule.products:
-        return const ProductsScreen();
+        return const MobileProductsScreen();
       case AppModule.productSettings:
         return const ProductSettingsScreen();
       case AppModule.invoices:
-        return const InvoicesScreen();
+        return const MobileInvoicesScreen();
       case AppModule.customerOrders:
-        return const CustomerOrdersScreen();
+        return const MobileCustomerOrdersScreen();
       case AppModule.quotes:
-        return const QuotesScreen();
+        return const MobileQuotesScreen();
       case AppModule.deliveryNotes:
-        return const DeliveryNotesScreen();
+        return const MobileDeliveryNotesScreen();
       case AppModule.stockDashboard:
       case AppModule.stockMovements:
-        return const StockScreen();
+        return const MobileStockScreen();
       case AppModule.transactions:
-        return const TreasuryTransactionsScreen();
+        return const MobileTreasuryTransactionsScreen();
       case AppModule.checksTraites:
-        return const ChecksTraitesScreen();
+        return const MobileChecksTraitesScreen();
       case AppModule.projects:
-        return const ProjectsScreen();
+        return const MobileProjectsScreen();
       case AppModule.reports:
         return const ReportsScreen();
       case AppModule.settings:
         return const SettingsScreen();
       case AppModule.payments:
-        return const PaymentsScreen();
+        return const MobilePaymentsScreen();
       case AppModule.purchaseInvoices:
-        return const PurchaseInvoicesScreen();
+        return const MobilePurchaseInvoicesScreen();
       case AppModule.supplierOrders:
-        return const SupplierOrdersScreen();
+        return const MobileSupplierOrdersScreen();
       case AppModule.receivingVouchers:
-        return const ReceivingVouchersScreen();
+        return const MobileReceivingVouchersScreen();
       case AppModule.withholdingTaxSales:
       case AppModule.withholdingTaxPurchase:
-        return WithholdingTaxScreen(isSales: _activeModule == AppModule.withholdingTaxSales);
+        return MobileWithholdingTaxScreen(isSales: _activeModule == AppModule.withholdingTaxSales);
       case AppModule.warehouses:
         return const WarehousesScreen();
       case AppModule.exitVouchers:
-        return const StockWithdrawalsScreen();
+        return const MobileStockWithdrawalsScreen();
       case AppModule.returnVouchers:
-        return const ReturnNotesScreen();
+        return const MobileReturnNotesScreen();
       case AppModule.creditNotes:
-        return const CreditNotesScreen();
+        return const MobileCreditNotesScreen();
       case AppModule.supplierReturns:
-        return const SupplierReturnsScreen();
+        return const MobileSupplierReturnsScreen();
       case AppModule.supplierCreditNotes:
-        return const SupplierCreditNotesScreen();
+        return const MobileSupplierCreditNotesScreen();
       case AppModule.accounts:
         return const TreasuryAccountsScreen();
       case AppModule.companyInfo:
