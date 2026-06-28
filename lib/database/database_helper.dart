@@ -2485,12 +2485,55 @@ class DatabaseHelper {
       WHERE q.is_deleted = 0 
       ORDER BY q.created_at DESC
     ''');
-    return maps.map((m) => Quote.fromMap(m)).toList();
+    
+    List<Quote> quotes = [];
+    for (var m in maps) {
+      final quote = Quote.fromMap(m);
+      final items = await getQuoteItems(quote.id);
+      quotes.add(quote.copyWith(items: items));
+    }
+    return quotes;
+  }
+
+  Future<Quote?> getQuote(String id) async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT q.*, c.name as customer_name 
+      FROM quotes q 
+      LEFT JOIN customers c ON q.customer_id = c.id 
+      WHERE q.id = ?
+    ''', [id]);
+    if (maps.isEmpty) return null;
+    final quote = Quote.fromMap(maps.first);
+    final items = await getQuoteItems(id);
+    return quote.copyWith(items: items);
+  }
+
+  Future<List<QuoteItem>> getQuoteItems(String quoteId) async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT qi.*, p.name as product_name 
+      FROM quote_items qi 
+      LEFT JOIN products p ON qi.product_id = p.id 
+      WHERE qi.quote_id = ?
+    ''', [quoteId]);
+    return maps.map((m) => QuoteItem.fromMap(m)).toList();
   }
 
   Future<void> insertQuote(Quote quote) async {
     await insert('quotes', quote.toMap());
     final db = await database;
+    for (final item in quote.items) {
+      await db.insert('quote_items', item.toMap());
+    }
+  }
+
+  Future<void> updateQuote(Quote quote) async {
+    await update('quotes', quote.toMap(), quote.id);
+    final db = await database;
+    // Delete existing items
+    await db.delete('quote_items', where: 'quote_id = ?', whereArgs: [quote.id]);
+    // Insert new items
     for (final item in quote.items) {
       await db.insert('quote_items', item.toMap());
     }

@@ -43,7 +43,7 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
     try { await DatabaseHelper.instance.insertQuote(event.quote); add(LoadQuotes()); } catch (e) { emit(QuotesError(e.toString())); }
   }
   Future<void> _onUpdate(UpdateQuote event, Emitter<QuotesState> emit) async {
-    try { await DatabaseHelper.instance.update('quotes', event.quote.toMap(), event.quote.id); add(LoadQuotes()); } catch (e) { emit(QuotesError(e.toString())); }
+    try { await DatabaseHelper.instance.updateQuote(event.quote); add(LoadQuotes()); } catch (e) { emit(QuotesError(e.toString())); }
   }
   Future<void> _onUpdateStatus(UpdateQuoteStatus event, Emitter<QuotesState> emit) async {
     try {

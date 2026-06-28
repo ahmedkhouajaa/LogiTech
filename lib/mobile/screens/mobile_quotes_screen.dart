@@ -3,10 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/constants.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
-import '../widgets/mobile_generic_card.dart';
+import '../widgets/mobile_devis_card.dart';
+import 'mobile_devis_detail_screen.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/quotes/quotes_bloc.dart';
 import 'forms/mobile_quote_form_screen.dart';
+import '../../models/quote.dart';
 
 
 class MobileQuotesScreen extends StatefulWidget {
@@ -111,46 +113,17 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
           isEmpty = filteredItems.isEmpty;
           
           cards = filteredItems.map((item) {
-            String reference = 'N/A';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? 'N/A').toString(); } catch (_) {}
-            
-            String status = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                try { status = (s as dynamic).label ?? s.toString(); } catch (_) { status = s.toString(); }
-              }
-            } catch (_) {}
-            
-            String? name;
-            try { name = (item as dynamic).customerName ?? (item as dynamic).supplierName ?? (item as dynamic).companyName ?? (item as dynamic).name; } catch (_) {}
-            
-            DateTime? date;
-            try { date = (item as dynamic).date ?? (item as dynamic).createdAt; } catch (_) {}
-            
-            double amount = 0;
-            try { amount = ((item as dynamic).totalTTC ?? (item as dynamic).amount ?? (item as dynamic).price ?? 0.0).toDouble(); } catch (_) {}
-            
-            String id = '';
-            try { id = (item as dynamic).id; } catch (_) {}
-
-            return MobileGenericCard(
-              reference: reference,
-              status: status,
-              name: name,
-              date: date,
-              amount: amount,
+            final quote = item as Quote;
+            return MobileDevisCard(
+              quote: quote,
               onTap: () {
-              },
-              onEdit: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobileQuoteFormScreen(existing: item)),
+                  MaterialPageRoute(builder: (_) => MobileDevisDetailScreen(quote: quote)),
                 ).then((_) {
                   context.read<QuotesBloc>().add(LoadQuotes());
                 });
               },
-              onDelete: () => _handleDelete(id),
             );
           }).toList();
         }
