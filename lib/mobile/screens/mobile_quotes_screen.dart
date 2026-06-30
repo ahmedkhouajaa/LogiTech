@@ -84,7 +84,7 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
             try {
               final s = (item as dynamic).status;
               if (s != null) {
-                try { statusStr = (s as dynamic).label ?? s.toString(); } catch (_) { statusStr = s.toString(); }
+                statusStr = translateStatus(s.toString());
               }
             } catch (_) {}
 

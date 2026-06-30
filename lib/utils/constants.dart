@@ -585,3 +585,28 @@ class DocPrefix {
   static const String paymentIn = 'PAI';
   static const String paymentOut = 'DEB';
 }
+
+
+String translateStatus(String s) {
+  // Quotes
+  if (s == 'draft') return 'Brouillon';
+  if (s == 'sent') return 'Envoyé';
+  if (s == 'accepted') return 'Accepté';
+  if (s == 'rejected') return 'Rejeté';
+  if (s == 'invoiced') return 'Facturé';
+  
+  // Orders
+  if (s == 'created') return 'Créé';
+  if (s == 'inProgress') return 'En cours';
+  if (s == 'delivered') return 'Livré';
+  if (s == 'cancelled') return 'Annulé';
+  if (s == 'validated') return 'Validé';
+  if (s == 'validatedAndInvoiced') return 'Validée et facturée';
+  
+  // Invoices
+  if (s == 'unpaid') return 'Non payée';
+  if (s == 'paid') return 'Payée';
+  if (s == 'partiallyPaid') return 'Partiellement payée';
+  
+  return s;
+}

@@ -19,6 +19,12 @@ class SyncService {
 
   void startPeriodicSync() {
     _syncTimer?.cancel();
+    
+    // Trigger an initial sync shortly after app launch
+    Future.delayed(const Duration(seconds: 2), () {
+      triggerSync();
+    });
+    
     _syncTimer = Timer.periodic(const Duration(minutes: 5), (_) => triggerSync());
     
     // Trigger sync when coming online, with a delay to let native network adapters stabilize
@@ -54,14 +60,16 @@ class SyncService {
             final dataJson = item['data_json'] as String;
             
             final docRef = FirebaseFirestore.instance.collection(tableName).doc(recordId);
-            
             if (operation == 'DELETE') {
-              await docRef.delete();
+              // Convert hard-delete to soft-delete in Firebase so other devices can pull it
+              final dataToMerge = {'is_deleted': 1, 'updated_at': DateTime.now().toUtc().toIso8601String()};
+              await docRef.set(dataToMerge, SetOptions(merge: true));
             } else {
               final Map<String, dynamic> data = jsonDecode(dataJson);
+              // Force updated_at to be UTC to prevent timezone string comparison bugs across devices
+              data['updated_at'] = DateTime.now().toUtc().toIso8601String();
               await docRef.set(data, SetOptions(merge: true));
             }
-            
             await DatabaseHelper.instance.markSynced(item['id'] as int);
           } catch (e) {
             await DatabaseHelper.instance.markSyncError(item['id'] as int, e.toString());
@@ -71,9 +79,45 @@ class SyncService {
       
       // Pulling changes from Firestore
       final prefs = await SharedPreferences.getInstance();
-      final lastSyncStr = prefs.getString('last_sync_time') ?? '1970-01-01T00:00:00.000Z';
+      String lastSyncStr = prefs.getString('last_sync_time') ?? '1970-01-01T00:00:00.000Z';
       
-      final tablesToPull = ['customers', 'suppliers', 'products', 'invoices', 'quotes'];
+      // Convert old local-time strings to UTC to fix timezone mismatch
+      if (!lastSyncStr.endsWith('Z')) {
+        try {
+          lastSyncStr = DateTime.parse(lastSyncStr).toUtc().toIso8601String();
+        } catch (_) {}
+      }
+      
+      // Add a 24-hour safety buffer to catch records from devices with incorrect system clocks
+      try {
+        final lastSyncDate = DateTime.parse(lastSyncStr);
+        lastSyncStr = lastSyncDate.subtract(const Duration(hours: 24)).toIso8601String();
+      } catch (_) {}
+      
+      final tablesToPull = [
+        'customers', 'suppliers', 'products', 'invoices', 'quotes',
+        'customer_orders', 'delivery_notes', 'return_notes', 'credit_notes',
+        'bons_sortie', 'receiving_vouchers', 'purchase_invoices', 'supplier_returns',
+        'supplier_orders', 'supplier_credit_notes', 'stock_movements', 'projects',
+        'transactions', 'check_traites', 'payment_accounts', 'product_families',
+        'warehouses', 'treasury_accounts'
+      ];
+      
+      final itemTableMap = {
+        'quotes': {'table': 'quote_items', 'fk': 'quote_id'},
+        'invoices': {'table': 'invoice_items', 'fk': 'invoice_id'},
+        'customer_orders': {'table': 'customer_order_items', 'fk': 'order_id'},
+        'delivery_notes': {'table': 'delivery_note_items', 'fk': 'delivery_note_id'},
+        'return_notes': {'table': 'return_note_items', 'fk': 'return_note_id'},
+        'credit_notes': {'table': 'credit_note_items', 'fk': 'credit_note_id'},
+        'bons_sortie': {'table': 'bons_sortie_items', 'fk': 'withdrawal_id'},
+        'receiving_vouchers': {'table': 'receiving_voucher_items', 'fk': 'voucher_id'},
+        'purchase_invoices': {'table': 'purchase_invoice_items', 'fk': 'invoice_id'},
+        'supplier_returns': {'table': 'supplier_return_items', 'fk': 'return_id'},
+        'supplier_orders': {'table': 'supplier_order_items', 'fk': 'order_id'},
+        'supplier_credit_notes': {'table': 'supplier_credit_note_items', 'fk': 'supplier_credit_note_id'},
+      };
+
       final db = await DatabaseHelper.instance.database;
       
       for (final table in tablesToPull) {
@@ -84,11 +128,44 @@ class SyncService {
             
         for (final doc in snapshot.docs) {
           final data = doc.data();
-          await db.insert(table, data, conflictAlgorithm: ConflictAlgorithm.replace);
+          data['id'] = doc.id; // Ensure ID is present even for partial documents
+          
+          if (data.containsKey('items')) {
+            final itemsInfo = itemTableMap[table];
+            if (itemsInfo != null) {
+              final itemsList = data['items'] as List<dynamic>?;
+              final itemTable = itemsInfo['table']!;
+              final fkColumn = itemsInfo['fk']!;
+              
+              try {
+                await db.transaction((txn) async {
+                  await txn.delete(itemTable, where: '$fkColumn = ?', whereArgs: [data['id']]);
+                  if (itemsList != null) {
+                    for (final item in itemsList) {
+                      final itemMap = Map<String, dynamic>.from(item as Map);
+                      await txn.insert(itemTable, itemMap, conflictAlgorithm: ConflictAlgorithm.replace);
+                    }
+                  }
+                });
+              } catch (e) {
+                print('Error syncing items for $table ${data['id']}: $e');
+              }
+            }
+            data.remove('items');
+          }
+          
+          try {
+            final changes = await db.update(table, data, where: 'id = ?', whereArgs: [data['id']]);
+            if (changes == 0) {
+              await db.insert(table, data, conflictAlgorithm: ConflictAlgorithm.replace);
+            }
+          } catch (e) {
+            print('Error syncing $table ${data['id']}: $e');
+          }
         }
       }
       
-      await prefs.setString('last_sync_time', DateTime.now().toIso8601String());
+      await prefs.setString('last_sync_time', DateTime.now().toUtc().toIso8601String());
       
       _setStatus(SyncStatus.success);
     } catch (e) {

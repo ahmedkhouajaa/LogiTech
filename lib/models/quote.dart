@@ -54,6 +54,7 @@ class Quote {
         'converted_to_delivery_id': convertedToDeliveryId,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
+        'items': items.map((i) => i.toMap()).toList(),
       };
 
   factory Quote.fromMap(Map<String, dynamic> map) => Quote(

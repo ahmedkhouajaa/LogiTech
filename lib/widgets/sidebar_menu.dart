@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
+import '../database/database_helper.dart';
+import '../services/sync_service.dart';
 
 enum AppModule {
   dashboard,
@@ -136,6 +138,32 @@ class _SidebarMenuState extends State<SidebarMenu> {
                   _buildItem(AppModule.companyInfo, Icons.business_rounded, 'Informations de la societe'),
                   _buildItem(AppModule.documentTemplates, Icons.description_rounded, 'Modeles de documents'),
                   const SizedBox(height: 16),
+                  
+                  // TEMP SYNC BUTTON
+                  if (!widget.isCollapsed)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () async {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Starting Force Sync... Please wait!')),
+                          );
+                          await DatabaseHelper.instance.forceSyncAllExistingDataWithItems();
+                          // Force upload to Firebase immediately!
+                          await SyncService.instance.triggerSync();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Force Sync Complete! Check Mobile now.')),
+                          );
+                        },
+                        icon: const Icon(Icons.sync_problem),
+                        label: const Text('FORCE SYNC FIX'),
+                      ),
+                    ),
+                    
                 ],
               ),
             ),

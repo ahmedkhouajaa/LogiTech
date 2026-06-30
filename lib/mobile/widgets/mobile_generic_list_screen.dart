@@ -4,7 +4,7 @@ import '../../widgets/sidebar_menu.dart';
 import 'mobile_search_bar.dart';
 import 'mobile_filter_chips.dart';
 import 'mobile_empty_state.dart';
-import '../mobile_drawer.dart';
+import '../../services/sync_service.dart';
 
 class MobileGenericListScreen extends StatelessWidget {
   final String title;
@@ -63,6 +63,7 @@ class MobileGenericListScreen extends StatelessWidget {
                 ? const Center(child: CircularProgressIndicator())
                 : RefreshIndicator(
                     onRefresh: () async {
+                      await SyncService.instance.triggerSync();
                       onRefresh();
                     },
                     child: isEmpty

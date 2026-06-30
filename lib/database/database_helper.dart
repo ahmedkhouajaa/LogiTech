@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../services/sync_service.dart';
 import '../models/document_template.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common/sqlite_api.dart';
@@ -30,6 +31,81 @@ import '../models/supplier_credit_note.dart';
 import '../utils/constants.dart';
 
 class DatabaseHelper {
+
+  Future<void> forceSyncAllExistingDataWithItems() async {
+    final db = await database;
+    
+    // Quotes
+    final quotes = await getQuotes();
+    for (var q in quotes) {
+      await updateQuote(q);
+    }
+    
+    // Invoices
+    final invoices = await getInvoices();
+    for (var i in invoices) {
+      await updateInvoice(i);
+    }
+    
+    // Customer Orders
+    final customerOrders = await getCustomerOrders();
+    for (var o in customerOrders) {
+      await updateCustomerOrder(o);
+    }
+    
+    // Delivery Notes
+    final deliveryNotes = await getDeliveryNotes();
+    for (var d in deliveryNotes) {
+      await updateDeliveryNote(d);
+    }
+    
+    // Credit Notes
+    final creditNotes = await getCreditNotes();
+    for (var c in creditNotes) {
+      await updateCreditNote(c);
+    }
+    
+    // Return Notes
+    final returnNotes = await getReturnNotes();
+    for (var r in returnNotes) {
+      await updateReturnNote(r);
+    }
+    
+    // Bons Sortie / Stock Withdrawals
+    final withdrawals = await getStockWithdrawals();
+    for (var w in withdrawals) {
+      await updateStockWithdrawal(w);
+    }
+    
+    // Supplier Orders
+    final supplierOrders = await getSupplierOrders();
+    for (var so in supplierOrders) {
+      await updateSupplierOrder(so);
+    }
+    
+    // Receiving Vouchers (Skipping as it uses Map instead of model)
+    
+    // Purchase Invoices
+    final purchaseInvoices = await getPurchaseInvoices();
+    for (var p in purchaseInvoices) {
+      await updatePurchaseInvoice(p);
+    }
+    
+    // Supplier Returns
+    final supplierReturns = await getSupplierReturns();
+    for (var sr in supplierReturns) {
+      await updateSupplierReturn(sr);
+    }
+    
+    // Supplier Credit Notes
+    final supplierCreditNotes = await getSupplierCreditNotes();
+    for (var scn in supplierCreditNotes) {
+      await updateSupplierCreditNote(scn);
+    }
+    
+    print('✅ FORCE SYNC COMPLETE! All local data pushed to sync queue with items.');
+  }
+
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
   final _uuid = const Uuid();
@@ -49,7 +125,7 @@ class DatabaseHelper {
     final path = p.join(dir.path, 'business_manager_pro.db');
     return await openDatabase(
       path,
-      version: 40,
+      version: 41,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -817,6 +893,27 @@ class DatabaseHelper {
           PRIMARY KEY (project_id, invoice_id)
         )
       ''');
+    }
+    if (oldVersion < 41) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS supplier_credit_note_items(
+            id TEXT PRIMARY KEY,
+            supplier_credit_note_id TEXT,
+            product_id TEXT,
+            designation TEXT,
+            quantity REAL,
+            unit_price REAL,
+            tva_rate REAL,
+            total_ht REAL,
+            total_ttc REAL,
+            FOREIGN KEY (supplier_credit_note_id) REFERENCES supplier_credit_notes(id) ON DELETE CASCADE,
+            FOREIGN KEY (product_id) REFERENCES products(id)
+          )
+        ''');
+      } catch (e) {
+        // Ignore if already exists
+      }
     }
   }
 
@@ -1689,6 +1786,22 @@ class DatabaseHelper {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS supplier_credit_note_items(
+        id TEXT PRIMARY KEY,
+        supplier_credit_note_id TEXT,
+        product_id TEXT,
+        designation TEXT,
+        quantity REAL,
+        unit_price REAL,
+        tva_rate REAL,
+        total_ht REAL,
+        total_ttc REAL,
+        FOREIGN KEY (supplier_credit_note_id) REFERENCES supplier_credit_notes(id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products(id)
+      )
+    ''');
+
     // ─── Supplier Returns ─────────────────────────────────────────
     await db.execute('''
       CREATE TABLE IF NOT EXISTS supplier_returns (
@@ -2097,20 +2210,22 @@ class DatabaseHelper {
   Future<int> insert(String table, Map<String, dynamic> data) async {
     final db = await database;
     await _addToSyncQueue(table, data['id'] as String, 'INSERT', data);
-    return await db.insert(table, data, conflictAlgorithm: ConflictAlgorithm.replace);
+    final sqliteData = Map<String, dynamic>.from(data)..remove('items');
+    return await db.insert(table, sqliteData, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<int> update(String table, Map<String, dynamic> data, String id) async {
     final db = await database;
     data['updated_at'] = DateTime.now().toIso8601String();
     await _addToSyncQueue(table, id, 'UPDATE', data);
-    return await db.update(table, data, where: 'id = ?', whereArgs: [id]);
+    final sqliteData = Map<String, dynamic>.from(data)..remove('items');
+    return await db.update(table, sqliteData, where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> softDelete(String table, String id) async {
     final db = await database;
-    final data = {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()};
-    await _addToSyncQueue(table, id, 'DELETE', data);
+    final data = {'is_deleted': 1, 'updated_at': DateTime.now().toUtc().toIso8601String()};
+    await _addToSyncQueue(table, id, 'UPDATE', data);
     return await db.update(table, data, where: 'id = ?', whereArgs: [id]);
   }
 
@@ -2136,6 +2251,8 @@ class DatabaseHelper {
       'created_at': DateTime.now().toIso8601String(),
       'status': 'pending',
     });
+    // Trigger sync asynchronously after adding to queue
+    SyncService.instance.triggerSync();
   }
 
   Future<List<Map<String, dynamic>>> getPendingSyncItems() async {
@@ -2352,7 +2469,7 @@ class DatabaseHelper {
   Future<void> insertCreditNote(CreditNote cn) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.insert('credit_notes', cn.toMap());
+      await txn.insert('credit_notes', Map<String, dynamic>.from(cn.toMap())..remove('items'));
       for (final item in cn.items) {
         await txn.insert('credit_note_items', item.toMap(cn.id));
       }
@@ -2364,6 +2481,7 @@ class DatabaseHelper {
         );
       }
     });
+    await _addToSyncQueue('credit_notes', cn.id, 'INSERT', cn.toMap());
   }
 
   Future<void> updateCreditNote(CreditNote cn) async {
@@ -2371,7 +2489,7 @@ class DatabaseHelper {
     await db.transaction((txn) async {
       await txn.update(
         'credit_notes',
-        cn.toMap(),
+        Map<String, dynamic>.from(cn.toMap())..remove('items'),
         where: 'id = ?',
         whereArgs: [cn.id],
       );
@@ -2386,6 +2504,7 @@ class DatabaseHelper {
         await txn.insert('credit_note_items', item.toMap(cn.id));
       }
     });
+    await _addToSyncQueue('credit_notes', cn.id, 'UPDATE', cn.toMap());
   }
 
   Future<void> deleteCreditNote(String id) async {
@@ -2552,7 +2671,7 @@ class DatabaseHelper {
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
              p.name AS project_name
       FROM delivery_notes dn
-      JOIN customers c ON dn.customer_id = c.id
+      LEFT JOIN customers c ON dn.customer_id = c.id
       LEFT JOIN projects p ON dn.project_id = p.id
       WHERE dn.is_deleted = 0
     ''';
@@ -2584,7 +2703,7 @@ class DatabaseHelper {
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
              p.name AS project_name
       FROM delivery_notes dn
-      JOIN customers c ON dn.customer_id = c.id
+      LEFT JOIN customers c ON dn.customer_id = c.id
       LEFT JOIN projects p ON dn.project_id = p.id
       WHERE dn.id = ? AND dn.is_deleted = 0
     ''', [id]);
@@ -2602,7 +2721,7 @@ class DatabaseHelper {
     final db = await database;
     final data = note.toMap();
     await db.transaction((txn) async {
-      await txn.insert('delivery_notes', data);
+      await txn.insert('delivery_notes', Map<String, dynamic>.from(data)..remove('items'));
       for (var item in note.items) {
         await txn.insert('delivery_note_items', item.toMap());
       }
@@ -2615,7 +2734,7 @@ class DatabaseHelper {
     final data = note.toMap();
     data['updated_at'] = DateTime.now().toIso8601String();
     await db.transaction((txn) async {
-      await txn.update('delivery_notes', data,
+      await txn.update('delivery_notes', Map<String, dynamic>.from(data)..remove('items'),
           where: 'id = ?', whereArgs: [note.id]);
       await txn.delete('delivery_note_items',
           where: 'delivery_note_id = ?', whereArgs: [note.id]);
@@ -2655,7 +2774,7 @@ class DatabaseHelper {
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name
       FROM return_notes rn
-      JOIN customers c ON rn.customer_id = c.id
+      LEFT JOIN customers c ON rn.customer_id = c.id
       WHERE 1=1
     ''';
     final args = <dynamic>[];
@@ -2685,7 +2804,7 @@ class DatabaseHelper {
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name
       FROM return_notes rn
-      JOIN customers c ON rn.customer_id = c.id
+      LEFT JOIN customers c ON rn.customer_id = c.id
       WHERE rn.id = ?
     ''', [id]);
     if (rnResult.isEmpty) return null;
@@ -2702,7 +2821,7 @@ class DatabaseHelper {
     final db = await database;
     final data = note.toMap();
     await db.transaction((txn) async {
-      await txn.insert('return_notes', data);
+      await txn.insert('return_notes', Map<String, dynamic>.from(data)..remove('items'));
       for (var item in note.items) {
         await txn.insert('return_note_items', item.toMap());
       }
@@ -2715,7 +2834,7 @@ class DatabaseHelper {
     final data = note.toMap();
     data['updated_at'] = DateTime.now().toIso8601String();
     await db.transaction((txn) async {
-      await txn.update('return_notes', data,
+      await txn.update('return_notes', Map<String, dynamic>.from(data)..remove('items'),
           where: 'id = ?', whereArgs: [note.id]);
       await txn.delete('return_note_items',
           where: 'return_note_id = ?', whereArgs: [note.id]);
@@ -2758,7 +2877,7 @@ class DatabaseHelper {
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
              p.name AS project_name
       FROM bons_sortie sw
-      JOIN customers c ON sw.customer_id = c.id
+      LEFT JOIN customers c ON sw.customer_id = c.id
       LEFT JOIN projects p ON sw.project_id = p.id
       WHERE sw.is_deleted = 0
     ''';
@@ -2790,7 +2909,7 @@ class DatabaseHelper {
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
              p.name AS project_name
       FROM bons_sortie sw
-      JOIN customers c ON sw.customer_id = c.id
+      LEFT JOIN customers c ON sw.customer_id = c.id
       LEFT JOIN projects p ON sw.project_id = p.id
       WHERE sw.id = ? AND sw.is_deleted = 0
     ''', [id]);
@@ -2808,7 +2927,7 @@ class DatabaseHelper {
     final db = await database;
     final data = sw.toMap();
     await db.transaction((txn) async {
-      await txn.insert('bons_sortie', data);
+      await txn.insert('bons_sortie', Map<String, dynamic>.from(data)..remove('items'));
       for (var item in sw.items) {
         await txn.insert('bons_sortie_items', item.toMap());
       }
@@ -2821,7 +2940,7 @@ class DatabaseHelper {
     final data = sw.toMap();
     data['updated_at'] = DateTime.now().toIso8601String();
     await db.transaction((txn) async {
-      await txn.update('bons_sortie', data,
+      await txn.update('bons_sortie', Map<String, dynamic>.from(data)..remove('items'),
           where: 'id = ?', whereArgs: [sw.id]);
       await txn.delete('bons_sortie_items',
           where: 'withdrawal_id = ?', whereArgs: [sw.id]);
@@ -2886,6 +3005,7 @@ class DatabaseHelper {
       data['payment_id'] = paymentId;
     }
     await db.update('checks_traites', data, where: 'id = ?', whereArgs: [id]);
+    await _addToSyncQueue('checks_traites', id, 'UPDATE', data);
   }
 
   Future<void> deleteCheckTraite(String id) async {
@@ -2949,6 +3069,7 @@ class DatabaseHelper {
       'UPDATE products SET stock_qty = stock_qty + ?, updated_at = ? WHERE id = ?',
       [movement.quantity * sign, DateTime.now().toIso8601String(), movement.productId],
     );
+    await _addToSyncQueue('stock_movements', movement.id, 'INSERT', movement.toMap());
   }
 
   // ─── Warehouses ─────────────────────────────────────────────────
@@ -3032,21 +3153,16 @@ class DatabaseHelper {
   }
 
   Future<void> insertPurchaseInvoice(PurchaseInvoice invoice) async {
+    await insert('purchase_invoices', invoice.toMap());
     final db = await database;
-    await db.insert('purchase_invoices', invoice.toMap());
     for (final item in invoice.items) {
       await db.insert('purchase_invoice_items', item.toMap());
     }
   }
 
   Future<void> updatePurchaseInvoice(PurchaseInvoice invoice) async {
+    await update('purchase_invoices', invoice.toMap(), invoice.id);
     final db = await database;
-    await db.update(
-      'purchase_invoices',
-      invoice.toMap(),
-      where: 'id = ?',
-      whereArgs: [invoice.id],
-    );
     
     // Delete old items
     await db.delete('purchase_invoice_items', where: 'invoice_id = ?', whereArgs: [invoice.id]);
@@ -3099,6 +3215,7 @@ class DatabaseHelper {
   Future<void> insertProductFamily(ProductFamily family) async {
     final db = await database;
     await db.insert('product_families', family.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    await _addToSyncQueue('product_families', family.id, 'INSERT', family.toMap());
   }
 
   Future<void> updateProductFamily(ProductFamily family) async {
@@ -3109,6 +3226,7 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [family.id],
     );
+    await _addToSyncQueue('product_families', family.id, 'UPDATE', family.toMap());
   }
 
   Future<void> deleteProductFamily(String id) async {
@@ -3187,7 +3305,7 @@ class DatabaseHelper {
   Future<void> insertReceivingVoucher(Map<String, dynamic> voucherMap, List<Map<String, dynamic>> itemsMap) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.insert('receiving_vouchers', voucherMap);
+      await txn.insert('receiving_vouchers', Map<String, dynamic>.from(voucherMap)..remove('items'));
       for (var item in itemsMap) {
         await txn.insert('receiving_voucher_items', item);
       }
@@ -3198,7 +3316,7 @@ class DatabaseHelper {
   Future<void> updateReceivingVoucher(Map<String, dynamic> voucherMap, List<Map<String, dynamic>> itemsMap) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.update('receiving_vouchers', voucherMap, where: 'id = ?', whereArgs: [voucherMap['id']]);
+      await txn.update('receiving_vouchers', Map<String, dynamic>.from(voucherMap)..remove('items'), where: 'id = ?', whereArgs: [voucherMap['id']]);
       await txn.delete('receiving_voucher_items', where: 'voucher_id = ?', whereArgs: [voucherMap['id']]);
       for (var item in itemsMap) {
         await txn.insert('receiving_voucher_items', item);
@@ -3262,7 +3380,7 @@ class DatabaseHelper {
   Future<void> insertSupplierReturn(SupplierReturn sr) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.insert('supplier_returns', sr.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      await txn.insert('supplier_returns', Map<String, dynamic>.from(sr.toMap()..remove('items')), conflictAlgorithm: ConflictAlgorithm.replace);
       for (var item in sr.items) {
         await txn.insert('supplier_return_items', item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
       }
@@ -3275,7 +3393,7 @@ class DatabaseHelper {
     await db.transaction((txn) async {
       final map = sr.toMap();
       map['updated_at'] = DateTime.now().toIso8601String();
-      await txn.update('supplier_returns', map, where: 'id = ?', whereArgs: [sr.id]);
+      await txn.update('supplier_returns', Map<String, dynamic>.from(map)..remove('items'), where: 'id = ?', whereArgs: [sr.id]);
       
       await txn.delete('supplier_return_items', where: 'return_id = ?', whereArgs: [sr.id]);
       for (var item in sr.items) {
@@ -3316,12 +3434,14 @@ class DatabaseHelper {
     final db = await database;
     await db.insert('payment_accounts', account.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace);
+    await _addToSyncQueue('payment_accounts', account.id, 'INSERT', account.toMap());
   }
 
   Future<void> updatePaymentAccount(PaymentAccount account) async {
     final db = await database;
     await db.update('payment_accounts', account.toMap(),
         where: 'id = ?', whereArgs: [account.id]);
+    await _addToSyncQueue('payment_accounts', account.id, 'UPDATE', account.toMap());
   }
 
   // ─── Payments ──────────────────────────────────────────────────
@@ -3451,7 +3571,7 @@ class DatabaseHelper {
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
              p.name AS project_name
       FROM customer_orders o
-      JOIN customers c ON o.customer_id = c.id
+      LEFT JOIN customers c ON o.customer_id = c.id
       LEFT JOIN projects p ON o.project_id = p.id
       WHERE o.is_deleted = 0
     ''';
@@ -3484,7 +3604,7 @@ class DatabaseHelper {
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
              p.name AS project_name
       FROM customer_orders o
-      JOIN customers c ON o.customer_id = c.id
+      LEFT JOIN customers c ON o.customer_id = c.id
       LEFT JOIN projects p ON o.project_id = p.id
       WHERE o.id = ? AND o.is_deleted = 0
     ''', [id]);
@@ -3505,7 +3625,7 @@ class DatabaseHelper {
     final db = await database;
     final data = order.toMap();
     await db.transaction((txn) async {
-      await txn.insert('customer_orders', data);
+      await txn.insert('customer_orders', Map<String, dynamic>.from(data)..remove('items'));
       for (var item in order.items) {
         await txn.insert('customer_order_items', item.toMap());
       }
@@ -3520,7 +3640,7 @@ class DatabaseHelper {
     await db.transaction((txn) async {
       await txn.update(
         'customer_orders',
-        data,
+        Map<String, dynamic>.from(data)..remove('items'),
         where: 'id = ?',
         whereArgs: [order.id],
       );
@@ -3597,7 +3717,7 @@ class DatabaseHelper {
              s.name AS supplier_name,
              p.name AS project_name
       FROM supplier_orders so
-      JOIN suppliers s ON so.supplier_id = s.id
+      LEFT JOIN suppliers s ON so.supplier_id = s.id
       LEFT JOIN projects p ON so.project_id = p.id
       WHERE $where
       ORDER BY so.date DESC, so.created_at DESC
@@ -3623,7 +3743,7 @@ class DatabaseHelper {
              s.name AS supplier_name,
              p.name AS project_name
       FROM supplier_orders so
-      JOIN suppliers s ON so.supplier_id = s.id
+      LEFT JOIN suppliers s ON so.supplier_id = s.id
       LEFT JOIN projects p ON so.project_id = p.id
       WHERE so.id = ? AND so.is_deleted = 0
     ''', [id]);
@@ -3644,7 +3764,7 @@ class DatabaseHelper {
     final db = await database;
     final data = order.toMap();
     await db.transaction((txn) async {
-      await txn.insert('supplier_orders', data);
+      await txn.insert('supplier_orders', Map<String, dynamic>.from(data)..remove('items'));
       for (var item in order.items) {
         await txn.insert('supplier_order_items', item.toMap());
       }
@@ -3660,7 +3780,7 @@ class DatabaseHelper {
     await db.transaction((txn) async {
       await txn.update(
         'supplier_orders',
-        data,
+        Map<String, dynamic>.from(data)..remove('items'),
         where: 'id = ?',
         whereArgs: [order.id],
       );
@@ -3715,6 +3835,7 @@ class DatabaseHelper {
   Future<void> updateTreasuryAccount(String id, Map<String, dynamic> data) async {
     final db = await database;
     await db.update('treasury_accounts', data, where: 'id = ?', whereArgs: [id]);
+    await _addToSyncQueue('treasury_accounts', id, 'UPDATE', data);
   }
 
   Future<void> deleteTreasuryAccount(String id) async {
@@ -3747,7 +3868,7 @@ class DatabaseHelper {
   Future<void> createTreasuryTransaction(Map<String, dynamic> data) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.insert('treasury_transactions', data);
+      await txn.insert('treasury_transactions', Map<String, dynamic>.from(data)..remove('items'));
       
       // Update account balance
       final amount = data['amount'] as double;
@@ -3852,11 +3973,12 @@ class DatabaseHelper {
   Future<void> insertSupplierCreditNote(SupplierCreditNote note) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.insert('supplier_credit_notes', note.toMap());
+      await txn.insert('supplier_credit_notes', Map<String, dynamic>.from(note.toMap())..remove('items'));
       for (var item in note.items) {
         await txn.insert('supplier_credit_note_items', item.toMap());
       }
     });
+    await _addToSyncQueue('supplier_credit_notes', note.id, 'INSERT', note.toMap());
   }
 
   Future<void> updateSupplierCreditNote(SupplierCreditNote note) async {
@@ -3864,7 +3986,7 @@ class DatabaseHelper {
     await db.transaction((txn) async {
       await txn.update(
         'supplier_credit_notes',
-        {...note.toMap(), 'updated_at': DateTime.now().toIso8601String()},
+        Map<String, dynamic>.from(note.toMap())..remove('items')..['updated_at'] = DateTime.now().toIso8601String(),
         where: 'id = ?',
         whereArgs: [note.id],
       );
@@ -3879,6 +4001,7 @@ class DatabaseHelper {
         await txn.insert('supplier_credit_note_items', item.toMap());
       }
     });
+    await _addToSyncQueue('supplier_credit_notes', note.id, 'UPDATE', note.toMap());
   }
 
   Future<void> deleteSupplierCreditNote(String id) async {
@@ -3922,6 +4045,7 @@ class DatabaseHelper {
   Future<void> insertDocumentTemplate(DocumentTemplate template) async {
     final db = await database;
     await db.insert('document_templates', template.toMap());
+    await _addToSyncQueue('document_templates', template.id, 'INSERT', template.toMap());
   }
 
   Future<void> updateDocumentTemplate(DocumentTemplate template) async {
@@ -3932,6 +4056,7 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [template.id],
     );
+    await _addToSyncQueue('document_templates', template.id, 'UPDATE', template.toMap());
   }
 
   Future<void> deleteDocumentTemplate(String id) async {

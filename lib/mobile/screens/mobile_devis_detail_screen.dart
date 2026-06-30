@@ -38,6 +38,7 @@ class MobileDevisDetailScreen extends StatefulWidget {
 
 class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
   late Quote currentQuote;
+  bool _isPopping = false;
 
   @override
   void initState() {
@@ -57,7 +58,10 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
             });
           } catch (_) {
             // Quote might have been deleted, pop the screen
-            Navigator.pop(context);
+            if (!_isPopping) {
+              _isPopping = true;
+              Navigator.pop(context);
+            }
           }
         }
       },
@@ -287,16 +291,17 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
       case 'delete':
         showDialog(
           context: context,
-          builder: (_) => AlertDialog(
+          builder: (dialogCtx) => AlertDialog(
             title: const Text('Confirmer la suppression'),
             content: const Text('Voulez-vous vraiment supprimer ce devis ?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(context);
+                  Navigator.pop(dialogCtx); // close dialog
                   context.read<QuotesBloc>().add(DeleteQuote(quote.id));
-                  Navigator.pop(context); // close details screen
+                  // We do NOT pop the details screen here. 
+                  // The BlocListener will automatically pop it when the quote is no longer found in the loaded state.
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
                 child: const Text('Supprimer', style: TextStyle(color: Colors.white)),

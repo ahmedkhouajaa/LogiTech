@@ -25,7 +25,7 @@ class MobileModuleConfig {
         return MobileModuleConfig(
           title: 'Commandes',
           fabText: 'Nouvelle commande',
-          filterOptions: ['Tous', 'En cours', 'Livrée', 'Annulée'],
+          filterOptions: ['Tous', 'Brouillon', 'Validée', 'Validée et facturée', 'En cours', 'Livrée', 'Annulée'],
         );
       case AppModule.deliveryNotes:
         return MobileModuleConfig(

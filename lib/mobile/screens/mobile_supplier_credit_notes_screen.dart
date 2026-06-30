@@ -84,7 +84,7 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
             try {
               final s = (item as dynamic).status;
               if (s != null) {
-                try { statusStr = (s as dynamic).label ?? s.toString(); } catch (_) { statusStr = s.toString(); }
+                statusStr = translateStatus(s.toString());
               }
             } catch (_) {}
 
@@ -120,7 +120,7 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
             try {
               final s = (item as dynamic).status;
               if (s != null) {
-                try { status = (s as dynamic).label ?? s.toString(); } catch (_) { status = s.toString(); }
+                status = translateStatus(s.toString());
               }
             } catch (_) {}
             

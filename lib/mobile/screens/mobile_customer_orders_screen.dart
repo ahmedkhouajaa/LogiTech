@@ -82,7 +82,7 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
             try {
               final s = (item as dynamic).status;
               if (s != null) {
-                try { statusStr = (s as dynamic).label ?? s.toString(); } catch (_) { statusStr = s.toString(); }
+                statusStr = translateStatus(s.toString());
               }
             } catch (_) {}
 
@@ -100,7 +100,9 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
             }
 
             if (_selectedFilter != 'Tous') {
-               if (statusStr.toLowerCase() != _selectedFilter.toLowerCase()) {
+               String s1 = statusStr.toLowerCase().replaceAll('é', 'e').replaceAll('è', 'e').replaceAll('ée', 'e');
+               String s2 = _selectedFilter.toLowerCase().replaceAll('é', 'e').replaceAll('è', 'e').replaceAll('ée', 'e');
+               if (s1 != s2 && !s2.startsWith(s1) && !s1.startsWith(s2)) {
                    matchesFilter = false;
                }
             }
@@ -118,7 +120,7 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
             try {
               final s = (item as dynamic).status;
               if (s != null) {
-                try { status = (s as dynamic).label ?? s.toString(); } catch (_) { status = s.toString(); }
+                status = translateStatus(s.toString());
               }
             } catch (_) {}
             

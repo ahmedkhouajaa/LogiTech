@@ -103,6 +103,7 @@ class ReceivingVoucher {
       'notes': notes,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'items': items.map((i) => i.toMap()).toList(),
     };
   }
 
