@@ -18,7 +18,8 @@ import '../widgets/dashboard_card.dart';
 enum SupplierReturnStatus {
   draft('Brouillon', AppColors.textSecondary),
   validated('Validé', AppColors.success),
-  canceled('Annulé', AppColors.error);
+  canceled('Annulé', AppColors.error),
+  paid('Remboursé', AppColors.success);
 
   final String label;
   final Color color;

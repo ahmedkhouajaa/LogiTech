@@ -41,7 +41,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
   bool _withTimbreFiscal = true;
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
-  InvoiceStatus _status = InvoiceStatus.draft;
+  InvoiceStatus _status = InvoiceStatus.unpaid;
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);

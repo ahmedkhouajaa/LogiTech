@@ -7,6 +7,7 @@ import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/payments/payments_bloc.dart';
 import 'forms/mobile_payment_form_screen.dart';
+import 'mobile_payment_detail_screen.dart';
 
 
 class MobilePaymentsScreen extends StatefulWidget {
@@ -78,19 +79,9 @@ class _MobilePaymentsScreenState extends State<MobilePaymentsScreen> {
             bool matchesSearch = true;
             bool matchesFilter = true;
 
-            String statusStr = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                statusStr = translateStatus(s.toString());
-              }
-            } catch (_) {}
-
-            String reference = '';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? '').toString(); } catch (_) {}
-            
-            String name = '';
-            try { name = ((item as dynamic).customerName ?? (item as dynamic).supplierName ?? (item as dynamic).companyName ?? (item as dynamic).name ?? '').toString(); } catch (_) {}
+            String statusStr = translateStatus(item.status);
+            String reference = item.paymentNumber;
+            String name = item.contactName ?? item.contactId;
 
             if (_searchQuery.isNotEmpty) {
               final query = _searchQuery.toLowerCase();
@@ -111,28 +102,12 @@ class _MobilePaymentsScreenState extends State<MobilePaymentsScreen> {
           isEmpty = filteredItems.isEmpty;
           
           cards = filteredItems.map((item) {
-            String reference = 'N/A';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? 'N/A').toString(); } catch (_) {}
-            
-            String status = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                status = translateStatus(s.toString());
-              }
-            } catch (_) {}
-            
-            String? name;
-            try { name = (item as dynamic).customerName ?? (item as dynamic).supplierName ?? (item as dynamic).companyName ?? (item as dynamic).name; } catch (_) {}
-            
-            DateTime? date;
-            try { date = (item as dynamic).date ?? (item as dynamic).createdAt; } catch (_) {}
-            
-            double amount = 0;
-            try { amount = ((item as dynamic).totalTTC ?? (item as dynamic).amount ?? (item as dynamic).price ?? 0.0).toDouble(); } catch (_) {}
-            
-            String id = '';
-            try { id = (item as dynamic).id; } catch (_) {}
+            String reference = item.paymentNumber;
+            String status = translateStatus(item.status);
+            String name = item.contactName ?? item.contactId;
+            DateTime date = item.paymentDate;
+            double amount = item.amount;
+            String id = item.id;
 
             return MobileGenericCard(
               reference: reference,
@@ -141,6 +116,12 @@ class _MobilePaymentsScreenState extends State<MobilePaymentsScreen> {
               date: date,
               amount: amount,
               onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobilePaymentDetailScreen(payment: item)),
+                ).then((_) {
+                  context.read<PaymentsBloc>().add(LoadPayments());
+                });
               },
               onEdit: () {
                 Navigator.push(

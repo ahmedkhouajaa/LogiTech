@@ -21,10 +21,10 @@ import '../../services/pdf_service.dart';
 import '../../services/auth_service.dart';
 import '../../database/database_helper.dart';
 
-import '../../screens/create_quote_screen.dart';
-import '../../screens/create_invoice_screen.dart';
-import '../../screens/create_customer_order_screen.dart';
-import '../../screens/create_delivery_note_screen.dart';
+import 'mobile_invoice_detail_screen.dart';
+import 'forms/mobile_quote_form_screen.dart';
+import 'mobile_customer_order_detail_screen.dart';
+import 'mobile_delivery_note_detail_screen.dart';
 import '../../screens/document_preview_screen.dart';
 
 class MobileDevisDetailScreen extends StatefulWidget {
@@ -283,7 +283,7 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                 BlocProvider.value(value: context.read<CustomersBloc>()),
                 BlocProvider.value(value: context.read<ProductsBloc>()),
               ],
-              child: CreateQuoteScreen(existing: quote),
+              child: MobileQuoteFormScreen(existing: quote),
             ),
           ),
         );
@@ -506,9 +506,9 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
           BlocProvider.value(value: context.read<CustomersBloc>()),
           BlocProvider.value(value: context.read<ProductsBloc>()),
         ],
-        child: CreateInvoiceScreen(existing: invoice),
+        child: MobileInvoiceDetailScreen(invoice: invoice),
       )));
-    } catch (e) { Navigator.push(context, MaterialPageRoute(builder: (_) => CreateInvoiceScreen(existing: invoice))); }
+    } catch (e) { Navigator.push(context, MaterialPageRoute(builder: (_) => MobileInvoiceDetailScreen(invoice: invoice))); }
   }
 
   Future<void> _openConvertedOrder(BuildContext context, String? orderId) async {
@@ -523,9 +523,9 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
           BlocProvider.value(value: context.read<CustomersBloc>()),
           BlocProvider.value(value: context.read<ProductsBloc>()),
         ],
-        child: CreateCustomerOrderScreen(existing: order),
+        child: MobileCustomerOrderDetailScreen(order: order),
       )));
-    } catch (e) { Navigator.push(context, MaterialPageRoute(builder: (_) => CreateCustomerOrderScreen(existing: order))); }
+    } catch (e) { Navigator.push(context, MaterialPageRoute(builder: (_) => MobileCustomerOrderDetailScreen(order: order))); }
   }
 
   Future<void> _openConvertedDelivery(BuildContext context, String? deliveryId) async {
@@ -540,8 +540,8 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
           BlocProvider.value(value: context.read<CustomersBloc>()),
           BlocProvider.value(value: context.read<ProductsBloc>()),
         ],
-        child: CreateDeliveryNoteScreen(existing: delivery),
+        child: MobileDeliveryNoteDetailScreen(deliveryNote: delivery),
       )));
-    } catch (e) { Navigator.push(context, MaterialPageRoute(builder: (_) => CreateDeliveryNoteScreen(existing: delivery))); }
+    } catch (e) { Navigator.push(context, MaterialPageRoute(builder: (_) => MobileDeliveryNoteDetailScreen(deliveryNote: delivery))); }
   }
 }

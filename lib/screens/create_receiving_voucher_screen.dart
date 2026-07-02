@@ -4,19 +4,23 @@ import 'package:uuid/uuid.dart';
 import '../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
-import '../models/receiving_voucher.dart';
+import '../blocs/projects/projects_bloc.dart';
+import '../models/supplier_order.dart';
 import '../models/supplier.dart';
 import '../models/product.dart';
+import '../models/project.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../models/receiving_voucher.dart';
 import '../database/database_helper.dart';
 import '../widgets/dashboard_card.dart';
 
 enum ReceivingVoucherStatus {
   draft('Brouillon', AppColors.textSecondary),
-  validated('Validé', AppColors.success),
-  partial('Réception partielle', AppColors.warning),
-  canceled('Annulé', AppColors.error);
+  validated('Validé', AppColors.primary),
+  received('Reçu', AppColors.info),
+  cancelled('Annulé', AppColors.error),
+  payee('Payé', AppColors.success);
 
   final String label;
   final Color color;
@@ -26,10 +30,12 @@ enum ReceivingVoucherStatus {
 class CreateReceivingVoucherScreen extends StatefulWidget {
   final ReceivingVoucher? existing;
   final bool isReadOnly;
-  const CreateReceivingVoucherScreen({super.key, this.existing, this.isReadOnly = false});
+  final String? overrideTitle;
+  const CreateReceivingVoucherScreen({super.key, this.existing, this.isReadOnly = false, this.overrideTitle});
 
   @override
-  State<CreateReceivingVoucherScreen> createState() => _CreateReceivingVoucherScreenState();
+  State<CreateReceivingVoucherScreen> createState() =>
+      _CreateReceivingVoucherScreenState();
 }
 
 class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScreen> {
@@ -37,35 +43,103 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
   final _uuid = const Uuid();
 
   String? _selectedSupplierId;
-  DateTime _date = DateTime.now();
-  ReceivingVoucherStatus _status = ReceivingVoucherStatus.draft;
+  String? _selectedProjectId;
   List<ReceivingVoucherItem> _items = [];
+  DateTime _date = DateTime.now();
+  final _notesCtrl = TextEditingController();
+  final _conditionsCtrl = TextEditingController();
+  bool _pricingModeHT = true;
+  bool _withTimbreFiscal = true;
+  bool _withGlobalDiscount = false;
+  double _globalDiscountPercent = 0;
+  ReceivingVoucherStatus _status = ReceivingVoucherStatus.draft;
+
+  // Computed totals
+  double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
+
+  Map<double, double> get _tvaBreakdown {
+    final map = <double, double>{};
+    for (final item in _items) {
+      final rate = item.tvaRate;
+      map[rate] = (map[rate] ?? 0) + item.tvaAmount;
+    }
+    return map;
+  }
+
+  double get _totalTva => _items.fold(0, (s, i) => s + i.tvaAmount);
+
+  double get _globalDiscountAmount {
+    if (!_withGlobalDiscount || _globalDiscountPercent <= 0) return 0;
+    return _totalHT * _globalDiscountPercent / 100;
+  }
+
+  double get _totalHTAfterDiscount => _totalHT - _globalDiscountAmount;
+  double get _totalTvaAfterDiscount {
+    if (!_withGlobalDiscount || _globalDiscountPercent <= 0) return _totalTva;
+    return _items.fold(0, (s, i) {
+      final itemHT = i.computedTotalHT;
+      final discountedHT = itemHT - (itemHT * _globalDiscountPercent / 100);
+      return s + discountedHT * (i.tvaRate / 100);
+    });
+  }
+
+  double get _timbreFiscal => _withTimbreFiscal ? 1.000 : 0;
+  double get _totalTTC =>
+      _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal;
 
   bool get _isEditing => widget.existing != null;
-  bool get _isReadOnly => _status == ReceivingVoucherStatus.validated || _status == ReceivingVoucherStatus.canceled;
 
   @override
   void initState() {
     super.initState();
     context.read<SuppliersBloc>().add(LoadSuppliers());
     context.read<ProductsBloc>().add(LoadProducts());
+    context.read<ProjectsBloc>().add(LoadProjects());
 
     if (widget.existing != null) {
-      final v = widget.existing!;
-      _date = v.date;
-      _selectedSupplierId = v.supplierId;
+      final n = widget.existing!;
+      _date = n.date;
+      _selectedSupplierId = n.supplierId;
+      
+      _pricingModeHT = n.pricingMode == 'ht';
+      _withGlobalDiscount = n.globalDiscountPercent > 0;
+      _globalDiscountPercent = n.globalDiscountPercent;
+      _withTimbreFiscal = n.timbreFiscal > 0;
       _status = ReceivingVoucherStatus.values.firstWhere(
-        (e) => e.name == v.status,
+        (e) => e.name == n.status,
         orElse: () => ReceivingVoucherStatus.draft,
       );
-      _items = v.items.map((i) => i.copyWith()).toList();
+      _notesCtrl.text = n.notes ?? '';
+      _conditionsCtrl.text = n.conditionsGenerales ?? '';
+      _items = n.items.map((i) => ReceivingVoucherItem(
+        voucherId: i.voucherId,
+        id: i.id,
+        productId: i.productId,
+        quantityExpected: i.quantityExpected,
+        quantityReceived: i.quantityReceived,
+        unitPrice: i.unitPrice,
+        tvaRate: i.tvaRate,
+        discountPercent: i.discountPercent,
+      )).toList();
     }
   }
 
+  @override
+  void dispose() {
+    _notesCtrl.dispose();
+    _conditionsCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Save ──────────────────────────────────────────────────────────
   Future<void> _save() async {
-    if (_isReadOnly) return;
+    if (widget.isReadOnly) return;
     if (_selectedSupplierId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un fournisseur'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Veuillez selectionner un fournisseur'),
+            backgroundColor: AppColors.error),
+      );
       return;
     }
 
@@ -75,29 +149,47 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
 
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      number = 'BR-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+      final seq = "BC-${DateTime.now().millisecondsSinceEpoch}";
+      number = seq;
     }
 
-    final voucherId = widget.existing?.id ?? _uuid.v4();
-    final voucher = ReceivingVoucher(
-      id: voucherId,
+    final orderId = widget.existing?.id ?? _uuid.v4();
+    final order = ReceivingVoucher(
+      id: orderId,
       number: number,
       supplierId: _selectedSupplierId!,
-      orderId: widget.existing?.orderId,
-      date: _date,
+            date: _date,
       status: _status.name,
-      items: _items.map((item) => item.copyWith(voucherId: voucherId)).toList(),
+      pricingMode: _pricingModeHT ? 'ht' : 'ttc',
+      globalDiscountPercent: _withGlobalDiscount ? _globalDiscountPercent : 0,
+      globalDiscountAmount: _globalDiscountAmount,
+      timbreFiscal: _timbreFiscal,
+      notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
+      conditionsGenerales:
+          _conditionsCtrl.text.isNotEmpty ? _conditionsCtrl.text : null,
+      items: _items.map((item) => ReceivingVoucherItem(
+        voucherId: orderId,
+        id: item.id,
+        productId: item.productId,
+        quantityExpected: item.quantityExpected,
+        quantityReceived: item.quantityReceived,
+        unitPrice: item.unitPrice,
+        tvaRate: item.tvaRate,
+        discountPercent: item.discountPercent,
+      )).toList(),
     );
 
     if (_isEditing) {
-      // bloc.add(UpdateReceivingVoucher(voucher)); // Not implemented yet
+      bloc.add(UpdateReceivingVoucher(order));
     } else {
-      bloc.add(AddReceivingVoucher(voucher));
+      bloc.add(AddReceivingVoucher(order));
     }
 
     nav.pop();
     messenger.showSnackBar(SnackBar(
-      content: Text(_isEditing ? 'Bon de réception $number mis à jour' : 'Bon de réception $number créé avec succès'),
+      content: Text(_isEditing
+          ? 'Commande ${order.number} mise a jour'
+          : 'Commande ${order.number} creee avec succes'),
       backgroundColor: AppColors.success,
     ));
   }
@@ -119,25 +211,32 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                    _buildFormCard(),
-                    const SizedBox(height: AppSpacing.lg),
-                    _buildArticlesSection(),
-                    if (!widget.isReadOnly) ...[
+                      _buildFormCard(),
+                      const SizedBox(height: AppSpacing.lg),
+                      _buildArticlesSection(),
+                      if (!widget.isReadOnly) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        _buildArticleActions(),
+                      ],
                       const SizedBox(height: AppSpacing.md),
-                      _buildArticleActions(),
+                      _buildGlobalDiscountSection(),
+                      const SizedBox(height: AppSpacing.lg),
+                      _buildTotalsSection(),
+                      const SizedBox(height: AppSpacing.lg),
+                      _buildNotesSection(),
+                      const SizedBox(height: AppSpacing.xl),
                     ],
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
       ),
     );
   }
 
+  // ── Top Bar ─────────────────────────────────────────────────────────
   Widget _buildTopBar() {
     return Container(
       height: 56,
@@ -150,24 +249,28 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
       child: Row(
         children: [
           Text(
-            _isEditing
-                ? (widget.isReadOnly ? 'Détails du bon de réception' : 'Modifier le bon de réception')
-                : 'Ajouter un bon de réception',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            widget.overrideTitle ?? (widget.isReadOnly 
+                ? 'Détails de la bon de réception' 
+                : (_isEditing ? 'Modifier la bon de réception' : 'Ajouter une bon de réception')),
+            style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary),
           ),
           const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(color: _status.color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-            child: Text(_status.label, style: TextStyle(color: _status.color, fontSize: 12, fontWeight: FontWeight.w500)),
-          ),
+          StatusBadge(label: _status.label, color: _status.color),
           const Spacer(),
-          _buildHeaderButton(Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
+          _buildHeaderButton(
+              Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
           if (!widget.isReadOnly) ...[
             const SizedBox(width: 8),
             _buildHeaderButton(Icons.description_rounded, 'Brouillon', () {
               setState(() => _status = ReceivingVoucherStatus.draft);
             }),
+            const SizedBox(width: 8),
+            _buildHeaderButton(Icons.send_rounded, 'Envoyer', () {
+              setState(() => _status = ReceivingVoucherStatus.validated);
+            }, color: AppColors.info),
             const SizedBox(width: 8),
             _buildHeaderButton(Icons.check_circle_rounded, 'Valider', () {
               setState(() => _status = ReceivingVoucherStatus.validated);
@@ -182,7 +285,8 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
             ),
           ],
@@ -191,19 +295,23 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
     );
   }
 
-  Widget _buildHeaderButton(IconData icon, String label, VoidCallback onTap, {Color? color}) {
+  Widget _buildHeaderButton(IconData icon, String label, VoidCallback onTap,
+      {Color? color}) {
     return OutlinedButton.icon(
       onPressed: onTap,
       icon: Icon(icon, size: 16, color: color ?? AppColors.textSecondary),
-      label: Text(label, style: TextStyle(color: color ?? AppColors.textSecondary)),
+      label: Text(label,
+          style: TextStyle(color: color ?? AppColors.textSecondary)),
       style: OutlinedButton.styleFrom(
         side: const BorderSide(color: AppColors.border),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md)),
       ),
     );
   }
 
+  // ── Form Details ────────────────────────────────────────────────────
   Widget _buildFormCard() {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -213,81 +321,203 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
         border: Border.all(color: AppColors.border),
         boxShadow: AppShadows.sm,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          // Fournisseur
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Fournisseur *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
-                BlocBuilder<SuppliersBloc, SuppliersState>(
-                  builder: (context, state) {
-                    List<Supplier> suppliers = [];
-                    if (state is SuppliersLoaded) suppliers = state.suppliers;
-                    
-                    return DropdownButtonFormField<String>(
-                      value: _selectedSupplierId,
-                      decoration: const InputDecoration(hintText: 'Sélectionner un fournisseur...'),
-                      items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                      onChanged: _isReadOnly ? null : (val) => setState(() => _selectedSupplierId = val),
-                      validator: (v) => v == null ? 'Veuillez sélectionner un fournisseur' : null,
-                      disabledHint: Text(
-                        suppliers.firstWhere((s) => s.id == _selectedSupplierId, orElse: () => Supplier(name: 'Inconnu', code: '', id: '')).name,
-                        style: const TextStyle(color: AppColors.textPrimary),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.lg),
-          // Date
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Date *', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: _isReadOnly ? null : () async {
-                    final d = await showDatePicker(
-                      context: context,
-                      initialDate: _date,
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                      locale: const Locale('fr', 'FR'),
-                    );
-                    if (d != null) setState(() => _date = d);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      color: _isReadOnly ? AppColors.background : AppColors.surfaceAlt,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Fournisseur
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Fournisseur *',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary)),
+                    const SizedBox(height: 8),
+                    BlocBuilder<SuppliersBloc, SuppliersState>(
+                      builder: (context, state) {
+                        List<Supplier> suppliers = [];
+                        if (state is SuppliersLoaded) {
+                          suppliers = state.suppliers;
+                        }
+                        return DropdownButtonFormField<String>(
+                          value: _selectedSupplierId,
+                          decoration: const InputDecoration(
+                              hintText: 'Selectionner un fournisseur...'),
+                          items: suppliers
+                              .map((s) => DropdownMenuItem(
+                                  value: s.id, child: Text(s.name)))
+                              .toList(),
+                          onChanged: (val) {
+                            setState(() => _selectedSupplierId = val);
+                          },
+                          validator: (v) => v == null
+                              ? 'Veuillez selectionner un fournisseur'
+                              : null,
+                        );
+                      },
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.lg),
+              // Date
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Date *',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary)),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: () async {
+                        final d = await showDatePicker(
+                          context: context,
+                          initialDate: _date,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                          locale: const Locale('fr', 'FR'),
+                        );
+                        if (d != null) setState(() => _date = d);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.border),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          color: AppColors.surfaceAlt,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(formatDateLong(_date),
+                                style: const TextStyle(
+                                    color: AppColors.textPrimary)),
+                            const Icon(Icons.calendar_today_outlined,
+                                size: 16, color: AppColors.textSecondary),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Project
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Projet (Optionnel)',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary)),
+                    const SizedBox(height: 8),
+                    BlocBuilder<ProjectsBloc, ProjectsState>(
+                      builder: (context, state) {
+                        List<Project> projects = [];
+                        if (state is ProjectsLoaded) {
+                          projects = state.projects;
+                        }
+                        return DropdownButtonFormField<String>(
+                          value: _selectedProjectId,
+                          decoration: const InputDecoration(
+                              hintText: 'Selectionner un projet...'),
+                          items: [
+                            const DropdownMenuItem(
+                                value: null, child: Text('Aucun projet')),
+                            ...projects.map((p) => DropdownMenuItem(
+                                value: p.id, child: Text(p.name))),
+                          ],
+                          onChanged: (val) {
+                            setState(() => _selectedProjectId = val);
+                          },
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.lg),
+              // Options
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Options',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary)),
+                    const SizedBox(height: 8),
+                    Row(
                       children: [
-                        Text(formatDateLong(_date), style: TextStyle(color: _isReadOnly ? AppColors.textSecondary : AppColors.textPrimary)),
-                        const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: AppColors.border),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              color: AppColors.surfaceAlt,
+                            ),
+                            child: CheckboxListTile(
+                              title: const Text('Timbre fiscal',
+                                  style: TextStyle(fontSize: 13)),
+                              value: _withTimbreFiscal,
+                              onChanged: (v) => setState(
+                                  () => _withTimbreFiscal = v ?? false),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: AppColors.border),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              color: AppColors.surfaceAlt,
+                            ),
+                            child: CheckboxListTile(
+                              title: const Text('Remise globale',
+                                  style: TextStyle(fontSize: 13)),
+                              value: _withGlobalDiscount,
+                              onChanged: (v) => setState(
+                                  () => _withGlobalDiscount = v ?? false),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
+  // ── Articles ────────────────────────────────────────────────────────
   Widget _buildArticlesSection() {
     return Container(
       decoration: BoxDecoration(
@@ -304,13 +534,53 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
               border: Border(bottom: BorderSide(color: AppColors.border)),
               color: AppColors.background,
             ),
-            child: Row(
+            child: const Row(
               children: [
-                if (!_isReadOnly) const SizedBox(width: 32),
-                const Expanded(flex: 3, child: Text('Article', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                const Expanded(child: Text('Qté Attendue', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                const Expanded(child: Text('Qté Reçue', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                if (!_isReadOnly) const SizedBox(width: 48), // Actions
+                SizedBox(width: 32),
+                Expanded(
+                    flex: 3,
+                    child: Text('Article',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: AppColors.textSecondary))),
+                Expanded(
+                    child: Text('Qté Attendue',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: AppColors.textSecondary))),
+                Expanded(
+                    child: Text('Qté Reçue',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: AppColors.textSecondary))),
+                Expanded(
+                    child: Text('Prix U. HT',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: AppColors.textSecondary))),
+                Expanded(
+                    child: Text('TVA %',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: AppColors.textSecondary))),
+                Expanded(
+                    child: Text('Remise %',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: AppColors.textSecondary))),
+                Expanded(
+                    child: Text('Total HT',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: AppColors.textSecondary))),
+                SizedBox(width: 80), // Actions
               ],
             ),
           ),
@@ -318,14 +588,16 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
             const Padding(
               padding: EdgeInsets.all(32),
               child: Center(
-                child: Text('Aucun article ajouté. Cliquez sur "Ajouter un article".', style: TextStyle(color: AppColors.textSecondary)),
+                child: Text('Aucun article ajoute. Cliquez sur "Ajouter un article".',
+                    style: TextStyle(color: AppColors.textSecondary)),
               ),
             ),
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _items.length,
-            separatorBuilder: (context, index) => const Divider(height: 1, color: AppColors.border),
+            separatorBuilder: (context, index) =>
+                const Divider(height: 1, color: AppColors.border),
             itemBuilder: (context, index) {
               final item = _items[index];
               return _buildArticleRow(item, index);
@@ -343,50 +615,75 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!_isReadOnly)
-            const SizedBox(
-              width: 32,
-              height: 40,
-              child: Icon(Icons.drag_indicator, color: AppColors.textTertiary, size: 20),
-            ),
-          // Product
+          // Drag handle
+          const SizedBox(
+            width: 32,
+            height: 40,
+            child: Icon(Icons.drag_indicator,
+                color: AppColors.textTertiary, size: 20),
+          ),
+          // Product selection
           Expanded(
             flex: 3,
-            child: SizedBox(
-              height: 40,
-              child: BlocBuilder<ProductsBloc, ProductsState>(
-                builder: (context, state) {
-                  List<Product> products = [];
-                  if (state is ProductsLoaded) products = state.products;
-                  
-                  return DropdownButtonFormField<String>(
-                    value: item.productId.isEmpty ? null : item.productId,
-                    decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                      hintText: 'Sélectionner un article...',
-                    ),
-                    items: products.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, overflow: TextOverflow.ellipsis))).toList(),
-                    onChanged: _isReadOnly ? null : (val) {
-                      if (val != null) setState(() => _items[index] = item.copyWith(productId: val));
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 40,
+                  child: BlocBuilder<ProductsBloc, ProductsState>(
+                    builder: (context, state) {
+                      List<Product> products = [];
+                      if (state is ProductsLoaded) {
+                        products = state.products;
+                      }
+                      return DropdownButtonFormField<String>(
+                        value: item.productId.isEmpty ? null : item.productId,
+                        decoration: InputDecoration(
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 12),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderSide:
+                                  const BorderSide(color: AppColors.border)),
+                          enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderSide:
+                                  const BorderSide(color: AppColors.border)),
+                          hintText: 'Selectionner un article...',
+                        ),
+                        items: products
+                            .map((p) => DropdownMenuItem(
+                                  value: p.id,
+                                  child: Text(p.name,
+                                      overflow: TextOverflow.ellipsis),
+                                ))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            final p = products.firstWhere((e) => e.id == val);
+                            setState(() {
+                              _items[index] = item.copyWith(
+                                productId: val,
+                                unitPrice: p.purchasePrice, // Using purchase price for supplier order
+                                tvaRate: p.tvaRate,
+                              );
+                            });
+                          }
+                        },
+                      );
                     },
-                    disabledHint: Text(
-                      products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', name: 'Inconnu', code: '', purchasePrice: 0, sellingPrice: 0)).name,
-                      style: const TextStyle(color: AppColors.textPrimary),
-                    ),
-                  );
-                },
-              ),
+                  ),
+                ),
+                
+              ],
             ),
           ),
           const SizedBox(width: 8),
-          // Expected Qty
+          // Quantity Expected
           Expanded(
             child: TextFormField(
               initialValue: item.quantityExpected.toString(),
               keyboardType: TextInputType.number,
-              readOnly: _isReadOnly,
               decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
               onChanged: (val) {
                 final v = double.tryParse(val) ?? 0;
@@ -395,12 +692,11 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
             ),
           ),
           const SizedBox(width: 8),
-          // Received Qty
+          // Quantity Received
           Expanded(
             child: TextFormField(
               initialValue: item.quantityReceived.toString(),
               keyboardType: TextInputType.number,
-              readOnly: _isReadOnly,
               decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
               onChanged: (val) {
                 final v = double.tryParse(val) ?? 0;
@@ -408,18 +704,85 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
               },
             ),
           ),
-          if (!_isReadOnly) ...[
-            const SizedBox(width: 8),
-            // Actions
+          const SizedBox(width: 8),
+          // Unit Price
+          Expanded(
+            child: TextFormField(
+              initialValue: item.unitPrice.toString(),
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
+              onChanged: (val) {
+                final v = double.tryParse(val) ?? 0;
+                setState(() => _items[index] = item.copyWith(unitPrice: v));
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          // TVA Rate
+          Expanded(
+            child: DropdownButtonFormField<double>(
+              value: item.tvaRate,
+              decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
+              items: TvaRates.all
+                  .map((t) => DropdownMenuItem(value: t, child: Text('$t%')))
+                  .toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() => _items[index] = item.copyWith(tvaRate: val));
+                }
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Discount
+          Expanded(
+            child: TextFormField(
+              initialValue: item.discountPercent.toString(),
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
+              onChanged: (val) {
+                final v = double.tryParse(val) ?? 0;
+                setState(() => _items[index] = item.copyWith(discountPercent: v));
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Total HT
+          Expanded(
+            child: Container(
+              height: 40,
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceAlt,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Text(formatCurrencyDT(item.computedTotalHT),
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Actions
+          if (!widget.isReadOnly)
             SizedBox(
-              width: 48,
-              child: IconButton(
-                icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
-                onPressed: () => setState(() => _items.removeAt(index)),
-                tooltip: 'Supprimer',
+              width: 80,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                    onPressed: () {
+                      setState(() {
+                        _items.removeAt(index);
+                      });
+                    },
+                    tooltip: 'Supprimer',
+                  ),
+                ],
               ),
             ),
-          ],
         ],
       ),
     );
@@ -431,7 +794,8 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
         ElevatedButton.icon(
           onPressed: () {
             setState(() {
-              _items.add(ReceivingVoucherItem(voucherId: widget.existing?.id ?? '', productId: ''));
+              _items.add(ReceivingVoucherItem(
+                  voucherId: widget.existing?.id ?? '', productId: ''));
             });
           },
           icon: const Icon(Icons.add_rounded, size: 18),
@@ -441,6 +805,189 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
             foregroundColor: AppColors.primary,
             elevation: 0,
             side: const BorderSide(color: AppColors.primary),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Totals & Global Discount ────────────────────────────────────────
+  Widget _buildGlobalDiscountSection() {
+    if (!_withGlobalDiscount) return const SizedBox();
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.percent_rounded, color: AppColors.textSecondary, size: 20),
+          const SizedBox(width: 8),
+          const Text('Remise globale sur la commande :',
+              style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(width: 16),
+          SizedBox(
+            width: 100,
+            child: TextFormField(
+              initialValue: _globalDiscountPercent.toString(),
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                suffixText: '%',
+                contentPadding: EdgeInsets.symmetric(horizontal: 12),
+              ),
+              onChanged: (val) {
+                setState(() {
+                  _globalDiscountPercent = double.tryParse(val) ?? 0;
+                });
+              },
+            ),
+          ),
+          const Spacer(),
+          Text(
+            '- ${formatCurrencyDT(_globalDiscountAmount)}',
+            style: const TextStyle(
+                color: AppColors.error,
+                fontWeight: FontWeight.bold,
+                fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTotalsSection() {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _buildTotalRow('Total HT', _totalHT),
+          if (_withGlobalDiscount) ...[
+            const SizedBox(height: 8),
+            _buildTotalRow('Remise globale', -_globalDiscountAmount,
+                color: AppColors.error),
+            const SizedBox(height: 8),
+            _buildTotalRow('Total HT (Apres remise)', _totalHTAfterDiscount,
+                isBold: true),
+          ],
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Divider(color: AppColors.border),
+          ),
+          ..._tvaBreakdown.entries.map((e) {
+            // Apply proportionate discount to TVA if global discount is enabled
+            double tvaAmount = e.value;
+            if (_withGlobalDiscount && _totalHT > 0) {
+              tvaAmount = tvaAmount * (1 - (_globalDiscountPercent / 100));
+            }
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _buildTotalRow('TVA ${e.key}%', tvaAmount),
+            );
+          }),
+          if (_withTimbreFiscal) ...[
+            const SizedBox(height: 8),
+            _buildTotalRow('Timbre fiscal', _timbreFiscal),
+          ],
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Divider(color: AppColors.border),
+          ),
+          _buildTotalRow('NET A PAYER', _totalTTC,
+              isBold: true, fontSize: 20, color: AppColors.primary),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTotalRow(String label, double amount,
+      {bool isBold = false, double fontSize = 14, Color? color}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        SizedBox(
+          width: 200,
+          child: Text(
+            label,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+        const SizedBox(width: 24),
+        SizedBox(
+          width: 150,
+          child: Text(
+            formatCurrencyDT(amount),
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+              color: color ?? AppColors.textPrimary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Notes ───────────────────────────────────────────────────────────
+  Widget _buildNotesSection() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Notes (Visibles par le fournisseur)',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _notesCtrl,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: 'Ajouter une note...',
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.lg),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Conditions d\'achat',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _conditionsCtrl,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: 'Ajouter des conditions...',
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                ),
+              ),
+            ],
           ),
         ),
       ],

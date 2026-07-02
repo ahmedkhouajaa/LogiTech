@@ -452,7 +452,7 @@ class MobileDashboardScreen extends StatelessWidget {
       case InvoiceStatus.overdue:
         return AppColors.error;
       case InvoiceStatus.cancelled:
-        return AppColors.textTertiary;
+        return AppColors.textSecondary;
     }
   }
 }

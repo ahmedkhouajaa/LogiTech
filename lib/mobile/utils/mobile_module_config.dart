@@ -37,7 +37,7 @@ class MobileModuleConfig {
         return MobileModuleConfig(
           title: 'Factures',
           fabText: 'Nouvelle facture',
-          filterOptions: ['Tous', 'Payée', 'Non payée', 'Brouillon'],
+          filterOptions: ['Tous', 'Payée', 'Non payée', 'En retard'],
         );
       case AppModule.exitVouchers:
         return MobileModuleConfig(
@@ -75,7 +75,7 @@ class MobileModuleConfig {
         return MobileModuleConfig(
           title: 'Factures d\'achat',
           fabText: 'Nouvelle facture d\'achat',
-          filterOptions: ['Tous', 'Payée', 'Non payée', 'Brouillon'],
+          filterOptions: ['Tous', 'Payée', 'Non payée', 'En retard'],
         );
       case AppModule.supplierCreditNotes:
         return MobileModuleConfig(

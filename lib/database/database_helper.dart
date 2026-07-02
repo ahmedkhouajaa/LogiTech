@@ -125,13 +125,38 @@ class DatabaseHelper {
     final path = p.join(dir.path, 'business_manager_pro.db');
     return await openDatabase(
       path,
-      version: 41,
+      version: 43,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 43) {
+      final receivingColumns = [
+        "ALTER TABLE receiving_vouchers ADD COLUMN pricing_mode TEXT DEFAULT 'ht'",
+        "ALTER TABLE receiving_vouchers ADD COLUMN global_discount_percent REAL DEFAULT 0",
+        "ALTER TABLE receiving_vouchers ADD COLUMN global_discount_amount REAL DEFAULT 0",
+        "ALTER TABLE receiving_vouchers ADD COLUMN timbre_fiscal REAL DEFAULT 0",
+        "ALTER TABLE receiving_vouchers ADD COLUMN conditions_generales TEXT",
+        "ALTER TABLE receiving_vouchers ADD COLUMN amount_paid REAL DEFAULT 0",
+        "ALTER TABLE receiving_voucher_items ADD COLUMN unit_price REAL DEFAULT 0",
+        "ALTER TABLE receiving_voucher_items ADD COLUMN tva_rate REAL DEFAULT 0",
+        "ALTER TABLE receiving_voucher_items ADD COLUMN discount_percent REAL DEFAULT 0",
+      ];
+      for (final sql in receivingColumns) {
+        try {
+          await db.execute(sql);
+        } catch (_) {}
+      }
+    }
+
+    if (oldVersion < 42) {
+      try {
+        await db.execute("ALTER TABLE receiving_vouchers ADD COLUMN warehouse_id TEXT");
+      } catch (_) {}
+    }
+
     if (oldVersion < 2) {
       final columns = [
         "ALTER TABLE customers ADD COLUMN customer_type TEXT DEFAULT 'entreprise'",
@@ -604,33 +629,45 @@ class DatabaseHelper {
     }
     
     if (oldVersion < 24) {
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS receiving_vouchers (
+      await db.execute('''        CREATE TABLE IF NOT EXISTS receiving_vouchers (
           id TEXT PRIMARY KEY,
           number TEXT NOT NULL,
           supplier_id TEXT NOT NULL,
           order_id TEXT,
           date TEXT NOT NULL,
+          warehouse_id TEXT,
           status TEXT DEFAULT 'draft',
-          notes TEXT,
+          pricing_mode TEXT DEFAULT 'ht',
+          global_discount_percent REAL DEFAULT 0,
+          global_discount_amount REAL DEFAULT 0,
+          timbre_fiscal REAL DEFAULT 0,
+          conditions_generales TEXT,
+          amount_paid REAL DEFAULT 0,
           firebase_uid TEXT,
           is_deleted INTEGER DEFAULT 0,
+          is_converted_to_purchase_invoice INTEGER DEFAULT 0,
+          converted_to_purchase_invoice_id TEXT,
+          is_converted_to_supplier_return INTEGER DEFAULT 0,
+          converted_to_supplier_return_id TEXT,
+          notes TEXT,
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
-          FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+          FOREIGN KEY (supplier_id) REFERENCES suppliers (id),
           FOREIGN KEY (order_id) REFERENCES supplier_orders(id)
         )
       ''');
 
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS receiving_voucher_items (
+      await db.execute('''        CREATE TABLE IF NOT EXISTS receiving_voucher_items (
           id TEXT PRIMARY KEY,
           voucher_id TEXT NOT NULL,
           product_id TEXT NOT NULL,
           quantity_expected REAL DEFAULT 0,
           quantity_received REAL DEFAULT 0,
-          notes TEXT,
-          FOREIGN KEY (voucher_id) REFERENCES receiving_vouchers(id)
+          unit_price REAL DEFAULT 0,
+          tva_rate REAL DEFAULT 0,
+          discount_percent REAL DEFAULT 0,
+          FOREIGN KEY (voucher_id) REFERENCES receiving_vouchers (id) ON DELETE CASCADE,
+          FOREIGN KEY (product_id) REFERENCES products (id)
         )
       ''');
 
@@ -1690,7 +1727,14 @@ class DatabaseHelper {
         supplier_id TEXT NOT NULL,
         order_id TEXT,
         date TEXT NOT NULL,
+        warehouse_id TEXT,
         status TEXT DEFAULT 'draft',
+        pricing_mode TEXT DEFAULT 'ht',
+        global_discount_percent REAL DEFAULT 0,
+        global_discount_amount REAL DEFAULT 0,
+        timbre_fiscal REAL DEFAULT 0,
+        conditions_generales TEXT,
+        amount_paid REAL DEFAULT 0,
         notes TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
@@ -1712,8 +1756,12 @@ class DatabaseHelper {
         product_id TEXT NOT NULL,
         quantity_expected REAL DEFAULT 0,
         quantity_received REAL DEFAULT 0,
+        unit_price REAL DEFAULT 0,
+        tva_rate REAL DEFAULT 0,
+        discount_percent REAL DEFAULT 0,
         notes TEXT,
-        FOREIGN KEY (voucher_id) REFERENCES receiving_vouchers(id)
+        FOREIGN KEY (voucher_id) REFERENCES receiving_vouchers(id),
+        FOREIGN KEY (product_id) REFERENCES products(id)
       )
     ''');
 
@@ -2373,7 +2421,13 @@ class DatabaseHelper {
       WHERE i.is_deleted = 0 
       ORDER BY i.created_at DESC
     ''');
-    return maps.map((m) => Invoice.fromMap(m)).toList();
+    List<Invoice> invoices = [];
+    for (var m in maps) {
+      final invoice = Invoice.fromMap(m);
+      final items = await getInvoiceItems(invoice.id);
+      invoices.add(invoice.copyWith(items: items));
+    }
+    return invoices;
   }
 
   Future<Invoice?> getInvoice(String id) async {
@@ -2692,7 +2746,18 @@ class DatabaseHelper {
 
     query += ' ORDER BY dn.date DESC, dn.created_at DESC';
     final result = await db.rawQuery(query, args);
-    return result.map((m) => DeliveryNote.fromMap(m)).toList();
+    List<DeliveryNote> notes = [];
+    for (var m in result) {
+      final note = DeliveryNote.fromMap(m);
+      final itemsResult = await db.query(
+        'delivery_note_items',
+        where: 'delivery_note_id = ?',
+        whereArgs: [note.id],
+      );
+      final items = itemsResult.map((map) => DeliveryNoteItem.fromMap(map)).toList();
+      notes.add(note.copyWith(items: items));
+    }
+    return notes;
   }
 
   Future<DeliveryNote?> getDeliveryNote(String id) async {
@@ -2794,7 +2859,18 @@ class DatabaseHelper {
 
     query += ' ORDER BY rn.date_emission DESC, rn.created_at DESC';
     final result = await db.rawQuery(query, args);
-    return result.map((m) => ReturnNote.fromMap(m)).toList();
+    List<ReturnNote> returnNotes = [];
+    for (var m in result) {
+      final note = ReturnNote.fromMap(m);
+      final itemsResult = await db.query(
+        'return_note_items',
+        where: 'return_note_id = ?',
+        whereArgs: [note.id],
+      );
+      final items = itemsResult.map((map) => ReturnNoteItem.fromMap(map)).toList();
+      returnNotes.add(note.copyWith(items: items));
+    }
+    return returnNotes;
   }
 
   Future<ReturnNote?> getReturnNote(String id) async {
@@ -2898,7 +2974,18 @@ class DatabaseHelper {
 
     query += ' ORDER BY sw.date DESC, sw.created_at DESC';
     final result = await db.rawQuery(query, args);
-    return result.map((m) => StockWithdrawal.fromMap(m)).toList();
+    List<StockWithdrawal> withdrawals = [];
+    for (var m in result) {
+      final withdrawal = StockWithdrawal.fromMap(m);
+      final itemsResult = await db.query(
+        'bons_sortie_items',
+        where: 'withdrawal_id = ?',
+        whereArgs: [withdrawal.id],
+      );
+      final items = itemsResult.map((map) => StockWithdrawalItem.fromMap(map)).toList();
+      withdrawals.add(withdrawal.copyWith(items: items));
+    }
+    return withdrawals;
   }
 
   Future<StockWithdrawal?> getStockWithdrawal(String id) async {
@@ -3281,7 +3368,17 @@ class DatabaseHelper {
       WHERE rv.is_deleted = 0
       ORDER BY rv.created_at DESC
     ''');
-    return maps.map((m) => ReceivingVoucher.fromMap(m, [])).toList();
+    final vouchers = <ReceivingVoucher>[];
+    for (final map in maps) {
+      final itemsMap = await db.query(
+        'receiving_voucher_items',
+        where: 'voucher_id = ?',
+        whereArgs: [map['id']],
+      );
+      final items = itemsMap.map((m) => ReceivingVoucherItem.fromMap(m)).toList();
+      vouchers.add(ReceivingVoucher.fromMap(map, items));
+    }
+    return vouchers;
   }
 
   Future<Map<String, dynamic>?> getReceivingVoucher(String id) async {
@@ -3593,7 +3690,18 @@ class DatabaseHelper {
     query += ' ORDER BY o.date DESC, o.created_at DESC';
 
     final result = await db.rawQuery(query, args);
-    return result.map((map) => CustomerOrder.fromMap(map)).toList();
+    List<CustomerOrder> orders = [];
+    for (var m in result) {
+      final order = CustomerOrder.fromMap(m);
+      final itemsResult = await db.query(
+        'customer_order_items',
+        where: 'order_id = ?',
+        whereArgs: [order.id],
+      );
+      final items = itemsResult.map((map) => CustomerOrderItem.fromMap(map)).toList();
+      orders.add(order.copyWith(items: items));
+    }
+    return orders;
   }
 
   Future<CustomerOrder?> getCustomerOrder(String id) async {
@@ -3830,6 +3938,9 @@ class DatabaseHelper {
   Future<void> createTreasuryAccount(Map<String, dynamic> data) async {
     final db = await database;
     await db.insert('treasury_accounts', data);
+    if (data['id'] != null) {
+      await _addToSyncQueue('treasury_accounts', data['id'], 'INSERT', data);
+    }
   }
 
   Future<void> updateTreasuryAccount(String id, Map<String, dynamic> data) async {
@@ -3841,6 +3952,7 @@ class DatabaseHelper {
   Future<void> deleteTreasuryAccount(String id) async {
     final db = await database;
     await db.delete('treasury_accounts', where: 'id = ?', whereArgs: [id]);
+    await _addToSyncQueue('treasury_accounts', id, 'DELETE', {'id': id});
   }
 
   // ─── Treasury Transactions ───────────────────────────────────────────
@@ -3958,6 +4070,21 @@ class DatabaseHelper {
       notes.add(SupplierCreditNote.fromMap(map, items));
     }
     return notes;
+  }
+
+  Future<SupplierCreditNote?> getSupplierCreditNoteById(String id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'supplier_credit_notes',
+      where: 'id = ? AND is_deleted = 0',
+      whereArgs: [id],
+    );
+    
+    if (maps.isEmpty) return null;
+    
+    final map = maps.first;
+    final items = await _getSupplierCreditNoteItems(map['id']);
+    return SupplierCreditNote.fromMap(map, items);
   }
 
   Future<List<SupplierCreditNoteItem>> _getSupplierCreditNoteItems(String noteId) async {

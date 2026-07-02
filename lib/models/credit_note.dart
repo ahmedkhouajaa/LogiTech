@@ -48,12 +48,12 @@ class CreditNoteItem extends Equatable {
       };
 
   factory CreditNoteItem.fromMap(Map<String, dynamic> map) => CreditNoteItem(
-        id: map['id'] as String,
-        productId: map['product_id'] as String,
-        quantity: (map['quantity'] as num?)?.toDouble() ?? 1,
-        unitPrice: (map['unit_price'] as num?)?.toDouble() ?? 0,
-        tvaRate: (map['tva_rate'] as num?)?.toDouble() ?? 19,
-        totalHT: (map['total_ht'] as num?)?.toDouble() ?? 0,
+        id: map['id']?.toString() ?? '',
+        productId: map['product_id']?.toString() ?? '',
+        quantity: double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0,
+        unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
+        tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
+        totalHT: double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0,
       );
 
   @override
@@ -135,24 +135,39 @@ class CreditNote extends Equatable {
       );
     }
     
+    List<CreditNoteItem> parsedItems = items ?? [];
+    if (parsedItems.isEmpty && map['items'] != null && map['items'] is List) {
+      parsedItems = (map['items'] as List).map((i) => CreditNoteItem.fromMap(Map<String, dynamic>.from(i))).toList();
+    }
+    
+    DateTime parsedDate = DateTime.now();
+    if (map['date'] != null) {
+      int? ms = int.tryParse(map['date'].toString());
+      if (ms != null) {
+        parsedDate = DateTime.fromMillisecondsSinceEpoch(ms);
+      } else {
+        parsedDate = DateTime.tryParse(map['date'].toString()) ?? DateTime.now();
+      }
+    }
+    
     return CreditNote(
-      id: map['id'] as String,
-      number: map['number'] as String,
-      invoiceId: map['invoice_id'] as String? ?? '',
-      customerId: map['customer_id'] as String,
-      customerName: map['customerName'] as String?,
-      date: DateTime.fromMillisecondsSinceEpoch(int.parse(map['date'] as String)),
-      reason: map['reason'] as String?,
+      id: map['id']?.toString() ?? '',
+      number: map['number']?.toString() ?? '',
+      invoiceId: map['invoice_id']?.toString() ?? '',
+      customerId: map['customer_id']?.toString() ?? '',
+      customerName: map['customerName']?.toString() ?? map['customer_name']?.toString(),
+      date: parsedDate,
+      reason: map['reason']?.toString(),
       status: parsedStatus,
-      totalHT: (map['total_ht'] as num?)?.toDouble() ?? 0,
-      totalTva: (map['total_tva'] as num?)?.toDouble() ?? 0,
-      totalTTC: (map['total_ttc'] as num?)?.toDouble() ?? 0,
-      notes: map['notes'] as String?,
-      items: items ?? [],
-      firebaseUid: map['firebase_uid'] as String?,
-      isDeleted: map['is_deleted'] == 1,
-      createdAt: DateTime.parse(map['created_at'] as String),
-      updatedAt: DateTime.parse(map['updated_at'] as String),
+      totalHT: double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0,
+      totalTva: double.tryParse(map['total_tva']?.toString() ?? '0') ?? 0.0,
+      totalTTC: double.tryParse(map['total_ttc']?.toString() ?? '0') ?? 0.0,
+      notes: map['notes']?.toString(),
+      items: parsedItems,
+      firebaseUid: map['firebase_uid']?.toString(),
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
+      createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
     );
   }
 

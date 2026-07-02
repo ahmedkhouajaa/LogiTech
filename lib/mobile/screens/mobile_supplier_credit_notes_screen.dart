@@ -9,6 +9,7 @@ import '../../blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
 import '../../blocs/supplier_credit_notes/supplier_credit_notes_state.dart';
 import '../../blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
 import 'forms/mobile_supplier_credit_note_form_screen.dart';
+import 'mobile_supplier_credit_note_detail_screen.dart';
 
 
 class MobileSupplierCreditNotesScreen extends StatefulWidget {
@@ -131,7 +132,7 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
             try { date = (item as dynamic).date ?? (item as dynamic).createdAt; } catch (_) {}
             
             double amount = 0;
-            try { amount = ((item as dynamic).totalTTC ?? (item as dynamic).amount ?? (item as dynamic).price ?? 0.0).toDouble(); } catch (_) {}
+            try { amount = (((item as dynamic).computedTotalTTC ?? (item as dynamic).totalTTC) ?? (item as dynamic).amount ?? (item as dynamic).price ?? 0.0).toDouble(); } catch (_) {}
             
             String id = '';
             try { id = (item as dynamic).id; } catch (_) {}
@@ -143,6 +144,10 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
               date: date,
               amount: amount,
               onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileSupplierCreditNoteDetailScreen(note: item)),
+                );
               },
               onEdit: () {
                 Navigator.push(

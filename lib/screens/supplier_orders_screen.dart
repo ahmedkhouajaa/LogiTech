@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
+import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
+import '../widgets/supplier_order_payment_dialog.dart';
+import '../blocs/payments/payments_bloc.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/supplier_orders/supplier_orders_bloc.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
@@ -556,7 +561,24 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                                   } else if (val == 'pdf') {
                                                     final doc = DocumentWrapper.fromSupplierOrder(order);
                                                     PdfService.instance.generateAndOpenDocument(doc);
-                                                  } else if (val == 'print' || val == 'payment' || val == 'credit_note' || val == 'email' || val == 'whatsapp' || val == 'status' || val == 'duplicate' || val == 'attachments') {
+                                                  } else if (val == 'payment') {
+                                                    showDialog(
+                                                      context: context,
+                                                      builder: (_) => MultiBlocProvider(
+                                                        providers: [
+                                                          BlocProvider.value(value: context.read<PaymentsBloc>()),
+                                                          BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+                                                          BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+                                                          BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
+                                                        ],
+                                                        child: SupplierOrderPaymentDialog(supplierOrder: order),
+                                                      ),
+                                                    ).then((created) {
+                                                      if (created == true && context.mounted) {
+                                                        context.read<SupplierOrdersBloc>().add(LoadSupplierOrders());
+                                                      }
+                                                    });
+                                                  } else if (val == 'print' || val == 'credit_note' || val == 'email' || val == 'whatsapp' || val == 'status' || val == 'duplicate' || val == 'attachments') {
                                                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                                                       content: Text('Cette fonctionnalité sera disponible prochainement'),
                                                       backgroundColor: AppColors.info,
@@ -717,7 +739,10 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     items.add(_buildMenuItem('edit', Icons.edit_outlined, 'Modifier', const Color(0xFF2563EB)));
     items.add(_buildMenuItem('delete', Icons.delete_outline, 'Supprimer', const Color(0xFFEF4444)));
     items.add(_buildMenuItem('print', Icons.print_outlined, 'Imprimer', const Color(0xFF475569)));
-    items.add(_buildMenuItem('payment', Icons.credit_card_outlined, 'Ajouter un paiement', const Color(0xFF10B981)));
+    
+    if (order.status != 'paid') {
+      items.add(_buildMenuItem('payment', Icons.credit_card_outlined, 'Ajouter un paiement', const Color(0xFF10B981)));
+    }
 
     if (!order.isConvertedToInvoice && !order.isConvertedToReceipt) {
       items.add(_buildMenuItem('to_invoice', Icons.receipt_long_outlined, 'Transformer en facture d\'achat', const Color(0xFF475569)));

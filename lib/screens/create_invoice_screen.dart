@@ -38,7 +38,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   bool _withTimbreFiscal = true;
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
-  InvoiceStatus _status = InvoiceStatus.draft;
+  InvoiceStatus _status = InvoiceStatus.unpaid;
 
   List<Map<String, dynamic>> _customColumns = [];
 
@@ -181,8 +181,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           // Action buttons
           _buildHeaderButton(Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
           const SizedBox(width: 8),
-          _buildHeaderButton(Icons.description_rounded, 'Brouillon', () {
-            setState(() => _status = InvoiceStatus.draft);
+          _buildHeaderButton(Icons.description_rounded, 'Non payé', () {
+            setState(() => _status = InvoiceStatus.unpaid);
           }),
           const SizedBox(width: 8),
           _buildHeaderButton(Icons.visibility_rounded, 'Apercu', () {}),

@@ -37,7 +37,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   bool _withTimbreFiscal = true;
   bool _withGlobalDiscount = false;
   double _globalDiscountPercent = 0;
-  InvoiceStatus _status = InvoiceStatus.draft;
+  InvoiceStatus _status = InvoiceStatus.unpaid;
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
@@ -168,8 +168,8 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
           _buildHeaderButton(Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
           const SizedBox(width: 8),
           if (!widget.isReadOnly) ...[
-            _buildHeaderButton(Icons.description_rounded, 'Brouillon', () {
-              setState(() => _status = InvoiceStatus.draft);
+            _buildHeaderButton(Icons.description_rounded, 'Non payé', () {
+              setState(() => _status = InvoiceStatus.unpaid);
             }),
             const SizedBox(width: 8),
             _buildHeaderButton(Icons.visibility_rounded, 'Apercu', () {}),

@@ -90,7 +90,7 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
           child: BlocBuilder<ChecksTraitesBloc, ChecksTraitesState>(
             builder: (context, state) {
               if (state is ChecksTraitesLoading) return const Center(child: CircularProgressIndicator());
-              if (state is ChecksTraitesError) return Center(child: Text('Erreur: \${state.message}'));
+              if (state is ChecksTraitesError) return Center(child: Text('Erreur: ${state.message}'));
               if (state is ChecksTraitesLoaded) {
                 final filtered = state.documents.where((doc) {
                   final matchesSearch = doc.documentNumber.toLowerCase().contains(_search) ||

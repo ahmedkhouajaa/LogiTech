@@ -7,6 +7,7 @@ import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/purchase_invoices/purchase_invoices_bloc.dart';
 import 'forms/mobile_purchase_invoice_form_screen.dart';
+import 'mobile_purchase_invoice_detail_screen.dart';
 
 
 class MobilePurchaseInvoicesScreen extends StatefulWidget {
@@ -111,28 +112,12 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
           isEmpty = filteredItems.isEmpty;
           
           cards = filteredItems.map((item) {
-            String reference = 'N/A';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? 'N/A').toString(); } catch (_) {}
-            
-            String status = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                status = translateStatus(s.toString());
-              }
-            } catch (_) {}
-            
-            String? name;
-            try { name = (item as dynamic).customerName ?? (item as dynamic).supplierName ?? (item as dynamic).companyName ?? (item as dynamic).name; } catch (_) {}
-            
-            DateTime? date;
-            try { date = (item as dynamic).date ?? (item as dynamic).createdAt; } catch (_) {}
-            
-            double amount = 0;
-            try { amount = ((item as dynamic).totalTTC ?? (item as dynamic).amount ?? (item as dynamic).price ?? 0.0).toDouble(); } catch (_) {}
-            
-            String id = '';
-            try { id = (item as dynamic).id; } catch (_) {}
+            String reference = item.number;
+            String status = item.status.label;
+            String? name = item.supplierName ?? 'Fournisseur Inconnu';
+            DateTime? date = item.date;
+            double amount = item.totalTTC;
+            String id = item.id;
 
             return MobileGenericCard(
               reference: reference,
@@ -141,6 +126,10 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
               date: date,
               amount: amount,
               onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobilePurchaseInvoiceDetailScreen(invoice: item)),
+                );
               },
               onEdit: () {
                 Navigator.push(

@@ -186,35 +186,41 @@ class StockWithdrawal {
         'items': items.map((i) => i.toMap()).toList(),
       };
 
-  factory StockWithdrawal.fromMap(Map<String, dynamic> map, [List<StockWithdrawalItem> items = const []]) =>
-      StockWithdrawal(
-        id: map['id'] as String,
-        number: map['number'] as String,
-        customerId: map['customer_id'] as String,
-        customerName: map['customer_name'] as String?,
-        customerCompany: map['customer_company'] as String?,
-        projectId: map['project_id'] as String?,
-        projectName: map['project_name'] as String?,
-        date: DateTime.parse(map['date'] as String),
-        status: map['status'] as String? ?? 'draft',
-        pricingMode: map['pricing_mode'] as String? ?? 'ht',
-        globalDiscountPercent: (map['global_discount_percent'] as num?)?.toDouble() ?? 0.0,
-        globalDiscountAmount: (map['global_discount_amount'] as num?)?.toDouble() ?? 0.0,
-        timbreFiscal: (map['timbre_fiscal'] as num?)?.toDouble() ?? 0.0,
-        vehicleRegistration: map['vehicle_registration'] as String?,
-        driverName: map['driver_name'] as String?,
-        notes: map['notes'] as String?,
-        conditionsGenerales: map['conditions'] as String?,
-        warehouseId: map['warehouse_id'] as String?,
-        firebaseUid: map['firebase_uid'] as String?,
-        isDeleted: map['is_deleted'] == 1,
-        createdAt: DateTime.parse(map['created_at'] as String),
-        updatedAt: DateTime.parse(map['updated_at'] as String),
-        items: items,
-        dbTotalHT: map['total_ht'] != null ? (map['total_ht'] as num).toDouble() : null,
-        dbTotalTVA: map['total_tva'] != null ? (map['total_tva'] as num).toDouble() : null,
-        dbTotalTTC: map['total_ttc'] != null ? (map['total_ttc'] as num).toDouble() : null,
-      );
+  factory StockWithdrawal.fromMap(Map<String, dynamic> map, [List<StockWithdrawalItem> optionalItems = const []]) {
+    List<StockWithdrawalItem> parsedItems = optionalItems;
+    if (parsedItems.isEmpty && map['items'] != null && map['items'] is List) {
+      parsedItems = (map['items'] as List).map((i) => StockWithdrawalItem.fromMap(Map<String, dynamic>.from(i))).toList();
+    }
+
+    return StockWithdrawal(
+      id: map['id']?.toString() ?? '',
+      number: map['number']?.toString() ?? '',
+      customerId: map['customer_id']?.toString() ?? '',
+      customerName: map['customer_name']?.toString(),
+      customerCompany: map['customer_company']?.toString(),
+      projectId: map['project_id']?.toString(),
+      projectName: map['project_name']?.toString(),
+      date: map['date'] != null ? DateTime.tryParse(map['date'].toString()) ?? DateTime.now() : DateTime.now(),
+      status: map['status']?.toString() ?? 'draft',
+      pricingMode: map['pricing_mode']?.toString() ?? 'ht',
+      globalDiscountPercent: double.tryParse(map['global_discount_percent']?.toString() ?? '0') ?? 0.0,
+      globalDiscountAmount: double.tryParse(map['global_discount_amount']?.toString() ?? '0') ?? 0.0,
+      timbreFiscal: double.tryParse(map['timbre_fiscal']?.toString() ?? '0') ?? 0.0,
+      vehicleRegistration: map['vehicle_registration']?.toString(),
+      driverName: map['driver_name']?.toString(),
+      notes: map['notes']?.toString(),
+      conditionsGenerales: map['conditions']?.toString(),
+      warehouseId: map['warehouse_id']?.toString(),
+      firebaseUid: map['firebase_uid']?.toString(),
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
+      createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
+      items: parsedItems,
+      dbTotalHT: double.tryParse(map['total_ht']?.toString() ?? ''),
+      dbTotalTVA: double.tryParse(map['total_tva']?.toString() ?? ''),
+      dbTotalTTC: double.tryParse(map['total_ttc']?.toString() ?? ''),
+    );
+  }
 }
 
 class StockWithdrawalItem {
@@ -288,15 +294,15 @@ class StockWithdrawalItem {
       };
 
   factory StockWithdrawalItem.fromMap(Map<String, dynamic> map) => StockWithdrawalItem(
-        id: map['id'] as String,
-        withdrawalId: map['withdrawal_id'] as String,
-        productId: map['product_id'] as String,
-        description: map['description'] as String?,
-        quantity: (map['quantity'] as num?)?.toDouble() ?? 1,
-        unitPrice: (map['unit_price'] as num?)?.toDouble() ?? 0,
-        tvaRate: (map['tva_rate'] as num?)?.toDouble() ?? 19,
-        discountPercent: (map['discount_percent'] as num?)?.toDouble() ?? 0,
-        showDescription: map['show_description'] == 1,
-        showDiscount: map['show_discount'] == 1,
+        id: map['id']?.toString() ?? '',
+        withdrawalId: map['withdrawal_id']?.toString() ?? '',
+        productId: map['product_id']?.toString() ?? '',
+        description: map['description']?.toString(),
+        quantity: double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0,
+        unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
+        tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
+        discountPercent: double.tryParse(map['discount_percent']?.toString() ?? '0') ?? 0.0,
+        showDescription: map['show_description'] == 1 || map['show_description'] == '1' || map['show_description'] == true,
+        showDiscount: map['show_discount'] == 1 || map['show_discount'] == '1' || map['show_discount'] == true,
       );
 }

@@ -5,6 +5,7 @@ import '../blocs/product_settings/product_settings_bloc.dart';
 import '../blocs/product_settings/product_settings_event.dart';
 import '../blocs/product_settings/product_settings_state.dart';
 import '../models/product_family.dart';
+import '../services/sync_service.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
 
@@ -18,6 +19,12 @@ class ProductSettingsScreen extends StatefulWidget {
 class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
   final _familyCtrl = TextEditingController();
   final Map<String, TextEditingController> _subFamilyCtrls = {};
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<ProductSettingsBloc>().add(LoadFamilies());
+  }
 
   @override
   void dispose() {
@@ -51,13 +58,21 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
         ),
         
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Gerer les familles et sous-familles', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 24),
+          child: RefreshIndicator(
+            onRefresh: () async {
+              await SyncService.instance.triggerSync();
+              if (context.mounted) {
+                context.read<ProductSettingsBloc>().add(LoadFamilies());
+              }
+            },
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Gerer les familles et sous-familles', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  const SizedBox(height: 24),
                 
                 BlocBuilder<ProductSettingsBloc, ProductSettingsState>(
                   builder: (context, state) {
@@ -120,6 +135,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                 ),
               ],
             ),
+          ),
           ),
         ),
       ],

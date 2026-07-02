@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
+import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
+import '../widgets/return_note_payment_dialog.dart';
+import '../blocs/payments/payments_bloc.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/return_notes/return_notes_bloc.dart';
 import '../blocs/return_notes/return_notes_event.dart';
@@ -672,20 +677,26 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                     borderRadius: BorderRadius.circular(8)),
                 color: AppColors.surface,
                 onSelected: (val) => _handleAction(context, val, note),
-                itemBuilder: (_) => [
-                  _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
-                  const PopupMenuDivider(height: 1),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
-                  const PopupMenuDivider(height: 1),
+                itemBuilder: (_) {
+                  final items = <PopupMenuEntry<String>>[
+                    _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
+                    const PopupMenuDivider(height: 1),
+                  ];
+
+                  if (note.status != 'paid') {
+                    items.add(_buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'));
+                    items.add(const PopupMenuDivider(height: 1));
+                  }
+
+                  items.addAll([
+                    _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
+                    const PopupMenuDivider(height: 1),
                   _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
                   const PopupMenuDivider(height: 1),
                   _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
@@ -695,7 +706,9 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                   _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
                   const PopupMenuDivider(height: 1),
                   _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
-                ],
+                  ]);
+                  return items;
+                },
               ),
             ),
           ),
@@ -790,7 +803,22 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
         );
         break;
       case 'add_payment':
-        _showAddPaymentDialog(context, note);
+        showDialog(
+          context: context,
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: context.read<PaymentsBloc>()),
+              BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+              BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+              BlocProvider.value(value: context.read<ReturnNotesBloc>()),
+            ],
+            child: ReturnNotePaymentDialog(returnNote: note),
+          ),
+        ).then((created) {
+          if (created == true && context.mounted) {
+            context.read<ReturnNotesBloc>().add(LoadReturnNotes());
+          }
+        });
         break;
       case 'delete':
         _confirmDelete(note);
@@ -887,99 +915,4 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
     );
   }
 
-  void _showAddPaymentDialog(BuildContext context, ReturnNote note) {
-    final amountCtrl = TextEditingController(text: note.totalTTC.toStringAsFixed(3));
-    final methodNotifier = ValueNotifier<String>('especes');
-    
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Ajouter un paiement pour BL ${note.returnNumber}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: amountCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Montant (DT)',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            ),
-            const SizedBox(height: 16),
-            ValueListenableBuilder<String>(
-              valueListenable: methodNotifier,
-              builder: (context, val, child) => DropdownButtonFormField<String>(
-                value: val,
-                decoration: const InputDecoration(
-                  labelText: 'Methode de paiement',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'especes', child: Text('Especes')),
-                  DropdownMenuItem(value: 'cheque', child: Text('Cheque')),
-                  DropdownMenuItem(value: 'virement', child: Text('Virement')),
-                  DropdownMenuItem(value: 'carte', child: Text('Carte')),
-                ],
-                onChanged: (v) {
-                  if (v != null) methodNotifier.value = v;
-                },
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-            onPressed: () async {
-              final amountStr = amountCtrl.text.replaceAll(',', '.');
-              final amount = double.tryParse(amountStr) ?? 0.0;
-              if (amount > 0) {
-                final payment = Payment(
-                  id: const Uuid().v4(),
-                  paymentNumber: 'PAI-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch % 1000000}',
-                  direction: 'encaissement',
-                  contactId: note.customerId,
-                  contactType: 'customer',
-                  contactName: note.customerName ?? note.customerCompany,
-                  amount: amount,
-                  method: methodNotifier.value,
-                  reference: note.returnNumber,
-                  paymentDate: DateTime.now(),
-                  status: 'paid',
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                );
-                
-                try {
-                  context.read<PaymentsBloc>().add(AddPayment(payment));
-                } catch (e) {
-                  await DatabaseHelper.instance.insertPayment(payment);
-                }
-                
-                if (context.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Paiement ajoute avec succes'),
-                    backgroundColor: AppColors.success,
-                  ));
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Veuillez entrer un montant valide'),
-                  backgroundColor: AppColors.error,
-                ));
-              }
-            },
-            child: const Text('Enregistrer'),
-          ),
-        ],
-      ),
-    );
-  }
 }

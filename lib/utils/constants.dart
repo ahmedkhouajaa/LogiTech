@@ -294,7 +294,8 @@ enum DeliveryNoteStatus {
   delivered,
   invoiced,
   returned,
-  cancelled;
+  cancelled,
+  paid;
 
   String get label {
     switch (this) {
@@ -308,6 +309,8 @@ enum DeliveryNoteStatus {
         return 'Retourne';
       case cancelled:
         return 'Annule';
+      case paid:
+        return 'Paye';
     }
   }
 
@@ -323,6 +326,8 @@ enum DeliveryNoteStatus {
         return AppColors.warning;
       case cancelled:
         return AppColors.error;
+      case paid:
+        return AppColors.success;
     }
   }
 }
@@ -330,7 +335,8 @@ enum DeliveryNoteStatus {
 enum ReturnNoteStatus {
   draft,
   validated,
-  cancelled;
+  cancelled,
+  paid;
 
   String get label {
     switch (this) {
@@ -340,6 +346,8 @@ enum ReturnNoteStatus {
         return 'Valide';
       case cancelled:
         return 'Annule';
+      case paid:
+        return 'Rembourse';
     }
   }
 
@@ -351,6 +359,8 @@ enum ReturnNoteStatus {
         return AppColors.success;
       case cancelled:
         return AppColors.error;
+      case paid:
+        return AppColors.success;
     }
   }
 }
@@ -511,7 +521,8 @@ enum SupplierOrderStatus {
   validated,
   partiallyReceived,
   received,
-  cancelled;
+  cancelled,
+  paid;
 
   String get label {
     switch (this) {
@@ -527,6 +538,8 @@ enum SupplierOrderStatus {
         return 'Recu';
       case cancelled:
         return 'Annule';
+      case paid:
+        return 'Payee';
     }
   }
 
@@ -544,6 +557,8 @@ enum SupplierOrderStatus {
         return AppColors.primary;
       case cancelled:
         return AppColors.error;
+      case paid:
+        return AppColors.success;
     }
   }
 }

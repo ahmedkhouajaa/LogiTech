@@ -80,18 +80,22 @@ class TreasuryAccount {
 
   factory TreasuryAccount.fromMap(Map<String, dynamic> map) {
     return TreasuryAccount(
-      id: map['id'],
-      name: map['name'],
-      internalName: map['internal_name'],
-      type: map['type'],
-      bankName: map['bank_name'],
-      agency: map['agency'],
-      iban: map['iban'],
-      currency: map['currency'] ?? 'TND',
-      balance: map['balance']?.toDouble() ?? 0.0,
-      isDefault: map['is_default'] == 1,
-      createdAt: map['created_at'] != null ? DateTime.fromMillisecondsSinceEpoch(map['created_at']) : DateTime.now(),
-      updatedAt: map['updated_at'] != null ? DateTime.fromMillisecondsSinceEpoch(map['updated_at']) : DateTime.now(),
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
+      internalName: map['internal_name']?.toString(),
+      type: map['type']?.toString() ?? '',
+      bankName: map['bank_name']?.toString(),
+      agency: map['agency']?.toString(),
+      iban: map['iban']?.toString(),
+      currency: map['currency']?.toString() ?? 'TND',
+      balance: double.tryParse(map['balance']?.toString() ?? '0') ?? 0.0,
+      isDefault: map['is_default'] == 1 || map['is_default'] == '1' || map['is_default'] == true,
+      createdAt: map['created_at'] != null 
+          ? DateTime.fromMillisecondsSinceEpoch(int.tryParse(map['created_at'].toString()) ?? DateTime.now().millisecondsSinceEpoch) 
+          : DateTime.now(),
+      updatedAt: map['updated_at'] != null 
+          ? DateTime.fromMillisecondsSinceEpoch(int.tryParse(map['updated_at'].toString()) ?? DateTime.now().millisecondsSinceEpoch) 
+          : DateTime.now(),
     );
   }
 }

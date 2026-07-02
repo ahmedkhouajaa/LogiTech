@@ -104,6 +104,30 @@ class DocumentWrapper {
     );
   }
 
+  static DocumentWrapper fromStockWithdrawal(dynamic doc) {
+    return DocumentWrapper(
+      id: doc.id,
+      number: doc.number,
+      documentTitle: 'BON DE SORTIE',
+      customerName: doc.customerName,
+      date: doc.date,
+      totalHT: doc.totalHTAfterDiscount,
+      totalTva: doc.totalTVA,
+      totalTTC: doc.totalTTC,
+      stampTax: doc.timbreFiscal,
+      notes: doc.notes,
+      conditionsGenerales: doc.conditionsGenerales,
+      items: (doc.items as List).map((i) => DocumentItemWrapper(
+        productName: i.description ?? 'Produit Inconnu',
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        tvaRate: i.tvaRate,
+        discountPercent: i.discountPercent,
+        totalHT: i.totalHT,
+      )).toList(),
+    );
+  }
+
   static DocumentWrapper fromPurchaseInvoice(dynamic inv) {
     return DocumentWrapper(
       id: inv.id,

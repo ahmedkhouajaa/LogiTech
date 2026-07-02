@@ -88,10 +88,10 @@ class SyncService {
         } catch (_) {}
       }
       
-      // Add a 24-hour safety buffer to catch records from devices with incorrect system clocks
+      // Force a 30-day buffer temporarily to catch missed records from the missing column bug
       try {
         final lastSyncDate = DateTime.parse(lastSyncStr);
-        lastSyncStr = lastSyncDate.subtract(const Duration(hours: 24)).toIso8601String();
+        lastSyncStr = lastSyncDate.subtract(const Duration(days: 30)).toIso8601String();
       } catch (_) {}
       
       final tablesToPull = [
@@ -155,9 +155,15 @@ class SyncService {
           }
           
           try {
-            final changes = await db.update(table, data, where: 'id = ?', whereArgs: [data['id']]);
+            final tableInfo = await db.rawQuery('PRAGMA table_info($table)');
+            final validColumns = tableInfo.map((e) => e['name'] as String).toList();
+            
+            final sanitizedData = Map<String, dynamic>.from(data)
+                ..removeWhere((key, value) => !validColumns.contains(key));
+
+            final changes = await db.update(table, sanitizedData, where: 'id = ?', whereArgs: [data['id']]);
             if (changes == 0) {
-              await db.insert(table, data, conflictAlgorithm: ConflictAlgorithm.replace);
+              await db.insert(table, sanitizedData, conflictAlgorithm: ConflictAlgorithm.replace);
             }
           } catch (e) {
             print('Error syncing $table ${data['id']}: $e');

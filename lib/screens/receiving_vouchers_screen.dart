@@ -23,12 +23,16 @@ import 'app_shell_screen.dart';
 import '../widgets/sidebar_menu.dart';
 import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
-import 'document_preview_screen.dart';
+import '../widgets/receiving_voucher_payment_dialog.dart';
+import '../blocs/payments/payments_bloc.dart';
+import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
+import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 enum ReceivingVoucherStatus {
   draft('Brouillon', AppColors.textSecondary),
-  validated('Validé', AppColors.success),
-  partial('Réception partielle', AppColors.warning),
-  canceled('Annulé', AppColors.error);
+  validated('Validé', AppColors.primary),
+  received('Reçu', AppColors.info),
+  cancelled('Annulé', AppColors.error),
+  payee('Payé', AppColors.success);
 
   final String label;
   final Color color;
@@ -398,8 +402,8 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                               SizedBox(width: 32), // Checkbox space
                               Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
                               Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
                               Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
                               SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
                             ],
                           ),
@@ -470,10 +474,6 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                           ),
                                           Expanded(
                                             flex: 2,
-                                            child: Text(formatDateLong(voucher.date), style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
                                             child: Container(
                                               alignment: Alignment.centerLeft,
                                               child: Container(
@@ -488,6 +488,10 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                 ),
                                               ),
                                             ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(formatCurrency(voucher.computedTotalTTC), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                                           ),
                                           SizedBox(
                                             width: 80,
@@ -550,6 +554,24 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                   } else if (val == 'pdf') {
                                                     final doc = DocumentWrapper.fromReceivingVoucher(voucher);
                                                     PdfService.instance.generateAndOpenDocument(doc);
+                                                  } else if (val == 'payment') {
+                                                    showDialog(
+                                                      context: context,
+                                                      builder: (_) => MultiBlocProvider(
+                                                        providers: [
+                                                          BlocProvider.value(value: context.read<PaymentsBloc>()),
+                                                          BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+                                                          BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+                                                          BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
+                                                          BlocProvider.value(value: context.read<ProductsBloc>()),
+                                                        ],
+                                                        child: ReceivingVoucherPaymentDialog(receivingVoucher: voucher),
+                                                      ),
+                                                    ).then((created) {
+                                                      if (created == true && context.mounted) {
+                                                        context.read<ReceivingVouchersBloc>().add(LoadReceivingVouchers());
+                                                      }
+                                                    });
                                                   } else {
                                                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                                                       content: Text('Cette fonctionnalité sera disponible prochainement'),
@@ -948,7 +970,10 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     items.add(_buildMenuItem('edit', Icons.edit_outlined, 'Modifier', const Color(0xFF2563EB)));
     items.add(_buildMenuItem('delete', Icons.delete_outline, 'Supprimer', const Color(0xFFEF4444)));
     items.add(_buildMenuItem('print', Icons.print_outlined, 'Imprimer', const Color(0xFF475569)));
-    items.add(_buildMenuItem('payment', Icons.credit_card_outlined, 'Ajouter un paiement', const Color(0xFF10B981)));
+    
+    if (!voucher.isPaid) {
+      items.add(_buildMenuItem('payment', Icons.credit_card_outlined, 'Ajouter un paiement', const Color(0xFF10B981)));
+    }
     
     // Mutually exclusive conversion logic
     if (voucher.isConvertedToPurchaseInvoice) {

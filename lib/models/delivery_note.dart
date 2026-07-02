@@ -216,41 +216,47 @@ class DeliveryNote {
         'items': items.map((i) => i.toMap()).toList(),
       };
 
-  factory DeliveryNote.fromMap(Map<String, dynamic> map, [List<DeliveryNoteItem> items = const []]) =>
-      DeliveryNote(
-        id: map['id'] as String,
-        number: map['number'] as String,
-        customerId: map['customer_id'] as String,
-        customerName: map['customer_name'] as String?,
-        customerCompany: map['customer_company'] as String?,
-        orderId: map['order_id'] as String?,
-        projectId: map['project_id'] as String?,
-        projectName: map['project_name'] as String?,
-        devisId: map['devis_id'] as String?,
-        date: DateTime.parse(map['date'] as String),
-        status: map['status'] as String? ?? 'draft',
-        pricingMode: map['pricing_mode'] as String? ?? 'ht',
-        globalDiscountPercent: (map['global_discount_percent'] as num?)?.toDouble() ?? 0.0,
-        globalDiscountAmount: (map['global_discount_amount'] as num?)?.toDouble() ?? 0.0,
-        timbreFiscal: (map['timbre_fiscal'] as num?)?.toDouble() ?? 0.0,
-        vehicleRegistration: map['vehicle_registration'] as String?,
-        driverName: map['driver_name'] as String?,
-        notes: map['notes'] as String?,
-        conditionsGenerales: map['conditions'],
-        warehouseId: map['warehouse_id'],
-        isConvertedToInvoice: map['is_converted_to_invoice'] == 1,
-        convertedToInvoiceId: map['converted_to_invoice_id'],
-        isConvertedToReturn: map['is_converted_to_return'] == 1,
-        convertedToReturnId: map['converted_to_return_id'],
-        firebaseUid: map['firebase_uid'],
-        isDeleted: map['is_deleted'] == 1,
-        createdAt: DateTime.parse(map['created_at'] as String),
-        updatedAt: DateTime.parse(map['updated_at'] as String),
-        items: items,
-        dbTotalHT: map['total_ht'] != null ? (map['total_ht'] as num).toDouble() : null,
-        dbTotalTVA: map['total_tva'] != null ? (map['total_tva'] as num).toDouble() : null,
-        dbTotalTTC: map['total_ttc'] != null ? (map['total_ttc'] as num).toDouble() : null,
-      );
+  factory DeliveryNote.fromMap(Map<String, dynamic> map, [List<DeliveryNoteItem> optionalItems = const []]) {
+    List<DeliveryNoteItem> parsedItems = optionalItems;
+    if (parsedItems.isEmpty && map['items'] != null && map['items'] is List) {
+      parsedItems = (map['items'] as List).map((i) => DeliveryNoteItem.fromMap(Map<String, dynamic>.from(i))).toList();
+    }
+
+    return DeliveryNote(
+      id: map['id']?.toString() ?? '',
+      number: map['number']?.toString() ?? '',
+      customerId: map['customer_id']?.toString() ?? '',
+      customerName: map['customer_name']?.toString(),
+      customerCompany: map['customer_company']?.toString(),
+      orderId: map['order_id']?.toString(),
+      projectId: map['project_id']?.toString(),
+      projectName: map['project_name']?.toString(),
+      devisId: map['devis_id']?.toString(),
+      date: map['date'] != null ? DateTime.tryParse(map['date'].toString()) ?? DateTime.now() : DateTime.now(),
+      status: map['status']?.toString() ?? 'draft',
+      pricingMode: map['pricing_mode']?.toString() ?? 'ht',
+      globalDiscountPercent: double.tryParse(map['global_discount_percent']?.toString() ?? '0') ?? 0.0,
+      globalDiscountAmount: double.tryParse(map['global_discount_amount']?.toString() ?? '0') ?? 0.0,
+      timbreFiscal: double.tryParse(map['timbre_fiscal']?.toString() ?? '0') ?? 0.0,
+      vehicleRegistration: map['vehicle_registration']?.toString(),
+      driverName: map['driver_name']?.toString(),
+      notes: map['notes']?.toString(),
+      conditionsGenerales: map['conditions']?.toString(),
+      warehouseId: map['warehouse_id']?.toString(),
+      isConvertedToInvoice: map['is_converted_to_invoice'] == 1 || map['is_converted_to_invoice'] == '1' || map['is_converted_to_invoice'] == true,
+      convertedToInvoiceId: map['converted_to_invoice_id']?.toString(),
+      isConvertedToReturn: map['is_converted_to_return'] == 1 || map['is_converted_to_return'] == '1' || map['is_converted_to_return'] == true,
+      convertedToReturnId: map['converted_to_return_id']?.toString(),
+      firebaseUid: map['firebase_uid']?.toString(),
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
+      createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
+      items: parsedItems,
+      dbTotalHT: double.tryParse(map['total_ht']?.toString() ?? ''),
+      dbTotalTVA: double.tryParse(map['total_tva']?.toString() ?? ''),
+      dbTotalTTC: double.tryParse(map['total_ttc']?.toString() ?? ''),
+    );
+  }
 }
 
 class DeliveryNoteItem {
@@ -324,15 +330,15 @@ class DeliveryNoteItem {
       };
 
   factory DeliveryNoteItem.fromMap(Map<String, dynamic> map) => DeliveryNoteItem(
-        id: map['id'] as String,
-        deliveryNoteId: map['delivery_note_id'] as String,
-        productId: map['product_id'] as String,
-        description: map['description'] as String?,
-        quantity: (map['quantity'] as num?)?.toDouble() ?? 1,
-        unitPrice: (map['unit_price'] as num?)?.toDouble() ?? 0,
-        tvaRate: (map['tva_rate'] as num?)?.toDouble() ?? 19,
-        discountPercent: (map['discount_percent'] as num?)?.toDouble() ?? 0,
-        showDescription: map['show_description'] == 1,
-        showDiscount: map['show_discount'] == 1,
+        id: map['id']?.toString() ?? '',
+        deliveryNoteId: map['delivery_note_id']?.toString() ?? '',
+        productId: map['product_id']?.toString() ?? '',
+        description: map['description']?.toString(),
+        quantity: double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0,
+        unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
+        tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
+        discountPercent: double.tryParse(map['discount_percent']?.toString() ?? '0') ?? 0.0,
+        showDescription: map['show_description'] == 1 || map['show_description'] == '1' || map['show_description'] == true,
+        showDiscount: map['show_discount'] == 1 || map['show_discount'] == '1' || map['show_discount'] == true,
       );
 }

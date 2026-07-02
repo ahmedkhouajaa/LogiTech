@@ -65,39 +65,86 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Header
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Row(
-            children: [
-              const Text(
-                'Comptes de Tresorerie',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+          child: isMobile 
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Text(
+                        'Comptes de Tresorerie',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      ),
+                      SizedBox(width: 8),
+                      Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showAccountDialog(context),
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('Ajouter Compte'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textPrimary,
+                            side: const BorderSide(color: AppColors.border),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _showExpenseDialog(context),
+                          icon: const Icon(Icons.attach_money_rounded, size: 18),
+                          label: const Text('Ajouter Depense'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  const Text(
+                    'Comptes de Tresorerie',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary),
+                  const Spacer(),
+                  OutlinedButton.icon(
+                    onPressed: () => _showAccountDialog(context),
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text('Ajouter un Compte'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textPrimary,
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => _showExpenseDialog(context),
+                    icon: const Icon(Icons.attach_money_rounded, size: 18),
+                    label: const Text('Ajouter une Depense'),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary),
-              const Spacer(),
-              OutlinedButton.icon(
-                onPressed: () => _showAccountDialog(context),
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Ajouter un Compte'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textPrimary,
-                  side: const BorderSide(color: AppColors.border),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton.icon(
-                onPressed: () => _showExpenseDialog(context),
-                icon: const Icon(Icons.attach_money_rounded, size: 18),
-                label: const Text('Ajouter une Depense'),
-              ),
-            ],
-          ),
         ),
 
         // Table
@@ -105,7 +152,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
           child: BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
             builder: (context, state) {
               if (state is TreasuryAccountsLoading) return const Center(child: CircularProgressIndicator());
-              if (state is TreasuryAccountsError) return Center(child: Text('Erreur: \${state.message}'));
+              if (state is TreasuryAccountsError) return Center(child: Text('Erreur: ${state.message}'));
               if (state is TreasuryAccountsLoaded) {
                 final filtered = _search.isEmpty
                     ? state.accounts

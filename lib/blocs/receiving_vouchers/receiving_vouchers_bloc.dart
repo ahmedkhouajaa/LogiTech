@@ -17,6 +17,11 @@ class UpdateReceivingVoucher extends ReceivingVouchersEvent {
   UpdateReceivingVoucher(this.voucher);
 }
 
+class DeleteReceivingVoucher extends ReceivingVouchersEvent {
+  final String id;
+  DeleteReceivingVoucher(this.id);
+}
+
 // ─── States ────────────────────────────────────────────────────────
 abstract class ReceivingVouchersState {}
 
@@ -44,6 +49,7 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
     on<LoadReceivingVouchers>(_onLoadReceivingVouchers);
     on<AddReceivingVoucher>(_onAddReceivingVoucher);
     on<UpdateReceivingVoucher>(_onUpdateReceivingVoucher);
+    on<DeleteReceivingVoucher>(_onDeleteReceivingVoucher);
   }
 
   Future<void> _onLoadReceivingVouchers(LoadReceivingVouchers event, Emitter<ReceivingVouchersState> emit) async {
@@ -51,7 +57,9 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
     try {
       final vouchers = await _dbHelper.getReceivingVouchers();
       emit(ReceivingVouchersLoaded(vouchers));
-    } catch (e) {
+    } catch (e, stacktrace) {
+      print('ReceivingVouchersBloc Error: $e');
+      print(stacktrace);
       emit(ReceivingVouchersError(e.toString()));
     }
   }
@@ -75,6 +83,16 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
       final voucherMap = event.voucher.toMap();
       final itemsMap = event.voucher.items.map((i) => i.toMap()).toList();
       await _dbHelper.updateReceivingVoucher(voucherMap, itemsMap);
+      add(LoadReceivingVouchers());
+    } catch (e) {
+      emit(ReceivingVouchersError(e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteReceivingVoucher(DeleteReceivingVoucher event, Emitter<ReceivingVouchersState> emit) async {
+    emit(ReceivingVouchersLoading());
+    try {
+      await _dbHelper.deleteReceivingVoucher(event.id);
       add(LoadReceivingVouchers());
     } catch (e) {
       emit(ReceivingVouchersError(e.toString()));

@@ -44,7 +44,7 @@ class Invoice {
     this.devisId,
     required this.date,
     required this.dueDate,
-    this.status = InvoiceStatus.draft,
+    this.status = InvoiceStatus.unpaid,
     this.totalHT = 0,
     this.totalTva = 0,
     this.totalTTC = 0,
@@ -89,37 +89,45 @@ class Invoice {
         'items': items.map((i) => i.toMap()).toList(),
       };
 
-  factory Invoice.fromMap(Map<String, dynamic> map) => Invoice(
-        id: map['id'] as String, number: map['number'] as String,
-        customerId: map['customer_id'] as String,
-        customerName: map['customer_name'] as String?,
-        orderId: map['order_id'] as String?,
-        deliveryNoteId: map['delivery_note_id'] as String?,
-        projectId: map['project_id'] as String?,
-        projectName: map['project_name'] as String?,
-        devisId: map['devis_id'] as String?,
-        date: DateTime.parse(map['date'] as String),
-        dueDate: DateTime.parse(map['due_date'] as String),
+  factory Invoice.fromMap(Map<String, dynamic> map) {
+    List<InvoiceItem> parsedItems = [];
+    if (map['items'] != null && map['items'] is List) {
+      parsedItems = (map['items'] as List).map((i) => InvoiceItem.fromMap(Map<String, dynamic>.from(i))).toList();
+    }
+    
+    return Invoice(
+        id: map['id']?.toString() ?? '', number: map['number']?.toString() ?? '',
+        customerId: map['customer_id']?.toString() ?? '',
+        customerName: map['customer_name']?.toString(),
+        orderId: map['order_id']?.toString(),
+        deliveryNoteId: map['delivery_note_id']?.toString(),
+        projectId: map['project_id']?.toString(),
+        projectName: map['project_name']?.toString(),
+        devisId: map['devis_id']?.toString(),
+        date: map['date'] != null ? DateTime.tryParse(map['date'].toString()) ?? DateTime.now() : DateTime.now(),
+        dueDate: map['due_date'] != null ? DateTime.tryParse(map['due_date'].toString()) ?? DateTime.now() : DateTime.now(),
         status: InvoiceStatus.values.firstWhere(
-          (e) => e.name == map['status'], orElse: () => InvoiceStatus.draft,
+          (e) => e.name == map['status'], orElse: () => InvoiceStatus.unpaid,
         ),
-        totalHT: (map['total_ht'] as num?)?.toDouble() ?? 0,
-        totalTva: (map['total_tva'] as num?)?.toDouble() ?? 0,
-        totalTTC: (map['total_ttc'] as num?)?.toDouble() ?? 0,
-        amountPaid: (map['amount_paid'] as num?)?.toDouble() ?? 0,
-        stampTax: (map['stamp_tax'] as num?)?.toDouble() ?? 0,
-        timbreFiscal: (map['timbre_fiscal'] as num?)?.toDouble() ?? 0,
-        globalDiscountPercent: (map['global_discount_percent'] as num?)?.toDouble() ?? 0,
-        globalDiscountAmount: (map['global_discount_amount'] as num?)?.toDouble() ?? 0,
-        pricingMode: map['pricing_mode'] as String? ?? 'ht',
-        notes: map['notes'] as String?,
-        conditionsGenerales: map['conditions'] as String?,
-        firebaseUid: map['firebase_uid'] as String?,
-        creditNoteId: map['credit_note_id'] as String?,
-        isDeleted: map['is_deleted'] == 1,
-        createdAt: DateTime.parse(map['created_at'] as String),
-        updatedAt: DateTime.parse(map['updated_at'] as String),
+        totalHT: double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0,
+        totalTva: double.tryParse(map['total_tva']?.toString() ?? '0') ?? 0.0,
+        totalTTC: double.tryParse(map['total_ttc']?.toString() ?? '0') ?? 0.0,
+        amountPaid: double.tryParse(map['amount_paid']?.toString() ?? '0') ?? 0.0,
+        stampTax: double.tryParse(map['stamp_tax']?.toString() ?? '0') ?? 0.0,
+        timbreFiscal: double.tryParse(map['timbre_fiscal']?.toString() ?? '0') ?? 0.0,
+        globalDiscountPercent: double.tryParse(map['global_discount_percent']?.toString() ?? '0') ?? 0.0,
+        globalDiscountAmount: double.tryParse(map['global_discount_amount']?.toString() ?? '0') ?? 0.0,
+        pricingMode: map['pricing_mode']?.toString() ?? 'ht',
+        notes: map['notes']?.toString(),
+        conditionsGenerales: map['conditions']?.toString(),
+        firebaseUid: map['firebase_uid']?.toString(),
+        creditNoteId: map['credit_note_id']?.toString(),
+        isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
+        createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+        updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
+        items: parsedItems,
       );
+  }
 
   Invoice copyWith({
     String? id, String? number, String? customerId, String? customerName,
@@ -205,16 +213,16 @@ class InvoiceItem {
       };
 
   factory InvoiceItem.fromMap(Map<String, dynamic> map) => InvoiceItem(
-        id: map['id'] as String, invoiceId: map['invoice_id'] as String,
-        productId: map['product_id'] as String,
-        productName: map['product_name'] as String?,
-        description: map['description'] as String?,
-        quantity: (map['quantity'] as num?)?.toDouble() ?? 1,
-        unitPrice: (map['unit_price'] as num?)?.toDouble() ?? 0,
-        tvaRate: (map['tva_rate'] as num?)?.toDouble() ?? 19,
-        discountPercent: (map['discount_percent'] as num?)?.toDouble() ?? 0,
-        totalHT: (map['total_ht'] as num?)?.toDouble() ?? 0,
-        customFields: _parseCustomFields(map['custom_fields_json'] as String?),
+        id: map['id']?.toString() ?? '', invoiceId: map['invoice_id']?.toString() ?? '',
+        productId: map['product_id']?.toString() ?? '',
+        productName: map['product_name']?.toString(),
+        description: map['description']?.toString(),
+        quantity: double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0,
+        unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
+        tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
+        discountPercent: double.tryParse(map['discount_percent']?.toString() ?? '0') ?? 0.0,
+        totalHT: double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0,
+        customFields: _parseCustomFields(map['custom_fields_json']?.toString()),
       );
 
   static Map<String, String> _parseCustomFields(String? jsonStr) {

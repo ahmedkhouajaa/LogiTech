@@ -9,6 +9,7 @@ import '../../blocs/supplier_returns/supplier_returns_bloc.dart';
 import '../../blocs/supplier_returns/supplier_returns_state.dart';
 import '../../blocs/supplier_returns/supplier_returns_event.dart';
 import 'forms/mobile_supplier_return_form_screen.dart';
+import 'mobile_supplier_return_detail_screen.dart';
 
 
 class MobileSupplierReturnsScreen extends StatefulWidget {
@@ -131,7 +132,7 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
             try { date = (item as dynamic).date ?? (item as dynamic).createdAt; } catch (_) {}
             
             double amount = 0;
-            try { amount = ((item as dynamic).totalTTC ?? (item as dynamic).amount ?? (item as dynamic).price ?? 0.0).toDouble(); } catch (_) {}
+            try { amount = (((item as dynamic).computedTotalTTC ?? (item as dynamic).totalTTC) ?? (item as dynamic).amount ?? (item as dynamic).price ?? 0.0).toDouble(); } catch (_) {}
             
             String id = '';
             try { id = (item as dynamic).id; } catch (_) {}
@@ -143,6 +144,10 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
               date: date,
               amount: amount,
               onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileSupplierReturnDetailScreen(returnNote: item)),
+                );
               },
               onEdit: () {
                 Navigator.push(

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
+import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
+import '../widgets/delivery_note_payment_dialog.dart';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/delivery_notes/delivery_notes_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
@@ -674,39 +678,49 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                     borderRadius: BorderRadius.circular(8)),
                 color: AppColors.surface,
                 onSelected: (val) => _handleAction(context, val, note),
-                itemBuilder: (_) => [
-                  _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-                  const PopupMenuDivider(height: 1),
-                  if (note.isConvertedToInvoice) ...[
-                    _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture creee')
-                  ] else if (note.isConvertedToReturn) ...[
-                    _buildMenuItem('view_return', Icons.assignment_return_outlined, AppColors.success, 'Voir le bon de retour cree')
-                  ] else ...[
-                    _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
+                itemBuilder: (_) {
+                  final items = <PopupMenuEntry<String>>[
+                    _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
                     const PopupMenuDivider(height: 1),
-                    _buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture'),
+                    _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
                     const PopupMenuDivider(height: 1),
-                    _buildMenuItem('to_return', Icons.assignment_return_outlined, AppColors.textSecondary, 'Transformer en Bon de Retour'),
-                  ],
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
-                ],
+                    _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
+                    const PopupMenuDivider(height: 1),
+                  ];
+
+                  if (note.isConvertedToInvoice) {
+                    items.add(_buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture creee'));
+                  } else if (note.isConvertedToReturn) {
+                    items.add(_buildMenuItem('view_return', Icons.assignment_return_outlined, AppColors.success, 'Voir le bon de retour cree'));
+                  } else {
+                    if (note.status != 'paid') {
+                      items.add(_buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'));
+                      items.add(const PopupMenuDivider(height: 1));
+                    }
+                    items.add(_buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture'));
+                    items.add(const PopupMenuDivider(height: 1));
+                    items.add(_buildMenuItem('to_return', Icons.assignment_return_outlined, AppColors.textSecondary, 'Transformer en Bon de Retour'));
+                  }
+
+                  items.addAll([
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
+                  ]);
+                  
+                  return items;
+                },
               ),
             ),
           ),
@@ -820,7 +834,22 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
         _openConvertedReturn(context, note.convertedToReturnId);
         break;
       case 'add_payment':
-        _showAddPaymentDialog(context, note);
+        showDialog(
+          context: context,
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: context.read<PaymentsBloc>()),
+              BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+              BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+              BlocProvider.value(value: context.read<DeliveryNotesBloc>()),
+            ],
+            child: DeliveryNotePaymentDialog(deliveryNote: note),
+          ),
+        ).then((created) {
+          if (created == true && context.mounted) {
+            context.read<DeliveryNotesBloc>().add(LoadDeliveryNotes());
+          }
+        });
         break;
       case 'delete':
         _confirmDelete(note);

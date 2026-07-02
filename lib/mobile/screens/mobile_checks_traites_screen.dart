@@ -129,7 +129,7 @@ class _MobileChecksTraitesScreenState extends State<MobileChecksTraitesScreen> {
             try { date = (item as dynamic).date ?? (item as dynamic).createdAt; } catch (_) {}
             
             double amount = 0;
-            try { amount = ((item as dynamic).totalTTC ?? (item as dynamic).amount ?? (item as dynamic).price ?? 0.0).toDouble(); } catch (_) {}
+            try { amount = (((item as dynamic).computedTotalTTC ?? (item as dynamic).totalTTC) ?? (item as dynamic).amount ?? (item as dynamic).price ?? 0.0).toDouble(); } catch (_) {}
             
             String id = '';
             try { id = (item as dynamic).id; } catch (_) {}

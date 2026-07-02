@@ -15,8 +15,12 @@ class MobileStatusColors {
     }
     
     // Orange
-    if (['brouillon', 'en cours', 'en attente', 'en préparation', 'en preparation', 'partiellement payee'].contains(lowerStatus)) {
+    if (['en cours', 'en attente', 'en préparation', 'en preparation', 'partiellement payee', 'partiellement payée'].contains(lowerStatus)) {
       return Colors.orange;
+    }
+
+    if (['brouillon'].contains(lowerStatus)) {
+      return Colors.blueGrey;
     }
 
     // Default fallback

@@ -198,36 +198,41 @@ class SupplierOrder {
     };
   }
 
-  factory SupplierOrder.fromMap(Map<String, dynamic> map, [List<SupplierOrderItem> items = const []]) {
+  factory SupplierOrder.fromMap(Map<String, dynamic> map, [List<SupplierOrderItem> optionalItems = const []]) {
+    List<SupplierOrderItem> parsedItems = optionalItems;
+    if (parsedItems.isEmpty && map['items'] != null && map['items'] is List) {
+      parsedItems = (map['items'] as List).map((i) => SupplierOrderItem.fromMap(Map<String, dynamic>.from(i))).toList();
+    }
+
     return SupplierOrder(
-      id: map['id'],
-      number: map['number'],
-      supplierId: map['supplier_id'],
-      supplierName: map['supplier_name'],
-      supplierCompany: map['supplier_company'], // Not standard in supplier model but useful for UI joins
-      projectId: map['project_id'],
-      projectName: map['project_name'],
-      date: DateTime.parse(map['date']),
-      expectedDate: map['expected_date'] != null ? DateTime.parse(map['expected_date']) : null,
-      status: map['status'] ?? 'draft',
-      pricingMode: map['pricing_mode'] ?? 'ht',
-      globalDiscountPercent: map['global_discount_percent'] ?? 0.0,
-      globalDiscountAmount: map['global_discount_amount'] ?? 0.0,
-      timbreFiscal: map['timbre_fiscal'] ?? 1.000,
-      notes: map['notes'],
-      conditionsGenerales: map['conditions'],
-      firebaseUid: map['firebase_uid'],
-      isDeleted: map['is_deleted'] == 1,
-      isConvertedToReceipt: map['is_converted_to_receipt'] == 1,
-      convertedToReceiptId: map['converted_to_receipt_id'],
-      isConvertedToInvoice: map['is_converted_to_invoice'] == 1,
-      convertedToInvoiceId: map['converted_to_invoice_id'],
-      createdAt: DateTime.parse(map['created_at']),
-      updatedAt: DateTime.parse(map['updated_at']),
-      items: items,
-      dbTotalHT: map['total_ht'] != null ? (map['total_ht'] as num).toDouble() : null,
-      dbTotalTVA: map['total_tva'] != null ? (map['total_tva'] as num).toDouble() : null,
-      dbTotalTTC: map['total_ttc'] != null ? (map['total_ttc'] as num).toDouble() : null,
+      id: map['id']?.toString(),
+      number: map['number']?.toString() ?? '',
+      supplierId: map['supplier_id']?.toString() ?? '',
+      supplierName: map['supplier_name']?.toString(),
+      supplierCompany: map['supplier_company']?.toString(),
+      projectId: map['project_id']?.toString(),
+      projectName: map['project_name']?.toString(),
+      date: map['date'] != null ? DateTime.tryParse(map['date'].toString()) ?? DateTime.now() : DateTime.now(),
+      expectedDate: map['expected_date'] != null ? DateTime.tryParse(map['expected_date'].toString()) : null,
+      status: map['status']?.toString() ?? 'draft',
+      pricingMode: map['pricing_mode']?.toString() ?? 'ht',
+      globalDiscountPercent: double.tryParse(map['global_discount_percent']?.toString() ?? '0') ?? 0.0,
+      globalDiscountAmount: double.tryParse(map['global_discount_amount']?.toString() ?? '0') ?? 0.0,
+      timbreFiscal: double.tryParse(map['timbre_fiscal']?.toString() ?? '1.000') ?? 1.000,
+      notes: map['notes']?.toString(),
+      conditionsGenerales: map['conditions']?.toString(),
+      firebaseUid: map['firebase_uid']?.toString(),
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
+      isConvertedToReceipt: map['is_converted_to_receipt'] == 1 || map['is_converted_to_receipt'] == '1' || map['is_converted_to_receipt'] == true,
+      convertedToReceiptId: map['converted_to_receipt_id']?.toString(),
+      isConvertedToInvoice: map['is_converted_to_invoice'] == 1 || map['is_converted_to_invoice'] == '1' || map['is_converted_to_invoice'] == true,
+      convertedToInvoiceId: map['converted_to_invoice_id']?.toString(),
+      createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
+      items: parsedItems,
+      dbTotalHT: double.tryParse(map['total_ht']?.toString() ?? ''),
+      dbTotalTVA: double.tryParse(map['total_tva']?.toString() ?? ''),
+      dbTotalTTC: double.tryParse(map['total_ttc']?.toString() ?? ''),
     );
   }
 }
@@ -317,16 +322,16 @@ class SupplierOrderItem {
 
   factory SupplierOrderItem.fromMap(Map<String, dynamic> map) {
     return SupplierOrderItem(
-      id: map['id'],
-      orderId: map['order_id'],
-      productId: map['product_id'],
-      description: map['description'],
-      quantity: map['quantity'] ?? 1,
-      unitPrice: map['unit_price'] ?? 0,
-      tvaRate: map['tva_rate'] ?? 19,
-      discountPercent: map['discount_percent'] ?? 0,
-      showDescription: map['show_description'] == 1,
-      showDiscount: map['show_discount'] == 1,
+      id: map['id']?.toString(),
+      orderId: map['order_id']?.toString() ?? '',
+      productId: map['product_id']?.toString() ?? '',
+      description: map['description']?.toString(),
+      quantity: double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0,
+      unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
+      tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
+      discountPercent: double.tryParse(map['discount_percent']?.toString() ?? '0') ?? 0.0,
+      showDescription: map['show_description'] == 1 || map['show_description'] == '1' || map['show_description'] == true,
+      showDiscount: map['show_discount'] == 1 || map['show_discount'] == '1' || map['show_discount'] == true,
     );
   }
 }

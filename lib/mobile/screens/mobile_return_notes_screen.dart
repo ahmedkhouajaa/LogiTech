@@ -6,6 +6,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/return_notes/return_notes_bloc.dart';
+import 'mobile_return_note_detail_screen.dart';
 import '../../blocs/return_notes/return_notes_state.dart';
 import '../../blocs/return_notes/return_notes_event.dart';
 import 'forms/mobile_return_voucher_form_screen.dart';
@@ -113,28 +114,12 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
           isEmpty = filteredItems.isEmpty;
           
           cards = filteredItems.map((item) {
-            String reference = 'N/A';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? 'N/A').toString(); } catch (_) {}
-            
-            String status = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                status = translateStatus(s.toString());
-              }
-            } catch (_) {}
-            
-            String? name;
-            try { name = (item as dynamic).customerName ?? (item as dynamic).supplierName ?? (item as dynamic).companyName ?? (item as dynamic).name; } catch (_) {}
-            
-            DateTime? date;
-            try { date = (item as dynamic).date ?? (item as dynamic).createdAt; } catch (_) {}
-            
-            double amount = 0;
-            try { amount = ((item as dynamic).totalTTC ?? (item as dynamic).amount ?? (item as dynamic).price ?? 0.0).toDouble(); } catch (_) {}
-            
-            String id = '';
-            try { id = (item as dynamic).id; } catch (_) {}
+            String reference = item.returnNumber;
+            String status = translateStatus(item.status);
+            String? name = item.customerName ?? item.customerCompany ?? 'Client Inconnu';
+            DateTime? date = item.dateEmission;
+            double amount = item.totalTTC;
+            String id = item.id;
 
             return MobileGenericCard(
               reference: reference,
@@ -143,6 +128,10 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
               date: date,
               amount: amount,
               onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileReturnNoteDetailScreen(returnNote: item)),
+                );
               },
               onEdit: () {
                 Navigator.push(

@@ -5,6 +5,8 @@ import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
+
+import 'mobile_customer_order_detail_screen.dart';
 import '../../blocs/customer_orders/customer_orders_bloc.dart';
 import 'forms/mobile_customer_order_form_screen.dart';
 
@@ -131,7 +133,7 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
             try { date = (item as dynamic).date ?? (item as dynamic).createdAt; } catch (_) {}
             
             double amount = 0;
-            try { amount = ((item as dynamic).totalTTC ?? (item as dynamic).amount ?? (item as dynamic).price ?? 0.0).toDouble(); } catch (_) {}
+            try { amount = (((item as dynamic).computedTotalTTC ?? (item as dynamic).totalTTC) ?? (item as dynamic).amount ?? (item as dynamic).price ?? 0.0).toDouble(); } catch (_) {}
             
             String id = '';
             try { id = (item as dynamic).id; } catch (_) {}
@@ -143,6 +145,10 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
               date: date,
               amount: amount,
               onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileCustomerOrderDetailScreen(order: item)),
+                );
               },
               onEdit: () {
                 Navigator.push(
@@ -173,11 +179,8 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
           isEmpty: isEmpty,
           emptyMessage: 'Aucun élément trouvé.',
           fabText: _config.fabText,
-          onFabPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MobileCustomerOrderFormScreen()),
-              ).then((_) {
+           onFabPressed: () {
+             Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileCustomerOrderFormScreen())).then((_) {
                 context.read<CustomerOrdersBloc>().add(LoadCustomerOrders());
               });
             },

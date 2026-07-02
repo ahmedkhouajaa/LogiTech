@@ -63,15 +63,15 @@ class ReturnNoteItem extends Equatable {
 
   factory ReturnNoteItem.fromMap(Map<String, dynamic> map) {
     return ReturnNoteItem(
-      id: map['id'] as String,
-      returnNoteId: map['return_note_id'] as String,
-      productId: map['product_id'] as String?,
-      designation: map['designation'] as String,
-      quantity: (map['quantity'] as num).toDouble(),
-      unitPrice: (map['unit_price'] as num).toDouble(),
-      tvaRate: (map['tva_rate'] as num?)?.toDouble() ?? 19.0,
-      totalHT: (map['total_ht'] as num).toDouble(),
-      reason: map['reason'] as String?,
+      id: map['id']?.toString() ?? '',
+      returnNoteId: map['return_note_id']?.toString() ?? '',
+      productId: map['product_id']?.toString(),
+      designation: map['designation']?.toString() ?? '',
+      quantity: double.tryParse(map['quantity']?.toString() ?? '0') ?? 0.0,
+      unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
+      tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
+      totalHT: double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0,
+      reason: map['reason']?.toString(),
     );
   }
 
@@ -179,23 +179,28 @@ class ReturnNote extends Equatable {
     };
   }
 
-  factory ReturnNote.fromMap(Map<String, dynamic> map, [List<ReturnNoteItem> items = const []]) {
+  factory ReturnNote.fromMap(Map<String, dynamic> map, [List<ReturnNoteItem> optionalItems = const []]) {
+    List<ReturnNoteItem> parsedItems = optionalItems;
+    if (parsedItems.isEmpty && map['items'] != null && map['items'] is List) {
+      parsedItems = (map['items'] as List).map((i) => ReturnNoteItem.fromMap(Map<String, dynamic>.from(i))).toList();
+    }
+
     return ReturnNote(
-      id: map['id'] as String,
-      returnNumber: map['return_number'] as String,
-      customerId: map['customer_id'] as String,
-      customerName: map['customer_name'] as String?,
-      customerCompany: map['customer_company'] as String?,
-      deliveryNoteId: map['delivery_note_id'] as String?,
-      dateEmission: DateTime.parse(map['date_emission'] as String),
-      subtotalHT: (map['subtotal_ht'] as num?)?.toDouble() ?? 0,
-      totalTTC: (map['total_ttc'] as num?)?.toDouble() ?? 0,
-      notes: map['notes'] as String?,
-      conditions: map['conditions'] as String?,
-      status: map['status'] as String? ?? 'draft',
-      createdAt: DateTime.parse(map['created_at'] as String),
-      updatedAt: DateTime.parse(map['updated_at'] as String),
-      items: items,
+      id: map['id']?.toString() ?? '',
+      returnNumber: map['return_number']?.toString() ?? '',
+      customerId: map['customer_id']?.toString() ?? '',
+      customerName: map['customer_name']?.toString(),
+      customerCompany: map['customer_company']?.toString(),
+      deliveryNoteId: map['delivery_note_id']?.toString(),
+      dateEmission: map['date_emission'] != null ? DateTime.tryParse(map['date_emission'].toString()) ?? DateTime.now() : DateTime.now(),
+      subtotalHT: double.tryParse(map['subtotal_ht']?.toString() ?? '0') ?? 0.0,
+      totalTTC: double.tryParse(map['total_ttc']?.toString() ?? '0') ?? 0.0,
+      notes: map['notes']?.toString(),
+      conditions: map['conditions']?.toString(),
+      status: map['status']?.toString() ?? 'draft',
+      createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
+      items: parsedItems,
     );
   }
 

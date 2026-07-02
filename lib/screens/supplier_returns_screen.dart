@@ -15,10 +15,6 @@ import '../blocs/payments/payments_bloc.dart';
 import '../models/payment_model.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
-import '../blocs/invoices/invoices_bloc.dart';
-import '../models/invoice.dart';
-import '../models/invoice.dart';
-import 'create_invoice_screen.dart';
 import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
@@ -26,7 +22,8 @@ import 'document_preview_screen.dart';
 enum SupplierReturnStatus {
   draft('Brouillon', AppColors.textSecondary),
   validated('Validé', AppColors.success),
-  canceled('Annulé', AppColors.error);
+  canceled('Annulé', AppColors.error),
+  paid('Remboursé', AppColors.success);
 
   final String label;
   final Color color;
@@ -71,7 +68,7 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Ã¢a€€Ã¢a€€ Header Ã¢a€€Ã¢a€€
+        // Ã¢a€ €Ã¢a€ € Header Ã¢a€ €Ã¢a€ €
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Row(
@@ -116,14 +113,14 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
           ),
         ),
 
-        // Ã¢a€€Ã¢a€€ Filter Bar Ã¢a€€Ã¢a€€
+        // Ã¢a€ €Ã¢a€ € Filter Bar Ã¢a€ €Ã¢a€ €
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: _buildFilterBar(),
         ),
         const SizedBox(height: AppSpacing.lg),
 
-        // Ã¢a€€Ã¢a€€ Table Ã¢a€€Ã¢a€€
+        // Ã¢a€ €Ã¢a€ € Table Ã¢a€ €Ã¢a€ €
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -182,7 +179,7 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
                               style: TextStyle(color: AppColors.textSecondary))),
                       ...Suppliers.map((c) => DropdownMenuItem(
                           value: c.id,
-                          child: Text(c.name ?? c.name ?? 'Inconnu'))),
+                          child: Text(c.name ?? 'Inconnu'))),
                     ],
                     onChanged: (val) {
                       setState(() => _selectedFournisseurId = val);
@@ -683,30 +680,38 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
                     borderRadius: BorderRadius.circular(8)),
                 color: AppColors.surface,
                 onSelected: (val) => _handleAction(context, val, note),
-                itemBuilder: (_) => [
-                  _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
-                  const PopupMenuDivider(height: 1),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
-                ],
+                itemBuilder: (_) {
+                  final items = <PopupMenuEntry<String>>[
+                    _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
+                    const PopupMenuDivider(height: 1),
+                  ];
+
+                  if (note.status != 'paid') {
+                    items.add(_buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'));
+                    items.add(const PopupMenuDivider(height: 1));
+                  }
+
+                  items.addAll([
+                    _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
+                  ]);
+                  return items;
+                },
               ),
             ),
           ),
@@ -971,6 +976,13 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
                   context.read<PaymentsBloc>().add(AddPayment(payment));
                 } catch (e) {
                   await DatabaseHelper.instance.insertPayment(payment);
+                }
+                
+                // Update SupplierReturn status to 'paid' if amount covers it
+                if (amount >= note.totalTTC - 0.01) {
+                  context.read<SupplierReturnsBloc>().add(UpdateSupplierReturn(
+                    note.copyWith(status: SupplierReturnStatus.paid.name)
+                  ));
                 }
                 
                 if (context.mounted) {
