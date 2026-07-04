@@ -103,6 +103,13 @@ class DatabaseHelper {
       await updateSupplierCreditNote(scn);
     }
     
+    // Payments
+    final payments = await getPayments();
+    for (var p in payments) {
+      await updatePayment(p);
+    }
+    
+
     print('✅ FORCE SYNC COMPLETE! All local data pushed to sync queue with items.');
   }
 

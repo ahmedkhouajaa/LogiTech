@@ -739,10 +739,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     items.add(_buildMenuItem('edit', Icons.edit_outlined, 'Modifier', const Color(0xFF2563EB)));
     items.add(_buildMenuItem('delete', Icons.delete_outline, 'Supprimer', const Color(0xFFEF4444)));
     items.add(_buildMenuItem('print', Icons.print_outlined, 'Imprimer', const Color(0xFF475569)));
-    
-    if (order.status != 'paid') {
-      items.add(_buildMenuItem('payment', Icons.credit_card_outlined, 'Ajouter un paiement', const Color(0xFF10B981)));
-    }
+
 
     if (!order.isConvertedToInvoice && !order.isConvertedToReceipt) {
       items.add(_buildMenuItem('to_invoice', Icons.receipt_long_outlined, 'Transformer en facture d\'achat', const Color(0xFF475569)));
@@ -755,7 +752,6 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
       items.add(_buildMenuItem('view_receipt', Icons.visibility_outlined, 'Voir le bon de reception cree', const Color(0xFF475569)));
     }
     
-    items.add(_buildMenuItem('credit_note', Icons.receipt_outlined, 'Transformer en Avoir', const Color(0xFF475569)));
     items.add(_buildMenuItem('pdf', Icons.picture_as_pdf_outlined, 'Telecharger PDF', const Color(0xFFEF4444)));
     items.add(_buildMenuItem('email', Icons.email_outlined, 'Envoyer par email', const Color(0xFF2563EB)));
     items.add(_buildMenuItem('whatsapp', Icons.chat_bubble_outline, 'Envoyer par WhatsApp', const Color(0xFF10B981)));
@@ -843,12 +839,21 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
       orderId: order.id,
       date: DateTime.now(),
       status: 'validated',
+      pricingMode: order.pricingMode,
+      globalDiscountPercent: order.globalDiscountPercent,
+      globalDiscountAmount: order.globalDiscountAmount,
+      timbreFiscal: order.timbreFiscal,
+      conditionsGenerales: order.conditionsGenerales,
       items: order.items.map((i) => ReceivingVoucherItem(
         id: const Uuid().v4(),
         voucherId: receiptId,
         productId: i.productId,
+        productName: i.description,
         quantityExpected: i.quantity,
         quantityReceived: i.quantity,
+        unitPrice: i.unitPrice,
+        tvaRate: i.tvaRate,
+        discountPercent: i.discountPercent,
       )).toList(),
     );
 

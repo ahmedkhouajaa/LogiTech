@@ -24,7 +24,7 @@ import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 
 enum SupplierCreditNoteStatus {
-  draft('Brouillon', AppColors.textSecondary),
+  draft('Non Utilisé', AppColors.textSecondary),
   validated('Validé', AppColors.success),
   canceled('Annulé', AppColors.error);
 

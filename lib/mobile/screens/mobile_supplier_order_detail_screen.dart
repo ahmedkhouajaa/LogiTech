@@ -284,8 +284,6 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
     items.add(const PopupMenuDivider(height: 1));
     items.add(_buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'));
     items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('payment', Icons.credit_card_outlined, AppColors.success, 'Ajouter un paiement'));
-    items.add(const PopupMenuDivider(height: 1));
 
     if (!order.isConvertedToInvoice && !order.isConvertedToReceipt) {
       items.add(_buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en facture d\'achat'));
@@ -623,12 +621,21 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
       orderId: order.id,
       date: DateTime.now(),
       status: 'validated',
+      pricingMode: order.pricingMode,
+      globalDiscountPercent: order.globalDiscountPercent,
+      globalDiscountAmount: order.globalDiscountAmount,
+      timbreFiscal: order.timbreFiscal,
+      conditionsGenerales: order.conditionsGenerales,
       items: order.items.map((i) => ReceivingVoucherItem(
         id: const Uuid().v4(),
         voucherId: receiptId,
         productId: i.productId,
+        productName: i.description,
         quantityExpected: i.quantity,
         quantityReceived: i.quantity,
+        unitPrice: i.unitPrice,
+        tvaRate: i.tvaRate,
+        discountPercent: i.discountPercent,
       )).toList(),
     );
 

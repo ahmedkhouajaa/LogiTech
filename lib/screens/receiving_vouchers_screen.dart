@@ -736,46 +736,26 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
   }
 
   void _executeConversion(ReceivingVoucher voucher) {
-    // We get products to map prices
-    final productsState = context.read<ProductsBloc>().state;
-    List<Product> products = [];
-    if (productsState is ProductsLoaded) {
-      products = productsState.products;
-    }
-
     final newInvoiceId = const Uuid().v4();
     final invoiceNumber = 'FA-${voucher.number.replaceAll("BR-", "")}';
 
     List<PurchaseInvoiceItem> newItems = [];
-    double totalHT = 0;
-    double totalTva = 0;
 
     for (var vItem in voucher.items) {
       if (vItem.quantityReceived <= 0) continue;
-      
-      final product = products.where((p) => p.id == vItem.productId).firstOrNull;
-      final price = product?.purchasePrice ?? 0;
-      final tvaRate = product?.tvaRate ?? 19;
-      final lineHT = vItem.quantityReceived * price;
-      final lineTva = lineHT * (tvaRate / 100);
-
-      totalHT += lineHT;
-      totalTva += lineTva;
 
       newItems.add(PurchaseInvoiceItem(
         id: const Uuid().v4(),
         purchaseInvoiceId: newInvoiceId,
         productId: vItem.productId,
-        productName: product?.name ?? 'Article inconnu',
+        productName: vItem.productName ?? 'Article inconnu',
         quantity: vItem.quantityReceived,
-        unitPrice: price,
-        tvaRate: tvaRate,
-        totalHT: lineHT,
+        unitPrice: vItem.unitPrice,
+        tvaRate: vItem.tvaRate,
+        discountPercent: vItem.discountPercent,
+        totalHT: vItem.computedTotalHT,
       ));
     }
-
-    final timbreFiscal = 1.0; // Default timbre fiscal
-    final totalTTC = totalHT + totalTva + timbreFiscal;
 
     final newInvoice = PurchaseInvoice(
       id: newInvoiceId,
@@ -787,10 +767,14 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
       date: DateTime.now(),
       dueDate: DateTime.now().add(const Duration(days: 30)),
       status: InvoiceStatus.unpaid,
-      totalHT: totalHT,
-      totalTva: totalTva,
-      totalTTC: totalTTC,
-      timbreFiscal: timbreFiscal,
+      totalHT: voucher.computedTotalHT,
+      totalTva: voucher.computedTotalTvaAfterDiscount,
+      totalTTC: voucher.computedTotalTTC,
+      timbreFiscal: voucher.timbreFiscal,
+      pricingMode: voucher.pricingMode,
+      globalDiscountPercent: voucher.globalDiscountPercent,
+      globalDiscountAmount: voucher.globalDiscountAmount,
+      conditionsGenerales: voucher.conditionsGenerales,
       amountPaid: 0,
       items: newItems,
       notes: voucher.notes,
@@ -873,12 +857,6 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
   }
 
   void _executeConvertToReturn(ReceivingVoucher voucher) {
-    final productsState = context.read<ProductsBloc>().state;
-    List<Product> products = [];
-    if (productsState is ProductsLoaded) {
-      products = productsState.products;
-    }
-
     final newReturnId = const Uuid().v4();
     final returnNumber = 'BRF-${voucher.number.replaceAll("BR-", "")}';
 
@@ -887,20 +865,15 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     for (var vItem in voucher.items) {
       if (vItem.quantityReceived <= 0) continue;
       
-      final product = products.where((p) => p.id == vItem.productId).firstOrNull;
-      final price = product?.purchasePrice ?? 0;
-      final tvaRate = product?.tvaRate ?? 19;
-      final lineHT = vItem.quantityReceived * price;
-
       newItems.add(SupplierReturnItem(
         id: const Uuid().v4(),
         supplierReturnId: newReturnId,
         productId: vItem.productId,
-        designation: product?.name ?? 'Article inconnu',
+        designation: vItem.productName ?? 'Article inconnu',
         quantity: vItem.quantityReceived,
-        unitPrice: price,
-        tvaRate: tvaRate,
-        totalHT: lineHT,
+        unitPrice: vItem.unitPrice,
+        tvaRate: vItem.tvaRate,
+        totalHT: vItem.computedTotalHT,
         reason: 'Retour après réception',
       ));
     }
@@ -924,6 +897,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
 
     // Update Receiving Voucher
     final updatedVoucher = voucher.copyWith(
+      status: ReceivingVoucherStatus.validated.name,
       isConvertedToSupplierReturn: true,
       convertedToSupplierReturnId: newReturnId,
     );

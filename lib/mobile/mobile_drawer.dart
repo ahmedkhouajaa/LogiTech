@@ -66,6 +66,10 @@ class _MobileDrawerState extends State<MobileDrawer> {
                     _buildItem(AppModule.transactions, Icons.swap_horiz_rounded, 'Transactions'),
                     _buildItem(AppModule.checksTraites, Icons.note_rounded, 'Cheques & Traites'),
                   ]),
+                  _buildGroup('retenue', 'Retenue à la source', Icons.request_quote_rounded, [
+                    _buildItem(AppModule.withholdingTaxSales, Icons.description_rounded, 'RS vente'),
+                    _buildItem(AppModule.withholdingTaxPurchase, Icons.receipt_rounded, 'RS achat'),
+                  ]),
                   _buildGroup('tiers', 'Tiers', Icons.people_rounded, [
                     _buildItem(AppModule.customers, Icons.person_rounded, 'Clients'),
                     _buildItem(AppModule.suppliers, Icons.business_rounded, 'Fournisseurs'),

@@ -7,6 +7,16 @@ import '../../blocs/products/products_bloc.dart';
 
 import '../../models/receiving_voucher.dart';
 import '../../models/document_wrapper.dart';
+import '../../models/purchase_invoice.dart';
+import '../../models/supplier_return.dart';
+
+import 'package:uuid/uuid.dart';
+import '../../blocs/purchase_invoices/purchase_invoices_bloc.dart';
+import '../../blocs/supplier_returns/supplier_returns_bloc.dart';
+import '../../blocs/supplier_returns/supplier_returns_event.dart';
+
+import 'mobile_purchase_invoices_screen.dart';
+import 'mobile_supplier_returns_screen.dart';
 
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
@@ -230,8 +240,6 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
     items.add(const PopupMenuDivider(height: 1));
     items.add(_buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'));
     items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('payment', Icons.credit_card_outlined, AppColors.success, 'Ajouter un paiement'));
-    items.add(const PopupMenuDivider(height: 1));
 
     if (voucher.isConvertedToPurchaseInvoice) {
       items.add(_buildMenuItem('view_invoice_created', Icons.visibility_outlined, AppColors.textSecondary, 'Voir la facture créée'));
@@ -306,11 +314,24 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
         final doc = DocumentWrapper.fromReceivingVoucher(voucher);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
         break;
-      case 'payment':
       case 'convert_invoice':
+        _showConvertDialog(context, voucher, true);
+        break;
       case 'convert_return':
+        _showConvertDialog(context, voucher, false);
+        break;
       case 'view_invoice_created':
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MobilePurchaseInvoicesScreen()),
+        );
+        break;
       case 'view_return_created':
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MobileSupplierReturnsScreen()),
+        );
+        break;
       case 'email':
       case 'whatsapp':
       case 'duplicate':
@@ -371,6 +392,147 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
           );
         },
       ),
+    );
+  }
+
+  void _showConvertDialog(BuildContext context, ReceivingVoucher voucher, bool toInvoice) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Text(toInvoice ? 'Transformer en facture d\'achat' : 'Transformer en bon de retour'),
+        content: Text('Voulez-vous transformer ce bon de réception en ${toInvoice ? 'facture d\'achat' : 'bon de retour fournisseur'} ?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              if (toInvoice) {
+                _convertToInvoice(context, voucher);
+              } else {
+                _convertToReturn(context, voucher);
+              }
+            },
+            child: const Text('Confirmer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _convertToInvoice(BuildContext context, ReceivingVoucher voucher) {
+    final newInvoiceId = const Uuid().v4();
+    final invoiceNumber = 'FA-${voucher.number.replaceAll("BR-", "")}';
+
+    List<PurchaseInvoiceItem> newItems = [];
+
+    for (var vItem in voucher.items) {
+      if (vItem.quantityReceived <= 0) continue;
+
+      newItems.add(PurchaseInvoiceItem(
+        id: const Uuid().v4(),
+        purchaseInvoiceId: newInvoiceId,
+        productId: vItem.productId,
+        productName: vItem.productName ?? 'Article inconnu',
+        quantity: vItem.quantityReceived,
+        unitPrice: vItem.unitPrice,
+        tvaRate: vItem.tvaRate,
+        discountPercent: vItem.discountPercent,
+        totalHT: vItem.computedTotalHT,
+      ));
+    }
+
+    final newInvoice = PurchaseInvoice(
+      id: newInvoiceId,
+      number: invoiceNumber,
+      supplierId: voucher.supplierId,
+      supplierName: voucher.supplierName,
+      receivingVoucherId: voucher.id,
+      orderId: voucher.orderId,
+      date: DateTime.now(),
+      dueDate: DateTime.now().add(const Duration(days: 30)),
+      status: InvoiceStatus.unpaid,
+      totalHT: voucher.computedTotalHT,
+      totalTva: voucher.computedTotalTvaAfterDiscount,
+      totalTTC: voucher.computedTotalTTC,
+      timbreFiscal: voucher.timbreFiscal,
+      pricingMode: voucher.pricingMode,
+      globalDiscountPercent: voucher.globalDiscountPercent,
+      globalDiscountAmount: voucher.globalDiscountAmount,
+      conditionsGenerales: voucher.conditionsGenerales,
+      amountPaid: 0,
+      items: newItems,
+      notes: voucher.notes,
+    );
+
+    try {
+      context.read<PurchaseInvoicesBloc>().add(AddPurchaseInvoice(newInvoice));
+    } catch (e) {
+      DatabaseHelper.instance.insertPurchaseInvoice(newInvoice);
+    }
+
+    final updatedVoucher = voucher.copyWith(
+      status: 'validated',
+      isConvertedToPurchaseInvoice: true,
+      convertedToPurchaseInvoiceId: newInvoiceId,
+    );
+    context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedVoucher));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Bon de réception transformé en facture d'achat avec succès")),
+    );
+  }
+
+  void _convertToReturn(BuildContext context, ReceivingVoucher voucher) {
+    final newReturnId = const Uuid().v4();
+    final returnNumber = 'BRF-${voucher.number.replaceAll("BR-", "")}';
+
+    List<SupplierReturnItem> newItems = [];
+
+    for (var vItem in voucher.items) {
+      if (vItem.quantityReceived <= 0) continue;
+
+      newItems.add(SupplierReturnItem(
+        id: const Uuid().v4(),
+        supplierReturnId: newReturnId,
+        productId: vItem.productId,
+        designation: vItem.productName ?? 'Article inconnu',
+        quantity: vItem.quantityReceived,
+        unitPrice: vItem.unitPrice,
+        tvaRate: vItem.tvaRate,
+        totalHT: vItem.computedTotalHT,
+        reason: 'Retour après réception',
+      ));
+    }
+
+    final newReturn = SupplierReturn(
+      id: newReturnId,
+      number: returnNumber,
+      supplierId: voucher.supplierId,
+      supplierName: voucher.supplierName,
+      receivingVoucherId: voucher.id,
+      date: DateTime.now(),
+      status: 'validated',
+      isDeleted: false,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      items: newItems,
+    );
+
+    try {
+      context.read<SupplierReturnsBloc>().add(AddSupplierReturn(newReturn));
+    } catch (e) {
+      DatabaseHelper.instance.insertSupplierReturn(newReturn);
+    }
+
+    final updatedVoucher = voucher.copyWith(
+      status: 'validated',
+      isConvertedToSupplierReturn: true,
+      convertedToSupplierReturnId: newReturnId,
+    );
+    context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedVoucher));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Bon de réception transformé en bon de retour avec succès")),
     );
   }
 }

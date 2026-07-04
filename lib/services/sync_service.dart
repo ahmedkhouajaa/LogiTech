@@ -100,7 +100,7 @@ class SyncService {
         'bons_sortie', 'receiving_vouchers', 'purchase_invoices', 'supplier_returns',
         'supplier_orders', 'supplier_credit_notes', 'stock_movements', 'projects',
         'transactions', 'check_traites', 'payment_accounts', 'product_families',
-        'warehouses', 'treasury_accounts'
+        'warehouses', 'treasury_accounts', 'payments', 'payment_allocations'
       ];
       
       final itemTableMap = {
@@ -121,6 +121,7 @@ class SyncService {
       final db = await DatabaseHelper.instance.database;
       
       for (final table in tablesToPull) {
+        print("DEBUG (Sync): Pulling table $table ...");
         final snapshot = await FirebaseFirestore.instance
             .collection(table)
             .where('updated_at', isGreaterThan: lastSyncStr)
@@ -171,6 +172,7 @@ class SyncService {
         }
       }
       
+      print("DEBUG (Sync): All tables pulled successfully!");
       await prefs.setString('last_sync_time', DateTime.now().toUtc().toIso8601String());
       
       _setStatus(SyncStatus.success);

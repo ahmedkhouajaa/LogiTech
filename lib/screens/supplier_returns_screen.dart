@@ -88,7 +88,7 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.play_circle_fill, color: Colors.red[600], size: 24),
+                     
                     ],
                   ),
                   const SizedBox(height: 4),

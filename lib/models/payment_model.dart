@@ -47,10 +47,14 @@ class PaymentAccount {
         balance: (map['balance'] as num?)?.toDouble() ?? 0,
         isDefault: map['is_default'] == 1,
         createdAt: map['created_at'] != null
-            ? DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int)
+            ? (map['created_at'] is int
+                ? DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int)
+                : DateTime.parse(map['created_at'].toString()))
             : DateTime.now(),
         updatedAt: map['updated_at'] != null
-            ? DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int)
+            ? (map['updated_at'] is int
+                ? DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int)
+                : DateTime.parse(map['updated_at'].toString()))
             : DateTime.now(),
       );
 
@@ -154,17 +158,23 @@ class Payment {
         accountName: map['account_name'] as String?,
         reference: map['reference'] as String?,
         paymentDate: map['payment_date'] != null
-            ? DateTime.fromMillisecondsSinceEpoch(map['payment_date'] as int)
+            ? (map['payment_date'] is int
+                ? DateTime.fromMillisecondsSinceEpoch(map['payment_date'] as int)
+                : DateTime.parse(map['payment_date'].toString()))
             : DateTime.now(),
         notes: map['notes'] as String?,
         status: map['status'] as String? ?? 'paid',
         relatedInvoiceId: map['related_invoice_id'] as String?,
         relatedQuoteId: map['related_quote_id'] as String?,
         createdAt: map['created_at'] != null
-            ? DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int)
+            ? (map['created_at'] is int
+                ? DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int)
+                : DateTime.parse(map['created_at'].toString()))
             : DateTime.now(),
         updatedAt: map['updated_at'] != null
-            ? DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int)
+            ? (map['updated_at'] is int
+                ? DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int)
+                : DateTime.parse(map['updated_at'].toString()))
             : DateTime.now(),
       );
 
@@ -240,7 +250,9 @@ class PaymentAllocation {
         invoiceId: map['invoice_id'] as String,
         allocatedAmount: (map['allocated_amount'] as num?)?.toDouble() ?? 0,
         createdAt: map['created_at'] != null
-            ? DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int)
+            ? (map['created_at'] is int
+                ? DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int)
+                : DateTime.parse(map['created_at'].toString()))
             : DateTime.now(),
       );
 }

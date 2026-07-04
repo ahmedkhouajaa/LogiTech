@@ -52,8 +52,8 @@ class MobileDashboardScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           // Welcome card
-          _buildWelcomeCard(),
-          const SizedBox(height: 16),
+          // _buildWelcomeCard(),
+          // const SizedBox(height: 16),
           // KPI grid (2 per row)
           _buildKpiGrid(state),
           const SizedBox(height: 20),
@@ -64,8 +64,8 @@ class MobileDashboardScreen extends StatelessWidget {
           _buildRecentInvoices(state.recentInvoices),
           const SizedBox(height: 20),
           // Low stock alerts
-          if (state.lowStockProducts.isNotEmpty)
-            _buildLowStockAlerts(state),
+          // if (state.lowStockProducts.isNotEmpty)
+          //   _buildLowStockAlerts(state),
         ],
       ),
     );
@@ -99,10 +99,10 @@ class MobileDashboardScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                     SizedBox(height: 4),
-                    Text(
-                      'Voici le resume de votre activite',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
-                    ),
+                    // Text(
+                    //   'Voici le resume de votre activite',
+                    //   style: TextStyle(color: Colors.white70, fontSize: 13),
+                    // ),
                   ],
                 ),
               ),

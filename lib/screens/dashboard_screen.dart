@@ -38,12 +38,13 @@ class DashboardScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Welcome header
-          _buildWelcomeHeader(isMobile),
-          const SizedBox(height: AppSpacing.lg),
+          // _buildWelcomeHeader(isMobile),
+          // const SizedBox(height: AppSpacing.lg),
           // KPI cards
           _buildKpiRow(state, isMobile),
           const SizedBox(height: AppSpacing.lg),
           // Charts + upcoming
+          /*
           if (isMobile) ...[
             _buildCashFlowChart(),
             const SizedBox(height: AppSpacing.lg),
@@ -58,20 +59,10 @@ class DashboardScreen extends StatelessWidget {
               ],
             ),
           const SizedBox(height: AppSpacing.lg),
-          // Bottom row
-          if (isMobile) ...[
-            _buildRecentInvoices(state.recentInvoices),
-            const SizedBox(height: AppSpacing.lg),
-            _buildLowStockAlerts(state),
-          ] else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(flex: 3, child: _buildRecentInvoices(state.recentInvoices)),
-                const SizedBox(width: AppSpacing.lg),
-                Expanded(flex: 2, child: _buildLowStockAlerts(state)),
-              ],
-            ),
+          */
+          
+          // Bottom row (Recent invoices only)
+          _buildRecentInvoices(state.recentInvoices),
         ],
       ),
     );
@@ -90,7 +81,7 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 const Text('Bienvenue !', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 4),
-                const Text('Voici le resume de votre activite', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                // const Text('Voici le resume de votre activite', style: TextStyle(color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: () {},
@@ -107,7 +98,7 @@ class DashboardScreen extends StatelessWidget {
                   children: [
                     Text('Bienvenue !', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
                     SizedBox(height: 4),
-                    Text('Voici le resume de votre activite', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    // Text('Voici le resume de votre activite', style: TextStyle(color: Colors.white70, fontSize: 13)),
                   ],
                 ),
                 const Spacer(),

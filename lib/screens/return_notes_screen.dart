@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import '../widgets/return_note_payment_dialog.dart';
@@ -85,7 +85,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.play_circle_fill, color: Colors.red[600], size: 24),
+                      
                     ],
                   ),
                   const SizedBox(height: 4),

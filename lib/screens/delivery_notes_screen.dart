@@ -86,7 +86,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.play_circle_fill, color: Colors.red[600], size: 24),
+                     
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -1110,6 +1110,9 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       date: now,
       dueDate: now.add(const Duration(days: 30)),
       status: InvoiceStatus.unpaid,
+      totalHT: note.totalHTAfterDiscount,
+      totalTva: note.totalTVA,
+      totalTTC: note.totalTTC,
       pricingMode: note.pricingMode,
       globalDiscountPercent: note.globalDiscountPercent,
       globalDiscountAmount: note.globalDiscountAmount,

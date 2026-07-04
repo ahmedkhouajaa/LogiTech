@@ -69,7 +69,7 @@ class MobileGenericListScreen extends StatelessWidget {
                     child: isEmpty
                         ? Stack(
                             children: [
-                              ListView(), // Needed for RefreshIndicator to work on empty
+                              child,
                               MobileEmptyState(message: emptyMessage),
                             ],
                           )
