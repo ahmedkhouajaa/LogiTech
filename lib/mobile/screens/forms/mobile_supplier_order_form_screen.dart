@@ -13,6 +13,7 @@ import '../../../../database/database_helper.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
+import '../../../../screens/suppliers_screen.dart';
 import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
@@ -258,17 +259,54 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                   onChanged: (v) { if (!widget.isReadOnly) setState(() => _date = v); },
                 ),
                 const SizedBox(height: 16),
-                BlocBuilder<SuppliersBloc, SuppliersState>(
-                  builder: (context, state) {
-                    final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
-                    return SmartDropdown<String>(
-                      label: 'Fournisseur',
-                      value: _selectedSupplierId,
-                      items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: const TextStyle(fontSize: 16)))).toList(),
-                      onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedSupplierId = v); },
-                      hint: 'Rechercher des fournisseurs...',
-                    );
-                  },
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: BlocBuilder<SuppliersBloc, SuppliersState>(
+                        builder: (context, state) {
+                          final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
+                          return SmartDropdown<String>(
+                            label: 'Fournisseur',
+                            value: _selectedSupplierId,
+                            items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: const TextStyle(fontSize: 16)))).toList(),
+                            onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedSupplierId = v); },
+                            hint: 'Rechercher des fournisseurs...',
+                          );
+                        },
+                      ),
+                    ),
+                    if (!widget.isReadOnly) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        height: 56,
+                        margin: const EdgeInsets.only(bottom: 2),
+                        child: ElevatedButton(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => BlocProvider.value(
+                                value: context.read<SuppliersBloc>(),
+                                child: SupplierDialog(existing: null),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary.withOpacity(0.1),
+                            foregroundColor: AppColors.primary,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                            ),
+                            side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                          ),
+                          child: const Icon(Icons.person_add_alt_1_rounded),
+                        ),
+                      ),
+                    ]
+                  ],
                 ),
                 const SizedBox(height: 16),
                 BlocBuilder<ProjectsBloc, ProjectsState>(
@@ -415,3 +453,4 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
     );
   }
 }
+

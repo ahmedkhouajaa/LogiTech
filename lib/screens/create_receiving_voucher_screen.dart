@@ -12,8 +12,10 @@ import '../models/project.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../models/receiving_voucher.dart';
+import '../utils/helpers.dart';
 import '../database/database_helper.dart';
 import '../widgets/dashboard_card.dart';
+import 'suppliers_screen.dart';
 
 enum ReceivingVoucherStatus {
   draft('Brouillon', AppColors.textSecondary),
@@ -322,198 +324,167 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
         boxShadow: AppShadows.sm,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Fournisseur
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Fournisseur *',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary)),
-                    const SizedBox(height: 8),
-                    BlocBuilder<SuppliersBloc, SuppliersState>(
-                      builder: (context, state) {
-                        List<Supplier> suppliers = [];
-                        if (state is SuppliersLoaded) {
-                          suppliers = state.suppliers;
-                        }
-                        return DropdownButtonFormField<String>(
-                          value: _selectedSupplierId,
-                          decoration: const InputDecoration(
-                              hintText: 'Selectionner un fournisseur...'),
-                          items: suppliers
-                              .map((s) => DropdownMenuItem(
-                                  value: s.id, child: Text(s.name)))
-                              .toList(),
-                          onChanged: (val) {
-                            setState(() => _selectedSupplierId = val);
-                          },
-                          validator: (v) => v == null
-                              ? 'Veuillez selectionner un fournisseur'
-                              : null,
-                        );
-                      },
-                    ),
-                  ],
+          // Date d'emission
+          const Text("Date", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          const SizedBox(height: 6),
+          GestureDetector(
+            onTap: () async {
+              if (widget.isReadOnly) return;
+              final picked = await showDatePicker(
+                context: context, initialDate: _date,
+                firstDate: DateTime(2020), lastDate: DateTime(2030),
+                locale: const Locale('fr', 'FR'),
+              );
+              if (picked != null) setState(() => _date = picked);
+            },
+            child: AbsorbPointer(
+              child: TextFormField(
+                controller: TextEditingController(text: formatDateLong(_date)),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  suffixIcon: const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                 ),
+                style: const TextStyle(fontSize: 14),
               ),
-              const SizedBox(width: AppSpacing.lg),
-              // Date
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Date *',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary)),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: () async {
-                        final d = await showDatePicker(
-                          context: context,
-                          initialDate: _date,
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2100),
-                          locale: const Locale('fr', 'FR'),
-                        );
-                        if (d != null) setState(() => _date = d);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: AppColors.border),
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          color: AppColors.surfaceAlt,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(formatDateLong(_date),
-                                style: const TextStyle(
-                                    color: AppColors.textPrimary)),
-                            const Icon(Icons.calendar_today_outlined,
-                                size: 16, color: AppColors.textSecondary),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: 20),
+          // Fournisseur & Project row
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Project
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Projet (Optionnel)',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary)),
-                    const SizedBox(height: 8),
-                    BlocBuilder<ProjectsBloc, ProjectsState>(
-                      builder: (context, state) {
-                        List<Project> projects = [];
-                        if (state is ProjectsLoaded) {
-                          projects = state.projects;
-                        }
-                        return DropdownButtonFormField<String>(
-                          value: _selectedProjectId,
-                          decoration: const InputDecoration(
-                              hintText: 'Selectionner un projet...'),
-                          items: [
-                            const DropdownMenuItem(
-                                value: null, child: Text('Aucun projet')),
-                            ...projects.map((p) => DropdownMenuItem(
-                                value: p.id, child: Text(p.name))),
-                          ],
-                          onChanged: (val) {
-                            setState(() => _selectedProjectId = val);
-                          },
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.lg),
-              // Options
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Options',
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary)),
-                    const SizedBox(height: 8),
+                    const Text('Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
                         Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(color: AppColors.border),
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              color: AppColors.surfaceAlt,
-                            ),
-                            child: CheckboxListTile(
-                              title: const Text('Timbre fiscal',
-                                  style: TextStyle(fontSize: 13)),
-                              value: _withTimbreFiscal,
-                              onChanged: (v) => setState(
-                                  () => _withTimbreFiscal = v ?? false),
-                              controlAffinity: ListTileControlAffinity.leading,
-                              contentPadding: EdgeInsets.zero,
-                              dense: true,
-                            ),
+                          child: BlocBuilder<SuppliersBloc, SuppliersState>(
+                            builder: (context, state) {
+                              final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
+                              return DropdownButtonFormField<String>(
+                                value: _selectedSupplierId,
+                                isExpanded: true,
+                                hint: const Text('Rechercher des fournisseurs...', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                                items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: const TextStyle(fontSize: 13)))).toList(),
+                                onChanged: (v) {
+                                  if (!widget.isReadOnly) setState(() => _selectedSupplierId = v);
+                                },
+                                decoration: _formInputDecoration(),
+                              );
+                            },
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(color: AppColors.border),
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              color: AppColors.surfaceAlt,
-                            ),
-                            child: CheckboxListTile(
-                              title: const Text('Remise globale',
-                                  style: TextStyle(fontSize: 13)),
-                              value: _withGlobalDiscount,
-                              onChanged: (v) => setState(
-                                  () => _withGlobalDiscount = v ?? false),
-                              controlAffinity: ListTileControlAffinity.leading,
-                              contentPadding: EdgeInsets.zero,
-                              dense: true,
+                        if (!widget.isReadOnly) ...[
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            height: 48,
+                            child: Tooltip(
+                              message: 'Créer un nouveau fournisseur',
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) => BlocProvider.value(
+                                      value: context.read<SuppliersBloc>(),
+                                      child: SupplierDialog(existing: null),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                  foregroundColor: AppColors.primary,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                                ),
+                                child: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Projet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    const SizedBox(height: 6),
+                    BlocBuilder<ProjectsBloc, ProjectsState>(
+                      builder: (context, state) {
+                        final projects = state is ProjectsLoaded ? state.projects : <Project>[];
+                        return DropdownButtonFormField<String>(
+                          value: _selectedProjectId,
+                          isExpanded: true,
+                          hint: const Text('Projet par defaut', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                          items: [
+                            const DropdownMenuItem<String>(value: null, child: Text('Projet par defaut', style: TextStyle(fontSize: 13))),
+                            ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: const TextStyle(fontSize: 13)))),
+                          ],
+                          onChanged: (v) {
+                            if (!widget.isReadOnly) setState(() => _selectedProjectId = v);
+                          },
+                          decoration: _formInputDecoration(),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Pricing mode radio
+          const Text('Les prix des articles sont en', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Radio<bool>(
+                value: true,
+                groupValue: _pricingModeHT,
+                onChanged: (v) { if (!widget.isReadOnly) setState(() => _pricingModeHT = v!); },
+                activeColor: AppColors.primary,
+              ),
+              const Text('Hors taxes', style: TextStyle(fontSize: 13)),
+              const SizedBox(width: 24),
+              Radio<bool>(
+                value: false,
+                groupValue: _pricingModeHT,
+                onChanged: (v) { if (!widget.isReadOnly) setState(() => _pricingModeHT = v!); },
+                activeColor: AppColors.primary,
+              ),
+              const Text('Taxe incluse', style: TextStyle(fontSize: 13)),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  InputDecoration _formInputDecoration() {
+    return InputDecoration(
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
     );
   }
 
@@ -636,39 +607,72 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                       if (state is ProductsLoaded) {
                         products = state.products;
                       }
-                      return DropdownButtonFormField<String>(
-                        value: item.productId.isEmpty ? null : item.productId,
-                        decoration: InputDecoration(
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 12),
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              borderSide:
-                                  const BorderSide(color: AppColors.border)),
-                          enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              borderSide:
-                                  const BorderSide(color: AppColors.border)),
-                          hintText: 'Selectionner un article...',
+                      return Autocomplete<Product>(
+                        initialValue: TextEditingValue(
+                          text: item.productId.isNotEmpty ? products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', code: '', name: '', sellingPrice: 0, purchasePrice: 0, tvaRate: 0)).name : '',
                         ),
-                        items: products
-                            .map((p) => DropdownMenuItem(
-                                  value: p.id,
-                                  child: Text(p.name,
-                                      overflow: TextOverflow.ellipsis),
-                                ))
-                            .toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            final p = products.firstWhere((e) => e.id == val);
-                            setState(() {
-                              _items[index] = item.copyWith(
-                                productId: val,
-                                unitPrice: p.purchasePrice, // Using purchase price for supplier order
-                                tvaRate: p.tvaRate,
-                              );
-                            });
+                        optionsBuilder: (TextEditingValue textEditingValue) {
+                          if (textEditingValue.text.isEmpty) {
+                            return const Iterable<Product>.empty();
                           }
+                          return products.where((Product option) {
+                            return option.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
+                                  (option.reference != null && option.reference!.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                          });
+                        },
+                        onSelected: (Product product) {
+                          setState(() {
+                            _items[index] = item.copyWith(
+                              productId: product.id,
+                              unitPrice: product.purchasePrice,
+                              tvaRate: product.tvaRate,
+                            );
+                          });
+                        },
+                        displayStringForOption: (Product option) => option.name,
+                        fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                          return TextFormField(
+                            controller: textEditingController,
+                            focusNode: focusNode,
+                            decoration: InputDecoration(
+                              hintText: 'Rechercher un article...',
+                              hintStyle: const TextStyle(fontSize: 13, color: Colors.black87),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+                            ),
+                            style: const TextStyle(fontSize: 13),
+                          );
+                        },
+                        optionsViewBuilder: (context, onSelected, options) {
+                          return Align(
+                            alignment: Alignment.topLeft,
+                            child: Material(
+                              elevation: 4,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
+                                child: ListView.builder(
+                                  padding: EdgeInsets.zero,
+                                  shrinkWrap: true,
+                                  itemCount: options.length,
+                                  itemBuilder: (context, i) {
+                                    final option = options.elementAt(i);
+                                    return ListTile(
+                                      title: Text(option.name, style: const TextStyle(fontSize: 13)),
+                                      subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
+                                      trailing: Text('${option.purchasePrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      onTap: () => onSelected(option),
+                                      dense: true,
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          );
                         },
                       );
                     },
@@ -813,136 +817,146 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
 
   // ── Totals & Global Discount ────────────────────────────────────────
   Widget _buildGlobalDiscountSection() {
-    if (!_withGlobalDiscount) return const SizedBox();
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
+      child: Column(
         children: [
-          const Icon(Icons.percent_rounded, color: AppColors.textSecondary, size: 20),
-          const SizedBox(width: 8),
-          const Text('Remise globale sur la commande :',
-              style: TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(width: 16),
-          SizedBox(
-            width: 100,
-            child: TextFormField(
-              initialValue: _globalDiscountPercent.toString(),
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                suffixText: '%',
-                contentPadding: EdgeInsets.symmetric(horizontal: 12),
-              ),
-              onChanged: (val) {
-                setState(() {
-                  _globalDiscountPercent = double.tryParse(val) ?? 0;
-                });
-              },
+          InkWell(
+            onTap: () { if (!widget.isReadOnly) setState(() => _withGlobalDiscount = !_withGlobalDiscount); },
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 18, height: 18,
+                  child: Checkbox(
+                    value: _withGlobalDiscount,
+                    onChanged: (v) { if (!widget.isReadOnly) setState(() => _withGlobalDiscount = v ?? false); },
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    side: const BorderSide(color: AppColors.border),
+                    activeColor: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+              ],
             ),
           ),
-          const Spacer(),
-          Text(
-            '- ${formatCurrencyDT(_globalDiscountAmount)}',
-            style: const TextStyle(
-                color: AppColors.error,
-                fontWeight: FontWeight.bold,
-                fontSize: 16),
-          ),
+          if (_withGlobalDiscount) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                SizedBox(
+                  width: 150,
+                  child: TextFormField(
+                    initialValue: _globalDiscountPercent > 0 ? _globalDiscountPercent.toString() : '',
+                    decoration: _itemInputDecoration('Remise %'),
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 13),
+                    onChanged: (v) => setState(() => _globalDiscountPercent = double.tryParse(v) ?? 0),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text('= ${formatCurrencyDT(_globalDiscountAmount)}', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              ],
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  InputDecoration _itemInputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: Colors.black87, fontSize: 12),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
     );
   }
 
   Widget _buildTotalsSection() {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppShadows.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          _buildTotalRow('Total HT', _totalHT),
-          if (_withGlobalDiscount) ...[
-            const SizedBox(height: 8),
-            _buildTotalRow('Remise globale', -_globalDiscountAmount,
-                color: AppColors.error),
-            const SizedBox(height: 8),
-            _buildTotalRow('Total HT (Apres remise)', _totalHTAfterDiscount,
-                isBold: true),
+    return Align(
+      alignment: Alignment.centerRight,
+      child: SizedBox(
+        width: 350,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _buildTotalLine('Sous-total HT:', formatCurrencyDT(_totalHTAfterDiscount)),
+            const SizedBox(height: 6),
+            // TVA breakdown
+            ..._tvaBreakdown.entries.map((entry) =>
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildTotalLine('TVA ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
+              ),
+            ),
+            InkWell(
+              onTap: () { if (!widget.isReadOnly) setState(() => _withTimbreFiscal = !_withTimbreFiscal); },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 16, height: 16,
+                          child: Checkbox(
+                            value: _withTimbreFiscal,
+                            onChanged: (v) { if (!widget.isReadOnly) setState(() => _withTimbreFiscal = v ?? false); },
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            side: const BorderSide(color: AppColors.border),
+                            activeColor: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Timbre fiscal:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                    Text(formatCurrencyDT(_timbreFiscal), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            if (_withGlobalDiscount && _globalDiscountAmount > 0) ...[
+              _buildTotalLine('Remise:', '- ${formatCurrencyDT(_globalDiscountAmount)}'),
+              const SizedBox(height: 6),
+            ],
+            const Divider(),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Total TTC:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(formatCurrencyDT(_totalTTC), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              ],
+            ),
           ],
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Divider(color: AppColors.border),
-          ),
-          ..._tvaBreakdown.entries.map((e) {
-            // Apply proportionate discount to TVA if global discount is enabled
-            double tvaAmount = e.value;
-            if (_withGlobalDiscount && _totalHT > 0) {
-              tvaAmount = tvaAmount * (1 - (_globalDiscountPercent / 100));
-            }
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _buildTotalRow('TVA ${e.key}%', tvaAmount),
-            );
-          }),
-          if (_withTimbreFiscal) ...[
-            const SizedBox(height: 8),
-            _buildTotalRow('Timbre fiscal', _timbreFiscal),
-          ],
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Divider(color: AppColors.border),
-          ),
-          _buildTotalRow('NET A PAYER', _totalTTC,
-              isBold: true, fontSize: 20, color: AppColors.primary),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildTotalRow(String label, double amount,
-      {bool isBold = false, double fontSize = 14, Color? color}) {
+  Widget _buildTotalLine(String label, String value) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        SizedBox(
-          width: 200,
-          child: Text(
-            label,
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-        const SizedBox(width: 24),
-        SizedBox(
-          width: 150,
-          child: Text(
-            formatCurrencyDT(amount),
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-              color: color ?? AppColors.textPrimary,
-            ),
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
       ],
     );
   }
 
-  // ── Notes ───────────────────────────────────────────────────────────
   Widget _buildNotesSection() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -951,41 +965,31 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Notes (Visibles par le fournisseur)',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              const Text('Notes (Visibles par le fournisseur)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _notesCtrl,
                 maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: 'Ajouter une note...',
-                  filled: true,
-                  fillColor: AppColors.surface,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                ),
+                readOnly: widget.isReadOnly,
+                decoration: _formInputDecoration().copyWith(hintText: 'Ajouter une note...'),
+                style: const TextStyle(fontSize: 13),
               ),
             ],
           ),
         ),
-        const SizedBox(width: AppSpacing.lg),
+        const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Conditions d\'achat',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              const Text("Conditions d'achat", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _conditionsCtrl,
                 maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: 'Ajouter des conditions...',
-                  filled: true,
-                  fillColor: AppColors.surface,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                ),
+                readOnly: widget.isReadOnly,
+                decoration: _formInputDecoration().copyWith(hintText: 'Ajouter des conditions...'),
+                style: const TextStyle(fontSize: 13),
               ),
             ],
           ),

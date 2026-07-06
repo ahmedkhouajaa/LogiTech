@@ -253,20 +253,20 @@ class _CustomersScreenState extends State<CustomersScreen> {
       barrierDismissible: false,
       builder: (_) => BlocProvider.value(
         value: context.read<CustomersBloc>(),
-        child: _CustomerDialog(existing: existing),
+        child: CustomerDialog(existing: existing),
       ),
     );
   }
 }
 
-class _CustomerDialog extends StatefulWidget {
+class CustomerDialog extends StatefulWidget {
   final Customer? existing;
-  const _CustomerDialog({this.existing});
+  const CustomerDialog({this.existing});
   @override
-  State<_CustomerDialog> createState() => _CustomerDialogState();
+  State<CustomerDialog> createState() => CustomerDialogState();
 }
 
-class _CustomerDialogState extends State<_CustomerDialog> with SingleTickerProviderStateMixin {
+class CustomerDialogState extends State<CustomerDialog> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late String _customerType;
   late bool _deliverySameAsBilling;

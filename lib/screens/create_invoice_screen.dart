@@ -14,6 +14,7 @@ import '../database/database_helper.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/dashboard_card.dart';
+import '../screens/customers_screen.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
   final Invoice? existing;
@@ -44,6 +45,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
+
+  Key _autocompleteKey = UniqueKey();
 
   Map<double, double> get _tvaBreakdown {
     final map = <double, double>{};
@@ -277,21 +280,55 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   children: [
                     const Text('Client', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                     const SizedBox(height: 6),
-                    BlocBuilder<CustomersBloc, CustomersState>(
-                      builder: (context, state) {
-                        final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                        return DropdownButtonFormField<String>(
-                          value: _selectedCustomer?.id,
-                          isExpanded: true,
-                          hint: const Text('Rechercher des clients...', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
-                          items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: const TextStyle(fontSize: 13)))).toList(),
-                          onChanged: (v) {
-                            final customer = customers.firstWhere((c) => c.id == v);
-                            setState(() => _selectedCustomer = customer);
-                          },
-                          decoration: _formInputDecoration(),
-                        );
-                      },
+                    Row(
+                      children: [
+                        Expanded(
+                          child: BlocBuilder<CustomersBloc, CustomersState>(
+                            builder: (context, state) {
+                              final customers = state is CustomersLoaded ? state.customers : <Customer>[];
+                              return DropdownButtonFormField<String>(
+                                value: _selectedCustomer?.id,
+                                isExpanded: true,
+                                hint: const Text('Rechercher des clients...', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                                items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: const TextStyle(fontSize: 13)))).toList(),
+                                onChanged: (v) {
+                                  final customer = customers.firstWhere((c) => c.id == v);
+                                  setState(() => _selectedCustomer = customer);
+                                },
+                                decoration: _formInputDecoration(),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          height: 48,
+                          child: Tooltip(
+                            message: 'Créer un nouveau client',
+                            child: ElevatedButton(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<CustomersBloc>(),
+                                    child: const CustomerDialog(existing: null),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                foregroundColor: AppColors.primary,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                              ),
+                              child: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -309,7 +346,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         return DropdownButtonFormField<String>(
                           value: _selectedProjectId,
                           isExpanded: true,
-                          hint: const Text('Projet par defaut', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
+                          hint: const Text('Projet par defaut', style: TextStyle(fontSize: 13, color: Colors.black87)),
                           items: [
                             const DropdownMenuItem<String>(value: null, child: Text('Projet par defaut', style: TextStyle(fontSize: 13))),
                             ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: const TextStyle(fontSize: 13)))),
@@ -355,10 +392,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   InputDecoration _formInputDecoration() {
     return InputDecoration(
       filled: true,
-      fillColor: AppColors.surface,
+      fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
     );
   }
@@ -370,7 +407,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
-        boxShadow: AppShadows.sm,
+        boxShadow: AppShadows.md,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,7 +443,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 32),
               width: double.infinity,
-              child: const Text('Aucun article', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
+              child: const Text('Aucun article', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: Colors.black87)),
             )
           else
             ..._items.asMap().entries.map((e) => _buildItemRow(e.key, e.value)),
@@ -432,26 +469,86 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               // Designation
               Expanded(
                 flex: 3,
-                child: TextFormField(
-                  initialValue: item.productName ?? '',
-                  decoration: _itemInputDecoration(''),
-                  style: const TextStyle(fontSize: 13),
-                  onChanged: (v) => setState(() => _items[index] = item.copyWith(productName: v)),
+                child: BlocBuilder<ProductsBloc, ProductsState>(
+                  builder: (context, state) {
+                    final products = state is ProductsLoaded ? state.products : <Product>[];
+                    return Autocomplete<Product>(
+                      initialValue: TextEditingValue(text: item.productName ?? ''),
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
+                        return products.where((Product p) => 
+                          p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
+                          (p.reference?.toLowerCase().contains(textEditingValue.text.toLowerCase()) ?? false)
+                        );
+                      },
+                      displayStringForOption: (Product option) => option.name,
+                      fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                        return TextFormField(
+                          controller: textEditingController,
+                          focusNode: focusNode,
+                          decoration: _itemInputDecoration('Rechercher un article...'),
+                          style: const TextStyle(fontSize: 13),
+                          onChanged: (v) => setState(() => _items[index] = item.copyWith(productName: v)),
+                        );
+                      },
+                      optionsViewBuilder: (context, onSelected, options) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
+                              child: ListView.builder(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                itemCount: options.length,
+                                itemBuilder: (context, i) {
+                                  final option = options.elementAt(i);
+                                  return ListTile(
+                                    title: Text(option.name, style: const TextStyle(fontSize: 13)),
+                                    subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
+                                    trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    onTap: () => onSelected(option),
+                                    dense: true,
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      onSelected: (Product selection) {
+                        setState(() {
+                          _items[index] = item.copyWith(
+                            productId: selection.id,
+                            productName: selection.name,
+                            unitPrice: selection.sellingPrice,
+                            tvaRate: selection.tvaRate,
+                          );
+                        });
+                      },
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 8),
-              // Quantite with + button
+              // Quantite with - and + buttons
               SizedBox(
                 width: 120,
                 child: Row(
                   children: [
                     InkWell(
-                      onTap: () => setState(() => _items[index] = item.copyWith(quantity: item.quantity + 1)),
+                      onTap: () {
+                        if (item.quantity > 1) {
+                          setState(() => _items[index] = item.copyWith(quantity: item.quantity - 1));
+                        }
+                      },
                       borderRadius: BorderRadius.circular(4),
                       child: Container(
                         width: 28, height: 28,
                         decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
-                        child: const Icon(Icons.add, size: 14, color: AppColors.textSecondary),
+                        child: const Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -464,6 +561,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                         style: const TextStyle(fontSize: 13),
                         keyboardType: TextInputType.number,
                         onChanged: (v) => setState(() => _items[index] = item.copyWith(quantity: double.tryParse(v) ?? 1)),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () => setState(() => _items[index] = item.copyWith(quantity: item.quantity + 1)),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        width: 28, height: 28,
+                        decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
+                        child: const Icon(Icons.add, size: 14, color: AppColors.textSecondary),
                       ),
                     ),
                   ],
@@ -646,12 +753,12 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   InputDecoration _itemInputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 12),
+      hintStyle: const TextStyle(color: Colors.black87, fontSize: 12),
       filled: true,
-      fillColor: AppColors.surface,
+      fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
     );
   }
@@ -672,22 +779,66 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: DropdownButtonFormField<String>(
-                  hint: const Text('Selectionner un article...', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
-                  isExpanded: true,
-                  items: products.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: const TextStyle(fontSize: 13)))).toList(),
-                  onChanged: (v) {
-                    if (v == null) return;
-                    final product = products.firstWhere((p) => p.id == v);
-                    _addProductItem(product);
+                child: Autocomplete<Product>(
+                  key: _autocompleteKey,
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
+                    return products.where((Product p) => 
+                      p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
+                      (p.reference?.toLowerCase().contains(textEditingValue.text.toLowerCase()) ?? false)
+                    );
                   },
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-                  ),
+                  displayStringForOption: (Product option) => option.name,
+                  fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                    return TextFormField(
+                      controller: textEditingController,
+                      focusNode: focusNode,
+                      decoration: InputDecoration(
+                        hintText: 'Rechercher un article...',
+                        hintStyle: const TextStyle(fontSize: 13, color: Colors.black87),
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                      ),
+                      style: const TextStyle(fontSize: 13),
+                    );
+                  },
+                  optionsViewBuilder: (context, onSelected, options) {
+                    return Align(
+                      alignment: Alignment.topLeft,
+                      child: Material(
+                        elevation: 4,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
+                          child: ListView.builder(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            itemCount: options.length,
+                            itemBuilder: (context, i) {
+                              final option = options.elementAt(i);
+                              return ListTile(
+                                title: Text(option.name, style: const TextStyle(fontSize: 13)),
+                                subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
+                                trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                onTap: () => onSelected(option),
+                                dense: true,
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  onSelected: (Product selection) {
+                    _addProductItem(selection);
+                    setState(() {
+                      _autocompleteKey = UniqueKey();
+                    });
+                  },
                 ),
               );
             },
@@ -732,8 +883,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   child: Checkbox(
                     value: _withGlobalDiscount,
                     onChanged: (v) => setState(() => _withGlobalDiscount = v ?? false),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    side: BorderSide(color: AppColors.border),
+                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            side: BorderSide(color: AppColors.border),
+                            activeColor: AppColors.primary,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -783,10 +935,35 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 child: _buildTotalLine('TVA ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
               ),
             ),
-            if (_withTimbreFiscal) ...[
-              _buildTotalLine('Timbre fiscal:', formatCurrencyDT(_timbreFiscal)),
-              const SizedBox(height: 6),
-            ],
+            InkWell(
+              onTap: () => setState(() => _withTimbreFiscal = !_withTimbreFiscal),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 16, height: 16,
+                          child: Checkbox(
+                            value: _withTimbreFiscal,
+                            onChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            side: BorderSide(color: AppColors.border),
+                            activeColor: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Timbre fiscal:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                    Text(formatCurrencyDT(_timbreFiscal), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
             if (_withGlobalDiscount && _globalDiscountAmount > 0) ...[
               _buildTotalLine('Remise:', '- ${formatCurrencyDT(_globalDiscountAmount)}'),
               const SizedBox(height: 6),
@@ -832,7 +1009,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 maxLines: 5,
                 decoration: InputDecoration(
                   hintText: 'Visible sur le document final',
-                  hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                  hintStyle: const TextStyle(color: Colors.black87, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.surface,
                   contentPadding: const EdgeInsets.all(14),
@@ -857,7 +1034,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 maxLines: 5,
                 decoration: InputDecoration(
                   hintText: 'Conditions generales pour ce document',
-                  hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                  hintStyle: const TextStyle(color: Colors.black87, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.surface,
                   contentPadding: const EdgeInsets.all(14),

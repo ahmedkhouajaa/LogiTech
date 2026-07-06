@@ -11,6 +11,7 @@ import '../models/product.dart';
 import '../models/project.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import 'customers_screen.dart';
 import '../database/database_helper.dart';
 import '../widgets/dashboard_card.dart';
 
@@ -368,31 +369,53 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                             fontWeight: FontWeight.w600,
                             color: AppColors.textSecondary)),
                     const SizedBox(height: 6),
-                    BlocBuilder<CustomersBloc, CustomersState>(
-                      builder: (context, state) {
-                        final customers = state is CustomersLoaded
-                            ? state.customers
-                            : <Customer>[];
-                        return DropdownButtonFormField<String>(
-                          value: _selectedCustomerId,
-                          isExpanded: true,
-                          hint: const Text('Rechercher des clients...',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textTertiary)),
-                          items: customers
-                              .map((c) => DropdownMenuItem(
-                                  value: c.id,
-                                  child: Text(
-                                      c.companyName ?? c.name,
-                                      style: const TextStyle(fontSize: 13))))
-                              .toList(),
-                          onChanged: (v) =>
-                              setState(() => _selectedCustomerId = v),
-                          validator: (v) => v == null ? 'Requis' : null,
-                          decoration: _formInputDecoration(),
-                        );
-                      },
+                    Row(
+                      children: [
+                        Expanded(
+                          child: BlocBuilder<CustomersBloc, CustomersState>(
+                            builder: (context, state) {
+                              final customers = state is CustomersLoaded ? state.customers : <Customer>[];
+                              return DropdownButtonFormField<String>(
+                                value: _selectedCustomerId,
+                                isExpanded: true,
+                                hint: const Text('Rechercher des clients...', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                                items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.companyName ?? c.name, style: const TextStyle(fontSize: 13, color: Colors.black87)))).toList(),
+                                onChanged: (v) => setState(() => _selectedCustomerId = v),
+                                validator: (v) => v == null ? 'Requis' : null,
+                                decoration: _formInputDecoration(),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          height: 48,
+                          child: Tooltip(
+                            message: 'Créer un nouveau client',
+                            child: ElevatedButton(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<CustomersBloc>(),
+                                    child: const CustomerDialog(existing: null),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                foregroundColor: AppColors.primary,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                              ),
+                              child: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -479,7 +502,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
     return InputDecoration(
       hintText: hint,
       hintStyle:
-          const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+          const TextStyle(color: Colors.black87, fontSize: 13),
       filled: true,
       fillColor: AppColors.surface,
       contentPadding:
@@ -566,7 +589,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
               child: const Text('Aucun article',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontSize: 13, color: AppColors.textTertiary)),
+                      fontSize: 13, color: Colors.black87)),
             )
           else
             ..._items.asMap().entries.map((e) => _buildItemRow(e.key, e.value)),
@@ -900,7 +923,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(
-          color: AppColors.textTertiary, fontSize: 12),
+          color: Colors.black87, fontSize: 12),
       filled: true,
       fillColor: AppColors.surface,
       contentPadding:
@@ -1036,9 +1059,9 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                     value: _withGlobalDiscount,
                     onChanged: (v) => setState(
                         () => _withGlobalDiscount = v ?? false),
-                    materialTapTargetSize:
-                        MaterialTapTargetSize.shrinkWrap,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     side: const BorderSide(color: AppColors.border),
+                    activeColor: AppColors.primary,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1090,22 +1113,46 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            _buildTotalLine('Sous-total HT:',
-                formatCurrencyDT(_totalHTAfterDiscount)),
+            _buildTotalLine('Sous-total HT:', formatCurrencyDT(_totalHTAfterDiscount)),
             const SizedBox(height: 6),
-            ..._tvaBreakdown.entries.map((entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: _buildTotalLine('TVA ${entry.key.toInt()}%:',
-                      formatCurrencyDT(entry.value)),
-                )),
-            if (_withTimbreFiscal) ...[
-              _buildTotalLine(
-                  'Timbre fiscal:', formatCurrencyDT(_timbreFiscal)),
-              const SizedBox(height: 6),
-            ],
+            // TVA breakdown
+            ..._tvaBreakdown.entries.map((entry) =>
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildTotalLine('TVA ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
+              ),
+            ),
+            InkWell(
+              onTap: () => setState(() => _withTimbreFiscal = !_withTimbreFiscal),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 16, height: 16,
+                          child: Checkbox(
+                            value: _withTimbreFiscal,
+                            onChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            side: const BorderSide(color: AppColors.border),
+                            activeColor: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Timbre fiscal:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                    Text(formatCurrencyDT(_timbreFiscal), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
             if (_withGlobalDiscount && _globalDiscountAmount > 0) ...[
-              _buildTotalLine('Remise:',
-                  '- ${formatCurrencyDT(_globalDiscountAmount)}'),
+              _buildTotalLine('Remise:', '- ${formatCurrencyDT(_globalDiscountAmount)}'),
               const SizedBox(height: 6),
             ],
             const Divider(),
@@ -1113,45 +1160,9 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Total TTC:',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary)),
-                Text(formatCurrencyDT(_totalTTC),
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary)),
+                const Text('Total TTC:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(formatCurrencyDT(_totalTTC), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
-            ),
-            const SizedBox(height: 8),
-            // Timbre fiscal toggle
-            InkWell(
-              onTap: () =>
-                  setState(() => _withTimbreFiscal = !_withTimbreFiscal),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: Checkbox(
-                      value: _withTimbreFiscal,
-                      onChanged: (v) => setState(
-                          () => _withTimbreFiscal = v ?? true),
-                      materialTapTargetSize:
-                          MaterialTapTargetSize.shrinkWrap,
-                      side: const BorderSide(color: AppColors.border),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text('Timbre fiscal (1 DT)',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textTertiary)),
-                ],
-              ),
             ),
           ],
         ),
@@ -1196,7 +1207,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                 decoration: InputDecoration(
                   hintText: 'Visible sur le document final',
                   hintStyle: const TextStyle(
-                      color: AppColors.textTertiary, fontSize: 13),
+                      color: Colors.black87, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.surface,
                   contentPadding: const EdgeInsets.all(14),
@@ -1235,7 +1246,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                 decoration: InputDecoration(
                   hintText: 'Conditions generales pour ce document',
                   hintStyle: const TextStyle(
-                      color: AppColors.textTertiary, fontSize: 13),
+                      color: Colors.black87, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.surface,
                   contentPadding: const EdgeInsets.all(14),

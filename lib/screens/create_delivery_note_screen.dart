@@ -11,8 +11,10 @@ import '../models/product.dart';
 import '../models/project.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../utils/helpers.dart';
 import '../database/database_helper.dart';
 import '../widgets/dashboard_card.dart';
+import 'customers_screen.dart';
 
 class CreateDeliveryNoteScreen extends StatefulWidget {
   final DeliveryNote? existing;
@@ -240,7 +242,7 @@ class _CreateDeliveryNoteScreenState
       decoration: BoxDecoration(
         color: AppColors.surface,
         border: const Border(bottom: BorderSide(color: AppColors.border)),
-        boxShadow: AppShadows.sm,
+        boxShadow: AppShadows.md,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -318,7 +320,7 @@ class _CreateDeliveryNoteScreenState
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
-        boxShadow: AppShadows.sm,
+        boxShadow: AppShadows.md,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,19 +349,17 @@ class _CreateDeliveryNoteScreenState
                     TextEditingController(text: formatDateLong(_date)),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: AppColors.surface,
+                  fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 14, vertical: 14),
                   suffixIcon: const Icon(Icons.calendar_today_rounded,
                       size: 16, color: AppColors.textTertiary),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide:
-                          const BorderSide(color: AppColors.border)),
+                      borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                   enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide:
-                          const BorderSide(color: AppColors.border)),
+                      borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                 ),
                 style: const TextStyle(fontSize: 14),
               ),
@@ -381,31 +381,66 @@ class _CreateDeliveryNoteScreenState
                             fontWeight: FontWeight.w600,
                             color: AppColors.textSecondary)),
                     const SizedBox(height: 6),
-                    BlocBuilder<CustomersBloc, CustomersState>(
-                      builder: (context, state) {
-                        final customers = state is CustomersLoaded
-                            ? state.customers
-                            : <Customer>[];
-                        return DropdownButtonFormField<String>(
-                          value: _selectedCustomerId,
-                          isExpanded: true,
-                          hint: const Text('Rechercher des clients...',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textTertiary)),
-                          items: customers
-                              .map((c) => DropdownMenuItem(
-                                  value: c.id,
-                                  child: Text(
-                                      c.companyName ?? c.name,
-                                      style: const TextStyle(fontSize: 13))))
-                              .toList(),
-                          onChanged: (v) =>
-                              setState(() => _selectedCustomerId = v),
-                          validator: (v) => v == null ? 'Requis' : null,
-                          decoration: _formInputDecoration(),
-                        );
-                      },
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: BlocBuilder<CustomersBloc, CustomersState>(
+                            builder: (context, state) {
+                              final customers = state is CustomersLoaded
+                                  ? state.customers
+                                  : <Customer>[];
+                              return DropdownButtonFormField<String>(
+                                value: _selectedCustomerId,
+                                isExpanded: true,
+                                hint: const Text('Rechercher des clients...',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.black87)),
+                                items: customers
+                                    .map((c) => DropdownMenuItem(
+                                        value: c.id,
+                                        child: Text(
+                                            c.companyName ?? c.name,
+                                            style: const TextStyle(fontSize: 13, color: Colors.black87))))
+                                    .toList(),
+                                onChanged: (v) =>
+                                    setState(() => _selectedCustomerId = v),
+                                validator: (v) => v == null ? 'Requis' : null,
+                                decoration: _formInputDecoration(),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          height: 48,
+                          margin: const EdgeInsets.only(bottom: 0),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (_) => BlocProvider.value(
+                                  value: context.read<CustomersBloc>(),
+                                  child: const CustomerDialog(existing: null),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary.withOpacity(0.1),
+                              foregroundColor: AppColors.primary,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                              ),
+                              side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                            ),
+                            child: const Icon(Icons.person_add_alt_1_rounded),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -561,18 +596,17 @@ class _CreateDeliveryNoteScreenState
   InputDecoration _formInputDecoration({String? hint}) {
     return InputDecoration(
       hintText: hint,
-      hintStyle:
-          const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+      hintStyle: const TextStyle(fontSize: 13, color: Colors.black87),
       filled: true,
-      fillColor: AppColors.surface,
+      fillColor: Colors.white,
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: AppColors.border)),
+          borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: AppColors.border)),
+          borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide:
@@ -587,7 +621,7 @@ class _CreateDeliveryNoteScreenState
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
-        boxShadow: AppShadows.sm,
+        boxShadow: AppShadows.md,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -929,15 +963,15 @@ class _CreateDeliveryNoteScreenState
       hintStyle: const TextStyle(
           color: AppColors.textTertiary, fontSize: 12),
       filled: true,
-      fillColor: AppColors.surface,
+      fillColor: Colors.white,
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: AppColors.border)),
+          borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: AppColors.border)),
+          borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide:
@@ -961,23 +995,17 @@ class _CreateDeliveryNoteScreenState
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: DropdownButtonFormField<String>(
-                  hint: const Text('Selectionner un article...',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textTertiary)),
-                  isExpanded: true,
-                  items: products
-                      .map((p) => DropdownMenuItem(
-                          value: p.id,
-                          child: Text(p.name,
-                              style:
-                                  const TextStyle(fontSize: 13))))
-                      .toList(),
-                  onChanged: (v) {
-                    if (v == null) return;
-                    final product =
-                        products.firstWhere((p) => p.id == v);
+                child: Autocomplete<Product>(
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text.isEmpty) {
+                      return const Iterable<Product>.empty();
+                    }
+                    return products.where((Product option) {
+                      return option.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
+                            (option.reference != null && option.reference!.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                    });
+                  },
+                  onSelected: (Product product) {
                     setState(() {
                       _items.add(DeliveryNoteItem(
                         id: _uuid.v4(),
@@ -990,18 +1018,51 @@ class _CreateDeliveryNoteScreenState
                       ));
                     });
                   },
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(
+                  displayStringForOption: (Product option) => option.name,
+                  fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                    return TextFormField(
+                      controller: textEditingController,
+                      focusNode: focusNode,
+                      decoration: InputDecoration(
+                        hintText: 'Rechercher un article...',
+                        hintStyle: const TextStyle(fontSize: 13, color: Colors.black87),
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                      ),
+                      style: const TextStyle(fontSize: 13),
+                    );
+                  },
+                  optionsViewBuilder: (context, onSelected, options) {
+                    return Align(
+                      alignment: Alignment.topLeft,
+                      child: Material(
+                        elevation: 4,
                         borderRadius: BorderRadius.circular(AppRadius.md),
-                        borderSide: BorderSide.none),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        borderSide: BorderSide.none),
-                  ),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
+                          child: ListView.builder(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            itemCount: options.length,
+                            itemBuilder: (context, i) {
+                              final option = options.elementAt(i);
+                              return ListTile(
+                                title: Text(option.name, style: const TextStyle(fontSize: 13)),
+                                subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
+                                trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                onTap: () => onSelected(option),
+                                dense: true,
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               );
             },
@@ -1063,9 +1124,10 @@ class _CreateDeliveryNoteScreenState
                     value: _withGlobalDiscount,
                     onChanged: (v) => setState(
                         () => _withGlobalDiscount = v ?? false),
-                    materialTapTargetSize:
-                        MaterialTapTargetSize.shrinkWrap,
-                    side: const BorderSide(color: AppColors.border),
+                 
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            side: const BorderSide(color: AppColors.border),
+                            activeColor: AppColors.primary,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1125,18 +1187,43 @@ class _CreateDeliveryNoteScreenState
                   child: _buildTotalLine('TVA ${entry.key.toInt()}%:',
                       formatCurrencyDT(entry.value)),
                 )),
-            if (_withTimbreFiscal) ...[
-              _buildTotalLine(
-                  'Timbre fiscal:', formatCurrencyDT(_timbreFiscal)),
-              const SizedBox(height: 6),
-            ],
             if (_withGlobalDiscount && _globalDiscountAmount > 0) ...[
               _buildTotalLine('Remise:',
                   '- ${formatCurrencyDT(_globalDiscountAmount)}'),
               const SizedBox(height: 6),
             ],
+                  InkWell(
+              onTap: () => setState(() => _withTimbreFiscal = !_withTimbreFiscal),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 16, height: 16,
+                          child: Checkbox(
+                            value: _withTimbreFiscal,
+                            onChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            side: const BorderSide(color: AppColors.border),
+                            activeColor: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Timbre fiscal:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                    Text(formatCurrencyDT(_timbreFiscal), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                  ],
+                ),
+              ),
+            ),
             const Divider(),
             const SizedBox(height: 4),
+      
+          
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1153,33 +1240,7 @@ class _CreateDeliveryNoteScreenState
               ],
             ),
             const SizedBox(height: 8),
-            // Timbre fiscal toggle
-            InkWell(
-              onTap: () =>
-                  setState(() => _withTimbreFiscal = !_withTimbreFiscal),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: Checkbox(
-                      value: _withTimbreFiscal,
-                      onChanged: (v) => setState(
-                          () => _withTimbreFiscal = v ?? true),
-                      materialTapTargetSize:
-                          MaterialTapTargetSize.shrinkWrap,
-                      side: const BorderSide(color: AppColors.border),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text('Timbre fiscal (1 DT)',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textTertiary)),
-                ],
-              ),
-            ),
+            
           ],
         ),
       ),
@@ -1225,16 +1286,14 @@ class _CreateDeliveryNoteScreenState
                   hintStyle: const TextStyle(
                       color: AppColors.textTertiary, fontSize: 13),
                   filled: true,
-                  fillColor: AppColors.surface,
+                  fillColor: Colors.white,
                   contentPadding: const EdgeInsets.all(14),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide:
-                          const BorderSide(color: AppColors.border)),
+                      borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                   enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide:
-                          const BorderSide(color: AppColors.border)),
+                      borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                   focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       borderSide: const BorderSide(
@@ -1264,16 +1323,14 @@ class _CreateDeliveryNoteScreenState
                   hintStyle: const TextStyle(
                       color: AppColors.textTertiary, fontSize: 13),
                   filled: true,
-                  fillColor: AppColors.surface,
+                  fillColor: Colors.white,
                   contentPadding: const EdgeInsets.all(14),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide:
-                          const BorderSide(color: AppColors.border)),
+                      borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                   enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
-                      borderSide:
-                          const BorderSide(color: AppColors.border)),
+                      borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                   focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       borderSide: const BorderSide(
@@ -1288,3 +1345,4 @@ class _CreateDeliveryNoteScreenState
     );
   }
 }
+

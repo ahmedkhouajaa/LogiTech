@@ -4,11 +4,14 @@ import 'package:uuid/uuid.dart';
 import '../blocs/quotes/quotes_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
+import '../blocs/projects/projects_bloc.dart';
 import '../models/quote.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
+import '../models/project.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import 'customers_screen.dart';
 import '../database/database_helper.dart';
 import '../widgets/dashboard_card.dart';
 
@@ -25,27 +28,37 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
   final _uuid = const Uuid();
 
   String? _selectedCustomerId;
+  String? _selectedProjectId;
   List<QuoteItem> _items = [];
   DateTime _date = DateTime.now();
   DateTime _validityDate = DateTime.now().add(const Duration(days: 30));
   final _notesCtrl = TextEditingController();
+  final _conditionsCtrl = TextEditingController();
   DocumentStatus _status = DocumentStatus.draft;
   bool _withTimbreFiscal = true;
+  bool _pricingModeHT = true;
+  bool _withGlobalDiscount = false;
+  double _globalDiscountPercent = 0.0;
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
+
+  double get _globalDiscountAmount => _withGlobalDiscount ? _totalHT * (_globalDiscountPercent / 100) : 0.0;
+
+  double get _totalHTAfterDiscount => _totalHT - _globalDiscountAmount;
 
   Map<double, double> get _tvaBreakdown {
     final map = <double, double>{};
     for (final item in _items) {
       final rate = item.tvaRate;
-      final tvaAmount = item.computedTotalHT * (rate / 100);
+      final discountFactor = _withGlobalDiscount ? (1 - (_globalDiscountPercent / 100)) : 1.0;
+      final tvaAmount = item.computedTotalHT * discountFactor * (rate / 100);
       map[rate] = (map[rate] ?? 0) + tvaAmount;
     }
     return map;
   }
 
-  double get _totalTva {
+  double get _totalTvaAfterDiscount {
     double total = 0;
     _tvaBreakdown.forEach((rate, amount) => total += amount);
     return total;
@@ -53,7 +66,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
 
   double get _timbreFiscal => _withTimbreFiscal ? 1.0 : 0.0;
 
-  double get _totalTTC => _totalHT + _totalTva + _timbreFiscal;
+  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal;
 
   bool get _isEditing => widget.existing != null;
 
@@ -62,14 +75,21 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     super.initState();
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<ProductsBloc>().add(LoadProducts());
+    context.read<ProjectsBloc>().add(LoadProjects());
 
     if (widget.existing != null) {
       final n = widget.existing!;
       _date = n.date;
       _validityDate = n.validityDate;
       _selectedCustomerId = n.customerId;
+      _selectedProjectId = n.projectId;
       _status = n.status;
+      _pricingModeHT = n.pricingMode == 'ht';
+      _globalDiscountPercent = n.globalDiscountPercent;
+      _withGlobalDiscount = _globalDiscountPercent > 0;
+      _withTimbreFiscal = n.timbreFiscal > 0;
       _notesCtrl.text = n.notes ?? '';
+      _conditionsCtrl.text = n.conditionsGenerales ?? '';
       _items = n.items.map((i) => QuoteItem(
         id: i.id,
         quoteId: i.quoteId,
@@ -87,6 +107,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
   @override
   void dispose() {
     _notesCtrl.dispose();
+    _conditionsCtrl.dispose();
     super.dispose();
   }
 
@@ -116,13 +137,19 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
       id: quoteId,
       number: number,
       customerId: _selectedCustomerId!,
+      projectId: _selectedProjectId,
       date: _date,
       validityDate: _validityDate,
       status: _status,
-      totalHT: _totalHT,
-      totalTva: _totalTva,
+      totalHT: _totalHTAfterDiscount,
+      totalTva: _totalTvaAfterDiscount,
       totalTTC: _totalTTC,
-      notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
+      timbreFiscal: _timbreFiscal,
+      globalDiscountPercent: _globalDiscountPercent,
+      globalDiscountAmount: _globalDiscountAmount,
+      pricingMode: _pricingModeHT ? 'ht' : 'ttc',
+      notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+      conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
       items: _items.map((item) => QuoteItem(
         id: item.id,
         quoteId: quoteId,
@@ -176,6 +203,8 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                     _buildArticlesSection(),
                     const SizedBox(height: AppSpacing.md),
                     _buildArticleActions(),
+                    const SizedBox(height: AppSpacing.md),
+                    _buildGlobalDiscountSection(),
                     const SizedBox(height: AppSpacing.lg),
                     _buildTotalsSection(),
                     const SizedBox(height: AppSpacing.lg),
@@ -380,38 +409,117 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Client
-          const Text('Client',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary)),
-          const SizedBox(height: 6),
-          BlocBuilder<CustomersBloc, CustomersState>(
-            builder: (context, state) {
-              final customers = state is CustomersLoaded
-                  ? state.customers
-                  : <Customer>[];
-              return DropdownButtonFormField<String>(
-                value: _selectedCustomerId,
-                isExpanded: true,
-                hint: const Text('Rechercher des clients...',
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textTertiary)),
-                items: customers
-                    .map((c) => DropdownMenuItem(
-                        value: c.id,
-                        child: Text(
-                            c.companyName ?? c.name,
-                            style: const TextStyle(fontSize: 13))))
-                    .toList(),
-                onChanged: (v) =>
-                    setState(() => _selectedCustomerId = v),
-                validator: (v) => v == null ? 'Requis' : null,
-                decoration: _formInputDecoration(),
-              );
-            },
+          // Client & Project
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Client', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: BlocBuilder<CustomersBloc, CustomersState>(
+                            builder: (context, state) {
+                              final customers = state is CustomersLoaded ? state.customers : <Customer>[];
+                              return DropdownButtonFormField<String>(
+                                value: _selectedCustomerId,
+                                isExpanded: true,
+                                hint: const Text('Rechercher des clients...', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                                items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.companyName ?? c.name, style: const TextStyle(fontSize: 13, color: Colors.black87)))).toList(),
+                                onChanged: (v) => setState(() => _selectedCustomerId = v),
+                                validator: (v) => v == null ? 'Requis' : null,
+                                decoration: _formInputDecoration(),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          height: 48,
+                          child: Tooltip(
+                            message: 'Créer un nouveau client',
+                            child: ElevatedButton(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<CustomersBloc>(),
+                                    child: const CustomerDialog(existing: null),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                foregroundColor: AppColors.primary,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                              ),
+                              child: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Projet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    const SizedBox(height: 6),
+                    BlocBuilder<ProjectsBloc, ProjectsState>(
+                      builder: (context, state) {
+                        final projects = state is ProjectsLoaded ? state.projects : <Project>[];
+                        return DropdownButtonFormField<String>(
+                          value: _selectedProjectId,
+                          isExpanded: true,
+                          hint: const Text('Projet par defaut', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                          items: [
+                            const DropdownMenuItem<String>(value: null, child: Text('Projet par defaut', style: TextStyle(fontSize: 13))),
+                            ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: const TextStyle(fontSize: 13)))),
+                          ],
+                          onChanged: (v) => setState(() => _selectedProjectId = v),
+                          decoration: _formInputDecoration(),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Pricing mode radio
+          const Text('Les prix des articles sont en', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Radio<bool>(
+                value: true,
+                groupValue: _pricingModeHT,
+                onChanged: (v) => setState(() => _pricingModeHT = v!),
+                activeColor: AppColors.primary,
+              ),
+              const Text('Hors taxes', style: TextStyle(fontSize: 13)),
+              const SizedBox(width: 24),
+              Radio<bool>(
+                value: false,
+                groupValue: _pricingModeHT,
+                onChanged: (v) => setState(() => _pricingModeHT = v!),
+                activeColor: AppColors.primary,
+              ),
+              const Text('Taxe incluse', style: TextStyle(fontSize: 13)),
+            ],
           ),
         ],
       ),
@@ -861,152 +969,191 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     );
   }
 
-  // ── Totals Section ────────────────────────────────────────────────
-  Widget _buildTotalsSection() {
+  // ─── Global Discount Section ─────────────────────────────────────
+  Widget _buildGlobalDiscountSection() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.border),
-        boxShadow: AppShadows.sm,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Totaux',
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary)),
-          const SizedBox(height: 16),
-          _buildTotalRow('Total HT', _totalHT),
-          const Divider(height: 24, color: AppColors.border),
-          if (_tvaBreakdown.isNotEmpty) ...[
-            ..._tvaBreakdown.entries.map((e) => _buildTotalRow(
-                'TVA (${e.key.toInt()}%)', e.value,
-                isSubtext: true)),
-            const SizedBox(height: 8),
-          ],
-          _buildTotalRow('Total TVA', _totalTva),
-          const Divider(height: 24, color: AppColors.border),
           InkWell(
-            onTap: () => setState(() => _withTimbreFiscal = !_withTimbreFiscal),
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: Checkbox(
-                      value: _withTimbreFiscal,
-                      onChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
-                      activeColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                    ),
+            onTap: () => setState(() => _withGlobalDiscount = !_withGlobalDiscount),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 18, height: 18,
+                  child: Checkbox(
+                    value: _withGlobalDiscount,
+                    onChanged: (v) => setState(() => _withGlobalDiscount = v ?? false),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    side: BorderSide(color: AppColors.border),
+                    activeColor: AppColors.primary,
                   ),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text('Timbre fiscal', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                  ),
-                  Text(
-                    formatCurrencyDT(_withTimbreFiscal ? 1.0 : 0),
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                const Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+              ],
             ),
           ),
-          const Divider(height: 24, color: AppColors.border),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Total TTC',
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary)),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
+          if (_withGlobalDiscount) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                SizedBox(
+                  width: 150,
+                  child: TextFormField(
+                    initialValue: _globalDiscountPercent > 0 ? _globalDiscountPercent.toString() : '',
+                    decoration: _itemInputDecoration('Remise %'),
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 13),
+                    onChanged: (v) => setState(() => _globalDiscountPercent = double.tryParse(v) ?? 0),
+                  ),
                 ),
-                child: Text(
-                  formatCurrencyDT(_totalTTC),
-                  style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary),
-                ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 12),
+                Text('= ${formatCurrencyDT(_globalDiscountAmount)}', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildTotalRow(String label, double amount,
-      {bool isSubtext = false, bool isDiscount = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: isSubtext ? 12 : 13,
-              color:
-                  isSubtext ? AppColors.textTertiary : AppColors.textSecondary,
-              fontWeight: isSubtext ? FontWeight.normal : FontWeight.w500,
+  // ── Totals Section ────────────────────────────────────────────────
+  Widget _buildTotalsSection() {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: SizedBox(
+        width: 350,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _buildTotalLine('Sous-total HT:', formatCurrencyDT(_totalHTAfterDiscount)),
+            const SizedBox(height: 6),
+            // TVA breakdown
+            ..._tvaBreakdown.entries.map((entry) =>
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: _buildTotalLine('TVA ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
+              ),
             ),
-          ),
-          Text(
-            (isDiscount ? '-' : '') + formatCurrencyDT(amount),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isDiscount ? AppColors.error : AppColors.textPrimary,
+            InkWell(
+              onTap: () => setState(() => _withTimbreFiscal = !_withTimbreFiscal),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 16, height: 16,
+                          child: Checkbox(
+                            value: _withTimbreFiscal,
+                            onChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            side: BorderSide(color: AppColors.border),
+                            activeColor: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Timbre fiscal:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                    Text(formatCurrencyDT(_timbreFiscal), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            if (_withGlobalDiscount && _globalDiscountAmount > 0) ...[
+              _buildTotalLine('Remise:', '- ${formatCurrencyDT(_globalDiscountAmount)}'),
+              const SizedBox(height: 6),
+            ],
+            const Divider(),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Total TTC:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(formatCurrencyDT(_totalTTC), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              ],
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildTotalLine(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+      ],
     );
   }
 
   // ── Notes Section ─────────────────────────────────────────────────
   Widget _buildNotesSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppShadows.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Notes & Conditions',
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary)),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _notesCtrl,
-            maxLines: 3,
-            decoration: _formInputDecoration(
-                hint: 'Notes internes, instructions de livraison...'),
-            style: const TextStyle(fontSize: 13),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Notes', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _notesCtrl,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  hintText: 'Visible sur le document final',
+                  hintStyle: const TextStyle(color: Colors.black87, fontSize: 13),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  contentPadding: const EdgeInsets.all(14),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+                ),
+                style: const TextStyle(fontSize: 13),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 24),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Conditions Generales', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _conditionsCtrl,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  hintText: 'Conditions generales pour ce document',
+                  hintStyle: const TextStyle(color: Colors.black87, fontSize: 13),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  contentPadding: const EdgeInsets.all(14),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+                ),
+                style: const TextStyle(fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

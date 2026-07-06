@@ -5,13 +5,20 @@ class Quote {
   final String number;
   final String customerId;
   final String? customerName;
+  final String? projectId;
+  final String? projectName;
   final DateTime date;
   final DateTime validityDate;
   final DocumentStatus status;
   final double totalHT;
   final double totalTva;
   final double totalTTC;
+  final double globalDiscountPercent;
+  final double globalDiscountAmount;
+  final double timbreFiscal;
+  final String pricingMode;
   final String? notes;
+  final String? conditionsGenerales;
   final List<QuoteItem> items;
   final String? firebaseUid;
   final bool isDeleted;
@@ -27,9 +34,10 @@ class Quote {
 
   Quote({
     required this.id, required this.number, required this.customerId,
-    this.customerName, required this.date, required this.validityDate,
+    this.customerName, this.projectId, this.projectName, required this.date, required this.validityDate,
     this.status = DocumentStatus.draft, this.totalHT = 0, this.totalTva = 0,
-    this.totalTTC = 0, this.notes, this.items = const [],
+    this.totalTTC = 0, this.globalDiscountPercent = 0, this.globalDiscountAmount = 0,
+    this.timbreFiscal = 1.000, this.pricingMode = 'ht', this.notes, this.conditionsGenerales, this.items = const [],
     this.firebaseUid, this.isDeleted = false,
     this.isConverted = false, this.convertedTo, this.convertedToId,
     this.isConvertedToOrder = false, this.convertedToOrderId,
@@ -41,10 +49,13 @@ class Quote {
   bool get isExpired => validityDate.isBefore(DateTime.now());
 
   Map<String, dynamic> toMap() => {
-        'id': id, 'number': number, 'customer_id': customerId,
+        'id': id, 'number': number, 'customer_id': customerId, 'project_id': projectId,
         'date': date.toIso8601String(), 'validity_date': validityDate.toIso8601String(),
         'status': status.name, 'total_ht': totalHT, 'total_tva': totalTva,
-        'total_ttc': totalTTC, 'notes': notes, 'firebase_uid': firebaseUid,
+        'total_ttc': totalTTC, 'global_discount_percent': globalDiscountPercent,
+        'global_discount_amount': globalDiscountAmount, 'timbre_fiscal': timbreFiscal,
+        'pricing_mode': pricingMode, 'notes': notes, 'conditions_generales': conditionsGenerales,
+        'firebase_uid': firebaseUid,
         'is_deleted': isDeleted ? 1 : 0, 
         'is_converted': isConverted ? 1 : 0,
         'converted_to': convertedTo, 'converted_to_id': convertedToId,
@@ -57,10 +68,12 @@ class Quote {
         'items': items.map((i) => i.toMap()).toList(),
       };
 
-  factory Quote.fromMap(Map<String, dynamic> map) => Quote(
+      factory Quote.fromMap(Map<String, dynamic> map) => Quote(
         id: map['id'] as String, number: map['number'] as String,
         customerId: map['customer_id'] as String,
         customerName: map['customer_name'] as String?,
+        projectId: map['project_id'] as String?,
+        projectName: map['project_name'] as String?,
         date: DateTime.parse(map['date'] as String),
         validityDate: DateTime.parse(map['validity_date'] as String),
         status: DocumentStatus.values.firstWhere(
@@ -68,7 +81,12 @@ class Quote {
         totalHT: (map['total_ht'] as num?)?.toDouble() ?? 0,
         totalTva: (map['total_tva'] as num?)?.toDouble() ?? 0,
         totalTTC: (map['total_ttc'] as num?)?.toDouble() ?? 0,
+        globalDiscountPercent: (map['global_discount_percent'] as num?)?.toDouble() ?? 0,
+        globalDiscountAmount: (map['global_discount_amount'] as num?)?.toDouble() ?? 0,
+        timbreFiscal: (map['timbre_fiscal'] as num?)?.toDouble() ?? 1.000,
+        pricingMode: map['pricing_mode'] as String? ?? 'ht',
         notes: map['notes'] as String?,
+        conditionsGenerales: map['conditions_generales'] as String?,
         firebaseUid: map['firebase_uid'] as String?,
         isDeleted: map['is_deleted'] == 1,
         isConverted: map['is_converted'] == 1,
@@ -84,8 +102,12 @@ class Quote {
 
   Quote copyWith({
     String? id, String? number, String? customerId, String? customerName,
+    String? projectId, String? projectName,
     DateTime? date, DateTime? validityDate, DocumentStatus? status,
-    double? totalHT, double? totalTva, double? totalTTC, String? notes,
+    double? totalHT, double? totalTva, double? totalTTC,
+    double? globalDiscountPercent, double? globalDiscountAmount,
+    double? timbreFiscal, String? pricingMode,
+    String? notes, String? conditionsGenerales,
     List<QuoteItem>? items, String? firebaseUid, bool? isDeleted,
     bool? isConverted, String? convertedTo, String? convertedToId,
     bool? isConvertedToOrder, String? convertedToOrderId,
@@ -95,10 +117,17 @@ class Quote {
         id: id ?? this.id, number: number ?? this.number,
         customerId: customerId ?? this.customerId,
         customerName: customerName ?? this.customerName,
+        projectId: projectId ?? this.projectId,
+        projectName: projectName ?? this.projectName,
         date: date ?? this.date, validityDate: validityDate ?? this.validityDate,
         status: status ?? this.status, totalHT: totalHT ?? this.totalHT,
         totalTva: totalTva ?? this.totalTva, totalTTC: totalTTC ?? this.totalTTC,
-        notes: notes ?? this.notes, items: items ?? this.items,
+        globalDiscountPercent: globalDiscountPercent ?? this.globalDiscountPercent,
+        globalDiscountAmount: globalDiscountAmount ?? this.globalDiscountAmount,
+        timbreFiscal: timbreFiscal ?? this.timbreFiscal,
+        pricingMode: pricingMode ?? this.pricingMode,
+        notes: notes ?? this.notes, conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
+        items: items ?? this.items,
         firebaseUid: firebaseUid ?? this.firebaseUid,
         isDeleted: isDeleted ?? this.isDeleted,
         isConverted: isConverted ?? this.isConverted,

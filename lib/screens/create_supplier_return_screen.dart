@@ -14,6 +14,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../database/database_helper.dart';
 import '../widgets/dashboard_card.dart';
+import 'suppliers_screen.dart';
 
 enum SupplierReturnStatus {
   draft('Brouillon', AppColors.textSecondary),
@@ -28,7 +29,8 @@ enum SupplierReturnStatus {
 
 class CreateSupplierReturnScreen extends StatefulWidget {
   final SupplierReturn? existing;
-  const CreateSupplierReturnScreen({super.key, this.existing});
+  final bool isReadOnly;
+  const CreateSupplierReturnScreen({super.key, this.existing, this.isReadOnly = false});
 
   @override
   State<CreateSupplierReturnScreen> createState() =>
@@ -49,7 +51,8 @@ class _CreateSupplierReturnScreenState
   bool _pricingModeHT = true;
   bool _withTimbreFiscal = true;
   bool _withGlobalDiscount = false;
-  double _globalDiscountPercent = 0;
+  double _globalDiscountPercent = 0.0;
+  Key _autocompleteKey = UniqueKey();
   SupplierReturnStatus _status = SupplierReturnStatus.draft;
 
   // Custom fields
@@ -232,7 +235,7 @@ class _CreateSupplierReturnScreenState
       decoration: BoxDecoration(
         color: AppColors.surface,
         border: const Border(bottom: BorderSide(color: AppColors.border)),
-        boxShadow: AppShadows.sm,
+        boxShadow: AppShadows.md,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -310,7 +313,7 @@ class _CreateSupplierReturnScreenState
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
-        boxShadow: AppShadows.sm,
+        boxShadow: AppShadows.md,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,7 +342,7 @@ class _CreateSupplierReturnScreenState
                     TextEditingController(text: formatDateLong(_date)),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: AppColors.surface,
+                  fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 14, vertical: 14),
                   suffixIcon: const Icon(Icons.calendar_today_rounded,
@@ -372,32 +375,59 @@ class _CreateSupplierReturnScreenState
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textSecondary)),
-                    const SizedBox(height: 6),
-                    BlocBuilder<SuppliersBloc, SuppliersState>(
-                      builder: (context, state) {
-                        final Suppliers = state is SuppliersLoaded
-                            ? state.suppliers
-                            : <Supplier>[];
-                        return DropdownButtonFormField<String>(
-                          value: _selectedsupplierId,
-                          isExpanded: true,
-                          hint: const Text('Rechercher des Fournisseurs...',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textTertiary)),
-                          items: Suppliers
-                              .map((c) => DropdownMenuItem(
-                                  value: c.id,
-                                  child: Text(
-                                      c.name ?? c.name,
-                                      style: const TextStyle(fontSize: 13))))
-                              .toList(),
-                          onChanged: (v) =>
-                              setState(() => _selectedsupplierId = v),
-                          validator: (v) => v == null ? 'Requis' : null,
-                          decoration: _formInputDecoration(),
-                        );
-                      },
+                    Row(
+                      children: [
+                        Expanded(
+                          child: BlocBuilder<SuppliersBloc, SuppliersState>(
+                            builder: (context, state) {
+                              final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
+                              return DropdownButtonFormField<String>(
+                                value: _selectedsupplierId,
+                                isExpanded: true,
+                                hint: const Text('Rechercher des fournisseurs...', style: TextStyle(fontSize: 13, color: Colors.black87)),
+                                items: suppliers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: const TextStyle(fontSize: 13)))).toList(),
+                                onChanged: (v) {
+                                  if (!widget.isReadOnly && v != null) {
+                                    setState(() => _selectedsupplierId = v);
+                                  }
+                                },
+                                validator: (v) => v == null ? 'Requis' : null,
+                                decoration: _formInputDecoration(),
+                              );
+                            },
+                          ),
+                        ),
+                        if (!widget.isReadOnly) ...[
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            height: 48,
+                            child: Tooltip(
+                              message: 'Créer un nouveau fournisseur',
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) => BlocProvider.value(
+                                      value: context.read<SuppliersBloc>(),
+                                      child: const SupplierDialog(existing: null),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                  foregroundColor: AppColors.primary,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                                ),
+                                child: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -556,15 +586,15 @@ class _CreateSupplierReturnScreenState
       hintStyle:
           const TextStyle(color: AppColors.textTertiary, fontSize: 13),
       filled: true,
-      fillColor: AppColors.surface,
+      fillColor: Colors.white,
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: AppColors.border)),
+          borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: AppColors.border)),
+          borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide:
@@ -579,7 +609,7 @@ class _CreateSupplierReturnScreenState
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
-        boxShadow: AppShadows.sm,
+        boxShadow: AppShadows.md,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -673,7 +703,7 @@ class _CreateSupplierReturnScreenState
               Expanded(
                 flex: 3,
                 child: TextFormField(
-                  initialValue: item.designation ?? '',
+                  initialValue: item.designation,
                   decoration: _itemInputDecoration(''),
                   style: const TextStyle(fontSize: 13),
                   onChanged: (v) => setState(() =>
@@ -822,15 +852,15 @@ class _CreateSupplierReturnScreenState
       hintStyle: const TextStyle(
           color: AppColors.textTertiary, fontSize: 12),
       filled: true,
-      fillColor: AppColors.surface,
+      fillColor: Colors.white,
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: AppColors.border)),
+          borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: const BorderSide(color: AppColors.border)),
+          borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide:
@@ -838,64 +868,90 @@ class _CreateSupplierReturnScreenState
     );
   }
 
-  // aâ€â‚¬aâ€â‚¬ Article Actions aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
+  // aâ€ â‚¬aâ€ â‚¬ Article Actions aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬aâ€ â‚¬
   Widget _buildArticleActions() {
     return Row(
       children: [
         Expanded(
           child: BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
-              final products =
-                  state is ProductsLoaded ? state.products : <Product>[];
+              final products = state is ProductsLoaded ? state.products : <Product>[];
               return Container(
                 height: 44,
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: Colors.grey.shade400, width: 1.0),
                 ),
-                child: DropdownButtonFormField<String>(
-                  hint: const Text('Selectionner un article...',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textTertiary)),
-                  isExpanded: true,
-                  items: products
-                      .map((p) => DropdownMenuItem(
-                          value: p.id,
-                          child: Text(p.name,
-                              style:
-                                  const TextStyle(fontSize: 13))))
-                      .toList(),
-                  onChanged: (v) {
-                    if (v == null) return;
-                    final product =
-                        products.firstWhere((p) => p.id == v);
+                child: Autocomplete<Product>(
+                  key: _autocompleteKey,
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
+                    return products.where((Product p) => 
+                      p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
+                      (p.reference?.toLowerCase().contains(textEditingValue.text.toLowerCase()) ?? false)
+                    );
+                  },
+                  displayStringForOption: (Product option) => option.name,
+                  fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                    return TextFormField(
+                      controller: textEditingController,
+                      focusNode: focusNode,
+                      decoration: InputDecoration(
+                        hintText: 'Rechercher un article...',
+                        hintStyle: const TextStyle(fontSize: 13, color: Colors.black87),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                      ),
+                      style: const TextStyle(fontSize: 13),
+                    );
+                  },
+                  optionsViewBuilder: (context, onSelected, options) {
+                    return Align(
+                      alignment: Alignment.topLeft,
+                      child: Material(
+                        elevation: 4,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
+                          child: ListView.builder(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            itemCount: options.length,
+                            itemBuilder: (context, i) {
+                              final option = options.elementAt(i);
+                              return ListTile(
+                                title: Text(option.name, style: const TextStyle(fontSize: 13)),
+                                subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
+                                trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                onTap: () => onSelected(option),
+                                dense: true,
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  onSelected: (Product selection) {
                     setState(() {
                       _items.add(SupplierReturnItem(
                         id: _uuid.v4(),
                         supplierReturnId: widget.existing?.id ?? '',
-                        productId: product.id,
-                        designation: product.name,
+                        productId: selection.id,
+                        designation: selection.name,
                         quantity: -1,
-                        unitPrice: product.sellingPrice,
-                        tvaRate: product.tvaRate,
-                        totalHT: -1 * product.sellingPrice,
+                        unitPrice: selection.sellingPrice,
+                        tvaRate: selection.tvaRate,
+                        totalHT: -1 * selection.sellingPrice,
                       ));
+                      _autocompleteKey = UniqueKey();
                     });
                   },
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        borderSide: BorderSide.none),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        borderSide: BorderSide.none),
-                  ),
                 ),
               );
             },
@@ -1120,7 +1176,7 @@ class _CreateSupplierReturnScreenState
                   hintStyle: const TextStyle(
                       color: AppColors.textTertiary, fontSize: 13),
                   filled: true,
-                  fillColor: AppColors.surface,
+                  fillColor: Colors.white,
                   contentPadding: const EdgeInsets.all(14),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1159,7 +1215,7 @@ class _CreateSupplierReturnScreenState
                   hintStyle: const TextStyle(
                       color: AppColors.textTertiary, fontSize: 13),
                   filled: true,
-                  fillColor: AppColors.surface,
+                  fillColor: Colors.white,
                   contentPadding: const EdgeInsets.all(14),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),

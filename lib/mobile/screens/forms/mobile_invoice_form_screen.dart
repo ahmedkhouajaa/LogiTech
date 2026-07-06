@@ -16,6 +16,7 @@ import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
+import '../../../../screens/customers_screen.dart';
 
 class MobileInvoiceFormScreen extends StatefulWidget {
   final Invoice? existing;
@@ -266,17 +267,50 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
                   onChanged: (v) => setState(() => _dueDate = v),
                 ),
                 const SizedBox(height: 16),
-                BlocBuilder<CustomersBloc, CustomersState>(
-                  builder: (context, state) {
-                    final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                    return SmartDropdown<String>(
-                      label: 'Client',
-                      value: _selectedCustomerId,
-                      items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.companyName ?? c.name, style: const TextStyle(fontSize: 16)))).toList(),
-                      onChanged: (v) => setState(() => _selectedCustomerId = v),
-                      hint: 'Rechercher des clients...',
-                    );
-                  },
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: BlocBuilder<CustomersBloc, CustomersState>(
+                        builder: (context, state) {
+                          final customers = state is CustomersLoaded ? state.customers : <Customer>[];
+                          return SmartDropdown<String>(
+                            label: 'Client',
+                            value: _selectedCustomerId,
+                            items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.companyName ?? c.name, style: const TextStyle(fontSize: 16)))).toList(),
+                            onChanged: (v) => setState(() => _selectedCustomerId = v),
+                            hint: 'Rechercher des clients...',
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 2),
+                      height: 54, // Match typical input height
+                      child: ElevatedButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => BlocProvider.value(
+                              value: context.read<CustomersBloc>(),
+                              child: const CustomerDialog(existing: null),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                          foregroundColor: AppColors.primary,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                        ),
+                        child: const Icon(Icons.person_add_alt_1_rounded, size: 24),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 BlocBuilder<ProjectsBloc, ProjectsState>(

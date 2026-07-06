@@ -227,19 +227,19 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
   void _showDialog(BuildContext context, Supplier? existing) {
     showDialog(context: context, builder: (_) => BlocProvider.value(
       value: context.read<SuppliersBloc>(),
-      child: _SupplierDialog(existing: existing),
+      child: SupplierDialog(existing: existing),
     ));
   }
 }
 
-class _SupplierDialog extends StatefulWidget {
+class SupplierDialog extends StatefulWidget {
   final Supplier? existing;
-  const _SupplierDialog({this.existing});
+  const SupplierDialog({this.existing});
   @override
-  State<_SupplierDialog> createState() => _SupplierDialogState();
+  State<SupplierDialog> createState() => SupplierDialogState();
 }
 
-class _SupplierDialogState extends State<_SupplierDialog> with SingleTickerProviderStateMixin {
+class SupplierDialogState extends State<SupplierDialog> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _codeCtrl, _nameCtrl, _emailCtrl, _phoneCtrl, _addressCtrl, _cityCtrl, _taxCtrl, _rcCtrl, _notesCtrl;
   late TabController _tabController;

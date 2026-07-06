@@ -132,13 +132,28 @@ class DatabaseHelper {
     final path = p.join(dir.path, 'business_manager_pro.db');
     return await openDatabase(
       path,
-      version: 43,
+      version: 44,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 44) {
+      final quoteColumns = [
+        "ALTER TABLE quotes ADD COLUMN project_id TEXT",
+        "ALTER TABLE quotes ADD COLUMN global_discount_percent REAL DEFAULT 0",
+        "ALTER TABLE quotes ADD COLUMN global_discount_amount REAL DEFAULT 0",
+        "ALTER TABLE quotes ADD COLUMN conditions_generales TEXT",
+        "ALTER TABLE quotes ADD COLUMN timbre_fiscal REAL DEFAULT 1.000",
+        "ALTER TABLE quotes ADD COLUMN pricing_mode TEXT DEFAULT 'ht'",
+      ];
+      for (final sql in quoteColumns) {
+        try {
+          await db.execute(sql);
+        } catch (_) {}
+      }
+    }
     if (oldVersion < 43) {
       final receivingColumns = [
         "ALTER TABLE receiving_vouchers ADD COLUMN pricing_mode TEXT DEFAULT 'ht'",
@@ -1327,13 +1342,19 @@ class DatabaseHelper {
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
         customer_id TEXT NOT NULL,
+        project_id TEXT,
         date TEXT NOT NULL,
         validity_date TEXT NOT NULL,
         status TEXT DEFAULT 'draft',
         total_ht REAL DEFAULT 0,
         total_tva REAL DEFAULT 0,
         total_ttc REAL DEFAULT 0,
+        global_discount_percent REAL DEFAULT 0,
+        global_discount_amount REAL DEFAULT 0,
+        timbre_fiscal REAL DEFAULT 1.000,
+        pricing_mode TEXT DEFAULT 'ht',
         notes TEXT,
+        conditions_generales TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
         is_converted INTEGER DEFAULT 0,
@@ -2659,9 +2680,10 @@ class DatabaseHelper {
   Future<List<Quote>> getQuotes() async {
     final db = await database;
     final maps = await db.rawQuery('''
-      SELECT q.*, c.name as customer_name 
+      SELECT q.*, c.name as customer_name, p.name as project_name 
       FROM quotes q 
       LEFT JOIN customers c ON q.customer_id = c.id 
+      LEFT JOIN projects p ON q.project_id = p.id 
       WHERE q.is_deleted = 0 
       ORDER BY q.created_at DESC
     ''');
@@ -2678,9 +2700,10 @@ class DatabaseHelper {
   Future<Quote?> getQuote(String id) async {
     final db = await database;
     final maps = await db.rawQuery('''
-      SELECT q.*, c.name as customer_name 
+      SELECT q.*, c.name as customer_name, p.name as project_name 
       FROM quotes q 
       LEFT JOIN customers c ON q.customer_id = c.id 
+      LEFT JOIN projects p ON q.project_id = p.id 
       WHERE q.id = ?
     ''', [id]);
     if (maps.isEmpty) return null;
