@@ -12,7 +12,8 @@ import '../models/project.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../models/receiving_voucher.dart';
-import '../utils/helpers.dart';
+import 'customers_screen.dart';
+import 'create_article_screen.dart';
 import '../database/database_helper.dart';
 import '../widgets/dashboard_card.dart';
 import 'suppliers_screen.dart';
@@ -678,34 +679,103 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                     },
                   ),
                 ),
-                
               ],
             ),
           ),
           const SizedBox(width: 8),
           // Quantity Expected
           Expanded(
-            child: TextFormField(
-              initialValue: item.quantityExpected.toString(),
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
-              onChanged: (val) {
-                final v = double.tryParse(val) ?? 0;
-                setState(() => _items[index] = item.copyWith(quantityExpected: v));
-              },
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: () {
+                    final newQty = item.quantityExpected > 1 ? item.quantityExpected - 1 : 1.0;
+                    setState(() => _items[index] = item.copyWith(quantityExpected: newQty));
+                  },
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    width: 28, height: 28,
+                    decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
+                    child: const Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: TextFormField(
+                    key: ValueKey('qtyExp_${item.id}_${item.quantityExpected}'),
+                    initialValue: item.quantityExpected.toString(),
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 13),
+                    decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
+                    onChanged: (val) {
+                      final v = double.tryParse(val) ?? 1;
+                      setState(() => _items[index] = item.copyWith(quantityExpected: v));
+                    },
+                  ),
+                ),
+                const SizedBox(width: 4),
+                InkWell(
+                  onTap: () {
+                    final newQty = item.quantityExpected + 1;
+                    setState(() => _items[index] = item.copyWith(quantityExpected: newQty));
+                  },
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    width: 28, height: 28,
+                    decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
+                    child: const Icon(Icons.add, size: 14, color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 8),
           // Quantity Received
           Expanded(
-            child: TextFormField(
-              initialValue: item.quantityReceived.toString(),
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
-              onChanged: (val) {
-                final v = double.tryParse(val) ?? 0;
-                setState(() => _items[index] = item.copyWith(quantityReceived: v));
-              },
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: () {
+                    final newQty = item.quantityReceived > 0 ? item.quantityReceived - 1 : 0.0;
+                    setState(() => _items[index] = item.copyWith(quantityReceived: newQty));
+                  },
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    width: 28, height: 28,
+                    decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
+                    child: const Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: TextFormField(
+                    key: ValueKey('qtyRec_${item.id}_${item.quantityReceived}'),
+                    initialValue: item.quantityReceived.toString(),
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 13),
+                    decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
+                    onChanged: (val) {
+                      final v = double.tryParse(val) ?? 0;
+                      setState(() => _items[index] = item.copyWith(quantityReceived: v));
+                    },
+                  ),
+                ),
+                const SizedBox(width: 4),
+                InkWell(
+                  onTap: () {
+                    final newQty = item.quantityReceived + 1;
+                    setState(() => _items[index] = item.copyWith(quantityReceived: newQty));
+                  },
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    width: 28, height: 28,
+                    decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
+                    child: const Icon(Icons.add, size: 14, color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 8),
@@ -810,6 +880,15 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
             elevation: 0,
             side: const BorderSide(color: AppColors.primary),
           ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+          tooltip: 'Créer un nouvel article',
+          onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          },
+          splashRadius: 24,
         ),
       ],
     );

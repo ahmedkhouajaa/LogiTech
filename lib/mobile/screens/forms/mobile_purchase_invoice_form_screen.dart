@@ -15,7 +15,9 @@ import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
+import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
+import 'mobile_product_form_screen.dart';
 
 class MobilePurchaseInvoiceFormScreen extends StatefulWidget {
   final PurchaseInvoice? existing;
@@ -346,16 +348,30 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
                   )),
                 if (!widget.isReadOnly) ...[
                   const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed: () => _showArticleForm(),
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Ajouter une ligne'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _showArticleForm(),
+                          icon: const Icon(Icons.add_rounded),
+                          label: const Text('Ajouter une ligne'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                          ),
+                        )
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
+                        tooltip: 'Créer un nouvel article',
+                        onPressed: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
+                        },
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   SmartCheckbox(

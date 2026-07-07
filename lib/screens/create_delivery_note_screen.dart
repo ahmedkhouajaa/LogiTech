@@ -11,11 +11,11 @@ import '../models/product.dart';
 import '../models/project.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
-import '../utils/helpers.dart';
+
 import '../database/database_helper.dart';
 import '../widgets/dashboard_card.dart';
 import 'customers_screen.dart';
-
+import 'create_article_screen.dart';
 class CreateDeliveryNoteScreen extends StatefulWidget {
   final DeliveryNote? existing;
   const CreateDeliveryNoteScreen({super.key, this.existing});
@@ -652,7 +652,7 @@ class _CreateDeliveryNoteScreenState
                     child: Text('Designation',
                         style: _tableHeaderStyle())),
                 SizedBox(
-                    width: 120,
+                    width: 140,
                     child: Text('Quantite',
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.center)),
@@ -714,33 +714,89 @@ class _CreateDeliveryNoteScreenState
               // Designation
               Expanded(
                 flex: 3,
-                child: TextFormField(
-                  initialValue: item.description ?? '',
-                  decoration: _itemInputDecoration(''),
-                  style: const TextStyle(fontSize: 13),
-                  onChanged: (v) => setState(() =>
-                      _items[index] = item.copyWith(description: v)),
+                child: BlocBuilder<ProductsBloc, ProductsState>(
+                  builder: (context, state) {
+                    final products = state is ProductsLoaded ? state.products : <Product>[];
+                    return Autocomplete<Product>(
+                      initialValue: TextEditingValue(text: item.description ?? ''),
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
+                        return products.where((Product p) => 
+                          p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
+                          (p.reference?.toLowerCase().contains(textEditingValue.text.toLowerCase()) ?? false)
+                        );
+                      },
+                      displayStringForOption: (Product option) => option.name,
+                      fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                        return TextFormField(
+                          controller: textEditingController,
+                          focusNode: focusNode,
+                          decoration: _itemInputDecoration('Rechercher un article...'),
+                          style: const TextStyle(fontSize: 13),
+                          onChanged: (v) => setState(() =>
+                              _items[index] = item.copyWith(description: v)),
+                        );
+                      },
+                      optionsViewBuilder: (context, onSelected, options) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
+                              child: ListView.builder(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                itemCount: options.length,
+                                itemBuilder: (context, i) {
+                                  final option = options.elementAt(i);
+                                  return ListTile(
+                                    title: Text(option.name, style: const TextStyle(fontSize: 13)),
+                                    subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
+                                    trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    onTap: () => onSelected(option),
+                                    dense: true,
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      onSelected: (Product selection) {
+                        setState(() {
+                          _items[index] = item.copyWith(
+                            productId: selection.id,
+                            description: selection.name,
+                            unitPrice: selection.sellingPrice,
+                            tvaRate: selection.tvaRate,
+                          );
+                        });
+                      },
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 8),
-              // Quantite with + button
+              // Quantite with - / + buttons
               SizedBox(
-                width: 120,
+                width: 140,
                 child: Row(
                   children: [
                     InkWell(
-                      onTap: () => setState(() => _items[index] =
-                          item.copyWith(quantity: item.quantity + 1)),
+                      onTap: () => setState(() {
+                        final newQ = item.quantity > 1 ? item.quantity - 1 : 1.0;
+                        _items[index] = item.copyWith(quantity: newQ);
+                      }),
                       borderRadius: BorderRadius.circular(4),
                       child: Container(
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
-                            border:
-                                Border.all(color: AppColors.border),
+                            border: Border.all(color: AppColors.border),
                             borderRadius: BorderRadius.circular(4)),
-                        child: const Icon(Icons.add,
-                            size: 14, color: AppColors.textSecondary),
+                        child: const Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -757,6 +813,22 @@ class _CreateDeliveryNoteScreenState
                             _items[index] = item.copyWith(
                                 quantity:
                                     double.tryParse(v) ?? 1)),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () => setState(() => _items[index] =
+                          item.copyWith(quantity: item.quantity + 1)),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                            border:
+                                Border.all(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(4)),
+                        child: const Icon(Icons.add,
+                            size: 14, color: AppColors.textSecondary),
                       ),
                     ),
                   ],
@@ -1067,6 +1139,15 @@ class _CreateDeliveryNoteScreenState
               );
             },
           ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+          tooltip: 'Créer un nouvel article',
+          onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          },
+          splashRadius: 24,
         ),
         const SizedBox(width: 12),
         SizedBox(

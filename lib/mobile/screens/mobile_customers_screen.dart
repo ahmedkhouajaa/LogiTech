@@ -125,13 +125,15 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
+                          color: AppColors.surfaceAlt.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
                         ),
                         child: Center(
-                          child: Text(
-                            avatarInitial,
-                            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                          child: Icon(
+                            isEntreprise ? Icons.domain_rounded : Icons.person_outline_rounded,
+                            color: AppColors.textSecondary,
+                            size: 24,
                           ),
                         ),
                       ),

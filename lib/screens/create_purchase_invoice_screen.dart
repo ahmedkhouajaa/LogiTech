@@ -13,6 +13,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/dashboard_card.dart';
 import 'suppliers_screen.dart';
+import 'create_article_screen.dart';
 
 
 
@@ -43,6 +44,15 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   
   Key _autocompleteKey = UniqueKey();
   InvoiceStatus _status = InvoiceStatus.unpaid;
+  
+  final Map<String, TextEditingController> _qtyControllers = {};
+
+  TextEditingController _getQtyController(PurchaseInvoiceItem item) {
+    if (!_qtyControllers.containsKey(item.id)) {
+      _qtyControllers[item.id] = TextEditingController(text: formatQuantity(item.quantity));
+    }
+    return _qtyControllers[item.id]!;
+  }
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
@@ -426,7 +436,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
             child: Row(
               children: [
                 Expanded(flex: 3, child: Text('Designation', style: _tableHeaderStyle())),
-                SizedBox(width: 120, child: Text('Quantite', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
+                SizedBox(width: 140, child: Text('Quantite', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 130, child: Text('P.U', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 100, child: Text('TVA', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 140, child: Text('Total HT', style: _tableHeaderStyle(), textAlign: TextAlign.right)),
@@ -465,38 +475,118 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
               // Designation
               Expanded(
                 flex: 3,
-                child: TextFormField(
-                  initialValue: item.productName ?? '',
-                  decoration: _itemInputDecoration(''),
-                  style: const TextStyle(fontSize: 13),
-                  onChanged: (v) => setState(() => _items[index] = item.copyWith(productName: v)),
+                child: BlocBuilder<ProductsBloc, ProductsState>(
+                  builder: (context, state) {
+                    final products = state is ProductsLoaded ? state.products : <Product>[];
+                    return Autocomplete<Product>(
+                      initialValue: TextEditingValue(text: item.productName ?? ''),
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
+                        final search = textEditingValue.text.toLowerCase();
+                        return products.where((Product p) => 
+                          p.name.toLowerCase().contains(search) || 
+                          p.code.toLowerCase().contains(search) ||
+                          (p.reference?.toLowerCase().contains(search) ?? false)
+                        );
+                      },
+                      displayStringForOption: (Product option) => option.name,
+                      fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                        return TextFormField(
+                          controller: textEditingController,
+                          focusNode: focusNode,
+                          decoration: _itemInputDecoration('Rechercher un article...'),
+                          style: const TextStyle(fontSize: 13),
+                          onChanged: (v) => setState(() => _items[index] = item.copyWith(productName: v)),
+                        );
+                      },
+                      optionsViewBuilder: (context, onSelected, options) {
+                        return Align(
+                          alignment: Alignment.topLeft,
+                          child: Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
+                              child: ListView.builder(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                itemCount: options.length,
+                                itemBuilder: (context, i) {
+                                  final option = options.elementAt(i);
+                                  return ListTile(
+                                    title: Text(option.name, style: const TextStyle(fontSize: 13)),
+                                    subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
+                                    trailing: Text('${option.purchasePrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    onTap: () => onSelected(option),
+                                    dense: true,
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      onSelected: (Product selection) {
+                        setState(() {
+                          _items[index] = item.copyWith(
+                            productId: selection.id,
+                            productName: selection.name,
+                            unitPrice: selection.purchasePrice,
+                            tvaRate: selection.tvaRate,
+                          );
+                        });
+                      },
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 8),
-              // Quantite with + button
+              // Quantite with - and + buttons
               SizedBox(
-                width: 120,
+                width: 140,
                 child: Row(
                   children: [
                     InkWell(
-                      onTap: () => setState(() => _items[index] = item.copyWith(quantity: item.quantity + 1)),
+                      onTap: () {
+                        final newQty = item.quantity > 1 ? item.quantity - 1 : 1.0;
+                        final ctrl = _getQtyController(item);
+                        ctrl.text = formatQuantity(newQty);
+                        setState(() => _items[index] = item.copyWith(quantity: newQty));
+                      },
                       borderRadius: BorderRadius.circular(4),
                       child: Container(
                         width: 28, height: 28,
                         decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
-                        child: const Icon(Icons.add, size: 14, color: AppColors.textSecondary),
+                        child: const Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
                       ),
                     ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: TextFormField(
-                        key: ValueKey('qty_${item.id}_${item.quantity}'),
-                        initialValue: formatQuantity(item.quantity),
+                        controller: _getQtyController(item),
                         decoration: _itemInputDecoration(''),
                         textAlign: TextAlign.center,
                         style: const TextStyle(fontSize: 13),
                         keyboardType: TextInputType.number,
-                        onChanged: (v) => setState(() => _items[index] = item.copyWith(quantity: double.tryParse(v) ?? 1)),
+                        onChanged: (v) {
+                          final newQty = double.tryParse(v) ?? 1;
+                          setState(() => _items[index] = item.copyWith(quantity: newQty));
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () {
+                        final newQty = item.quantity + 1;
+                        final ctrl = _getQtyController(item);
+                        ctrl.text = formatQuantity(newQty);
+                        setState(() => _items[index] = item.copyWith(quantity: newQty));
+                      },
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        width: 28, height: 28,
+                        decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
+                        child: const Icon(Icons.add, size: 14, color: AppColors.textSecondary),
                       ),
                     ),
                   ],
@@ -673,74 +763,91 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
           child: BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
               final products = state is ProductsLoaded ? state.products : <Product>[];
-              return Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Autocomplete<Product>(
-                  key: _autocompleteKey,
-                  optionsBuilder: (TextEditingValue textEditingValue) {
-                    if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
-                    return products.where((Product p) => 
-                      p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
-                      (p.reference?.toLowerCase().contains(textEditingValue.text.toLowerCase()) ?? false)
-                    );
-                  },
-                  displayStringForOption: (Product option) => option.name,
-                  fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                    return TextFormField(
-                      controller: textEditingController,
-                      focusNode: focusNode,
-                      decoration: InputDecoration(
-                        hintText: 'Rechercher un article...',
-                        hintStyle: const TextStyle(fontSize: 13, color: Colors.black87),
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-                      ),
-                      style: const TextStyle(fontSize: 13),
-                    );
-                  },
-                  optionsViewBuilder: (context, onSelected, options) {
-                    return Align(
-                      alignment: Alignment.topLeft,
-                      child: Material(
-                        elevation: 4,
+              return Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(AppRadius.md),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
-                          child: ListView.builder(
-                            padding: EdgeInsets.zero,
-                            shrinkWrap: true,
-                            itemCount: options.length,
-                            itemBuilder: (context, i) {
-                              final option = options.elementAt(i);
-                              return ListTile(
-                                title: Text(option.name, style: const TextStyle(fontSize: 13)),
-                                subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
-                                trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                onTap: () => onSelected(option),
-                                dense: true,
-                              );
-                            },
-                          ),
-                        ),
+                        border: Border.all(color: AppColors.border),
                       ),
-                    );
-                  },
-                  onSelected: (Product selection) {
-                    _addProductItem(selection);
-                    setState(() {
-                      _autocompleteKey = UniqueKey();
-                    });
-                  },
-                ),
+                      child: Autocomplete<Product>(
+                        key: _autocompleteKey,
+                        optionsBuilder: (TextEditingValue textEditingValue) {
+                          if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
+                          final search = textEditingValue.text.toLowerCase();
+                          return products.where((Product p) => 
+                            p.name.toLowerCase().contains(search) || 
+                            p.code.toLowerCase().contains(search) ||
+                            (p.reference?.toLowerCase().contains(search) ?? false)
+                          ).toList();
+                        },
+                        displayStringForOption: (Product option) => option.name,
+                        fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                          return TextFormField(
+                            controller: textEditingController,
+                            focusNode: focusNode,
+                            decoration: InputDecoration(
+                              hintText: 'Rechercher un article...',
+                              hintStyle: const TextStyle(fontSize: 13, color: Colors.black87),
+                              filled: true,
+                              fillColor: AppColors.surface,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+                            ),
+                            style: const TextStyle(fontSize: 13),
+                          );
+                        },
+                        optionsViewBuilder: (context, onSelected, options) {
+                          return Align(
+                            alignment: Alignment.topLeft,
+                            child: Material(
+                              elevation: 4,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
+                                child: ListView.builder(
+                                  padding: EdgeInsets.zero,
+                                  shrinkWrap: true,
+                                  itemCount: options.length,
+                                  itemBuilder: (context, i) {
+                                    final option = options.elementAt(i);
+                                    return ListTile(
+                                      title: Text(option.name, style: const TextStyle(fontSize: 13)),
+                                      subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
+                                      trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      onTap: () => onSelected(option),
+                                      dense: true,
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        onSelected: (Product selection) {
+                          _addProductItem(selection);
+                          setState(() {
+                            _autocompleteKey = UniqueKey();
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+                    tooltip: 'Créer un nouvel article',
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+                    },
+                    splashRadius: 24,
+                  ),
+                ],
               );
             },
           ),

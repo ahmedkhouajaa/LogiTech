@@ -1,3 +1,4 @@
+import 'mobile_product_form_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
@@ -274,16 +275,30 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                   ..._items.asMap().entries.map((e) => _buildArticleItem(e.key, e.value)),
                 if (!widget.isReadOnly) ...[
                   const SizedBox(height: 16),
-                  OutlinedButton.icon(
-                    onPressed: _showAddArticleDialog,
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Ajouter une ligne'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _showAddArticleDialog,
+                          icon: const Icon(Icons.add_rounded),
+                          label: const Text('Ajouter une ligne'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                          ),
+                        )
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
+                        tooltip: 'Créer un nouvel article',
+                        onPressed: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
+                        },
+                      ),
+                    ],
                   ),
                 ]
               ],

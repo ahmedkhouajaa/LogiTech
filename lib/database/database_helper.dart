@@ -132,13 +132,53 @@ class DatabaseHelper {
     final path = p.join(dir.path, 'business_manager_pro.db');
     return await openDatabase(
       path,
-      version: 44,
+      version: 47,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 46) {
+      final supplierNewCols = [
+        "ALTER TABLE suppliers ADD COLUMN supplier_type TEXT DEFAULT 'entreprise'",
+        "ALTER TABLE suppliers ADD COLUMN company_name TEXT",
+        "ALTER TABLE suppliers ADD COLUMN responsible_name TEXT",
+        "ALTER TABLE suppliers ADD COLUMN cin_number TEXT",
+        "ALTER TABLE suppliers ADD COLUMN birth_date TEXT",
+        "ALTER TABLE suppliers ADD COLUMN reference_code TEXT",
+      ];
+      for (final sql in supplierNewCols) {
+        try {
+          await db.execute(sql);
+        } catch (_) {}
+      }
+    }
+
+    if (oldVersion < 47) {
+      try {
+        await db.execute("ALTER TABLE stock_entries ADD COLUMN notes TEXT");
+      } catch (_) {}
+    }
+
+    if (oldVersion < 45) {
+      final supplierColumns = [
+        "ALTER TABLE suppliers ADD COLUMN postal_code TEXT",
+        "ALTER TABLE suppliers ADD COLUMN country TEXT DEFAULT 'Tunisia'",
+        "ALTER TABLE suppliers ADD COLUMN delivery_street TEXT",
+        "ALTER TABLE suppliers ADD COLUMN delivery_city TEXT",
+        "ALTER TABLE suppliers ADD COLUMN delivery_postal_code TEXT",
+        "ALTER TABLE suppliers ADD COLUMN delivery_country TEXT DEFAULT 'Tunisia'",
+        "ALTER TABLE suppliers ADD COLUMN delivery_same_as_billing INTEGER DEFAULT 1",
+        "ALTER TABLE suppliers ADD COLUMN bank_account TEXT",
+      ];
+      for (final sql in supplierColumns) {
+        try {
+          await db.execute(sql);
+        } catch (_) {}
+      }
+    }
+
     if (oldVersion < 44) {
       final quoteColumns = [
         "ALTER TABLE quotes ADD COLUMN project_id TEXT",
@@ -1270,7 +1310,21 @@ class DatabaseHelper {
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        postal_code TEXT,
+        country TEXT DEFAULT 'Tunisia',
+        delivery_street TEXT,
+        delivery_city TEXT,
+        delivery_postal_code TEXT,
+        delivery_country TEXT DEFAULT 'Tunisia',
+        delivery_same_as_billing INTEGER DEFAULT 1,
+        bank_account TEXT,
+        supplier_type TEXT DEFAULT 'entreprise',
+        company_name TEXT,
+        responsible_name TEXT,
+        cin_number TEXT,
+        birth_date TEXT,
+        reference_code TEXT
       )
     ''');
 
@@ -2027,6 +2081,7 @@ class DatabaseHelper {
         date TEXT NOT NULL,
         supplier_id TEXT,
         reason TEXT,
+        notes TEXT,
         status TEXT DEFAULT 'draft',
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
@@ -2317,7 +2372,7 @@ class DatabaseHelper {
   }
 
   // ─── Sync Queue ─────────────────────────────────────────────────
-  Future<void> _addToSyncQueue(String table, String recordId, String operation, Map<String, dynamic> data) async {
+  Future<void> addToSyncQueue(String table, String recordId, String operation, Map<String, dynamic> data) async {
     final db = await database;
     await db.insert('sync_queue', {
       'table_name': table,
@@ -2329,6 +2384,10 @@ class DatabaseHelper {
     });
     // Trigger sync asynchronously after adding to queue
     SyncService.instance.triggerSync();
+  }
+
+  Future<void> _addToSyncQueue(String table, String recordId, String operation, Map<String, dynamic> data) async {
+    return addToSyncQueue(table, recordId, operation, data);
   }
 
   Future<List<Map<String, dynamic>>> getPendingSyncItems() async {
@@ -3183,7 +3242,7 @@ class DatabaseHelper {
     // Update product stock
     final sign = (movement.type == MovementType.entry || movement.type == MovementType.adjustment) ? 1 : -1;
     await db.rawUpdate(
-      'UPDATE products SET stock_qty = stock_qty + ?, updated_at = ? WHERE id = ?',
+      'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) + ?, updated_at = ? WHERE id = ?',
       [movement.quantity * sign, DateTime.now().toIso8601String(), movement.productId],
     );
     await _addToSyncQueue('stock_movements', movement.id, 'INSERT', movement.toMap());

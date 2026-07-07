@@ -12,6 +12,7 @@ import '../models/project.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'customers_screen.dart';
+import 'create_article_screen.dart';
 import '../database/database_helper.dart';
 import '../widgets/dashboard_card.dart';
 
@@ -685,24 +686,24 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              // Quantite with + button
+              // Quantite with - / + buttons
               SizedBox(
-                width: 120,
+                width: 140,
                 child: Row(
                   children: [
                     InkWell(
-                      onTap: () => setState(() => _items[index] =
-                          item.copyWith(quantity: item.quantity + 1)),
+                      onTap: () => setState(() {
+                        final newQ = item.quantity > 1 ? item.quantity - 1 : 1.0;
+                        _items[index] = item.copyWith(quantity: newQ);
+                      }),
                       borderRadius: BorderRadius.circular(4),
                       child: Container(
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
-                            border:
-                                Border.all(color: AppColors.border),
+                            border: Border.all(color: AppColors.border),
                             borderRadius: BorderRadius.circular(4)),
-                        child: const Icon(Icons.add,
-                            size: 14, color: AppColors.textSecondary),
+                        child: const Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -719,6 +720,22 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                             _items[index] = item.copyWith(
                                 quantity:
                                     double.tryParse(v) ?? 1)),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () => setState(() => _items[index] =
+                          item.copyWith(quantity: item.quantity + 1)),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                            border:
+                                Border.all(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(4)),
+                        child: const Icon(Icons.add,
+                            size: 14, color: AppColors.textSecondary),
                       ),
                     ),
                   ],
@@ -1002,6 +1019,15 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
               );
             },
           ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+          tooltip: 'Créer un nouvel article',
+          onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          },
+          splashRadius: 24,
         ),
         const SizedBox(width: 12),
         SizedBox(

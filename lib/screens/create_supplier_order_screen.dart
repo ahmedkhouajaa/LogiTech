@@ -14,6 +14,7 @@ import '../utils/helpers.dart';
 import '../database/database_helper.dart';
 import '../widgets/dashboard_card.dart';
 import 'suppliers_screen.dart';
+import 'create_article_screen.dart';
 
 class CreateSupplierOrderScreen extends StatefulWidget {
   final SupplierOrder? existing;
@@ -592,18 +593,23 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                       if (state is ProductsLoaded) {
                         products = state.products;
                       }
-                      return Autocomplete<Product>(
-                        initialValue: TextEditingValue(
-                          text: item.productId.isNotEmpty ? products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', code: '', name: '', sellingPrice: 0, purchasePrice: 0, tvaRate: 0)).name : '',
-                        ),
-                        optionsBuilder: (TextEditingValue textEditingValue) {
-                          if (textEditingValue.text.isEmpty) {
-                            return const Iterable<Product>.empty();
-                          }
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: Autocomplete<Product>(
+                              initialValue: TextEditingValue(
+                                text: item.productId.isNotEmpty ? products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', code: '', name: '', sellingPrice: 0, purchasePrice: 0, tvaRate: 0)).name : '',
+                              ),
+                              optionsBuilder: (TextEditingValue textEditingValue) {
+                                if (textEditingValue.text.isEmpty) {
+                                  return const Iterable<Product>.empty();
+                                }
+                          final search = textEditingValue.text.toLowerCase();
                           return products.where((Product option) {
-                            return option.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
-                                  (option.reference != null && option.reference!.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-                          });
+                            return option.name.toLowerCase().contains(search) || 
+                                   option.code.toLowerCase().contains(search) ||
+                                  (option.reference != null && option.reference!.toLowerCase().contains(search));
+                          }).toList();
                         },
                         onSelected: (Product product) {
                           setState(() {
@@ -659,7 +665,10 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                             ),
                           );
                         },
-                      );
+                              ),
+                            ),
+                          ],
+                        );
                     },
                   ),
                 ),
@@ -683,14 +692,49 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
           const SizedBox(width: 8),
           // Quantity
           Expanded(
-            child: TextFormField(
-              initialValue: item.quantity.toString(),
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
-              onChanged: (val) {
-                final v = double.tryParse(val) ?? 0;
-                setState(() => _items[index] = item.copyWith(quantity: v));
-              },
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: () {
+                    final newQty = item.quantity > 1 ? item.quantity - 1 : 1.0;
+                    setState(() => _items[index] = item.copyWith(quantity: newQty));
+                  },
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    width: 28, height: 28,
+                    decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
+                    child: const Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: TextFormField(
+                    key: ValueKey('qty_${item.id}_${item.quantity}'),
+                    initialValue: item.quantity.toString(),
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 13),
+                    decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
+                    onChanged: (val) {
+                      final v = double.tryParse(val) ?? 1;
+                      setState(() => _items[index] = item.copyWith(quantity: v));
+                    },
+                  ),
+                ),
+                const SizedBox(width: 4),
+                InkWell(
+                  onTap: () {
+                    final newQty = item.quantity + 1;
+                    setState(() => _items[index] = item.copyWith(quantity: newQty));
+                  },
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    width: 28, height: 28,
+                    decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
+                    child: const Icon(Icons.add, size: 14, color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 8),
@@ -807,6 +851,15 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
             elevation: 0,
             side: const BorderSide(color: AppColors.primary),
           ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+          tooltip: 'Créer un nouvel article',
+          onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          },
+          splashRadius: 24,
         ),
       ],
     );

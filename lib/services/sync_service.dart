@@ -97,7 +97,7 @@ class SyncService {
       final tablesToPull = [
         'customers', 'suppliers', 'products', 'invoices', 'quotes',
         'customer_orders', 'delivery_notes', 'return_notes', 'credit_notes',
-        'bons_sortie', 'receiving_vouchers', 'purchase_invoices', 'supplier_returns',
+        'bons_sortie', 'stock_entries', 'receiving_vouchers', 'purchase_invoices', 'supplier_returns',
         'supplier_orders', 'supplier_credit_notes', 'stock_movements', 'projects',
         'transactions', 'check_traites', 'payment_accounts', 'product_families',
         'warehouses', 'treasury_accounts', 'payments', 'payment_allocations'
@@ -111,6 +111,7 @@ class SyncService {
         'return_notes': {'table': 'return_note_items', 'fk': 'return_note_id'},
         'credit_notes': {'table': 'credit_note_items', 'fk': 'credit_note_id'},
         'bons_sortie': {'table': 'bons_sortie_items', 'fk': 'withdrawal_id'},
+        'stock_entries': {'table': 'stock_entry_items', 'fk': 'entry_id'},
         'receiving_vouchers': {'table': 'receiving_voucher_items', 'fk': 'voucher_id'},
         'purchase_invoices': {'table': 'purchase_invoice_items', 'fk': 'invoice_id'},
         'supplier_returns': {'table': 'supplier_return_items', 'fk': 'return_id'},

@@ -35,6 +35,7 @@ import 'withholding_tax_screen.dart';
 import 'warehouses_screen.dart';
 import 'payments_screen.dart';
 import 'stock_withdrawals_screen.dart';
+import 'stock_entries_screen.dart';
 import 'company_info_screen.dart';
 import 'document_templates_screen.dart';
 class AppShellScreen extends StatefulWidget {
@@ -123,6 +124,8 @@ class AppShellScreenState extends State<AppShellScreen> {
         return const CompanyInfoScreen();
       case AppModule.documentTemplates:
         return const DocumentTemplatesScreen();
+      case AppModule.stockEntry:
+        return const StockEntriesScreen();
       default:
         return _ComingSoonScreen(module: _activeModule);
     }

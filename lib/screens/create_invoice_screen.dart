@@ -10,6 +10,7 @@ import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/project.dart';
 import '../models/document_template.dart';
+import 'create_article_screen.dart';
 import '../database/database_helper.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
@@ -38,15 +39,24 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   bool _pricingModeHT = true; // true = HT, false = TTC
   bool _withTimbreFiscal = true;
   bool _withGlobalDiscount = false;
-  double _globalDiscountPercent = 0;
-  InvoiceStatus _status = InvoiceStatus.unpaid;
+  double _globalDiscountPercent = 0.0;
+  
+  Key _autocompleteKey = UniqueKey();
+  InvoiceStatus _status = InvoiceStatus.draft;
+
+  final Map<String, TextEditingController> _qtyControllers = {};
+
+  TextEditingController _getQtyController(InvoiceItem item) {
+    if (!_qtyControllers.containsKey(item.id)) {
+      _qtyControllers[item.id] = TextEditingController(text: formatQuantity(item.quantity));
+    }
+    return _qtyControllers[item.id]!;
+  }
 
   List<Map<String, dynamic>> _customColumns = [];
 
   // Computed totals
   double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
-
-  Key _autocompleteKey = UniqueKey();
 
   Map<double, double> get _tvaBreakdown {
     final map = <double, double>{};
@@ -430,7 +440,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             child: Row(
               children: [
                 Expanded(flex: 3, child: Text('Designation', style: _tableHeaderStyle())),
-                SizedBox(width: 120, child: Text('Quantite', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
+                SizedBox(width: 140, child: Text('Quantite', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 130, child: Text('P.U', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 100, child: Text('TVA', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 140, child: Text('Total HT', style: _tableHeaderStyle(), textAlign: TextAlign.right)),
@@ -535,13 +545,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               const SizedBox(width: 8),
               // Quantite with - and + buttons
               SizedBox(
-                width: 120,
+                width: 140,
                 child: Row(
                   children: [
                     InkWell(
                       onTap: () {
                         if (item.quantity > 1) {
-                          setState(() => _items[index] = item.copyWith(quantity: item.quantity - 1));
+                          final newQty = item.quantity - 1;
+                          final ctrl = _getQtyController(item);
+                          ctrl.text = formatQuantity(newQty);
+                          setState(() => _items[index] = item.copyWith(quantity: newQty));
                         }
                       },
                       borderRadius: BorderRadius.circular(4),
@@ -554,18 +567,25 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                     const SizedBox(width: 4),
                     Expanded(
                       child: TextFormField(
-                        key: ValueKey('qty_${item.id}_${item.quantity}'),
-                        initialValue: formatQuantity(item.quantity),
+                        controller: _getQtyController(item),
                         decoration: _itemInputDecoration(''),
                         textAlign: TextAlign.center,
                         style: const TextStyle(fontSize: 13),
                         keyboardType: TextInputType.number,
-                        onChanged: (v) => setState(() => _items[index] = item.copyWith(quantity: double.tryParse(v) ?? 1)),
+                        onChanged: (v) {
+                          final newQty = double.tryParse(v) ?? 1;
+                          setState(() => _items[index] = item.copyWith(quantity: newQty));
+                        },
                       ),
                     ),
                     const SizedBox(width: 4),
                     InkWell(
-                      onTap: () => setState(() => _items[index] = item.copyWith(quantity: item.quantity + 1)),
+                      onTap: () {
+                        final newQty = item.quantity + 1;
+                        final ctrl = _getQtyController(item);
+                        ctrl.text = formatQuantity(newQty);
+                        setState(() => _items[index] = item.copyWith(quantity: newQty));
+                      },
                       borderRadius: BorderRadius.circular(4),
                       child: Container(
                         width: 28, height: 28,
@@ -843,6 +863,15 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               );
             },
           ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+          tooltip: 'Créer un nouvel article',
+          onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          },
+          splashRadius: 24,
         ),
         const SizedBox(width: 12),
         // Add empty line button

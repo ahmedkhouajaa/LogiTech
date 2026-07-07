@@ -6,6 +6,7 @@ import '../../../blocs/products/products_bloc.dart';
 import '../../../utils/constants.dart';
 import '../../../utils/helpers.dart';
 import 'mobile_smart_fields.dart';
+import '../../screens/forms/mobile_product_form_screen.dart';
 
 class MobileArticleFormResult {
   final String productId;
@@ -176,85 +177,91 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                   // Designation
                   const Text('Désignation', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                   const SizedBox(height: 8),
-                  BlocBuilder<ProductsBloc, ProductsState>(
-                    builder: (context, state) {
-                      final products = state is ProductsLoaded ? state.products : <Product>[];
-                      return Autocomplete<Product>(
-                        initialValue: TextEditingValue(text: _productName),
-                        optionsBuilder: (TextEditingValue textEditingValue) {
-                          if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
-                          return products.where((Product p) => 
-                            p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
-                            (p.reference?.toLowerCase().contains(textEditingValue.text.toLowerCase()) ?? false)
-                          );
-                        },
-                        displayStringForOption: (Product option) => option.name,
-                        fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                          return TextFormField(
-                            controller: textEditingController,
-                            focusNode: focusNode,
-                            decoration: InputDecoration(
-                              hintText: 'Rechercher un article...',
-                              hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 16),
-                              filled: true,
-                              fillColor: const Color(0xFFF8FAFC),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
-                              suffixIcon: const Icon(Icons.search_rounded, color: AppColors.textTertiary),
-                            ),
-                            style: const TextStyle(fontSize: 16),
-                            onChanged: (v) {
-                              setState(() {
-                                _productName = v;
-                                if (!_showDescription) _description = v;
-                              });
-                            },
-                          );
-                        },
-                        optionsViewBuilder: (context, onSelected, options) {
-                          return Align(
-                            alignment: Alignment.topLeft,
-                            child: Material(
-                              elevation: 4,
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(maxHeight: 250, maxWidth: MediaQuery.of(context).size.width - 40),
-                                child: ListView.builder(
-                                  padding: EdgeInsets.zero,
-                                  shrinkWrap: true,
-                                  itemCount: options.length,
-                                  itemBuilder: (context, i) {
-                                    final option = options.elementAt(i);
-                                    return ListTile(
-                                      title: Text(option.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                                      subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)) : null,
-                                      trailing: Text(
-                                        '${(widget.isPurchase ? option.purchasePrice : option.sellingPrice).toStringAsFixed(2)} DT', 
-                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)
-                                      ),
-                                      onTap: () => onSelected(option),
-                                      dense: true,
-                                    );
+                  Row(
+                    children: [
+                      Expanded(
+                        child: BlocBuilder<ProductsBloc, ProductsState>(
+                          builder: (context, state) {
+                            final products = state is ProductsLoaded ? state.products : <Product>[];
+                            return Autocomplete<Product>(
+                              initialValue: TextEditingValue(text: _productName),
+                              optionsBuilder: (TextEditingValue textEditingValue) {
+                                if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
+                                return products.where((Product p) => 
+                                  p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
+                                  (p.reference?.toLowerCase().contains(textEditingValue.text.toLowerCase()) ?? false)
+                                );
+                              },
+                              displayStringForOption: (Product option) => option.name,
+                              fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                                return TextFormField(
+                                  controller: textEditingController,
+                                  focusNode: focusNode,
+                                  decoration: InputDecoration(
+                                    hintText: 'Rechercher un article...',
+                                    hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 16),
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+                                    suffixIcon: const Icon(Icons.search_rounded, color: AppColors.textTertiary),
+                                  ),
+                                  style: const TextStyle(fontSize: 16),
+                                  onChanged: (v) {
+                                    setState(() {
+                                      _productName = v;
+                                      if (!_showDescription) _description = v;
+                                    });
                                   },
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                        onSelected: (Product selection) {
-                          setState(() {
-                            _selectedProduct = selection;
-                            _productId = selection.id;
-                            _productName = selection.name;
-                            _description = selection.name;
-                            _unitPrice = widget.isPurchase ? selection.purchasePrice : selection.sellingPrice;
-                            _tvaRate = selection.tvaRate;
-                          });
-                        },
-                      );
-                    },
+                                );
+                              },
+                              optionsViewBuilder: (context, onSelected, options) {
+                                return Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Material(
+                                    elevation: 4,
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(maxHeight: 250, maxWidth: MediaQuery.of(context).size.width - 40),
+                                      child: ListView.builder(
+                                        padding: EdgeInsets.zero,
+                                        shrinkWrap: true,
+                                        itemCount: options.length,
+                                        itemBuilder: (context, i) {
+                                          final option = options.elementAt(i);
+                                          return ListTile(
+                                            title: Text(option.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                            subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)) : null,
+                                            trailing: Text(
+                                              '${(widget.isPurchase ? option.purchasePrice : option.sellingPrice).toStringAsFixed(2)} DT', 
+                                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)
+                                            ),
+                                            onTap: () => onSelected(option),
+                                            dense: true,
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              onSelected: (Product selection) {
+                                setState(() {
+                                  _selectedProduct = selection;
+                                  _productId = selection.id;
+                                  _productName = selection.name;
+                                  _description = selection.name;
+                                  _unitPrice = widget.isPurchase ? selection.purchasePrice : selection.sellingPrice;
+                                  _tvaRate = selection.tvaRate;
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   

@@ -118,18 +118,15 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                   width: 50,
                                   height: 50,
                                   decoration: BoxDecoration(
-                                    gradient: isEntreprise 
-                                      ? const LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)])
-                                      : const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)]),
+                                    color: AppColors.surfaceAlt.withValues(alpha: 0.5),
                                     borderRadius: BorderRadius.circular(14),
-                                    boxShadow: [
-                                      BoxShadow(color: (isEntreprise ? const Color(0xFF3B82F6) : const Color(0xFF8B5CF6)).withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3)),
-                                    ]
+                                    border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
                                   ),
                                   child: Center(
-                                    child: Text(
-                                      c.name.isNotEmpty ? c.name[0].toUpperCase() : '?',
-                                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                                    child: Icon(
+                                      isEntreprise ? Icons.domain_rounded : Icons.person_outline_rounded,
+                                      color: AppColors.textSecondary,
+                                      size: 24,
                                     ),
                                   ),
                                 ),

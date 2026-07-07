@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/dashboard/dashboard_bloc.dart';
-import '../blocs/auth/auth_bloc.dart';
 import '../widgets/sidebar_menu.dart';
 import '../widgets/sync_indicator.dart';
 import '../utils/constants.dart';
@@ -33,34 +32,14 @@ import 'screens/mobile_withholding_tax_screen.dart';
 
 // Placeholder screens for bottom nav tabs until full mobile screens are built
 // These reuse the existing desktop screens which already handle isMobile layout
-import '../screens/invoices_screen.dart';
-import '../screens/purchase_invoices_screen.dart';
-import '../screens/customers_screen.dart';
-import '../screens/suppliers_screen.dart';
-import '../screens/products_screen.dart';
-import '../screens/quotes_screen.dart';
-import '../screens/customer_orders_screen.dart';
-import '../screens/delivery_notes_screen.dart';
-import '../screens/stock_screen.dart';
-import '../screens/payments_screen.dart';
 import '../screens/treasury_accounts_screen.dart';
-import '../screens/treasury_transactions_screen.dart';
-import '../screens/checks_traites_screen.dart';
-import '../screens/projects_screen.dart';
 import '../screens/reports_screen.dart';
 import '../screens/settings_screen.dart';
-import '../screens/stock_withdrawals_screen.dart';
-import '../screens/return_notes_screen.dart';
-import '../screens/credit_notes_screen.dart';
-import '../screens/supplier_orders_screen.dart';
-import '../screens/receiving_vouchers_screen.dart';
-import '../screens/supplier_returns_screen.dart';
-import '../screens/supplier_credit_notes_screen.dart';
 import '../screens/company_info_screen.dart';
 import '../screens/document_templates_screen.dart';
-import '../screens/withholding_tax_screen.dart';
 import '../screens/warehouses_screen.dart';
 import '../screens/product_settings_screen.dart';
+import '../screens/stock_entries_screen.dart';
 
 class MobileShellScreen extends StatefulWidget {
   const MobileShellScreen({super.key});
@@ -174,6 +153,8 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         return const CompanyInfoScreen();
       case AppModule.documentTemplates:
         return const DocumentTemplatesScreen();
+      case AppModule.stockEntry:
+        return const StockEntriesScreen();
       default:
         return _ComingSoonMobile(module: _activeModule);
     }
@@ -210,6 +191,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.payments: return 'Paiements';
       case AppModule.companyInfo: return 'Ma Societe';
       case AppModule.documentTemplates: return 'Modeles';
+      case AppModule.stockEntry: return "Bons d'entree";
       default: return 'LogiTech Pro';
     }
   }

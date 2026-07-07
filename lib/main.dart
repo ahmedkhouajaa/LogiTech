@@ -17,6 +17,7 @@ import 'blocs/supplier_orders/supplier_orders_bloc.dart';
 import 'blocs/purchase_invoices/purchase_invoices_bloc.dart';
 import 'blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import 'blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
+import 'blocs/stock_entries/stock_entries_bloc.dart';
 import 'blocs/credit_notes/credit_notes_bloc.dart';
 import 'blocs/quotes/quotes_bloc.dart';
 import 'blocs/stock/stock_bloc.dart';
@@ -130,6 +131,8 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => PurchaseInvoicesBloc()),
         BlocProvider(create: (_) => QuotesBloc()),
         BlocProvider(create: (_) => StockBloc()),
+        BlocProvider(create: (_) => StockWithdrawalsBloc()),
+        BlocProvider(create: (_) => StockEntriesBloc()),
         BlocProvider(create: (_) => TransactionsBloc()),
         BlocProvider(create: (_) => ProjectsBloc()),
         BlocProvider(create: (_) => PaymentsBloc()),

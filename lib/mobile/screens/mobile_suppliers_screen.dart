@@ -97,7 +97,7 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
           isEmpty = filteredItems.isEmpty;
           
           cards = filteredItems.map((supplier) {
-            final avatarInitial = supplier.name.isNotEmpty ? supplier.name[0].toUpperCase() : '?';
+            final isEntreprise = supplier.supplierType.toLowerCase() == 'entreprise';
             
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
@@ -121,13 +121,15 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: Colors.deepPurpleAccent,
+                          color: AppColors.surfaceAlt.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
                         ),
                         child: Center(
-                          child: Text(
-                            avatarInitial,
-                            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                          child: Icon(
+                            isEntreprise ? Icons.domain_rounded : Icons.person_outline_rounded,
+                            color: AppColors.textSecondary,
+                            size: 24,
                           ),
                         ),
                       ),
@@ -137,11 +139,33 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              supplier.name,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    supplier.name,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isEntreprise ? Colors.blue.withOpacity(0.15) : Colors.purple.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    isEntreprise ? 'Entreprise' : 'Particulier',
+                                    style: TextStyle(
+                                      color: isEntreprise ? Colors.blue[700] : Colors.purple[700],
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 6),
                             Wrap(
