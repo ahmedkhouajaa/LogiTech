@@ -21,20 +21,20 @@ class SyncService {
     _syncTimer?.cancel();
     
     // Trigger an initial sync shortly after app launch
-    Future.delayed(const Duration(seconds: 2), () {
-      triggerSync();
-    });
+    // Future.delayed(const Duration(seconds: 2), () {
+    //   triggerSync();
+    // });
     
-    _syncTimer = Timer.periodic(const Duration(minutes: 5), (_) => triggerSync());
+    // _syncTimer = Timer.periodic(const Duration(minutes: 5), (_) => triggerSync());
     
     // Trigger sync when coming online, with a delay to let native network adapters stabilize
-    ConnectivityService.instance.onConnectivityChanged.listen((isOnline) {
-      if (isOnline) {
-        Future.delayed(const Duration(seconds: 3), () {
-          triggerSync();
-        });
-      }
-    });
+    // ConnectivityService.instance.onConnectivityChanged.listen((isOnline) {
+    //   if (isOnline) {
+    //     Future.delayed(const Duration(seconds: 3), () {
+    //       triggerSync();
+    //     });
+    //   }
+    // });
   }
 
   void stopPeriodicSync() {
@@ -88,10 +88,16 @@ class SyncService {
         } catch (_) {}
       }
       
-      // Force a 30-day buffer temporarily to catch missed records from the missing column bug
+      // Force a 30-day buffer temporarily to catch missed records
       try {
         final lastSyncDate = DateTime.parse(lastSyncStr);
-        lastSyncStr = lastSyncDate.subtract(const Duration(days: 30)).toIso8601String();
+        final bufferDate = lastSyncDate.subtract(const Duration(days: 30));
+        // Firebase C++ SDK on Windows crashes if date is before 1970
+        if (bufferDate.year >= 1970) {
+          lastSyncStr = bufferDate.toIso8601String();
+        } else {
+          lastSyncStr = '1970-01-01T00:00:00.000Z';
+        }
       } catch (_) {}
       
       final tablesToPull = [
@@ -123,14 +129,19 @@ class SyncService {
       
       for (final table in tablesToPull) {
         print("DEBUG (Sync): Pulling table $table ...");
-        final snapshot = await FirebaseFirestore.instance
-            .collection(table)
-            .where('updated_at', isGreaterThan: lastSyncStr)
-            .get();
-            
-        for (final doc in snapshot.docs) {
-          final data = doc.data();
-          data['id'] = doc.id; // Ensure ID is present even for partial documents
+        
+        try {
+          print("DEBUG (Sync): Querying with lastSyncStr: $lastSyncStr");
+          final snapshot = await FirebaseFirestore.instance
+              .collection(table)
+              .where('updated_at', isGreaterThan: lastSyncStr)
+              .get();
+              
+          print("DEBUG (Sync): Snapshot received for $table, docs: ${snapshot.docs.length}");
+          
+          for (final doc in snapshot.docs) {
+            final data = doc.data();
+            data['id'] = doc.id; // Ensure ID is present even for partial documents
           
           if (data.containsKey('items')) {
             final itemsInfo = itemTableMap[table];
@@ -170,6 +181,9 @@ class SyncService {
           } catch (e) {
             print('Error syncing $table ${data['id']}: $e');
           }
+        }
+        } catch (e) {
+          print("DEBUG (Sync): Error getting snapshot for $table: $e");
         }
       }
       

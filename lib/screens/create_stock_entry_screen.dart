@@ -1,16 +1,19 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/stock_entries/stock_entries_bloc.dart';
 import '../blocs/stock_entries/stock_entries_event.dart';
+import '../blocs/stock_entries/stock_entries_state.dart';
 import '../blocs/products/products_bloc.dart';
+import '../blocs/stock/stock_bloc.dart';
 import '../models/stock_entry.dart';
 import '../models/product.dart';
 import '../utils/constants.dart';
 
+import '../models/stock_movement.dart' show Warehouse;
 import 'create_article_screen.dart';
-
 class CreateStockEntryScreen extends StatefulWidget {
   final StockEntry? existing;
   const CreateStockEntryScreen({super.key, this.existing});
@@ -24,9 +27,10 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
   final _uuid = const Uuid();
 
   DateTime _date = DateTime.now();
-  String _warehouseId = 'default_warehouse';
+  String? _warehouseId;
   final _reasonController = TextEditingController();
   final _notesController = TextEditingController();
+  List<Warehouse> _warehouses = [];
 
   List<StockEntryItem> _items = [];
   final Map<String, double> _stockQuantities = {}; // to hold current stock of selected products
@@ -41,11 +45,16 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
   }
   
 
-
   @override
   void initState() {
     super.initState();
-    context.read<ProductsBloc>().add(LoadProducts());
+    if (context.read<ProductsBloc>().state is! ProductsLoaded) {
+      context.read<ProductsBloc>().add(LoadProducts());
+    }
+    if (context.read<StockBloc>().state is! StockLoaded) {
+      context.read<StockBloc>().add(LoadStock());
+    }
+    _loadWarehouses();
     // Note: Assuming there is a WarehousesBloc or similar if needed. If not, just ProductsBloc.
     if (widget.existing != null) {
       _date = widget.existing!.date;
@@ -65,6 +74,10 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
+    if (_warehouseId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un entrepôt')));
+      return;
+    }
     final validItems = _items.where((i) => i.productId.isNotEmpty).toList();
     if (validItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -76,7 +89,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
     final entry = StockEntry(
       id: widget.existing?.id,
       number: widget.existing?.number ?? '',
-      warehouseId: _warehouseId,
+      warehouseId: _warehouseId!,
       date: _date,
       reason: _reasonController.text,
       notes: _notesController.text,
@@ -84,13 +97,23 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
       items: validItems,
     );
 
+    final entryBloc = context.read<StockEntriesBloc>();
+    final productsBloc = context.read<ProductsBloc>();
+
+    late StreamSubscription subscription;
+    subscription = entryBloc.stream.listen((state) {
+      if (state is StockEntriesLoaded || state is StockEntriesError) {
+        productsBloc.add(LoadProducts());
+        subscription.cancel();
+      }
+    });
+
     if (widget.existing == null) {
-      context.read<StockEntriesBloc>().add(AddStockEntry(entry));
+      entryBloc.add(AddStockEntry(entry));
     } else {
-      context.read<StockEntriesBloc>().add(UpdateStockEntry(entry));
+      entryBloc.add(UpdateStockEntry(entry));
     }
-    // Refresh products list so stock quantities are updated immediately
-    context.read<ProductsBloc>().add(LoadProducts());
+    
     Navigator.pop(context);
   }
 
@@ -233,6 +256,18 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
     );
   }
 
+  Future<void> _loadWarehouses() async {
+    final state = context.read<StockBloc>().state;
+    if (state is StockLoaded) {
+      setState(() {
+        _warehouses = state.warehouses;
+        if (widget.existing == null && _warehouses.isNotEmpty) {
+          _warehouseId = _warehouses.first.id;
+        }
+      });
+    }
+  }
+
   Widget _buildInfoSection() {
     final dateField = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,9 +306,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
           ),
-          items: const [
-            DropdownMenuItem(value: 'default_warehouse', child: Text('Entrepôt par defaut', style: TextStyle(fontSize: 13))),
-          ],
+          items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 13)))).toList(),
           onChanged: (val) {
             if (val != null) setState(() => _warehouseId = val);
           },
@@ -426,8 +459,48 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
   );
 }
 
+  
+  TextStyle _tableHeaderStyle() {
+    return const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textSecondary);
+  }
+
+  
+  InputDecoration _itemInputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+    );
+  }
+
+  double _getRealCurrentStock(StockEntryItem currentItem) {
+    if (currentItem.productId.isEmpty) return 0;
+    double stock = _stockQuantities[currentItem.productId] ?? 0;
+    
+    // If editing an existing entry, the DB stock already has the old quantity added.
+    // We must subtract it to show the true "stock before entry" preview in the UI.
+    if (widget.existing != null) {
+      try {
+        final originalItem = widget.existing!.items.firstWhere((i) => i.id == currentItem.id);
+        if (originalItem.productId == currentItem.productId) {
+          stock -= originalItem.quantity;
+        }
+      } catch (e) {
+        // Not found (e.g. newly added row)
+      }
+    }
+    return stock;
+  }
+
   Widget _buildItemRow(int index, StockEntryItem item, List<Product> products) {
-    double currentStock = item.productId.isNotEmpty ? (_stockQuantities[item.productId] ?? 0) : 0;
+    double currentStock = _getRealCurrentStock(item);
     double finalStock = currentStock + item.quantity;
 
     if (_isMobile) {

@@ -20,6 +20,9 @@ import '../models/project.dart';
 import '../models/payment_model.dart';
 import '../models/customer_order.dart';
 import '../models/stock_withdrawal.dart';
+import '../models/stock_transfer.dart';
+import '../models/inventory_sheet.dart';
+import '../models/inventory_sheet_item.dart';
 import '../models/return_note.dart';
 import '../models/supplier_order.dart';
 import '../models/receiving_voucher.dart';
@@ -121,9 +124,12 @@ class DatabaseHelper {
 
   String get newId => _uuid.v4();
 
+  Future<Database>? _initDbFuture;
+
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB();
+    _initDbFuture ??= _initDB();
+    _database = await _initDbFuture;
     return _database!;
   }
 
@@ -132,13 +138,50 @@ class DatabaseHelper {
     final path = p.join(dir.path, 'business_manager_pro.db');
     return await openDatabase(
       path,
-      version: 47,
+      version: 50,
+      onConfigure: (db) async {
+        await db.execute('PRAGMA busy_timeout = 30000;');
+      },
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 50) {
+      await db.execute('DROP TABLE IF EXISTS inventory_sheet_items');
+      await db.execute('DROP TABLE IF EXISTS inventory_sheets');
+      
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_sheets (
+          id TEXT PRIMARY KEY,
+          number TEXT NOT NULL,
+          date TEXT NOT NULL,
+          inventory_date TEXT NOT NULL,
+          warehouse_id TEXT NOT NULL,
+          counted_by TEXT,
+          status TEXT DEFAULT 'draft',
+          reason TEXT,
+          notes TEXT,
+          firebase_uid TEXT,
+          is_deleted INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS inventory_sheet_items (
+          id TEXT PRIMARY KEY,
+          inventory_id TEXT NOT NULL,
+          product_id TEXT NOT NULL,
+          theoretical_qty REAL NOT NULL,
+          actual_qty REAL NOT NULL,
+          FOREIGN KEY (inventory_id) REFERENCES inventory_sheets(id) ON DELETE CASCADE
+        )
+      ''');
+    }
+
     if (oldVersion < 46) {
       final supplierNewCols = [
         "ALTER TABLE suppliers ADD COLUMN supplier_type TEXT DEFAULT 'entreprise'",
@@ -153,6 +196,68 @@ class DatabaseHelper {
           await db.execute(sql);
         } catch (_) {}
       }
+    }
+
+    if (oldVersion < 49) {
+      // Recreate tables to fix schema mismatch from earlier _createDB vs _upgradeDB 48
+      await db.execute('DROP TABLE IF EXISTS stock_transfer_items');
+      await db.execute('DROP TABLE IF EXISTS stock_transfers');
+      
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS stock_transfers (
+          id TEXT PRIMARY KEY,
+          number TEXT NOT NULL,
+          date TEXT NOT NULL,
+          source_warehouse_id TEXT NOT NULL,
+          destination_warehouse_id TEXT NOT NULL,
+          status TEXT DEFAULT 'draft',
+          reason TEXT,
+          notes TEXT,
+          firebase_uid TEXT,
+          is_deleted INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS stock_transfer_items (
+          id TEXT PRIMARY KEY,
+          transfer_id TEXT NOT NULL,
+          product_id TEXT NOT NULL,
+          quantity_to_transfer REAL NOT NULL,
+          FOREIGN KEY (transfer_id) REFERENCES stock_transfers(id)
+        )
+      ''');
+    }
+
+    if (oldVersion < 48) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS stock_transfers (
+          id TEXT PRIMARY KEY,
+          number TEXT NOT NULL,
+          date TEXT NOT NULL,
+          source_warehouse_id TEXT NOT NULL,
+          destination_warehouse_id TEXT NOT NULL,
+          status TEXT DEFAULT 'draft',
+          reason TEXT,
+          notes TEXT,
+          firebase_uid TEXT,
+          is_deleted INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS stock_transfer_items (
+          id TEXT PRIMARY KEY,
+          transfer_id TEXT NOT NULL,
+          product_id TEXT NOT NULL,
+          quantity_to_transfer REAL NOT NULL,
+          FOREIGN KEY (transfer_id) REFERENCES stock_transfers(id)
+        )
+      ''');
     }
 
     if (oldVersion < 47) {
@@ -1614,6 +1719,34 @@ class DatabaseHelper {
       )
     ''');
 
+    // ─── Stock Transfers ──────────────────────────────────────────
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS stock_transfers (
+        id TEXT PRIMARY KEY,
+        number TEXT NOT NULL,
+        date TEXT NOT NULL,
+        source_warehouse_id TEXT NOT NULL,
+        destination_warehouse_id TEXT NOT NULL,
+        status TEXT DEFAULT 'draft',
+        reason TEXT,
+        notes TEXT,
+        firebase_uid TEXT,
+        is_deleted INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS stock_transfer_items (
+        id TEXT PRIMARY KEY,
+        transfer_id TEXT NOT NULL,
+        product_id TEXT NOT NULL,
+        quantity_to_transfer REAL NOT NULL,
+        FOREIGN KEY (transfer_id) REFERENCES stock_transfers(id)
+      )
+    ''');
+
     // ─── Invoices ─────────────────────────────────────────────────
     await db.execute('''
       CREATE TABLE IF NOT EXISTS invoices (
@@ -2133,10 +2266,11 @@ class DatabaseHelper {
       CREATE TABLE IF NOT EXISTS stock_transfers (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
-        from_warehouse_id TEXT NOT NULL,
-        to_warehouse_id TEXT NOT NULL,
+        source_warehouse_id TEXT NOT NULL,
+        destination_warehouse_id TEXT NOT NULL,
         date TEXT NOT NULL,
         status TEXT DEFAULT 'draft',
+        reason TEXT,
         notes TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
@@ -2150,7 +2284,7 @@ class DatabaseHelper {
         id TEXT PRIMARY KEY,
         transfer_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
-        quantity REAL DEFAULT 1,
+        quantity_to_transfer REAL NOT NULL,
         FOREIGN KEY (transfer_id) REFERENCES stock_transfers(id)
       )
     ''');
@@ -2160,9 +2294,13 @@ class DatabaseHelper {
       CREATE TABLE IF NOT EXISTS inventory_sheets (
         id TEXT PRIMARY KEY,
         number TEXT NOT NULL,
-        warehouse_id TEXT NOT NULL,
         date TEXT NOT NULL,
-        status TEXT DEFAULT 'in_progress',
+        inventory_date TEXT NOT NULL,
+        warehouse_id TEXT NOT NULL,
+        counted_by TEXT,
+        status TEXT DEFAULT 'draft',
+        reason TEXT,
+        notes TEXT,
         firebase_uid TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
@@ -2173,12 +2311,11 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS inventory_sheet_items (
         id TEXT PRIMARY KEY,
-        sheet_id TEXT NOT NULL,
+        inventory_id TEXT NOT NULL,
         product_id TEXT NOT NULL,
-        theoretical_qty REAL DEFAULT 0,
-        physical_qty REAL DEFAULT 0,
-        difference REAL DEFAULT 0,
-        FOREIGN KEY (sheet_id) REFERENCES inventory_sheets(id)
+        theoretical_qty REAL NOT NULL,
+        actual_qty REAL NOT NULL,
+        FOREIGN KEY (inventory_id) REFERENCES inventory_sheets(id) ON DELETE CASCADE
       )
     ''');
 
@@ -2383,7 +2520,7 @@ class DatabaseHelper {
       'status': 'pending',
     });
     // Trigger sync asynchronously after adding to queue
-    SyncService.instance.triggerSync();
+    // SyncService.instance.triggerSync();
   }
 
   Future<void> _addToSyncQueue(String table, String recordId, String operation, Map<String, dynamic> data) async {
@@ -3226,7 +3363,16 @@ class DatabaseHelper {
   Future<List<StockMovement>> getStockMovements() async {
     final db = await database;
     final maps = await db.rawQuery('''
-      SELECT sm.*, p.name as product_name, w.name as warehouse_name
+      SELECT sm.*, p.name as product_name, 
+             CASE 
+               WHEN sm.type IN ('transfer', 'transfer_out') AND sm.reference_type = 'stock_transfer' THEN 
+                 (SELECT w1.name || ' ➔ ' || w2.name 
+                  FROM stock_transfers st
+                  LEFT JOIN warehouses w1 ON st.source_warehouse_id = w1.id
+                  LEFT JOIN warehouses w2 ON st.destination_warehouse_id = w2.id
+                  WHERE st.id = sm.reference_id)
+               ELSE w.name 
+             END as warehouse_name
       FROM stock_movements sm
       LEFT JOIN products p ON sm.product_id = p.id
       LEFT JOIN warehouses w ON sm.warehouse_id = w.id
@@ -3260,6 +3406,16 @@ class DatabaseHelper {
 
   Future<void> updateWarehouse(Warehouse warehouse) async {
     await update('warehouses', warehouse.toMap(), warehouse.id);
+  }
+
+  Future<void> deleteWarehouse(String id) async {
+    final db = await database;
+    await db.update(
+      'warehouses',
+      {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   // ─── Projects ───────────────────────────────────────────────────
@@ -4300,4 +4456,264 @@ class DatabaseHelper {
     });
   }
 
+  // ─── Stock Transfers CRUD ─────────────────────────────────────
+  Future<List<StockTransfer>> getStockTransfers() async {
+    final db = await database;
+    final maps = await db.query(
+      'stock_transfers',
+      where: 'is_deleted = 0',
+      orderBy: 'date DESC',
+    );
+    List<StockTransfer> transfers = [];
+    for (var map in maps) {
+      final itemMaps = await db.query(
+        'stock_transfer_items',
+        where: 'transfer_id = ?',
+        whereArgs: [map['id']],
+      );
+      final items = itemMaps.map((i) => StockTransferItem.fromMap(i)).toList();
+      transfers.add(StockTransfer.fromMap(map, items));
+    }
+    return transfers;
+  }
+
+  Future<void> insertStockTransfer(StockTransfer transfer) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('stock_transfers', transfer.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      for (var item in transfer.items) {
+        await txn.insert('stock_transfer_items', item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+        
+        // Out movement
+        await txn.insert('stock_movements', {
+          'id': const Uuid().v4(),
+          'date': transfer.date.toIso8601String(),
+          'product_id': item.productId,
+          'warehouse_id': transfer.sourceWarehouseId,
+          'type': 'transfer_out',
+          'quantity': item.quantityToTransfer,
+          'reference_type': 'stock_transfer',
+          'reference_id': transfer.id,
+          'notes': 'Transfert sortant',
+          'firebase_uid': transfer.firebaseUid,
+          'is_deleted': 0,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+        
+        // In movement
+        await txn.insert('stock_movements', {
+          'id': const Uuid().v4(),
+          'date': transfer.date.toIso8601String(),
+          'product_id': item.productId,
+          'warehouse_id': transfer.destinationWarehouseId,
+          'type': 'transfer_in',
+          'quantity': item.quantityToTransfer,
+          'reference_type': 'stock_transfer',
+          'reference_id': transfer.id,
+          'notes': 'Transfert entrant',
+          'firebase_uid': transfer.firebaseUid,
+          'is_deleted': 0,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      }
+    });
+    await _addToSyncQueue('stock_transfers', transfer.id, 'INSERT', transfer.toMap());
+  }
+
+  Future<void> updateStockTransfer(StockTransfer transfer) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'stock_transfers',
+        transfer.toMap(),
+        where: 'id = ?',
+        whereArgs: [transfer.id],
+      );
+      await txn.delete('stock_transfer_items', where: 'transfer_id = ?', whereArgs: [transfer.id]);
+      await txn.delete('stock_movements', where: 'reference_id = ? AND reference_type = ?', whereArgs: [transfer.id, 'stock_transfer']);
+      
+      for (var item in transfer.items) {
+        await txn.insert('stock_transfer_items', item.toMap());
+        
+        // Re-insert Out movement
+        await txn.insert('stock_movements', {
+          'id': const Uuid().v4(),
+          'date': transfer.date.toIso8601String(),
+          'product_id': item.productId,
+          'warehouse_id': transfer.sourceWarehouseId,
+          'type': 'transfer_out',
+          'quantity': item.quantityToTransfer,
+          'reference_type': 'stock_transfer',
+          'reference_id': transfer.id,
+          'notes': 'Transfert sortant',
+          'firebase_uid': transfer.firebaseUid,
+          'is_deleted': 0,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+        
+        // Re-insert In movement
+        await txn.insert('stock_movements', {
+          'id': const Uuid().v4(),
+          'date': transfer.date.toIso8601String(),
+          'product_id': item.productId,
+          'warehouse_id': transfer.destinationWarehouseId,
+          'type': 'transfer_in',
+          'quantity': item.quantityToTransfer,
+          'reference_type': 'stock_transfer',
+          'reference_id': transfer.id,
+          'notes': 'Transfert entrant',
+          'firebase_uid': transfer.firebaseUid,
+          'is_deleted': 0,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      }
+    });
+    await _addToSyncQueue('stock_transfers', transfer.id, 'UPDATE', transfer.toMap());
+  }
+
+  Future<void> deleteStockTransfer(String id) async {
+    final db = await database;
+    final maps = await db.query('stock_transfers', where: 'id = ?', whereArgs: [id]);
+    if (maps.isNotEmpty) {
+      await db.update(
+        'stock_movements',
+        {'is_deleted': 1},
+        where: 'reference_id = ? AND reference_type = ?',
+        whereArgs: [id, 'stock_transfer'],
+      );
+    }
+    
+    await db.update(
+      'stock_transfers',
+      {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    await _addToSyncQueue('stock_transfers', id, 'DELETE', {'is_deleted': 1});
+  }
+
+  // ─── Inventory Sheets CRUD ─────────────────────────────────────
+  Future<List<InventorySheet>> getInventorySheets() async {
+    final db = await database;
+    final maps = await db.query(
+      'inventory_sheets',
+      where: 'is_deleted = 0',
+      orderBy: 'date DESC',
+    );
+    List<InventorySheet> sheets = [];
+    for (var map in maps) {
+      final itemMaps = await db.query(
+        'inventory_sheet_items',
+        where: 'inventory_id = ?',
+        whereArgs: [map['id']],
+      );
+      final items = <InventorySheetItem>[];
+      for (var imap in itemMaps) {
+        final productMaps = await db.query('products', where: 'id = ?', whereArgs: [imap['product_id']]);
+        String? productName;
+        String? productSku;
+        if (productMaps.isNotEmpty) {
+          productName = productMaps.first['name'] as String?;
+          productSku = productMaps.first['reference'] as String?;
+        }
+        items.add(InventorySheetItem.fromMap(imap, productName: productName, productSku: productSku));
+      }
+      sheets.add(InventorySheet.fromMap(map, items));
+    }
+    return sheets;
+  }
+
+  Future<void> insertInventorySheet(InventorySheet sheet) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('inventory_sheets', sheet.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      for (var item in sheet.items) {
+        await txn.insert('inventory_sheet_items', item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      
+      // If status is finalized, create stock adjustments
+      if (sheet.status == 'Finalisée') {
+        for (var item in sheet.items) {
+          final diff = item.actualQty - item.theoreticalQty;
+          if (diff != 0) {
+            await txn.insert('stock_movements', {
+              'id': const Uuid().v4(),
+              'date': sheet.date.toIso8601String(),
+              'product_id': item.productId,
+              'warehouse_id': sheet.warehouseId,
+              'type': 'adjustment',
+              'quantity': diff,
+              'reference_type': 'inventory_sheet',
+              'reference_id': sheet.id,
+              'notes': 'Inventaire: ${sheet.number}',
+              'firebase_uid': sheet.firebaseUid,
+              'is_deleted': 0,
+              'created_at': DateTime.now().toIso8601String(),
+            });
+          }
+        }
+      }
+    });
+    await _addToSyncQueue('inventory_sheets', sheet.id, 'INSERT', sheet.toMap());
+  }
+
+  Future<void> updateInventorySheet(InventorySheet sheet) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'inventory_sheets',
+        sheet.toMap(),
+        where: 'id = ?',
+        whereArgs: [sheet.id],
+      );
+      await txn.delete('inventory_sheet_items', where: 'inventory_id = ?', whereArgs: [sheet.id]);
+      for (var item in sheet.items) {
+        await txn.insert('inventory_sheet_items', item.toMap());
+      }
+      
+      // If status is finalized, create stock adjustments
+      if (sheet.status == 'Finalisée') {
+        for (var item in sheet.items) {
+          final diff = item.actualQty - item.theoreticalQty;
+          if (diff != 0) {
+            await txn.insert('stock_movements', {
+              'id': const Uuid().v4(),
+              'date': sheet.date.toIso8601String(),
+              'product_id': item.productId,
+              'warehouse_id': sheet.warehouseId,
+              'type': 'adjustment',
+              'quantity': diff,
+              'reference_type': 'inventory_sheet',
+              'reference_id': sheet.id,
+              'notes': 'Inventaire: ${sheet.number}',
+              'firebase_uid': sheet.firebaseUid,
+              'is_deleted': 0,
+              'created_at': DateTime.now().toIso8601String(),
+            });
+          }
+        }
+      }
+    });
+    await _addToSyncQueue('inventory_sheets', sheet.id, 'UPDATE', sheet.toMap());
+  }
+
+  Future<void> deleteInventorySheet(String id) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'inventory_sheets',
+        {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      // Delete associated stock movements
+      await txn.update(
+        'stock_movements',
+        {'is_deleted': 1},
+        where: 'reference_id = ? AND reference_type = ?',
+        whereArgs: [id, 'inventory_sheet'],
+      );
+    });
+    await _addToSyncQueue('inventory_sheets', id, 'DELETE', {'is_deleted': 1});
+  }
 }

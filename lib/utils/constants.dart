@@ -397,6 +397,8 @@ enum MovementType {
   entry,
   exit,
   transfer,
+  transfer_in,
+  transfer_out,
   adjustment;
 
   String get label {
@@ -406,6 +408,8 @@ enum MovementType {
       case exit:
         return 'Sortie';
       case transfer:
+      case transfer_in:
+      case transfer_out:
         return 'Transfert';
       case adjustment:
         return 'Ajustement';

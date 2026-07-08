@@ -497,78 +497,58 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
               border: Border(bottom: BorderSide(color: AppColors.border)),
               color: AppColors.background,
             ),
-            child: const Row(
+            child: Row(
               children: [
                 SizedBox(width: 32),
                 Expanded(
                     flex: 3,
-                    child: Text('Article',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: AppColors.textSecondary))),
+                    child: Text('Article', style: _tableHeaderStyle())),
                 Expanded(
-                    child: Text('Quantite',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: AppColors.textSecondary))),
+                    child: Text('Quantite', style: _tableHeaderStyle())),
                 Expanded(
-                    child: Text('Prix U. HT',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: AppColors.textSecondary))),
+                    child: Text('Prix U. HT', style: _tableHeaderStyle())),
                 Expanded(
-                    child: Text('TVA %',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: AppColors.textSecondary))),
+                    child: Text('TVA %', style: _tableHeaderStyle())),
                 Expanded(
-                    child: Text('Remise %',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: AppColors.textSecondary))),
+                    child: Text('Remise %', style: _tableHeaderStyle())),
                 Expanded(
-                    child: Text('Total HT',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: AppColors.textSecondary))),
+                    child: Text('Total HT', style: _tableHeaderStyle())),
                 SizedBox(width: 80), // Actions
               ],
             ),
           ),
           if (_items.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(
-                child: Text('Aucun article ajoute. Cliquez sur "Ajouter un article".',
-                    style: TextStyle(color: AppColors.textSecondary)),
-              ),
-            ),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _items.length,
-            separatorBuilder: (context, index) =>
-                const Divider(height: 1, color: AppColors.border),
-            itemBuilder: (context, index) {
-              final item = _items[index];
-              return _buildArticleRow(item, index);
-            },
-          ),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              width: double.infinity,
+              child: const Text('Aucun article',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 13, color: AppColors.textTertiary)),
+            )
+          else
+            ..._items.asMap().entries.map((e) => _buildArticleRow(e.value, e.key)),
         ],
       ),
     );
   }
 
+  
+  TextStyle _tableHeaderStyle() {
+    return const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: AppColors.textSecondary);
+  }
+
   Widget _buildArticleRow(SupplierOrderItem item, int index) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withOpacity(0.3),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        border: const Border(
+            bottom: BorderSide(color: AppColors.border, width: 0.5)),
+        color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -714,7 +694,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 13),
-                    decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
+                    decoration: _itemInputDecoration(''),
                     onChanged: (val) {
                       final v = double.tryParse(val) ?? 1;
                       setState(() => _items[index] = item.copyWith(quantity: v));
@@ -743,7 +723,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
             child: TextFormField(
               initialValue: item.unitPrice.toString(),
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
+              decoration: _itemInputDecoration(''),
               onChanged: (val) {
                 final v = double.tryParse(val) ?? 0;
                 setState(() => _items[index] = item.copyWith(unitPrice: v));
@@ -755,7 +735,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
           Expanded(
             child: DropdownButtonFormField<double>(
               value: item.tvaRate,
-              decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
+              decoration: _itemInputDecoration(''),
               items: TvaRates.all
                   .map((t) => DropdownMenuItem(value: t, child: Text('$t%')))
                   .toList(),
@@ -772,7 +752,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
             child: TextFormField(
               initialValue: item.discountPercent.toString(),
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12)),
+              decoration: _itemInputDecoration(''),
               onChanged: (val) {
                 final v = double.tryParse(val) ?? 0;
                 setState(() => _items[index] = item.copyWith(discountPercent: v));

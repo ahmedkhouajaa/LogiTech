@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/products/products_bloc.dart';
 import '../models/product.dart';
+import '../blocs/stock/stock_bloc.dart';
+import '../models/stock_movement.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
@@ -23,6 +25,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void initState() {
     super.initState();
     context.read<ProductsBloc>().add(LoadProducts());
+    context.read<StockBloc>().add(LoadStock());
   }
 
   @override
@@ -65,11 +68,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
         
         // Data List
         Expanded(
-          child: BlocBuilder<ProductsBloc, ProductsState>(
-            builder: (context, state) {
-              if (state is ProductsLoading) return const Center(child: CircularProgressIndicator());
-              if (state is ProductsError) return Center(child: Text('Erreur: ${state.message}'));
-              if (state is ProductsLoaded) {
+          child: BlocBuilder<StockBloc, StockState>(
+            builder: (context, stockState) {
+              final movements = stockState is StockLoaded ? stockState.movements : <StockMovement>[];
+              
+              return BlocBuilder<ProductsBloc, ProductsState>(
+                builder: (context, state) {
+                  if (state is ProductsLoading) return const Center(child: CircularProgressIndicator());
+                  if (state is ProductsError) return Center(child: Text('Erreur: ${state.message}'));
+                  if (state is ProductsLoaded) {
                 final filtered = _search.isEmpty ? state.products
                     : state.products.where((p) => 
                         p.name.toLowerCase().contains(_search) || 
@@ -96,6 +103,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   separatorBuilder: (context, index) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final p = filtered[index];
+                    
+                    double realStock = 0;
+                    for (var m in movements) {
+                      if (m.productId == p.id) {
+                        if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) realStock += m.quantity;
+                        else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) realStock -= m.quantity;
+                      }
+                    }
+
                     final tvaMultiplier = 1 + (p.tvaRate / 100);
                     final sellTtc = p.sellingPrice * tvaMultiplier;
                     
@@ -193,21 +209,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                     children: [
                                       const Text('Stock', style: TextStyle(fontSize: 11, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
                                       const SizedBox(height: 4),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: p.stockQty <= 0 ? AppColors.errorLight : AppColors.successLight.withValues(alpha: 0.5),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          p.stockQty.toStringAsFixed(0),
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                            color: p.stockQty <= 0 ? AppColors.error : AppColors.success,
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: realStock <= 0 ? AppColors.errorLight : AppColors.successLight.withValues(alpha: 0.5),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            formatQuantity(realStock),
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: realStock <= 0 ? AppColors.error : AppColors.success,
+                                            ),
                                           ),
                                         ),
-                                      ),
                                     ],
                                   ),
                                 ),
@@ -254,9 +270,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
               }
               return const SizedBox();
             },
-          ),
-        ),
-      ],
+          );
+        },
+      ),
+    ),
+  ],
     );
   }
 

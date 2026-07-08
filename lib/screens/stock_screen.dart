@@ -126,6 +126,18 @@ class _StockScreenState extends State<StockScreen> {
                     );
                   },
                 ),
+                const SizedBox(height: AppSpacing.lg),
+                // Niveaux de stock actuels
+                BlocBuilder<ProductsBloc, ProductsState>(
+                  builder: (context, pState) {
+                    if (pState is! ProductsLoaded) return const SizedBox();
+                    return _StockLevelsTable(
+                      movements: state.movements,
+                      warehouses: state.warehouses,
+                      products: pState.products,
+                    );
+                  },
+                ),
               ],
             ),
           );
@@ -162,6 +174,8 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
           if (state is StockLoading) return const Center(child: CircularProgressIndicator());
           if (state is StockLoaded) {
             final filteredMovements = state.movements.where((m) {
+              if (m.type == MovementType.transfer_in) return false;
+              
               final matchesSearch = _searchQuery.isEmpty || 
                   (m.productName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
                   (m.referenceId?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
@@ -267,9 +281,19 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                         
                         String qtyStr = '';
                         Color qtyCol = AppColors.textPrimary;
-                        if (val > 0) { qtyStr = '+${formatQuantity(val)}'; qtyCol = AppColors.success; }
-                        else if (val < 0) { qtyStr = '-${formatQuantity(val.abs())}'; qtyCol = AppColors.error; }
-                        else { qtyStr = formatQuantity(val); }
+                        if (m.type == MovementType.adjustment) {
+                          qtyStr = val > 0 ? '+${formatQuantity(val)}' : (val < 0 ? '-${formatQuantity(val.abs())}' : formatQuantity(val));
+                          qtyCol = AppColors.textSecondary;
+                        } else if (m.type == MovementType.transfer || m.type == MovementType.transfer_out || m.type == MovementType.transfer_in) {
+                          qtyStr = formatQuantity(val.abs());
+                          qtyCol = AppColors.info;
+                        } else if (val > 0) { 
+                          qtyStr = '+${formatQuantity(val)}'; qtyCol = AppColors.success; 
+                        } else if (val < 0) { 
+                          qtyStr = '-${formatQuantity(val.abs())}'; qtyCol = AppColors.error; 
+                        } else { 
+                          qtyStr = formatQuantity(val); 
+                        }
 
                         return [
                           DataCell(Text(formatDate(m.date), style: const TextStyle(fontWeight: FontWeight.w500))),
@@ -277,7 +301,13 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                           DataCell(Text(m.warehouseName ?? '—')),
                           DataCell(StatusBadge(
                             label: m.type.label,
-                            color: m.type == MovementType.entry ? AppColors.success : m.type == MovementType.exit ? AppColors.error : AppColors.warning,
+                            color: m.type == MovementType.adjustment 
+                                ? AppColors.textSecondary 
+                                : m.type == MovementType.entry 
+                                    ? AppColors.success 
+                                    : m.type == MovementType.exit 
+                                        ? AppColors.error 
+                                        : AppColors.warning,
                           )),
                           DataCell(Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -598,5 +628,221 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
 
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ajustement de stock enregistré avec succès'), backgroundColor: AppColors.success));
+  }
+}
+
+class StockLevelItem {
+  final Product product;
+  final Warehouse warehouse;
+  final double quantity;
+  StockLevelItem({required this.product, required this.warehouse, required this.quantity});
+}
+
+class _StockLevelsTable extends StatefulWidget {
+  final List<StockMovement> movements;
+  final List<Warehouse> warehouses;
+  final List<Product> products;
+  
+  const _StockLevelsTable({required this.movements, required this.warehouses, required this.products});
+  
+  @override
+  State<_StockLevelsTable> createState() => _StockLevelsTableState();
+}
+
+class _StockLevelsTableState extends State<_StockLevelsTable> {
+  int _rowsPerPage = 10;
+  int _currentPage = 0;
+  
+  @override
+  Widget build(BuildContext context) {
+    List<StockLevelItem> items = [];
+    for (var p in widget.products) {
+      for (var w in widget.warehouses) {
+        double stock = 0;
+        for (var m in widget.movements) {
+          final isMatch = m.warehouseId == w.id || (m.warehouseId == 'default_warehouse' && w.isDefault);
+          if (m.productId == p.id && isMatch) {
+            if (m.type == MovementType.entry || m.type == MovementType.transfer_in) stock += m.quantity;
+            else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) stock -= m.quantity;
+            else if (m.type == MovementType.adjustment) stock += m.quantity;
+          }
+        }
+        items.add(StockLevelItem(product: p, warehouse: w, quantity: stock));
+      }
+    }
+
+    final totalItems = items.length;
+    final totalPages = (totalItems / _rowsPerPage).ceil();
+    final startIndex = _currentPage * _rowsPerPage;
+    final endIndex = (startIndex + _rowsPerPage).clamp(0, totalItems);
+    final currentPageItems = totalItems > 0 ? items.sublist(startIndex, endIndex) : <StockLevelItem>[];
+
+    return AppCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Niveaux de Stock Actuels', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      SizedBox(height: 4),
+                      Text('Voir les niveaux de stock actuels pour tous les produits', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.download_rounded, size: 16),
+                  label: const Text('Exporter'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: const BorderSide(color: AppColors.border),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          // Table header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
+            child: const Row(
+              children: [
+                Expanded(flex: 3, child: Text('Produit', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text('Entrepôt', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 1, child: Text('Disponible', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 1, child: Text('Réservé', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 1, child: Text('Total', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                SizedBox(width: 100, child: Text('Statut', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+              ],
+            ),
+          ),
+          // Table body
+          if (items.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(child: Text("Aucun produit trouvé.", style: TextStyle(color: AppColors.textSecondary))),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: currentPageItems.length,
+              itemBuilder: (context, index) {
+                final item = currentPageItems[index];
+                return Container(
+                  decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(4)),
+                              child: const Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textSecondary),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(child: Text(item.product.name, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.w500))),
+                          ],
+                        ),
+                      ),
+                      Expanded(flex: 2, child: Text(item.product.reference ?? item.product.code, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text(item.warehouse.name, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 1, child: Text(formatQuantity(item.quantity), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary))),
+                      const Expanded(flex: 1, child: Text('0', textAlign: TextAlign.right, style: TextStyle(fontSize: 13, color: AppColors.error))),
+                      Expanded(flex: 1, child: Text(formatQuantity(item.quantity), textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.bold))),
+                      SizedBox(
+                        width: 100,
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: item.quantity > 0 ? AppColors.success.withValues(alpha: 0.1) : AppColors.error.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              item.quantity > 0 ? 'En Stock' : 'En Rupture',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: item.quantity > 0 ? AppColors.success : AppColors.error,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          // Pagination
+          if (totalPages > 1)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  const Text('Lignes', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
+                    child: DropdownButton<int>(
+                      value: _rowsPerPage,
+                      underline: const SizedBox(),
+                      icon: const Icon(Icons.keyboard_arrow_down, size: 16),
+                      items: [10, 20, 50].map((v) => DropdownMenuItem(value: v, child: Text('$v', style: const TextStyle(fontSize: 13)))).toList(),
+                      onChanged: (v) {
+                        if (v != null) {
+                          setState(() {
+                            _rowsPerPage = v;
+                            _currentPage = 0;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const Spacer(),
+                  Text('Page ${_currentPage + 1} sur $totalPages', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  const SizedBox(width: 24),
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: _currentPage > 0 ? () => setState(() => _currentPage--) : null,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(border: Border.all(color: _currentPage > 0 ? AppColors.border : AppColors.border.withValues(alpha: 0.5)), borderRadius: BorderRadius.circular(4)),
+                          child: Icon(Icons.chevron_left, size: 20, color: _currentPage > 0 ? AppColors.textPrimary : AppColors.textTertiary),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: _currentPage < totalPages - 1 ? () => setState(() => _currentPage++) : null,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(border: Border.all(color: _currentPage < totalPages - 1 ? AppColors.border : AppColors.border.withValues(alpha: 0.5)), borderRadius: BorderRadius.circular(4)),
+                          child: Icon(Icons.chevron_right, size: 20, color: _currentPage < totalPages - 1 ? AppColors.textPrimary : AppColors.textTertiary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

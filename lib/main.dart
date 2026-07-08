@@ -17,6 +17,7 @@ import 'blocs/supplier_orders/supplier_orders_bloc.dart';
 import 'blocs/purchase_invoices/purchase_invoices_bloc.dart';
 import 'blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import 'blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
+import 'blocs/stock_transfers/stock_transfers_bloc.dart';
 import 'blocs/stock_entries/stock_entries_bloc.dart';
 import 'blocs/credit_notes/credit_notes_bloc.dart';
 import 'blocs/quotes/quotes_bloc.dart';
@@ -36,6 +37,10 @@ import 'blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
 import 'blocs/product_settings/product_settings_bloc.dart';
 import 'blocs/product_settings/product_settings_event.dart';
 import 'blocs/document_templates/document_templates_bloc.dart';
+import 'blocs/warehouses/warehouses_bloc.dart';
+import 'blocs/warehouses/warehouses_event.dart';
+import 'blocs/inventory_sheets/inventory_sheets_bloc.dart';
+import 'blocs/inventory_sheets/inventory_sheets_event.dart';
 import 'services/auth_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_service.dart';
@@ -132,6 +137,7 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => QuotesBloc()),
         BlocProvider(create: (_) => StockBloc()),
         BlocProvider(create: (_) => StockWithdrawalsBloc()),
+        BlocProvider(create: (_) => StockTransfersBloc()),
         BlocProvider(create: (_) => StockEntriesBloc()),
         BlocProvider(create: (_) => TransactionsBloc()),
         BlocProvider(create: (_) => ProjectsBloc()),
@@ -145,6 +151,8 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => CreditNotesBloc()..add(LoadCreditNotes())),
         BlocProvider(create: (_) => ProductSettingsBloc()..add(LoadFamilies())),
         BlocProvider(create: (_) => DocumentTemplatesBloc()..add(LoadDocumentTemplates())),
+        BlocProvider(create: (_) => WarehousesBloc()..add(LoadWarehouses())),
+        BlocProvider(create: (_) => InventorySheetsBloc(databaseHelper: DatabaseHelper.instance)..add(InventorySheetsLoadRequested())),
       ],
       child: MaterialApp(
         title: 'LogiTech Pro',

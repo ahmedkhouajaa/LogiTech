@@ -54,7 +54,12 @@ class StockMovement {
 class Warehouse {
   final String id;
   final String name;
+  final String? reference;
   final String? address;
+  final String? postalCode;
+  final String? city;
+  final String? country;
+  final bool isActive;
   final bool isDefault;
   final String? firebaseUid;
   final bool isDeleted;
@@ -62,22 +67,27 @@ class Warehouse {
   final DateTime updatedAt;
 
   Warehouse({
-    required this.id, required this.name, this.address,
+    required this.id, required this.name, this.reference, this.address,
+    this.postalCode, this.city, this.country, this.isActive = true,
     this.isDefault = false, this.firebaseUid, this.isDeleted = false,
     DateTime? createdAt, DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() => {
-        'id': id, 'name': name, 'address': address,
-        'is_default': isDefault ? 1 : 0, 'firebase_uid': firebaseUid,
+        'id': id, 'name': name, 'reference': reference, 'address': address,
+        'postal_code': postalCode, 'city': city, 'country': country,
+        'is_active': isActive ? 1 : 0, 'is_default': isDefault ? 1 : 0,
+        'firebase_uid': firebaseUid,
         'is_deleted': isDeleted ? 1 : 0, 'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
 
   factory Warehouse.fromMap(Map<String, dynamic> map) => Warehouse(
         id: map['id'] as String, name: map['name'] as String,
-        address: map['address'] as String?,
+        reference: map['reference'] as String?, address: map['address'] as String?,
+        postalCode: map['postal_code'] as String?, city: map['city'] as String?,
+        country: map['country'] as String?, isActive: map['is_active'] != 0,
         isDefault: map['is_default'] == 1,
         firebaseUid: map['firebase_uid'] as String?,
         isDeleted: map['is_deleted'] == 1,
@@ -86,11 +96,14 @@ class Warehouse {
       );
 
   Warehouse copyWith({
-    String? id, String? name, String? address, bool? isDefault,
+    String? id, String? name, String? reference, String? address,
+    String? postalCode, String? city, String? country, bool? isActive, bool? isDefault,
     String? firebaseUid, bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
   }) => Warehouse(
-        id: id ?? this.id, name: name ?? this.name,
-        address: address ?? this.address, isDefault: isDefault ?? this.isDefault,
+        id: id ?? this.id, name: name ?? this.name, reference: reference ?? this.reference,
+        address: address ?? this.address, postalCode: postalCode ?? this.postalCode,
+        city: city ?? this.city, country: country ?? this.country,
+        isActive: isActive ?? this.isActive, isDefault: isDefault ?? this.isDefault,
         firebaseUid: firebaseUid ?? this.firebaseUid,
         isDeleted: isDeleted ?? this.isDeleted,
         createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,

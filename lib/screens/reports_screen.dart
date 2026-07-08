@@ -15,17 +15,3 @@ class ReportsScreen extends StatelessWidget {
   }
 }
 
-
-
-class WarehousesScreen extends StatelessWidget {
-  const WarehousesScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const EmptyState(
-      icon: Icons.warehouse_rounded,
-      title: 'Gestion des entrepots',
-      subtitle: 'La creation et configuration des entrepots sera bientot disponible',
-    );
-  }
-}

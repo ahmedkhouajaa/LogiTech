@@ -38,6 +38,8 @@ import 'stock_withdrawals_screen.dart';
 import 'stock_entries_screen.dart';
 import 'company_info_screen.dart';
 import 'document_templates_screen.dart';
+import 'stock_transfers_screen.dart';
+import 'inventory_sheets_screen.dart';
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
 
@@ -111,7 +113,13 @@ class AppShellScreenState extends State<AppShellScreen> {
       case AppModule.warehouses:
         return const WarehousesScreen();
       case AppModule.exitVouchers:
+        return _ComingSoonScreen(module: _activeModule);
+      case AppModule.inventorySheet:
+        return const InventorySheetsScreen();
+      case AppModule.stockWithdrawal:
         return const StockWithdrawalsScreen();
+      case AppModule.stockTransfer:
+        return const StockTransfersScreen();
       case AppModule.returnVouchers:
         return const ReturnNotesScreen();
       case AppModule.creditNotes:
