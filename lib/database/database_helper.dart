@@ -140,7 +140,7 @@ class DatabaseHelper {
       path,
       version: 50,
       onConfigure: (db) async {
-        await db.execute('PRAGMA busy_timeout = 30000;');
+        await db.rawQuery('PRAGMA busy_timeout = 30000;');
       },
       onCreate: _createDB,
       onUpgrade: _upgradeDB,

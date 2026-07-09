@@ -6,48 +6,48 @@ import '../../utils/constants.dart';
 import '../../database/database_helper.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
-abstract class StockWithdrawalsEvent {}
+abstract class ExitVouchersEvent {}
 
-class LoadStockWithdrawals extends StockWithdrawalsEvent {}
+class LoadExitVouchers extends ExitVouchersEvent {}
 
-class AddStockWithdrawal extends StockWithdrawalsEvent {
+class AddExitVoucher extends ExitVouchersEvent {
   final StockWithdrawal withdrawal;
-  AddStockWithdrawal(this.withdrawal);
+  AddExitVoucher(this.withdrawal);
 }
 
-class UpdateStockWithdrawal extends StockWithdrawalsEvent {
+class UpdateExitVoucher extends ExitVouchersEvent {
   final StockWithdrawal withdrawal;
-  UpdateStockWithdrawal(this.withdrawal);
+  UpdateExitVoucher(this.withdrawal);
 }
 
-class DeleteStockWithdrawal extends StockWithdrawalsEvent {
+class DeleteExitVoucher extends ExitVouchersEvent {
   final String withdrawalId;
-  DeleteStockWithdrawal(this.withdrawalId);
+  DeleteExitVoucher(this.withdrawalId);
 }
 
-class FilterStockWithdrawals extends StockWithdrawalsEvent {
+class FilterExitVouchers extends ExitVouchersEvent {
   final String? clientId;
   final DateTime? dateFrom;
   final DateTime? dateTo;
   final String? status;
-  FilterStockWithdrawals({this.clientId, this.dateFrom, this.dateTo, this.status});
+  FilterExitVouchers({this.clientId, this.dateFrom, this.dateTo, this.status});
 }
 
 // ─── States ──────────────────────────────────────────────────────
-abstract class StockWithdrawalsState {}
+abstract class ExitVouchersState {}
 
-class StockWithdrawalsInitial extends StockWithdrawalsState {}
+class ExitVouchersInitial extends ExitVouchersState {}
 
-class StockWithdrawalsLoading extends StockWithdrawalsState {}
+class ExitVouchersLoading extends ExitVouchersState {}
 
-class StockWithdrawalsLoaded extends StockWithdrawalsState {
+class ExitVouchersLoaded extends ExitVouchersState {
   final List<StockWithdrawal> withdrawals;
   final String? clientFilter;
   final DateTime? dateFromFilter;
   final DateTime? dateToFilter;
   final String? statusFilter;
 
-  StockWithdrawalsLoaded(
+  ExitVouchersLoaded(
     this.withdrawals, {
     this.clientFilter,
     this.dateFromFilter,
@@ -56,36 +56,36 @@ class StockWithdrawalsLoaded extends StockWithdrawalsState {
   });
 }
 
-class StockWithdrawalsError extends StockWithdrawalsState {
+class ExitVouchersError extends ExitVouchersState {
   final String message;
-  StockWithdrawalsError(this.message);
+  ExitVouchersError(this.message);
 }
 
 // ─── BLoC ────────────────────────────────────────────────────────
-class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsState> {
+class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   final _uuid = const Uuid();
 
-  StockWithdrawalsBloc() : super(StockWithdrawalsInitial()) {
-    on<LoadStockWithdrawals>(_onLoad);
-    on<AddStockWithdrawal>(_onAdd);
-    on<UpdateStockWithdrawal>(_onUpdate);
-    on<DeleteStockWithdrawal>(_onDelete);
-    on<FilterStockWithdrawals>(_onFilter);
+  ExitVouchersBloc() : super(ExitVouchersInitial()) {
+    on<LoadExitVouchers>(_onLoad);
+    on<AddExitVoucher>(_onAdd);
+    on<UpdateExitVoucher>(_onUpdate);
+    on<DeleteExitVoucher>(_onDelete);
+    on<FilterExitVouchers>(_onFilter);
   }
 
-  Future<void> _onLoad(LoadStockWithdrawals event, Emitter<StockWithdrawalsState> emit) async {
-    emit(StockWithdrawalsLoading());
+  Future<void> _onLoad(LoadExitVouchers event, Emitter<ExitVouchersState> emit) async {
+    emit(ExitVouchersLoading());
     try {
       final allWithdrawals = await _dbHelper.getStockWithdrawals();
-      final filtered = allWithdrawals.where((w) => w.number.startsWith('BP-')).toList();
-      emit(StockWithdrawalsLoaded(filtered));
+      final filtered = allWithdrawals.where((w) => w.number.startsWith('BS-')).toList();
+      emit(ExitVouchersLoaded(filtered));
     } catch (e) {
-      emit(StockWithdrawalsError("Erreur lors du chargement: $e"));
+      emit(ExitVouchersError("Erreur lors du chargement: $e"));
     }
   }
 
-  Future<void> _onAdd(AddStockWithdrawal event, Emitter<StockWithdrawalsState> emit) async {
+  Future<void> _onAdd(AddExitVoucher event, Emitter<ExitVouchersState> emit) async {
     try {
       final db = await _dbHelper.database;
       
@@ -96,7 +96,7 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
             "SELECT COUNT(*) as count FROM bons_sortie WHERE date LIKE '${now.year}-%'"
         );
         final count = (countMap.first['count'] as int? ?? 0) + 1;
-        number = 'BP-${now.year}-${count.toString().padLeft(5, '0')}';
+        number = 'BS-${now.year}-${count.toString().padLeft(5, '0')}';
       }
 
       final newWithdrawal = event.withdrawal.copyWith(number: number);
@@ -149,13 +149,13 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
         }
       }
 
-      add(LoadStockWithdrawals());
+      add(LoadExitVouchers());
     } catch (e) {
-      emit(StockWithdrawalsError("Erreur lors de l'ajout: $e"));
+      emit(ExitVouchersError("Erreur lors de l'ajout: $e"));
     }
   }
 
-  Future<void> _onUpdate(UpdateStockWithdrawal event, Emitter<StockWithdrawalsState> emit) async {
+  Future<void> _onUpdate(UpdateExitVoucher event, Emitter<ExitVouchersState> emit) async {
     try {
       final db = await _dbHelper.database;
       final withdrawal = event.withdrawal.copyWith(updatedAt: DateTime.now());
@@ -260,13 +260,13 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
         }
       }
 
-      add(LoadStockWithdrawals());
+      add(LoadExitVouchers());
     } catch (e) {
-      emit(StockWithdrawalsError('Erreur lors de la mise a jour: $e'));
+      emit(ExitVouchersError('Erreur lors de la mise a jour: $e'));
     }
   }
 
-  Future<void> _onDelete(DeleteStockWithdrawal event, Emitter<StockWithdrawalsState> emit) async {
+  Future<void> _onDelete(DeleteExitVoucher event, Emitter<ExitVouchersState> emit) async {
     try {
       final db = await _dbHelper.database;
       final List<Map<String, dynamic>> movementsToDelete = await db.query(
@@ -320,14 +320,14 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
         }
       }
 
-      add(LoadStockWithdrawals());
+      add(LoadExitVouchers());
     } catch (e) {
-      emit(StockWithdrawalsError('Erreur lors de la suppression: $e'));
+      emit(ExitVouchersError('Erreur lors de la suppression: $e'));
     }
   }
 
-  Future<void> _onFilter(FilterStockWithdrawals event, Emitter<StockWithdrawalsState> emit) async {
-    emit(StockWithdrawalsLoading());
+  Future<void> _onFilter(FilterExitVouchers event, Emitter<ExitVouchersState> emit) async {
+    emit(ExitVouchersLoading());
     try {
       final allWithdrawals = await _dbHelper.getStockWithdrawals(
         status: event.status,
@@ -336,14 +336,14 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
       );
 
       final filtered = allWithdrawals.where((w) {
-        if (!w.number.startsWith('BP-')) return false;
+        if (!w.number.startsWith('BS-')) return false;
         if (event.clientId != null && event.clientId!.isNotEmpty && event.clientId != 'all') {
           return w.customerId == event.clientId;
         }
         return true;
       }).toList();
 
-      emit(StockWithdrawalsLoaded(
+      emit(ExitVouchersLoaded(
         filtered,
         clientFilter: event.clientId,
         dateFromFilter: event.dateFrom,
@@ -351,7 +351,7 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
         statusFilter: event.status,
       ));
     } catch (e) {
-      emit(StockWithdrawalsError(e.toString()));
+      emit(ExitVouchersError(e.toString()));
     }
   }
 }

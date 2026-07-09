@@ -26,6 +26,9 @@ import 'reports_screen.dart';
 import 'settings_screen.dart';
 import 'package:business_manager_pro/screens/return_notes_screen.dart';
 import 'package:business_manager_pro/screens/supplier_returns_screen.dart';
+import 'package:business_manager_pro/screens/stock_withdrawals_screen.dart';
+import 'package:business_manager_pro/screens/exit_vouchers_screen.dart';
+import 'package:business_manager_pro/screens/supplier_orders_screen.dart';
 import 'package:business_manager_pro/screens/supplier_credit_notes_screen.dart';
 import 'credit_notes_screen.dart';
 import 'purchase_invoices_screen.dart';
@@ -113,7 +116,7 @@ class AppShellScreenState extends State<AppShellScreen> {
       case AppModule.warehouses:
         return const WarehousesScreen();
       case AppModule.exitVouchers:
-        return _ComingSoonScreen(module: _activeModule);
+        return const ExitVouchersScreen();
       case AppModule.inventorySheet:
         return const InventorySheetsScreen();
       case AppModule.stockWithdrawal:

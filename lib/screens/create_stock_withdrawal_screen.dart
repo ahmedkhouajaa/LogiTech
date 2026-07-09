@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
+import '../blocs/exit_vouchers/exit_vouchers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/stock/stock_bloc.dart';
 import '../models/stock_withdrawal.dart';
@@ -15,7 +16,8 @@ import '../models/stock_movement.dart' show Warehouse;
 
 class CreateStockWithdrawalScreen extends StatefulWidget {
   final StockWithdrawal? existing;
-  const CreateStockWithdrawalScreen({super.key, this.existing});
+  final bool isExitVoucher;
+  const CreateStockWithdrawalScreen({super.key, this.existing, this.isExitVoucher = false});
 
   @override
   State<CreateStockWithdrawalScreen> createState() => _CreateStockWithdrawalScreenState();
@@ -97,21 +99,36 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
       items: validItems,
     );
 
-    final withdrawalBloc = context.read<StockWithdrawalsBloc>();
     final productsBloc = context.read<ProductsBloc>();
 
     late StreamSubscription subscription;
-    subscription = withdrawalBloc.stream.listen((state) {
-      if (state is StockWithdrawalsLoaded || state is StockWithdrawalsError) {
-        productsBloc.add(LoadProducts());
-        subscription.cancel();
+    
+    if (widget.isExitVoucher) {
+      final exitVouchersBloc = context.read<ExitVouchersBloc>();
+      subscription = exitVouchersBloc.stream.listen((state) {
+        if (state is ExitVouchersLoaded || state is ExitVouchersError) {
+          productsBloc.add(LoadProducts());
+          subscription.cancel();
+        }
+      });
+      if (widget.existing == null) {
+        exitVouchersBloc.add(AddExitVoucher(entry));
+      } else {
+        exitVouchersBloc.add(UpdateExitVoucher(entry));
       }
-    });
-
-    if (widget.existing == null) {
-      withdrawalBloc.add(AddStockWithdrawal(entry));
     } else {
-      withdrawalBloc.add(UpdateStockWithdrawal(entry));
+      final withdrawalBloc = context.read<StockWithdrawalsBloc>();
+      subscription = withdrawalBloc.stream.listen((state) {
+        if (state is StockWithdrawalsLoaded || state is StockWithdrawalsError) {
+          productsBloc.add(LoadProducts());
+          subscription.cancel();
+        }
+      });
+      if (widget.existing == null) {
+        withdrawalBloc.add(AddStockWithdrawal(entry));
+      } else {
+        withdrawalBloc.add(UpdateStockWithdrawal(entry));
+      }
     }
     
     Navigator.pop(context);

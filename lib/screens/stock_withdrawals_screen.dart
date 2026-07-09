@@ -20,7 +20,8 @@ enum StockWithdrawalStatus {
 }
 
 class StockWithdrawalsScreen extends StatefulWidget {
-  const StockWithdrawalsScreen({super.key});
+  final bool isExitVoucher;
+  const StockWithdrawalsScreen({super.key, this.isExitVoucher = false});
 
   @override
   State<StockWithdrawalsScreen> createState() => _StockWithdrawalsScreenState();
@@ -76,10 +77,10 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                     child: const Icon(Icons.inventory_2_rounded, color: AppColors.primary, size: 22),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      "Bons de prélèvement",
-                      style: TextStyle(
+                      widget.isExitVoucher ? "Bons de sortie" : "Bons de prélèvement",
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
@@ -110,7 +111,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                           children: [
                             Icon(Icons.inbox_rounded, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
                             const SizedBox(height: 12),
-                            const Text("Aucun Bon de prélèvement", style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                            Text(widget.isExitVoucher ? "Aucun Bon de sortie" : "Aucun Bon de prélèvement", style: const TextStyle(color: AppColors.textSecondary, fontSize: 15)),
                             const SizedBox(height: 4),
                             Text("Appuyez sur + pour en créer un", style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
                           ],
@@ -307,9 +308,9 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
             children: [
               const Icon(Icons.play_arrow, color: Colors.red, size: 28), // The YouTube-like icon from mockup
               const SizedBox(width: 8),
-              const Text(
-                "Bon de prélèvement",
-                style: TextStyle(
+              Text(
+                widget.isExitVoucher ? "Bon de sortie" : "Bon de prélèvement",
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary,
@@ -354,8 +355,8 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                   final entries = state.withdrawals;
 
                   if (entries.isEmpty) {
-                    return const Center(
-                      child: Text("Aucun Bon de prélèvement trouvé", style: TextStyle(color: AppColors.textSecondary)),
+                    return Center(
+                      child: Text(widget.isExitVoucher ? "Aucun Bon de sortie trouvé" : "Aucun Bon de prélèvement trouvé", style: const TextStyle(color: AppColors.textSecondary)),
                     );
                   }
 
@@ -547,7 +548,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmer la suppression'),
-        content: Text("Voulez-vous vraiment supprimer le Bon de prélèvement ${entry.number} ?"),
+        content: Text("Voulez-vous vraiment supprimer le ${widget.isExitVoucher ? 'Bon de sortie' : 'Bon de prélèvement'} ${entry.number} ?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
