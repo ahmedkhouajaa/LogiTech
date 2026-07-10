@@ -21,20 +21,20 @@ class SyncService {
     _syncTimer?.cancel();
     
     // Trigger an initial sync shortly after app launch
-    // Future.delayed(const Duration(seconds: 2), () {
-    //   triggerSync();
-    // });
+    Future.delayed(const Duration(seconds: 2), () {
+      triggerSync();
+    });
     
-    // _syncTimer = Timer.periodic(const Duration(minutes: 5), (_) => triggerSync());
+    _syncTimer = Timer.periodic(const Duration(minutes: 5), (_) => triggerSync());
     
     // Trigger sync when coming online, with a delay to let native network adapters stabilize
-    // ConnectivityService.instance.onConnectivityChanged.listen((isOnline) {
-    //   if (isOnline) {
-    //     Future.delayed(const Duration(seconds: 3), () {
-    //       triggerSync();
-    //     });
-    //   }
-    // });
+    ConnectivityService.instance.onConnectivityChanged.listen((isOnline) {
+      if (isOnline) {
+        Future.delayed(const Duration(seconds: 3), () {
+          triggerSync();
+        });
+      }
+    });
   }
 
   void stopPeriodicSync() {
@@ -42,14 +42,29 @@ class SyncService {
   }
 
   Future<void> triggerSync() async {
-    if (!ConnectivityService.instance.isOnline) return;
-    if (FirebaseAuth.instance.currentUser == null) return;
-    if (_currentStatus == SyncStatus.syncing) return;
+    print('DEBUG (Sync): === SYNC TRIGGERED ===');
+    print('DEBUG (Sync): isOnline = ${ConnectivityService.instance.isOnline}');
+    print('DEBUG (Sync): currentUser = ${FirebaseAuth.instance.currentUser?.uid}');
+    print('DEBUG (Sync): currentStatus = $_currentStatus');
+    
+    if (!ConnectivityService.instance.isOnline) {
+      print('DEBUG (Sync): ABORTING - not online');
+      return;
+    }
+    if (FirebaseAuth.instance.currentUser == null) {
+      print('DEBUG (Sync): ABORTING - no Firebase user');
+      return;
+    }
+    if (_currentStatus == SyncStatus.syncing) {
+      print('DEBUG (Sync): ABORTING - already syncing');
+      return;
+    }
 
     _setStatus(SyncStatus.syncing);
 
     try {
       final pendingItems = await DatabaseHelper.instance.getPendingSyncItems();
+      print('DEBUG (Sync): Pending items to PUSH: ${pendingItems.length}');
       
       if (pendingItems.isNotEmpty) {
         for (var item in pendingItems) {
@@ -59,6 +74,7 @@ class SyncService {
             final operation = item['operation'] as String;
             final dataJson = item['data_json'] as String;
             
+            print('DEBUG (Sync): PUSHING $operation to $tableName/$recordId');
             final docRef = FirebaseFirestore.instance.collection(tableName).doc(recordId);
             if (operation == 'DELETE') {
               // Convert hard-delete to soft-delete in Firebase so other devices can pull it
@@ -71,15 +87,19 @@ class SyncService {
               await docRef.set(data, SetOptions(merge: true));
             }
             await DatabaseHelper.instance.markSynced(item['id'] as int);
+            print('DEBUG (Sync): PUSHED OK $tableName/$recordId');
           } catch (e) {
+            print('DEBUG (Sync): PUSH ERROR for ${item['table_name']}/${item['record_id']}: $e');
             await DatabaseHelper.instance.markSyncError(item['id'] as int, e.toString());
           }
         }
       }
       
       // Pulling changes from Firestore
+      print('DEBUG (Sync): === STARTING PULL PHASE ===');
       final prefs = await SharedPreferences.getInstance();
       String lastSyncStr = prefs.getString('last_sync_time') ?? '1970-01-01T00:00:00.000Z';
+      print('DEBUG (Sync): Raw last_sync_time from prefs: $lastSyncStr');
       
       // Convert old local-time strings to UTC to fix timezone mismatch
       if (!lastSyncStr.endsWith('Z')) {
@@ -177,9 +197,12 @@ class SyncService {
             final changes = await db.update(table, sanitizedData, where: 'id = ?', whereArgs: [data['id']]);
             if (changes == 0) {
               await db.insert(table, sanitizedData, conflictAlgorithm: ConflictAlgorithm.replace);
+              print('DEBUG (Sync): INSERTED $table/${data['id']}');
+            } else {
+              print('DEBUG (Sync): UPDATED $table/${data['id']}');
             }
           } catch (e) {
-            print('Error syncing $table ${data['id']}: $e');
+            print('DEBUG (Sync): ERROR inserting $table ${data['id']}: $e');
           }
         }
         } catch (e) {
@@ -192,6 +215,7 @@ class SyncService {
       
       _setStatus(SyncStatus.success);
     } catch (e) {
+      print('DEBUG (Sync): === SYNC FAILED WITH ERROR: $e ===');
       _setStatus(SyncStatus.error);
     } finally {
       // Revert to idle after showing success/error

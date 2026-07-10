@@ -17,12 +17,17 @@ import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
-import 'mobile_product_form_screen.dart';
 import '../../../../screens/customers_screen.dart';
 
 class MobileExitVoucherFormScreen extends StatefulWidget {
   final StockWithdrawal? existing;
-  const MobileExitVoucherFormScreen({super.key, this.existing});
+  final bool isExitVoucher;
+
+  const MobileExitVoucherFormScreen({
+    super.key, 
+    this.existing,
+    this.isExitVoucher = true,
+  });
 
   @override
   State<MobileExitVoucherFormScreen> createState() => _MobileExitVoucherFormScreenState();
@@ -135,7 +140,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
         final seq = await DatabaseHelper.instance.getNextStockWithdrawalSequence();
-        number = generateDocNumber('BS', seq);
+        number = generateDocNumber(widget.isExitVoucher ? 'BS' : 'BP', seq);
       }
 
       final noteId = widget.existing?.id ?? _uuid.v4();
@@ -239,7 +244,9 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
   @override
   Widget build(BuildContext context) {
     return MobileFormScreen(
-      title: _isEditing ? 'Modifier le BS' : 'Nouveau BS',
+      title: _isEditing 
+          ? (widget.isExitVoucher ? 'Modifier le BS' : 'Modifier le prélèvement')
+          : (widget.isExitVoucher ? 'Nouveau BS' : 'Nouveau prélèvement'),
       statusLabel: _status.label,
       statusColor: _status.color,
       isLoading: _isLoading,

@@ -78,6 +78,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
                   ]),
                   _buildGroup('stock', 'Stock', Icons.warehouse_rounded, [
                     _buildItem(AppModule.stockDashboard, Icons.dashboard_rounded, 'Vue d\'ensemble'),
+                    _buildItem(AppModule.stockMovements, Icons.swap_horiz_rounded, 'Mouvements'),
                     _buildItem(AppModule.stockEntry, Icons.add_box_rounded, 'Bons d\'entree'),
                     _buildItem(AppModule.stockWithdrawal, Icons.outbox_rounded, 'Prelevements'),
                     _buildItem(AppModule.warehouses, Icons.warehouse_rounded, 'Entrepots'),

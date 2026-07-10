@@ -26,6 +26,7 @@ import 'screens/mobile_customers_screen.dart';
 import 'screens/mobile_suppliers_screen.dart';
 import 'screens/mobile_products_screen.dart';
 import 'screens/mobile_stock_screen.dart';
+import 'screens/mobile_stock_movements_screen.dart';
 import 'screens/mobile_projects_screen.dart';
 import 'screens/mobile_withholding_tax_screen.dart';
 
@@ -112,8 +113,9 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.deliveryNotes:
         return const MobileDeliveryNotesScreen();
       case AppModule.stockDashboard:
-      case AppModule.stockMovements:
         return const MobileStockScreen();
+      case AppModule.stockMovements:
+        return const MobileStockMovementsScreen();
       case AppModule.transactions:
         return const MobileTreasuryTransactionsScreen();
       case AppModule.checksTraites:
@@ -138,7 +140,8 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.warehouses:
         return const WarehousesScreen();
       case AppModule.exitVouchers:
-        return const MobileStockWithdrawalsScreen();
+      case AppModule.stockWithdrawal:
+        return MobileStockWithdrawalsScreen(activeModule: _activeModule);
       case AppModule.returnVouchers:
         return const MobileReturnNotesScreen();
       case AppModule.creditNotes:

@@ -1,4 +1,4 @@
-import '../../utils/constants.dart';
+
 import '../../widgets/sidebar_menu.dart';
 
 class MobileModuleConfig {
@@ -139,12 +139,23 @@ class MobileModuleConfig {
           fabText: 'Nouvel article',
           filterOptions: ['Tous', 'En stock', 'Rupture'], // Added defaults
         );
-      case AppModule.stockMovements:
       case AppModule.stockDashboard:
         return MobileModuleConfig(
-          title: 'Stock',
+          title: 'Vue d\'ensemble du Stock',
+          fabText: 'Nouvel ajustement',
+          filterOptions: [],
+        );
+      case AppModule.stockWithdrawal:
+        return MobileModuleConfig(
+          title: 'Prélèvements',
+          fabText: 'Nouveau prélèvement',
+          filterOptions: ['Tous', 'Brouillon', 'Validé', 'Annulé'],
+        );
+      case AppModule.stockMovements:
+        return MobileModuleConfig(
+          title: 'Mouvements de Stock',
           fabText: 'Nouveau mouvement',
-          filterOptions: ['Tous', 'Entrée', 'Sortie'], // Added defaults
+          filterOptions: ['Tous', 'Entrée', 'Sortie', 'Transfert', 'Ajustement'],
         );
       case AppModule.projects:
         return MobileModuleConfig(

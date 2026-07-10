@@ -404,7 +404,7 @@ enum MovementType {
   String get label {
     switch (this) {
       case entry:
-        return 'Entree';
+        return 'Entrée';
       case exit:
         return 'Sortie';
       case transfer:
