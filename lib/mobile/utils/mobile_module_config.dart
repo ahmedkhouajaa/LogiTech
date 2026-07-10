@@ -157,6 +157,18 @@ class MobileModuleConfig {
           fabText: 'Nouveau mouvement',
           filterOptions: ['Tous', 'Entrée', 'Sortie', 'Transfert', 'Ajustement'],
         );
+      case AppModule.stockTransfer:
+        return MobileModuleConfig(
+          title: 'Bons de transfert',
+          fabText: 'Nouveau transfert',
+          filterOptions: ['Tous', 'Brouillon', 'Validé', 'Annulé'],
+        );
+      case AppModule.inventorySheet:
+        return MobileModuleConfig(
+          title: 'Fiche d\'inventaire',
+          fabText: 'Nouvelle fiche',
+          filterOptions: ['Tous', 'Brouillon', 'Validé', 'Annulé'],
+        );
       case AppModule.projects:
         return MobileModuleConfig(
           title: 'Projets',

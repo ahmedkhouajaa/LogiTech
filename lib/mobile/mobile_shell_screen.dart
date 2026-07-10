@@ -12,6 +12,8 @@ import 'screens/mobile_customer_orders_screen.dart';
 import 'screens/mobile_delivery_notes_screen.dart';
 import 'screens/mobile_invoices_screen.dart';
 import 'screens/mobile_stock_withdrawals_screen.dart';
+import 'screens/mobile_stock_transfers_screen.dart';
+import 'screens/mobile_inventory_sheets_screen.dart';
 import 'screens/mobile_credit_notes_screen.dart';
 import 'screens/mobile_return_notes_screen.dart';
 import 'screens/mobile_supplier_orders_screen.dart';
@@ -29,6 +31,7 @@ import 'screens/mobile_stock_screen.dart';
 import 'screens/mobile_stock_movements_screen.dart';
 import 'screens/mobile_projects_screen.dart';
 import 'screens/mobile_withholding_tax_screen.dart';
+import 'screens/mobile_warehouses_screen.dart';
 
 
 // Placeholder screens for bottom nav tabs until full mobile screens are built
@@ -138,10 +141,14 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.withholdingTaxPurchase:
         return MobileWithholdingTaxScreen(isSales: _activeModule == AppModule.withholdingTaxSales);
       case AppModule.warehouses:
-        return const WarehousesScreen();
+        return const MobileWarehousesScreen();
       case AppModule.exitVouchers:
       case AppModule.stockWithdrawal:
         return MobileStockWithdrawalsScreen(activeModule: _activeModule);
+      case AppModule.stockTransfer:
+        return const MobileStockTransfersScreen();
+      case AppModule.inventorySheet:
+        return const MobileInventorySheetsScreen();
       case AppModule.returnVouchers:
         return const MobileReturnNotesScreen();
       case AppModule.creditNotes:
@@ -175,6 +182,10 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.deliveryNotes: return 'Bons de livraison';
       case AppModule.stockDashboard: return 'Stock';
       case AppModule.stockMovements: return 'Mouvements';
+      case AppModule.stockEntry: return 'Bons d\'entrée';
+      case AppModule.stockWithdrawal: return 'Prélèvements';
+      case AppModule.stockTransfer: return 'Bons de transfert';
+      case AppModule.inventorySheet: return 'Fiche d\'inventaire';
       case AppModule.transactions: return 'Transactions';
       case AppModule.checksTraites: return 'Cheques & Traites';
       case AppModule.projects: return 'Projets';

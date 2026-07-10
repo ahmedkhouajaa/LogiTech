@@ -81,6 +81,8 @@ class _MobileDrawerState extends State<MobileDrawer> {
                     _buildItem(AppModule.stockMovements, Icons.swap_horiz_rounded, 'Mouvements'),
                     _buildItem(AppModule.stockEntry, Icons.add_box_rounded, 'Bons d\'entree'),
                     _buildItem(AppModule.stockWithdrawal, Icons.outbox_rounded, 'Prelevements'),
+                    _buildItem(AppModule.stockTransfer, Icons.sync_alt_rounded, 'Bons de transfert'),
+                    _buildItem(AppModule.inventorySheet, Icons.fact_check_rounded, 'Fiche d\'inventaire'),
                     _buildItem(AppModule.warehouses, Icons.warehouse_rounded, 'Entrepots'),
                   ]),
                   const _DrawerDivider(),

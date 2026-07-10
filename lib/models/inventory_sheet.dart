@@ -49,6 +49,7 @@ class InventorySheet {
         'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
+        'items': items.map((i) => i.toMap()).toList(),
       };
 
   factory InventorySheet.fromMap(Map<String, dynamic> map, [List<InventorySheetItem>? items]) => InventorySheet(

@@ -123,7 +123,7 @@ class SyncService {
       final tablesToPull = [
         'customers', 'suppliers', 'products', 'invoices', 'quotes',
         'customer_orders', 'delivery_notes', 'return_notes', 'credit_notes',
-        'bons_sortie', 'stock_entries', 'receiving_vouchers', 'purchase_invoices', 'supplier_returns',
+        'bons_sortie', 'stock_entries', 'stock_transfers', 'inventory_sheets', 'receiving_vouchers', 'purchase_invoices', 'supplier_returns',
         'supplier_orders', 'supplier_credit_notes', 'stock_movements', 'projects',
         'transactions', 'check_traites', 'payment_accounts', 'product_families',
         'warehouses', 'treasury_accounts', 'payments', 'payment_allocations'
@@ -143,6 +143,8 @@ class SyncService {
         'supplier_returns': {'table': 'supplier_return_items', 'fk': 'return_id'},
         'supplier_orders': {'table': 'supplier_order_items', 'fk': 'order_id'},
         'supplier_credit_notes': {'table': 'supplier_credit_note_items', 'fk': 'supplier_credit_note_id'},
+        'stock_transfers': {'table': 'stock_transfer_items', 'fk': 'transfer_id'},
+        'inventory_sheets': {'table': 'inventory_sheet_items', 'fk': 'inventory_id'},
       };
 
       final db = await DatabaseHelper.instance.database;
