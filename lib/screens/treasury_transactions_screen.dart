@@ -5,6 +5,7 @@ import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../models/treasury_transaction.dart';
 import '../models/treasury_account.dart';
+import '../services/transaction_export_service.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/data_table_widget.dart';
@@ -46,6 +47,23 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
     _loadData();
   }
 
+  void _handleExport(String type) {
+    final state = context.read<TreasuryTransactionsBloc>().state;
+    if (state is TreasuryTransactionsLoaded) {
+      final filtered = state.transactions.where((t) {
+        if (_selectedAccountId != 'all' && t.accountId != _selectedAccountId) return false;
+        if (_selectedCategoryId != 'all' && t.category != _selectedCategoryId) return false;
+        return true;
+      }).toList();
+
+      if (type == 'pdf') {
+        TransactionExportService.exportToPdf(context, filtered);
+      } else if (type == 'excel') {
+        TransactionExportService.exportToExcel(context, filtered);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -73,17 +91,48 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                   ],
                 ),
               ),
-              OutlinedButton.icon(
-                onPressed: () {
-                  // Export functionality could go here
-                },
-                icon: const Icon(Icons.download_rounded, size: 18),
-                label: const Text('Exporter'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textPrimary,
-                  side: const BorderSide(color: AppColors.border),
+              PopupMenuButton<String>(
+                offset: const Offset(0, 45),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md), side: const BorderSide(color: AppColors.border)),
+                tooltip: 'Options d\'exportation',
+                child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(100), // Rounded pill shape like original outlined button
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.download_rounded, size: 18, color: AppColors.textPrimary),
+                      const SizedBox(width: 8),
+                      const Text('Exporter', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
                 ),
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'pdf',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.picture_as_pdf, size: 18),
+                        const SizedBox(width: 8),
+                        const Text('Exporter en PDF'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'excel',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.table_chart, size: 18),
+                        const SizedBox(width: 8),
+                        const Text('Exporter en Excel'),
+                      ],
+                    ),
+                  ),
+                ],
+                onSelected: _handleExport,
               ),
             ],
           ),

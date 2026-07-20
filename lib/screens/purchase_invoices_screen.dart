@@ -662,7 +662,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: iconColor),
+          Icon(icon, size: 18, color: const Color(0xFF64748B)),
           const SizedBox(width: 12),
           Text(text, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ],
@@ -732,7 +732,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         break;
       case 'pdf':
         final doc = DocumentWrapper.fromPurchaseInvoice(inv);
-        PdfService.instance.generateAndOpenDocument(doc);
+        PdfService.instance.downloadDocument(context, doc);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));

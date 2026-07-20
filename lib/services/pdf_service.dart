@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
@@ -10,6 +11,7 @@ import '../models/project.dart'; // Contains CompanySettings
 import '../models/document_template.dart';
 import '../models/canvas/canvas_element.dart';
 import '../utils/helpers.dart';
+import '../utils/platform_utils.dart';
 import '../database/database_helper.dart';
 import 'canvas_pdf_generator.dart';
 
@@ -78,12 +80,184 @@ class PdfService {
 
   Future<void> generateAndOpenDocument(DocumentWrapper document, {DocumentTemplate? template}) async {
     final bytes = await generateDocumentBytes(document, template: template);
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/${document.number}.pdf');
+    final fileName = '${document.number}.pdf';
+    
+    // Save to platform Downloads folder
+    final downloadsDir = await _getDownloadsDirectory();
+    final file = File('${downloadsDir.path}/$fileName');
     await file.writeAsBytes(bytes);
     
-    // Open the generated PDF (requires open_filex package)
+    // Open the generated PDF
     await OpenFilex.open(file.path);
+  }
+
+  /// Downloads PDF to the platform's Downloads folder and shows feedback via SnackBar.
+  /// Use this from screens that have a BuildContext available.
+  Future<void> downloadDocument(BuildContext context, DocumentWrapper document, {DocumentTemplate? template}) async {
+    try {
+      final bytes = await generateDocumentBytes(document, template: template);
+      final fileName = '${document.number}.pdf';
+      
+      final downloadsDir = await _getDownloadsDirectory();
+      final file = File('${downloadsDir.path}/$fileName');
+      await file.writeAsBytes(bytes);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.picture_as_pdf, color: Colors.redAccent, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        fileName,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 14),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Téléchargé avec succès',
+                            style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    OpenFilex.open(file.path);
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.white.withOpacity(0.1),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                  child: const Text('Ouvrir'),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+                  onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+                  splashRadius: 20,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF282A2D),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+            ),
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            duration: const Duration(seconds: 5),
+            elevation: 4,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.error_outline, color: Colors.redAccent, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Erreur de téléchargement',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 14),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        e.toString(),
+                        style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+                  onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+                  splashRadius: 20,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF282A2D),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.redAccent.withOpacity(0.3), width: 1),
+            ),
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            duration: const Duration(seconds: 5),
+            elevation: 4,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Returns the platform's public Downloads directory.
+  Future<Directory> _getDownloadsDirectory() async {
+    if (PlatformUtils.isAndroid) {
+      // Android: use the public Downloads directory
+      final dir = Directory('/storage/emulated/0/Download');
+      if (await dir.exists()) return dir;
+      // Fallback to external storage
+      final extDir = await getExternalStorageDirectory();
+      if (extDir != null) return extDir;
+      return await getApplicationDocumentsDirectory();
+    } else if (PlatformUtils.isWindows) {
+      // Windows: use USERPROFILE/Downloads
+      final userProfile = Platform.environment['USERPROFILE'];
+      if (userProfile != null) {
+        final dir = Directory('$userProfile\\Downloads');
+        if (await dir.exists()) return dir;
+      }
+      // Fallback to getDownloadsDirectory from path_provider
+      final dir = await getDownloadsDirectory();
+      if (dir != null) return dir;
+      return await getApplicationDocumentsDirectory();
+    }
+    // Fallback for other platforms
+    return await getApplicationDocumentsDirectory();
   }
 
   Future<void> printDocument(DocumentWrapper document, {DocumentTemplate? template}) async {

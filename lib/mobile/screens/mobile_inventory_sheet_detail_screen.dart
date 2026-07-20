@@ -207,9 +207,9 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
     return PopupMenuItem(
       value: value,
       child: Row(children: [
-        Icon(icon, size: 16, color: color),
+        Icon(icon, size: 16, color: const Color(0xFF64748B)),
         const SizedBox(width: 8),
-        Text(text, style: TextStyle(color: color)),
+        Text(text, style: TextStyle(color: const Color(0xFF64748B))),
       ]),
     );
   }

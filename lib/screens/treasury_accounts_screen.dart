@@ -183,19 +183,16 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                           ),
                         ),
                         DataCell(
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit_rounded, size: 18, color: AppColors.textSecondary),
-                                onPressed: () => _showAccountDialog(context, acc),
-                                tooltip: 'Modifier',
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
-                                onPressed: () => context.read<TreasuryAccountsBloc>().add(DeleteTreasuryAccount(acc.id)),
-                                tooltip: 'Supprimer',
-                              ),
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+                            onSelected: (val) => _handleAction(context, val, acc, state is TreasuryAccountsLoaded ? state.accounts : []),
+                            itemBuilder: (_) => [
+                              _buildMenuItem('depot', Icons.file_upload_outlined, 'Dépôt'),
+                              _buildMenuItem('transfer', Icons.swap_horiz_outlined, 'Transférer'),
+                              const PopupMenuDivider(height: 1),
+                              _buildMenuItem('edit', Icons.edit_outlined, 'Modifier'),
+                              const PopupMenuDivider(height: 1),
+                              _buildMenuItem('delete', Icons.delete_outline, 'Supprimer', isDestructive: true),
                             ],
                           ),
                         ),
@@ -211,6 +208,81 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
         const SizedBox(height: AppSpacing.lg),
       ],
     );
+  }
+
+  PopupMenuItem<String> _buildMenuItem(String value, IconData icon, String text, {bool isDestructive = false}) {
+    final color = isDestructive ? AppColors.error : const Color(0xFF64748B);
+    return PopupMenuItem<String>(
+      value: value,
+      height: 40,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 12),
+          Text(text, style: TextStyle(fontSize: 14, color: isDestructive ? AppColors.error : AppColors.textPrimary)),
+        ],
+      ),
+    );
+  }
+
+  void _handleAction(BuildContext context, String action, TreasuryAccount account, List<TreasuryAccount> allAccounts) {
+    switch (action) {
+      case 'depot':
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+              BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+            ],
+            child: _CreateDepositDialog(
+              selectedAccountId: account.id,
+              accounts: allAccounts,
+            ),
+          ),
+        );
+        break;
+      case 'transfer':
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+              BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+            ],
+            child: _CreateTransferDialog(
+              selectedAccountId: account.id,
+              accounts: allAccounts,
+            ),
+          ),
+        );
+        break;
+      case 'edit':
+        _showAccountDialog(context, account);
+        break;
+      case 'delete':
+        showDialog(
+          context: context,
+          builder: (dialogCtx) => AlertDialog(
+            title: const Text('Confirmer la suppression'),
+            content: const Text('Voulez-vous vraiment supprimer ce compte de trésorerie ?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(dialogCtx);
+                  context.read<TreasuryAccountsBloc>().add(DeleteTreasuryAccount(account.id));
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        );
+        break;
+    }
   }
 }
 
@@ -1014,3 +1086,481 @@ class _ManageExpenseCategoriesDialogState extends State<_ManageExpenseCategories
     );
   }
 }
+
+class _CreateDepositDialog extends StatefulWidget {
+  final String selectedAccountId;
+  final List<TreasuryAccount> accounts;
+
+  const _CreateDepositDialog({
+    required this.selectedAccountId,
+    required this.accounts,
+  });
+
+  @override
+  State<_CreateDepositDialog> createState() => _CreateDepositDialogState();
+}
+
+class _CreateDepositDialogState extends State<_CreateDepositDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late String _selectedAccountId;
+  late final TextEditingController _amountCtrl;
+  late final TextEditingController _reasonCtrl;
+  DateTime _date = DateTime.now();
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedAccountId = widget.selectedAccountId;
+    _amountCtrl = TextEditingController();
+    _reasonCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _reasonCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSubmitting = true);
+    
+    try {
+      final amount = double.parse(_amountCtrl.text.replaceAll(',', '.'));
+      final account = widget.accounts.firstWhere((a) => a.id == _selectedAccountId);
+      
+      // Create transaction (databaseHelper automatically updates the account balance)
+      final transaction = TreasuryTransaction(
+        transactionNumber: 'DEP-${DateTime.now().millisecondsSinceEpoch}',
+        accountId: _selectedAccountId,
+        type: 'income',
+        amount: amount,
+        dateTransaction: _date,
+        description: _reasonCtrl.text.isEmpty ? 'Dépôt' : _reasonCtrl.text,
+        category: 'other',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(transaction));
+      
+      // Reload accounts to reflect the DB balance update
+      context.read<TreasuryAccountsBloc>().add(LoadTreasuryAccounts());
+      
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error));
+      setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Nouveau Dépôt'),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+            splashRadius: 20,
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 500,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Montant', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _amountCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  hintText: '0',
+                  suffixText: 'DT',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                validator: (val) {
+                  if (val == null || val.isEmpty) return 'Requis';
+                  if (double.tryParse(val.replaceAll(',', '.')) == null) return 'Montant invalide';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              const Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _date,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (picked != null) {
+                    setState(() => _date = picked);
+                  }
+                },
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(DateFormat('dd MMMM yyyy', 'fr').format(_date)),
+                      const Icon(Icons.calendar_today_outlined, size: 20, color: AppColors.textSecondary),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              const Text('Compte de Trésorerie', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _selectedAccountId,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                items: widget.accounts.map((acc) {
+                  return DropdownMenuItem(
+                    value: acc.id,
+                    child: Text('${acc.name} (${acc.currency})'),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _selectedAccountId = val);
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              const Text('Raison', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _reasonCtrl,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Entrez la raison ou la description du dépôt',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.textSecondary,
+            side: const BorderSide(color: AppColors.border),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: const Text('Fermer'),
+        ),
+        ElevatedButton.icon(
+          onPressed: _isSubmitting ? null : _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2563EB), // Blue button from image 3
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          icon: _isSubmitting 
+            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            : const Icon(Icons.save_outlined, size: 18, color: Colors.white),
+          label: const Text('Créer', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
+  }
+}
+
+class _CreateTransferDialog extends StatefulWidget {
+  final String selectedAccountId;
+  final List<TreasuryAccount> accounts;
+
+  const _CreateTransferDialog({
+    required this.selectedAccountId,
+    required this.accounts,
+  });
+
+  @override
+  State<_CreateTransferDialog> createState() => _CreateTransferDialogState();
+}
+
+class _CreateTransferDialogState extends State<_CreateTransferDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late String _selectedAccountId;
+  String? _destinationAccountId;
+  late final TextEditingController _amountCtrl;
+  late final TextEditingController _reasonCtrl;
+  DateTime _date = DateTime.now();
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedAccountId = widget.selectedAccountId;
+    _amountCtrl = TextEditingController();
+    _reasonCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _reasonCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_destinationAccountId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un compte destination'), backgroundColor: AppColors.error));
+      return;
+    }
+    if (_selectedAccountId == _destinationAccountId) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Le compte source et destination doivent être différents'), backgroundColor: AppColors.error));
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    
+    try {
+      final amount = double.parse(_amountCtrl.text.replaceAll(',', '.'));
+      final destAccount = widget.accounts.firstWhere((a) => a.id == _destinationAccountId);
+      final reason = _reasonCtrl.text.isEmpty ? 'Virement vers ${destAccount.name}' : _reasonCtrl.text;
+      final ts = DateTime.now().millisecondsSinceEpoch;
+
+      // Expense from source
+      final txOut = TreasuryTransaction(
+        transactionNumber: 'VIR-OUT-$ts',
+        accountId: _selectedAccountId,
+        type: 'expense',
+        amount: amount,
+        dateTransaction: _date,
+        description: reason,
+        category: 'other', // Virement
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      
+      // Income to destination
+      final txIn = TreasuryTransaction(
+        transactionNumber: 'VIR-IN-$ts',
+        accountId: _destinationAccountId!,
+        type: 'income',
+        amount: amount,
+        dateTransaction: _date,
+        description: reason,
+        category: 'other', // Virement
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      
+      context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(txOut));
+      context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(txIn));
+      
+      // Reload accounts to reflect the DB balance update
+      context.read<TreasuryAccountsBloc>().add(LoadTreasuryAccounts());
+      
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error));
+      setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Nouveau Virement'),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+            splashRadius: 20,
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 500,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Montant', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _amountCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: InputDecoration(
+                            hintText: '0',
+                            suffixText: 'DT',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          ),
+                          validator: (val) {
+                            if (val == null || val.isEmpty) return 'Requis';
+                            if (double.tryParse(val.replaceAll(',', '.')) == null) return 'Invalide';
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Date', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _date,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) {
+                              setState(() => _date = picked);
+                            }
+                          },
+                          child: InputDecorator(
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(DateFormat('dd MMMM yyyy', 'fr').format(_date)),
+                                const Icon(Icons.calendar_today_outlined, size: 20, color: AppColors.textSecondary),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              const Text('Compte Source', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _selectedAccountId,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                items: widget.accounts.map((acc) {
+                  return DropdownMenuItem(
+                    value: acc.id,
+                    child: Text('${acc.name} (${acc.currency})'),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      _selectedAccountId = val;
+                      if (_destinationAccountId == val) {
+                        _destinationAccountId = null;
+                      }
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+
+              const Text('Compte Destination', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _destinationAccountId,
+                hint: const Text('Sélectionner le compte destination'),
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                items: widget.accounts.where((acc) => acc.id != _selectedAccountId).map((acc) {
+                  return DropdownMenuItem(
+                    value: acc.id,
+                    child: Text('${acc.name} (${acc.currency})'),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _destinationAccountId = val);
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              const Text('Raison', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _reasonCtrl,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Entrez la raison ou la description du virement',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton.icon(
+          onPressed: () => Navigator.pop(context),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.textSecondary,
+            side: const BorderSide(color: AppColors.border),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          icon: const Icon(Icons.close, size: 16),
+          label: const Text('Fermer'),
+        ),
+        ElevatedButton.icon(
+          onPressed: _isSubmitting ? null : _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2563EB), // Blue button from image 3
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+          icon: _isSubmitting 
+            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            : const Icon(Icons.save_outlined, size: 18, color: Colors.white),
+          label: const Text('Confirmer', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
+  }
+}
+

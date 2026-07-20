@@ -789,7 +789,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: iconColor),
+          Icon(icon, size: 18, color: const Color(0xFF64748B)),
           const SizedBox(width: 12),
           Text(text, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ],
@@ -810,7 +810,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
         break;
       case 'pdf':
         final doc = DocumentWrapper.fromDeliveryNote(note);
-        PdfService.instance.generateAndOpenDocument(doc);
+        PdfService.instance.downloadDocument(context, doc);
         break;
             case 'print':
         final doc = DocumentWrapper.fromDeliveryNote(note);

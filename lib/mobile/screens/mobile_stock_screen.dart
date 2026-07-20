@@ -9,6 +9,8 @@ import '../../models/stock_movement.dart';
 import '../../models/product.dart';
 import 'forms/mobile_stock_adjustment_form.dart';
 import '../../services/sync_service.dart';
+import '../../screens/stock_screen.dart';
+import '../../services/stock_export_service.dart';
 class MobileStockScreen extends StatefulWidget {
   const MobileStockScreen({super.key});
 
@@ -223,7 +225,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
     List<Product> products,
   ) {
     // Calculate stock levels per product/warehouse (same logic as desktop)
-    List<_StockLevelItem> items = [];
+    List<StockLevelItem> items = [];
     for (var p in products) {
       for (var w in warehouses) {
         double stock = 0;
@@ -239,7 +241,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
             }
           }
         }
-        items.add(_StockLevelItem(product: p, warehouse: w, quantity: stock));
+        items.add(StockLevelItem(product: p, warehouse: w, quantity: stock));
       }
     }
 
@@ -259,17 +261,70 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              const Text(
-                'Niveaux de Stock Actuels',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Niveaux de Stock Actuels',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${filteredItems.length} produits',
+                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                '${filteredItems.length} produits',
-                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'pdf') {
+                    await StockExportService.exportToPdf(context, items);
+                  } else if (value == 'excel') {
+                    await StockExportService.exportToExcel(context, items);
+                  }
+                },
+                offset: const Offset(0, 40),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'pdf',
+                    child: Row(
+                      children: [
+                        Icon(Icons.picture_as_pdf, size: 18),
+                        SizedBox(width: 8),
+                        Text('Exporter en PDF'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'excel',
+                    child: Row(
+                      children: [
+                        Icon(Icons.table_chart, size: 18),
+                        SizedBox(width: 8),
+                        Text('Exporter en Excel'),
+                      ],
+                    ),
+                  ),
+                ],
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.download_rounded, size: 16, color: AppColors.textPrimary),
+                      SizedBox(width: 6),
+                      Text('Exporter', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),

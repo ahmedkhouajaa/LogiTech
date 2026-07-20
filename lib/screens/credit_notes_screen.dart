@@ -520,7 +520,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                                                     context.read<CreditNotesBloc>().add(DeleteCreditNote(note.id));
                                                   } else if (val == 'pdf') {
                                                     final doc = DocumentWrapper.fromCreditNote(note);
-                                                    PdfService.instance.generateAndOpenDocument(doc);
+                                                    PdfService.instance.downloadDocument(context, doc);
                                                   } else if (val == 'print') {
                                                     final doc = DocumentWrapper.fromCreditNote(note);
                                                     Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
@@ -638,7 +638,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: iconColor),
+          Icon(icon, size: 18, color: const Color(0xFF64748B)),
           const SizedBox(width: 12),
           Text(text, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ],

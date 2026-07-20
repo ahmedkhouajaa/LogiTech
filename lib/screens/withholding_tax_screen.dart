@@ -299,7 +299,7 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
                   } else if (val == 'pdf') {
                     final doc = DocumentWrapper.fromWithholdingTax(p, widget.isSales);
-                    PdfService.instance.generateAndOpenDocument(doc);
+                    PdfService.instance.downloadDocument(context, doc);
                   }
                 },
                 itemBuilder: (_) => [

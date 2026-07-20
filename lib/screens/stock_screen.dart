@@ -10,6 +10,7 @@ import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
+import '../services/stock_export_service.dart';
 
 class StockScreen extends StatefulWidget {
   const StockScreen({super.key});
@@ -696,13 +697,51 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                     ],
                   ),
                 ),
-                OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.download_rounded, size: 16),
-                  label: const Text('Exporter'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
-                    side: const BorderSide(color: AppColors.border),
+                PopupMenuButton<String>(
+                  onSelected: (value) async {
+                    if (value == 'pdf') {
+                      await StockExportService.exportToPdf(context, items);
+                    } else if (value == 'excel') {
+                      await StockExportService.exportToExcel(context, items);
+                    }
+                  },
+                  offset: const Offset(0, 40),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'pdf',
+                      child: Row(
+                        children: [
+                          Icon(Icons.picture_as_pdf, size: 18),
+                          SizedBox(width: 8),
+                          Text('Exporter en PDF'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'excel',
+                      child: Row(
+                        children: [
+                          Icon(Icons.table_chart, size: 18),
+                          SizedBox(width: 8),
+                          Text('Exporter en Excel'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.download_rounded, size: 16, color: AppColors.textPrimary),
+                        SizedBox(width: 8),
+                        Text('Exporter', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
                   ),
                 ),
               ],

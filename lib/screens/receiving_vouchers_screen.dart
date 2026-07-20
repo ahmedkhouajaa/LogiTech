@@ -553,7 +553,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                     }
                                                   } else if (val == 'pdf') {
                                                     final doc = DocumentWrapper.fromReceivingVoucher(voucher);
-                                                    PdfService.instance.generateAndOpenDocument(doc);
+                                                    PdfService.instance.downloadDocument(context, doc);
                                                   } else if (val == 'payment') {
                                                     showDialog(
                                                       context: context,
@@ -922,7 +922,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: iconColor),
+            Icon(icon, size: 18, color: const Color(0xFF64748B)),
             const SizedBox(width: 12),
             Expanded(
               child: Text(

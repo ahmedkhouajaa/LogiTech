@@ -64,9 +64,9 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
       value: val,
       child: Row(
         children: [
-          Icon(icon, color: color, size: 20),
+          Icon(icon, color: const Color(0xFF64748B), size: 20),
           const SizedBox(width: 8),
-          Text(text, style: TextStyle(color: color)),
+          Text(text, style: TextStyle(color: const Color(0xFF64748B))),
         ],
       ),
     );

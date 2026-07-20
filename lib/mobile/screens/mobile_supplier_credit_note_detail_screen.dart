@@ -224,7 +224,7 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: iconColor),
+          Icon(icon, size: 18, color: const Color(0xFF64748B)),
           const SizedBox(width: 12),
           Text(text, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
         ],
@@ -297,7 +297,7 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
         break;
       case 'pdf':
         final doc = DocumentWrapper.fromSupplierCreditNote(note);
-        PdfService.instance.generateAndOpenDocument(doc);
+        PdfService.instance.downloadDocument(context, doc);
         break;
       case 'print':
         final doc = DocumentWrapper.fromSupplierCreditNote(note);

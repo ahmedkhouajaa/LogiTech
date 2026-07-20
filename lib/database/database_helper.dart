@@ -4177,6 +4177,15 @@ class DatabaseHelper {
   // ─── Treasury Accounts ───────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> getTreasuryAccounts() async {
     final db = await database;
+    // Auto-sync account balances with their actual transactions sum to prevent any desync issues
+    await db.rawUpdate('''
+      UPDATE treasury_accounts
+      SET balance = COALESCE((
+        SELECT SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END)
+        FROM treasury_transactions
+        WHERE account_id = treasury_accounts.id
+      ), 0.0)
+    ''');
     return await db.query('treasury_accounts', orderBy: 'is_default DESC, name ASC');
   }
 
