@@ -331,6 +331,50 @@ class DocumentWrapper {
       ],
     );
   }
+
+  static DocumentWrapper fromStockTransfer(dynamic transfer) {
+    return DocumentWrapper(
+      id: transfer.id,
+      number: transfer.number,
+      documentTitle: 'BON DE TRANSFERT',
+      customerName: 'Inter-Entrepôts',
+      date: transfer.date,
+      totalHT: 0,
+      totalTva: 0,
+      totalTTC: 0,
+      notes: transfer.notes,
+      items: (transfer.items as List).map((i) => DocumentItemWrapper(
+        productName: i.productName ?? 'Produit Inconnu',
+        quantity: i.quantityToTransfer,
+        unitPrice: 0,
+        tvaRate: 0,
+        discountPercent: 0,
+        totalHT: 0,
+      )).toList(),
+    );
+  }
+
+  static DocumentWrapper fromInventorySheet(dynamic sheet) {
+    return DocumentWrapper(
+      id: sheet.id,
+      number: sheet.number,
+      documentTitle: 'FICHE D\'INVENTAIRE',
+      customerName: 'Ajustement de stock',
+      date: sheet.date,
+      totalHT: 0,
+      totalTva: 0,
+      totalTTC: 0,
+      notes: sheet.notes,
+      items: (sheet.items as List).map((i) => DocumentItemWrapper(
+        productName: i.productName ?? 'Produit Inconnu',
+        quantity: i.actualQty,
+        unitPrice: 0,
+        tvaRate: 0,
+        discountPercent: 0,
+        totalHT: 0,
+      )).toList(),
+    );
+  }
 }
 
 class DocumentItemWrapper {

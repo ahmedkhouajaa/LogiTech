@@ -93,7 +93,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         // Filter bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: _buildFilterBar(),
+          child: BlocBuilder<InvoicesBloc, InvoicesState>(
+            builder: (context, state) {
+              return _buildFilterBar(state);
+            },
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         // Data table
@@ -108,7 +112,30 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     );
   }
 
-  Widget _buildFilterBar() {
+  Widget _buildFilterBar(InvoicesState state) {
+    int totalItems = 0;
+    if (state is InvoicesLoaded) {
+      List<Invoice> filteredInvoices = state.invoices;
+      if (_selectedClientId != null) {
+        filteredInvoices = filteredInvoices.where((i) => i.customerId == _selectedClientId).toList();
+      }
+      if (_dateFrom != null) {
+        filteredInvoices = filteredInvoices.where((i) => i.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
+      }
+      if (_dateTo != null) {
+        filteredInvoices = filteredInvoices.where((i) => i.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
+      }
+      if (_statusFilter != null) {
+        filteredInvoices = filteredInvoices.where((i) => i.status == _statusFilter).toList();
+      }
+      totalItems = filteredInvoices.length;
+    }
+
+    final activeFilterCount = (_selectedClientId != null ? 1 : 0) +
+        (_dateFrom != null ? 1 : 0) +
+        (_dateTo != null ? 1 : 0) +
+        (_statusFilter != null ? 1 : 0);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -117,9 +144,12 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         border: Border.all(color: AppColors.border),
         boxShadow: AppShadows.sm,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Client filter
+          Row(
+            children: [
+              // Client filter
           Expanded(
             flex: 2,
             child: _buildFilterField(
@@ -248,6 +278,46 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           ),
         ],
       ),
+      if (activeFilterCount > 0)
+        Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '$totalItems résultat${totalItems > 1 ? 's' : ''}',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _selectedClientId = null;
+                    _dateFrom = null;
+                    _dateTo = null;
+                    _statusFilter = null;
+                    _currentPage = 0;
+                  });
+                  context.read<InvoicesBloc>().add(LoadInvoices());
+                },
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: const Text('Réinitialiser les filtres'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
     );
   }
 

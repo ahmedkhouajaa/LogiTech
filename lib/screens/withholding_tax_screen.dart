@@ -64,93 +64,189 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Toolbar
-            Container(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
-              color: AppColors.surface,
-              child: Column(
+          children: [            // Toolbar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: _SearchField(
-                          hint: 'Rechercher par ref. facture ou certificat..',
-                          icon: Icons.search_rounded,
-                          value: _searchQuery,
-                          onChanged: (v) => setState(() {
-                            _searchQuery = v;
-                            _page = 0;
-                          }),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Dummy dropdowns and date pickers to match screenshot
-                      Expanded(
-                        flex: 3,
-                        child: Container(
-                          height: 40,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            border: Border.all(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  widget.isSales ? 'Rechercher un client...' : 'Rechercher un fournisseur...',
-                                  style: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                                ),
-                              ),
-                              const Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Date Du
-                      Expanded(
-                        flex: 2,
-                        child: _buildDateDummy('Choisir une date', Icons.calendar_today_rounded),
-                      ),
-                      const SizedBox(width: 12),
-                      // Date Au
-                      Expanded(
-                        flex: 2,
-                        child: _buildDateDummy('Choisir une date', Icons.calendar_today_rounded),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Bottom toolbar row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      // Export Button
-                      ElevatedButton.icon(
-                        onPressed: () {
-                           ScaffoldMessenger.of(context).showSnackBar(
-                             const SnackBar(content: Text('Export TEJ bientôt disponible')),
-                           );
-                        },
-                        icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.textSecondary),
-                        label: const Text('Export TEJ', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.surfaceAlt,
-                          elevation: 0,
-                          side: const BorderSide(color: AppColors.border),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                        ),
-                      ),
-                    ],
+                  // Export Button
+                  ElevatedButton.icon(
+                    onPressed: () {
+                       ScaffoldMessenger.of(context).showSnackBar(
+                         const SnackBar(content: Text('Export TEJ bientôt disponible')),
+                       );
+                    },
+                    icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.textSecondary),
+                    label: const Text('Export TEJ', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.surfaceAlt,
+                      elevation: 0,
+                      side: const BorderSide(color: AppColors.border),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
+                ),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Recherche',
+                                  style: TextStyle(
+                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 40,
+                                child: _SearchField(
+                                  hint: 'Rechercher par ref. facture ou certificat..',
+                                  icon: Icons.search_rounded,
+                                  value: _searchQuery,
+                                  onChanged: (v) => setState(() {
+                                    _searchQuery = v;
+                                    _page = 0;
+                                  }),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        // Dummy dropdowns and date pickers to match screenshot
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(widget.isSales ? 'Client' : 'Fournisseur',
+                                  style: const TextStyle(
+                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 40,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    border: Border.all(color: AppColors.border),
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          widget.isSales ? 'Rechercher un client...' : 'Rechercher un fournisseur...',
+                                          style: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                                        ),
+                                      ),
+                                      const Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        // Date Du
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Date de début',
+                                  style: TextStyle(
+                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 40,
+                                child: _buildDateDummy('Choisir une date', Icons.calendar_today_rounded),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        // Date Au
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Date de fin',
+                                  style: TextStyle(
+                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 40,
+                                child: _buildDateDummy('Choisir une date', Icons.calendar_today_rounded),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_searchQuery.isNotEmpty) // Placeholder logic for active filter
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '${filtered.length} résultat${filtered.length > 1 ? 's' : ''}',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                              ),
+                            ),
+                            const Spacer(),
+                            TextButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _searchQuery = '';
+                                  _page = 0;
+                                });
+                              },
+                              icon: const Icon(Icons.refresh_rounded, size: 16),
+                              label: const Text('Réinitialiser les filtres'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.textSecondary,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
 
             // Table
             Expanded(

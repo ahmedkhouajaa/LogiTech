@@ -141,145 +141,195 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
         // Filter Bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  SizedBox(
-                    width: 200,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Compte de Tresorerie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                      const SizedBox(height: 8),
-                      BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
-                        builder: (context, state) {
-                          List<DropdownMenuItem<String>> items = [
-                            const DropdownMenuItem(value: 'all', child: Text('Tous les Comptes')),
-                          ];
-                          if (state is TreasuryAccountsLoaded) {
-                            items.addAll(state.accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))));
-                          }
-                          return DropdownButtonFormField<String>(
-                            value: _selectedAccountId,
-                            decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-                            isExpanded: true,
-                            items: items,
-                            onChanged: (val) {
-                              if (val != null) setState(() => _selectedAccountId = val);
-                            },
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+          child: BlocBuilder<TreasuryTransactionsBloc, TreasuryTransactionsState>(
+            builder: (context, state) {
+              List<TreasuryTransaction> transactions = [];
+              if (state is TreasuryTransactionsLoaded) {
+                transactions = state.transactions;
+              }
+              final filtered = transactions.where((t) {
+                if (_selectedAccountId != 'all' && t.accountId != _selectedAccountId) return false;
+                if (_selectedCategoryId != 'all' && t.category != _selectedCategoryId) return false;
+                return true;
+              }).toList();
+
+              return Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
                 ),
-                const SizedBox(width: 16),
-                SizedBox(
-                  width: 200,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Categorie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                      const SizedBox(height: 8),
-                      BlocBuilder<TreasuryTransactionsBloc, TreasuryTransactionsState>(
-                        builder: (context, state) {
-                          List<DropdownMenuItem<String>> items = [
-                            const DropdownMenuItem(value: 'all', child: Text('Toutes les Categories')),
-                          ];
-                          if (state is TreasuryTransactionsLoaded) {
-                            items.addAll(state.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))));
-                          }
-                          return DropdownButtonFormField<String>(
-                            value: _selectedCategoryId,
-                            decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-                            isExpanded: true,
-                            items: items,
-                            onChanged: (val) {
-                              if (val != null) setState(() => _selectedCategoryId = val);
-                            },
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                SizedBox(
-                  width: 150,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Date de debut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        readOnly: true,
-                        controller: TextEditingController(text: DateFormat('dd MMM yyyy', 'fr_FR').format(_startDate)),
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.calendar_today_rounded, size: 16),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Compte de Tresorerie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              const SizedBox(height: 8),
+                              BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+                                builder: (context, accountState) {
+                                  List<DropdownMenuItem<String>> items = [
+                                    const DropdownMenuItem(value: 'all', child: Text('Tous les Comptes')),
+                                  ];
+                                  if (accountState is TreasuryAccountsLoaded) {
+                                    items.addAll(accountState.accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))));
+                                  }
+                                  return SizedBox(
+                                    height: 40,
+                                    child: DropdownButtonFormField<String>(
+                                      value: _selectedAccountId,
+                                      decoration: InputDecoration(
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                      ),
+                                      isExpanded: true,
+                                      items: items,
+                                      onChanged: (val) {
+                                        if (val != null) setState(() => _selectedAccountId = val);
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                        onTap: () async {
-                          final picked = await showDatePicker(context: context, initialDate: _startDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
-                          if (picked != null) {
-                            setState(() => _startDate = picked);
-                            _loadData();
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                SizedBox(
-                  width: 150,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Date de fin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        readOnly: true,
-                        controller: TextEditingController(text: DateFormat('dd MMM yyyy', 'fr_FR').format(_endDate)),
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.calendar_today_rounded, size: 16),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Categorie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 40,
+                                child: DropdownButtonFormField<String>(
+                                  value: _selectedCategoryId,
+                                  decoration: InputDecoration(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                  ),
+                                  isExpanded: true,
+                                  items: [
+                                    const DropdownMenuItem(value: 'all', child: Text('Toutes les Categories')),
+                                    if (state is TreasuryTransactionsLoaded)
+                                      ...state.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
+                                  ],
+                                  onChanged: (val) {
+                                    if (val != null) setState(() => _selectedCategoryId = val);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        onTap: () async {
-                          final picked = await showDatePicker(context: context, initialDate: _endDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
-                          if (picked != null) {
-                            setState(() => _endDate = picked);
-                            _loadData();
-                          }
-                        },
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Date de debut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 40,
+                                child: TextFormField(
+                                  readOnly: true,
+                                  controller: TextEditingController(text: DateFormat('dd MMM yyyy', 'fr_FR').format(_startDate)),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(Icons.calendar_today_rounded, size: 16),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                  ),
+                                  onTap: () async {
+                                    final picked = await showDatePicker(context: context, initialDate: _startDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
+                                    if (picked != null) {
+                                      setState(() => _startDate = picked);
+                                      _loadData();
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Date de fin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 40,
+                                child: TextFormField(
+                                  readOnly: true,
+                                  controller: TextEditingController(text: DateFormat('dd MMM yyyy', 'fr_FR').format(_endDate)),
+                                  decoration: InputDecoration(
+                                    prefixIcon: const Icon(Icons.calendar_today_rounded, size: 16),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                  ),
+                                  onTap: () async {
+                                    final picked = await showDatePicker(context: context, initialDate: _endDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
+                                    if (picked != null) {
+                                      setState(() => _endDate = picked);
+                                      _loadData();
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_selectedAccountId != 'all' || _selectedCategoryId != 'all')
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '${filtered.length} résultat${filtered.length > 1 ? 's' : ''}',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                              ),
+                            ),
+                            const Spacer(),
+                            TextButton.icon(
+                              onPressed: _resetFilters,
+                              icon: const Icon(Icons.refresh_rounded, size: 16),
+                              label: const Text('Réinitialiser les filtres'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.textSecondary,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.border),
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.tune_rounded, color: AppColors.textSecondary),
-                    onPressed: _resetFilters,
-                    tooltip: 'Reinitialiser les filtres',
-                  ),
-                ),
-              ],
-            ),
-          ),
+              );
+            },
           ),
         ),
         const SizedBox(height: AppSpacing.lg),

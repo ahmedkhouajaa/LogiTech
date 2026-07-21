@@ -120,6 +120,7 @@ class _MobileWithholdingTaxScreenState extends State<MobileWithholdingTaxScreen>
           isLoading: isLoading,
           isEmpty: isEmpty,
           emptyMessage: 'Aucune retenue à la source trouvée.',
+          itemCount: cards.length,
           fabText: _config.fabText,
           onFabPressed: () {
              ScaffoldMessenger.of(context).showSnackBar(

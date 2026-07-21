@@ -87,6 +87,17 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
       return;
     }
 
+    final seenProducts = <String>{};
+    for (var item in validItems) {
+      if (seenProducts.contains(item.productId)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur: Ce produit est déjà ajouté dans une autre ligne')),
+        );
+        return;
+      }
+      seenProducts.add(item.productId);
+    }
+
     final entry = StockWithdrawal(
       id: widget.existing?.id,
       number: widget.existing?.number ?? '',
@@ -556,8 +567,11 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
           Row(
             children: [
               Expanded(
-                child: Container(
-                  height: 40,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 40,
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(4),
@@ -621,9 +635,16 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                     },
                   ),
                 ),
-              ),
+                if (_items.where((i) => i.productId == item.productId && i.productId.isNotEmpty).length > 1)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 4.0),
+                    child: Text('Ce produit est déjà ajouté dans une autre ligne', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                  ),
               ],
             ),
+          ),
+        ],
+      ),
           const SizedBox(height: 12),
           // Quantities row
           Row(
@@ -735,8 +756,11 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                     child: Row(
                       children: [
                         Expanded(
-                          child: Container(
-                            height: 40,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 40,
                             decoration: BoxDecoration(
                               color: AppColors.surface,
                               borderRadius: BorderRadius.circular(4),
@@ -800,10 +824,17 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                               },
                             ),
                           ),
-                        ),
-                      ],
+                          if (_items.where((i) => i.productId == item.productId && i.productId.isNotEmpty).length > 1)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 4.0),
+                              child: Text('Ce produit est déjà ajouté dans une autre ligne', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
+                ),
+              ),
                   const SizedBox(width: 16),
                   
                   // Qté en stock

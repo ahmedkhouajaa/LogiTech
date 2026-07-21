@@ -167,7 +167,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                       border: Border.all(color: AppColors.border),
                     ),
                     child: DataTableWidget<TreasuryAccount>(
-                      columns: const ['Nom du Compte', 'Type', 'Solde', 'Actions'],
+                      columns: const ['Nom du Compte', 'Type', 'Solde'],
                       rows: filtered,
                       emptyMessage: 'Aucun compte trouve',
                       cellBuilder: (acc) => [
@@ -182,21 +182,19 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                             ),
                           ),
                         ),
-                        DataCell(
-                          PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
-                            onSelected: (val) => _handleAction(context, val, acc, state is TreasuryAccountsLoaded ? state.accounts : []),
-                            itemBuilder: (_) => [
-                              _buildMenuItem('depot', Icons.file_upload_outlined, 'Dépôt'),
-                              _buildMenuItem('transfer', Icons.swap_horiz_outlined, 'Transférer'),
-                              const PopupMenuDivider(height: 1),
-                              _buildMenuItem('edit', Icons.edit_outlined, 'Modifier'),
-                              const PopupMenuDivider(height: 1),
-                              _buildMenuItem('delete', Icons.delete_outline, 'Supprimer', isDestructive: true),
-                            ],
-                          ),
-                        ),
                       ],
+                      customActionsBuilder: (acc) => PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_horiz, color: AppColors.textSecondary),
+                        onSelected: (val) => _handleAction(context, val, acc, state is TreasuryAccountsLoaded ? state.accounts : []),
+                        itemBuilder: (_) => [
+                          _buildMenuItem('depot', Icons.file_upload_outlined, 'Dépôt'),
+                          _buildMenuItem('transfer', Icons.swap_horiz_outlined, 'Transférer'),
+                          const PopupMenuDivider(height: 1),
+                          _buildMenuItem('edit', Icons.edit_outlined, 'Modifier'),
+                          const PopupMenuDivider(height: 1),
+                          _buildMenuItem('delete', Icons.delete_outline, 'Supprimer', isDestructive: true),
+                        ],
+                      ),
                     ),
                   ),
                 );

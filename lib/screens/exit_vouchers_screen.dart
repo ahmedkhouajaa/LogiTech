@@ -128,7 +128,11 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
             // Filter Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: _buildFilterBar(),
+              child: BlocBuilder<ExitVouchersBloc, ExitVouchersState>(
+                builder: (context, state) {
+                  return _buildFilterBar(state);
+                },
+              ),
             ),
             const SizedBox(height: AppSpacing.lg),
             
@@ -220,7 +224,11 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
         // Filter Bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: _buildFilterBar(),
+          child: BlocBuilder<ExitVouchersBloc, ExitVouchersState>(
+            builder: (context, state) {
+              return _buildFilterBar(state);
+            },
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
 
@@ -236,7 +244,30 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
     );
   }
 
-  Widget _buildFilterBar() {
+  Widget _buildFilterBar(ExitVouchersState state) {
+    int totalItems = 0;
+    if (state is ExitVouchersLoaded) {
+      List<StockWithdrawal> filteredVouchers = state.withdrawals;
+      if (_selectedClientId != null && _selectedClientId != 'all') {
+        filteredVouchers = filteredVouchers.where((q) => q.customerId == _selectedClientId).toList();
+      }
+      if (_dateFrom != null) {
+        filteredVouchers = filteredVouchers.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
+      }
+      if (_dateTo != null) {
+        filteredVouchers = filteredVouchers.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
+      }
+      if (_statusFilter != null) {
+        filteredVouchers = filteredVouchers.where((q) => q.status == _statusFilter!.name).toList();
+      }
+      totalItems = filteredVouchers.length;
+    }
+
+    final activeFilterCount = (_selectedClientId != null && _selectedClientId != 'all' ? 1 : 0) +
+        (_dateFrom != null ? 1 : 0) +
+        (_dateTo != null ? 1 : 0) +
+        (_statusFilter != null ? 1 : 0);
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -244,10 +275,13 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
             flex: 3,
             child: _filterSection(
               label: 'Client',
@@ -328,26 +362,43 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
               ),
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
-          Container(
-            height: 40,
-            width: 40,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.tune, size: 18, color: AppColors.textSecondary),
-              padding: EdgeInsets.zero,
-              onPressed: () {
-                setState(() {
-                  _selectedClientId = null;
-                  _dateFrom = null;
-                  _dateTo = null;
-                  _statusFilter = null;
-                });
-                _applyFilters();
-              },
+          ],
+        ),
+        if (activeFilterCount > 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '$totalItems résultat${totalItems > 1 ? 's' : ''}',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  ),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _selectedClientId = null;
+                      _dateFrom = null;
+                      _dateTo = null;
+                      _statusFilter = null;
+                    });
+                    _applyFilters();
+                  },
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: const Text('Réinitialiser les filtres'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

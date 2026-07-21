@@ -103,7 +103,11 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
         // Filter bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: _buildFilterBar(),
+          child: BlocBuilder<ReceivingVouchersBloc, ReceivingVouchersState>(
+            builder: (context, state) {
+              return _buildFilterBar(state);
+            },
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
         // Table
@@ -118,7 +122,30 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     );
   }
 
-  Widget _buildFilterBar() {
+  Widget _buildFilterBar(ReceivingVouchersState state) {
+    int totalItems = 0;
+    if (state is ReceivingVouchersLoaded) {
+      List<ReceivingVoucher> filteredVouchers = state.vouchers;
+      if (_selectedSupplierId != null && _selectedSupplierId != 'all') {
+        filteredVouchers = filteredVouchers.where((q) => q.supplierId == _selectedSupplierId).toList();
+      }
+      if (_dateFrom != null) {
+        filteredVouchers = filteredVouchers.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
+      }
+      if (_dateTo != null) {
+        filteredVouchers = filteredVouchers.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
+      }
+      if (_statusFilter != null) {
+        filteredVouchers = filteredVouchers.where((q) => q.status == _statusFilter!.name).toList();
+      }
+      totalItems = filteredVouchers.length;
+    }
+
+    final activeFilterCount = (_selectedSupplierId != null && _selectedSupplierId != 'all' ? 1 : 0) +
+        (_dateFrom != null ? 1 : 0) +
+        (_dateTo != null ? 1 : 0) +
+        (_statusFilter != null ? 1 : 0);
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -126,11 +153,14 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
         border: Border.all(color: AppColors.border),
       ),
       padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Supplier
-          Expanded(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Supplier
+              Expanded(
             flex: 3,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,33 +348,49 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
-          // Reset Button
-          Container(
-            height: 40,
-            width: 40,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.tune, size: 18, color: AppColors.textSecondary),
-              padding: EdgeInsets.zero,
-              onPressed: () {
-                setState(() {
-                  _selectedSupplierId = null;
-                  _dateFrom = null;
-                  _dateTo = null;
-                  _statusFilter = null;
-                });
-                _applyFilters();
-              },
-            ),
-          ),
         ],
       ),
-    );
-  }
+      if (activeFilterCount > 0)
+        Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '$totalItems résultat${totalItems > 1 ? 's' : ''}',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _selectedSupplierId = null;
+                    _dateFrom = null;
+                    _dateTo = null;
+                    _statusFilter = null;
+                  });
+                  _applyFilters();
+                },
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: const Text('Réinitialiser les filtres'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildTable() {
     return BlocBuilder<ReceivingVouchersBloc, ReceivingVouchersState>(

@@ -73,157 +73,227 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ─── Toolbar ───────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
-              color: AppColors.surface,
-              child: Column(
+            // ─── Toolbar ───────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Row(
-                    children: [
-                      // Reference search
-                      Expanded(
-                        flex: 3,
-                        child: _SearchField(
-                          hint: 'Recherche des paiements...',
-                          icon: Icons.search_rounded,
-                          value: _searchQuery,
-                          onChanged: (v) => setState(() {
-                            _searchQuery = v;
-                            _page = 0;
-                          }),
-                        ),
+                  // Actions button
+                  PopupMenuButton<String>(
+                    offset: const Offset(0, 44),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    child: Container(
+                      height: 40,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.border),
                       ),
-                      const SizedBox(width: 12),
-                      // Contact search
-                      Expanded(
-                        flex: 3,
-                        child: _SearchField(
-                          hint: 'Rechercher un contact...',
-                          icon: Icons.person_search_rounded,
-                          value: _contactSearch,
-                          onChanged: (v) => setState(() {
-                            _contactSearch = v;
-                            _page = 0;
-                          }),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Method filter
-                      _FilterDropdown(
-                        label: 'Methode',
-                        value: _methodFilter,
-                        items: const {
-                          'tous': 'Tous',
-                          'especes': 'Especes',
-                          'cheque': 'Cheque',
-                          'virement': 'Virement',
-                          'carte': 'Carte',
-                        },
-                        onChanged: (v) => setState(() {
-                          _methodFilter = v!;
-                          _page = 0;
-                        }),
-                      ),
-                      const SizedBox(width: 12),
-                      // Status filter
-                      _FilterDropdown(
-                        label: 'Statut',
-                        value: _statusFilter,
-                        items: const {
-                          'tous': 'Tous',
-                          'paid': 'Paye',
-                          'pending': 'En attente',
-                          'cancelled': 'Annule',
-                        },
-                        onChanged: (v) => setState(() {
-                          _statusFilter = v!;
-                          _page = 0;
-                        }),
-                      ),
-                      const SizedBox(width: 12),
-                      // Actions button
-                      PopupMenuButton<String>(
-                        offset: const Offset(0, 44),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.md)),
-                        child: Container(
-                          height: 40,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceAlt,
-                            borderRadius:
-                                BorderRadius.circular(AppRadius.md),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('Actions',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary)),
-                              SizedBox(width: 6),
-                              Icon(Icons.keyboard_arrow_down_rounded,
-                                  size: 16, color: AppColors.textSecondary),
-                            ],
-                          ),
-                        ),
-                        itemBuilder: (_) => [
-                          PopupMenuItem(
-                            value: 'export',
-                            child: Row(children: [
-                              const Icon(Icons.file_download_rounded,
-                                  size: 16, color: AppColors.primary),
-                              const SizedBox(width: 10),
-                              const Text('Exporter CSV'),
-                            ]),
-                          ),
-                          PopupMenuItem(
-                            value: 'print',
-                            child: Row(children: [
-                              const Icon(Icons.print_rounded,
-                                  size: 16, color: AppColors.textSecondary),
-                              const SizedBox(width: 10),
-                              const Text('Imprimer'),
-                            ]),
-                          ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Actions',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                          SizedBox(width: 6),
+                          Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textSecondary),
                         ],
-                        onSelected: (val) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text(
-                                    '${val == 'export' ? 'Export' : 'Impression'} bientot disponible')),
-                          );
-                        },
                       ),
-                      const SizedBox(width: 12),
-                      // New payment button
-                      ElevatedButton.icon(
-                        onPressed: () => _showCreateDialog(context),
-                        icon: const Icon(Icons.add_rounded,
-                            size: 18, color: Colors.white),
-                        label: const Text('Nouveau paiement',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.md)),
-                        ),
+                    ),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'export',
+                        child: Row(children: [
+                          const Icon(Icons.file_download_rounded, size: 16, color: AppColors.primary),
+                          const SizedBox(width: 10),
+                          const Text('Exporter CSV'),
+                        ]),
+                      ),
+                      PopupMenuItem(
+                        value: 'print',
+                        child: Row(children: [
+                          const Icon(Icons.print_rounded, size: 16, color: AppColors.textSecondary),
+                          const SizedBox(width: 10),
+                          const Text('Imprimer'),
+                        ]),
                       ),
                     ],
+                    onSelected: (val) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('${val == 'export' ? 'Export' : 'Impression'} bientot disponible')),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  // New payment button
+                  ElevatedButton.icon(
+                    onPressed: () => _showCreateDialog(context),
+                    icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                    label: const Text('Nouveau paiement',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
+                ),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        // Reference search
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Référence',
+                                  style: TextStyle(
+                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 40,
+                                child: _SearchField(
+                                  hint: 'Recherche des paiements...',
+                                  icon: Icons.search_rounded,
+                                  value: _searchQuery,
+                                  onChanged: (v) => setState(() {
+                                    _searchQuery = v;
+                                    _page = 0;
+                                  }),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        // Contact search
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Contact',
+                                  style: TextStyle(
+                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                height: 40,
+                                child: _SearchField(
+                                  hint: 'Rechercher un contact...',
+                                  icon: Icons.person_search_rounded,
+                                  value: _contactSearch,
+                                  onChanged: (v) => setState(() {
+                                    _contactSearch = v;
+                                    _page = 0;
+                                  }),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        // Method filter
+                        Expanded(
+                          flex: 2,
+                          child: _FilterDropdown(
+                            label: 'Methode',
+                            value: _methodFilter,
+                            items: const {
+                              'tous': 'Tous',
+                              'especes': 'Especes',
+                              'cheque': 'Cheque',
+                              'virement': 'Virement',
+                              'carte': 'Carte',
+                            },
+                            onChanged: (v) => setState(() {
+                              _methodFilter = v!;
+                              _page = 0;
+                            }),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        // Status filter
+                        Expanded(
+                          flex: 2,
+                          child: _FilterDropdown(
+                            label: 'Statut',
+                            value: _statusFilter,
+                            items: const {
+                              'tous': 'Tous',
+                              'paid': 'Paye',
+                              'pending': 'En attente',
+                              'cancelled': 'Annule',
+                            },
+                            onChanged: (v) => setState(() {
+                              _statusFilter = v!;
+                              _page = 0;
+                            }),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_searchQuery.isNotEmpty || _contactSearch.isNotEmpty || _methodFilter != 'tous' || _statusFilter != 'tous')
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '${filtered.length} résultat${filtered.length > 1 ? 's' : ''}',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                              ),
+                            ),
+                            const Spacer(),
+                            TextButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _searchQuery = '';
+                                  _contactSearch = '';
+                                  _methodFilter = 'tous';
+                                  _statusFilter = 'tous';
+                                  _page = 0;
+                                });
+                              },
+                              icon: const Icon(Icons.refresh_rounded, size: 16),
+                              label: const Text('Réinitialiser les filtres'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.textSecondary,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
 
             // ─── Table ─────────────────────────────────────────────
             Expanded(

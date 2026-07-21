@@ -92,9 +92,19 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
-    if (_items.isEmpty) {
+    
+    final validItems = _items.where((i) => i.productId.isNotEmpty).toList();
+    if (validItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        const SnackBar(content: Text('Veuillez ajouter au moins un article valide'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final productIds = validItems.map((i) => i.productId).toList();
+    if (productIds.toSet().length != productIds.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vous ne pouvez pas sélectionner le même produit plusieurs fois'), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -427,21 +437,27 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
               
               final finalSourceStock = sourceStock - item.quantityToTransfer;
               final finalDestStock = destStock + item.quantityToTransfer;
+              final isDuplicate = item.productId.isNotEmpty && _items.where((i) => i.productId == item.productId).length > 1;
               
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Product Selection
                     Expanded(
                       flex: 3,
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceAlt,
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                        ),
-                        child: Autocomplete<Product>(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Container(
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceAlt,
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              border: isDuplicate ? Border.all(color: AppColors.error) : null,
+                            ),
+                            child: Autocomplete<Product>(
                           initialValue: TextEditingValue(
                             text: item.productName ?? '',
                           ),
@@ -506,6 +522,16 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                             });
                           },
                         ),
+                          ),
+                          if (isDuplicate)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 4, left: 4),
+                              child: Text(
+                                'Produit déjà ajouté',
+                                style: TextStyle(color: AppColors.error, fontSize: 11),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 8),

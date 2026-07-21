@@ -184,6 +184,7 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
           isLoading: isLoading,
           isEmpty: isEmpty,
           emptyMessage: 'Aucun élément trouvé.',
+          itemCount: cards.length,
           fabText: _config.fabText,
            onFabPressed: () {
              Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileCustomerOrderFormScreen())).then((_) {

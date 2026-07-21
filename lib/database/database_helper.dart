@@ -4489,7 +4489,9 @@ class DatabaseHelper {
   Future<void> insertStockTransfer(StockTransfer transfer) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.insert('stock_transfers', transfer.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      final transferMap = transfer.toMap();
+      transferMap.remove('items');
+      await txn.insert('stock_transfers', transferMap, conflictAlgorithm: ConflictAlgorithm.replace);
       for (var item in transfer.items) {
         await txn.insert('stock_transfer_items', item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
         
@@ -4532,9 +4534,11 @@ class DatabaseHelper {
   Future<void> updateStockTransfer(StockTransfer transfer) async {
     final db = await database;
     await db.transaction((txn) async {
+      final transferMap = transfer.toMap();
+      transferMap.remove('items');
       await txn.update(
         'stock_transfers',
-        transfer.toMap(),
+        transferMap,
         where: 'id = ?',
         whereArgs: [transfer.id],
       );
@@ -4635,7 +4639,9 @@ class DatabaseHelper {
   Future<void> insertInventorySheet(InventorySheet sheet) async {
     final db = await database;
     await db.transaction((txn) async {
-      await txn.insert('inventory_sheets', sheet.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      final sheetMap = sheet.toMap();
+      sheetMap.remove('items');
+      await txn.insert('inventory_sheets', sheetMap, conflictAlgorithm: ConflictAlgorithm.replace);
       for (var item in sheet.items) {
         await txn.insert('inventory_sheet_items', item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
       }
@@ -4669,9 +4675,11 @@ class DatabaseHelper {
   Future<void> updateInventorySheet(InventorySheet sheet) async {
     final db = await database;
     await db.transaction((txn) async {
+      final sheetMap = sheet.toMap();
+      sheetMap.remove('items');
       await txn.update(
         'inventory_sheets',
-        sheet.toMap(),
+        sheetMap,
         where: 'id = ?',
         whereArgs: [sheet.id],
       );

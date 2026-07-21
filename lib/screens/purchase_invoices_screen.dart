@@ -94,7 +94,11 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         // Filter bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: _buildFilterBar(),
+          child: BlocBuilder<PurchaseInvoicesBloc, PurchaseInvoicesState>(
+            builder: (context, state) {
+              return _buildFilterBar(state);
+            },
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         // Data table
@@ -109,7 +113,17 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     );
   }
 
-  Widget _buildFilterBar() {
+  Widget _buildFilterBar(PurchaseInvoicesState state) {
+    int totalItems = 0;
+    if (state is PurchaseInvoicesLoaded) {
+      totalItems = state.filteredPurchaseInvoices.length;
+    }
+
+    final activeFilterCount = (_selectedClientId != null && _selectedClientId != 'all' ? 1 : 0) +
+        (_dateFrom != null ? 1 : 0) +
+        (_dateTo != null ? 1 : 0) +
+        (_statusFilter != null ? 1 : 0);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -118,10 +132,13 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         border: Border.all(color: AppColors.border),
         boxShadow: AppShadows.sm,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Supplier filter
-          Expanded(
+          Row(
+            children: [
+              // Supplier filter
+              Expanded(
             flex: 2,
             child: _buildFilterField(
               label: 'Fournisseur',
@@ -224,33 +241,50 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          // Filter icon button
-          Container(
-            margin: const EdgeInsets.only(top: 18),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.tune_rounded, size: 18, color: AppColors.textSecondary),
-              onPressed: () {
-                setState(() {
-                  _selectedClientId = null;
-                  _dateFrom = null;
-                  _dateTo = null;
-                  _statusFilter = null;
-                  _currentPage = 0;
-                });
-                context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
-              },
-              tooltip: 'Reinitialiser les filtres',
-            ),
-          ),
         ],
       ),
-    );
-  }
+      if (activeFilterCount > 0)
+        Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '$totalItems résultat${totalItems > 1 ? 's' : ''}',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _selectedClientId = null;
+                    _dateFrom = null;
+                    _dateTo = null;
+                    _statusFilter = null;
+                    _currentPage = 0;
+                  });
+                  context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
+                },
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: const Text('Réinitialiser les filtres'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildFilterField({required String label, required Widget child}) {
     return Column(

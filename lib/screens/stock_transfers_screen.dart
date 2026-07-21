@@ -5,6 +5,10 @@ import '../models/stock_transfer.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'create_stock_transfer_screen.dart';
+import '../models/document_wrapper.dart';
+import 'document_preview_screen.dart';
+import '../models/stock_movement.dart';
+import '../database/database_helper.dart';
 
 class StockTransfersScreen extends StatefulWidget {
   const StockTransfersScreen({super.key});
@@ -16,11 +20,58 @@ class StockTransfersScreen extends StatefulWidget {
 class _StockTransfersScreenState extends State<StockTransfersScreen> {
   int _rowsPerPage = 10;
   int _currentPage = 0;
+  List<Warehouse> _warehouses = [];
 
   @override
   void initState() {
     super.initState();
     context.read<StockTransfersBloc>().add(LoadStockTransfers());
+    _loadWarehouses();
+  }
+
+  Future<void> _loadWarehouses() async {
+    final ws = await DatabaseHelper.instance.getWarehouses();
+    if (mounted) setState(() => _warehouses = ws);
+  }
+
+  String _getWarehouseName(String id) {
+    if (id == 'default_warehouse') return 'Entrepôt par défaut';
+    try {
+      return _warehouses.firstWhere((w) => w.id == id).name;
+    } catch (_) {
+      return 'Entrepôt par défaut';
+    }
+  }
+
+  void _previewDocument(StockTransfer entry) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DocumentPreviewScreen(
+          document: DocumentWrapper.fromStockTransfer(entry),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildArticlesDisplay(List<StockTransferItem> items) {
+    if (items.isEmpty) return const Text('0 article', style: TextStyle(fontSize: 13, color: AppColors.textSecondary));
+    
+    final summaryText = items.map((item) {
+      final pName = item.productName ?? 'Produit Inconnu';
+      return '${item.quantityToTransfer.toInt()}x $pName';
+    }).join(', ');
+
+    return Tooltip(
+      message: summaryText,
+      preferBelow: false,
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      showDuration: const Duration(seconds: 3),
+      decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(8)),
+      textStyle: const TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
+      child: Text('${items.length} article${items.length > 1 ? 's' : ''}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+    );
   }
 
   void _navigate(BuildContext context, [StockTransfer? transfer]) {
@@ -200,10 +251,19 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       color: AppColors.surface,
                       onSelected: (val) {
+                        if (val == 'voir') _previewDocument(transfer);
                         if (val == 'edit') _navigate(context, transfer);
                         if (val == 'delete') _confirmDelete(transfer);
                       },
                       itemBuilder: (_) => [
+                        const PopupMenuItem(
+                          value: 'voir',
+                          child: Row(children: [
+                            Icon(Icons.visibility_outlined, size: 16, color: AppColors.textSecondary),
+                            SizedBox(width: 8),
+                            Text('Voir')
+                          ]),
+                        ),
                         const PopupMenuItem(
                           value: 'edit',
                           child: Row(children: [
@@ -234,7 +294,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildInfoItem(Icons.warehouse_rounded, 'Source: ${transfer.sourceWarehouseId}'),
+                      child: _buildInfoItem(Icons.warehouse_rounded, 'Source: ${_getWarehouseName(transfer.sourceWarehouseId)}'),
                     ),
                   ],
                 ),
@@ -242,9 +302,9 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildInfoItem(Icons.warehouse_rounded, 'Dest: ${transfer.destinationWarehouseId}'),
+                      child: _buildInfoItem(Icons.warehouse_rounded, 'Dest: ${_getWarehouseName(transfer.destinationWarehouseId)}'),
                     ),
-                    _buildInfoItem(Icons.shopping_bag_rounded, '${transfer.items.length} article${transfer.items.length > 1 ? 's' : ''}'),
+                    _buildArticlesDisplay(transfer.items),
                   ],
                 ),
               ],
@@ -346,6 +406,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                             Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
                             Expanded(flex: 2, child: Text('Entrepôt', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
                             Expanded(flex: 1, child: Text('Articles', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text('Créé par', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
                             SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
                           ],
                         ),
@@ -445,25 +506,38 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
           ),
           Expanded(
             flex: 2,
-            child: Text(transfer.sourceWarehouseId, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+            child: Text('${_getWarehouseName(transfer.sourceWarehouseId)} -> ${_getWarehouseName(transfer.destinationWarehouseId)}', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
           ),
           Expanded(
             flex: 1,
-            child: Text('${transfer.items.length}', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+            child: _buildArticlesDisplay(transfer.items),
+          ),
+          const Expanded(
+            flex: 2,
+            child: Text('Admin', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
           ),
           SizedBox(
             width: 80,
             child: Align(
               alignment: Alignment.centerRight,
               child: PopupMenuButton<String>(
-                icon: const Icon(Icons.more_horiz, color: AppColors.textSecondary),
+                icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 color: AppColors.surface,
                 onSelected: (val) {
+                  if (val == 'voir') _previewDocument(transfer);
                   if (val == 'edit') _navigate(context, transfer);
                   if (val == 'delete') _confirmDelete(transfer);
                 },
                 itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'voir',
+                    child: Row(children: [
+                      Icon(Icons.visibility_outlined, size: 16, color: AppColors.textSecondary),
+                      SizedBox(width: 8),
+                      Text('Voir')
+                    ]),
+                  ),
                   const PopupMenuItem(
                     value: 'edit',
                     child: Row(children: [

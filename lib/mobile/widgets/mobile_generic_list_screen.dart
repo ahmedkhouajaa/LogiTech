@@ -21,6 +21,7 @@ class MobileGenericListScreen extends StatelessWidget {
   final Widget child; // The list of cards
   final VoidCallback onFabPressed;
   final String fabText;
+  final int? itemCount; // Added itemCount
 
   const MobileGenericListScreen({
     super.key,
@@ -38,6 +39,7 @@ class MobileGenericListScreen extends StatelessWidget {
     required this.child,
     required this.onFabPressed,
     required this.fabText,
+    this.itemCount,
   });
 
   @override
@@ -55,6 +57,25 @@ class MobileGenericListScreen extends StatelessWidget {
               options: filterOptions,
               selectedOption: selectedFilter,
               onSelected: onFilterChanged,
+            ),
+            
+          if (itemCount != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '$itemCount résultat${itemCount! > 1 ? 's' : ''}',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  ),
+                ),
+              ),
             ),
           
           // Content

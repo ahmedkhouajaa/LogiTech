@@ -73,6 +73,8 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
           headingTextStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: AppColors.textSecondary),
           dataTextStyle: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
           dividerThickness: 0.5,
+          dataRowMaxHeight: double.infinity,
+          dataRowMinHeight: 48.0,
           columnSpacing: 20,
           horizontalMargin: 20,
           columns: [
@@ -91,19 +93,32 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
                   DataCell(
                     widget.customActionsBuilder != null 
                     ? widget.customActionsBuilder!(row)
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
+                    : PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        color: AppColors.surface,
+                        onSelected: (val) {
+                          switch (val) {
+                            case 'view': widget.onView?.call(row); break;
+                            case 'edit': widget.onEdit?.call(row); break;
+                            case 'print': widget.onPrint?.call(row); break;
+                            case 'delete': _confirmDelete(context, row); break;
+                          }
+                        },
+                        itemBuilder: (_) => [
                           if (widget.onView != null)
-                            _ActionButton(icon: Icons.visibility_rounded, color: AppColors.info, tooltip: 'Voir', onTap: () => widget.onView!(row)),
+                            PopupMenuItem(value: 'view', height: 40, child: Row(children: const [Icon(Icons.visibility_outlined, size: 18, color: AppColors.info), SizedBox(width: 12), Text('Voir', style: TextStyle(fontSize: 14))])),
                           if (widget.onEdit != null)
-                            _ActionButton(icon: Icons.edit_rounded, color: AppColors.primary, tooltip: 'Modifier', onTap: () => widget.onEdit!(row)),
+                            PopupMenuItem(value: 'edit', height: 40, child: Row(children: const [Icon(Icons.edit_outlined, size: 18, color: AppColors.primary), SizedBox(width: 12), Text('Modifier', style: TextStyle(fontSize: 14))])),
                           if (widget.onPrint != null)
-                            _ActionButton(icon: Icons.print_rounded, color: AppColors.success, tooltip: 'Imprimer', onTap: () => widget.onPrint!(row)),
-                          if (widget.onDelete != null)
-                            _ActionButton(icon: Icons.delete_rounded, color: AppColors.error, tooltip: 'Supprimer', onTap: () => _confirmDelete(context, row)),
+                            PopupMenuItem(value: 'print', height: 40, child: Row(children: const [Icon(Icons.print_outlined, size: 18, color: AppColors.success), SizedBox(width: 12), Text('Imprimer', style: TextStyle(fontSize: 14))])),
+                          if (widget.onDelete != null) ...[
+                            if (widget.onView != null || widget.onEdit != null || widget.onPrint != null)
+                              const PopupMenuDivider(height: 1),
+                            PopupMenuItem(value: 'delete', height: 40, child: Row(children: const [Icon(Icons.delete_outline, size: 18, color: AppColors.error), SizedBox(width: 12), Text('Supprimer', style: TextStyle(fontSize: 14, color: AppColors.error))])),
+                          ],
                         ],
-                      )
+                      ),
                   ),
               ],
             );

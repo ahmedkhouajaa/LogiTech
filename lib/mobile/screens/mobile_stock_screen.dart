@@ -20,6 +20,13 @@ class MobileStockScreen extends StatefulWidget {
 
 class _MobileStockScreenState extends State<MobileStockScreen> {
   String _searchQuery = '';
+  
+  // Filter state
+  String? _filterWarehouseId;
+  String _filterDestination = 'tous'; // 'tous', 'vente', 'achat'
+  String _filterReference = '';
+  String _filterStatus = 'tous'; // 'tous', 'en_stock', 'rupture'
+  bool _showFilters = false;
 
   @override
   void initState() {
@@ -107,6 +114,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
             MaterialPageRoute(builder: (_) => const MobileStockAdjustmentForm()),
           ).then((_) {
             if (!mounted) return;
+            if (!context.mounted) return;
             context.read<StockBloc>().add(LoadStock());
             context.read<ProductsBloc>().add(LoadProducts());
           });
@@ -245,16 +253,42 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
       }
     }
 
-    // Apply search filter
-    final filteredItems = _searchQuery.isEmpty
-        ? items
-        : items.where((item) {
-            final query = _searchQuery.toLowerCase();
-            return item.product.name.toLowerCase().contains(query) ||
-                item.product.code.toLowerCase().contains(query) ||
-                (item.product.reference?.toLowerCase().contains(query) ?? false) ||
-                item.warehouse.name.toLowerCase().contains(query);
-          }).toList();
+    // Apply all filters
+    final filteredItems = items.where((item) {
+      // Search filter (product name/code/reference/warehouse)
+      if (_searchQuery.isNotEmpty) {
+        final query = _searchQuery.toLowerCase();
+        final matchesSearch = item.product.name.toLowerCase().contains(query) ||
+            item.product.code.toLowerCase().contains(query) ||
+            (item.product.reference?.toLowerCase().contains(query) ?? false) ||
+            item.warehouse.name.toLowerCase().contains(query);
+        if (!matchesSearch) return false;
+      }
+      
+      // Warehouse filter
+      if (_filterWarehouseId != null && item.warehouse.id != _filterWarehouseId) return false;
+      
+      // Destination filter
+      if (_filterDestination == 'vente' && item.product.sellingPrice <= 0) return false;
+      if (_filterDestination == 'achat' && item.product.purchasePrice <= 0) return false;
+      
+      // Reference filter
+      if (_filterReference.isNotEmpty) {
+        final ref = item.product.reference ?? item.product.code;
+        if (!ref.toLowerCase().contains(_filterReference.toLowerCase())) return false;
+      }
+      
+      // Status filter
+      if (_filterStatus == 'en_stock' && item.quantity <= 0) return false;
+      if (_filterStatus == 'rupture' && item.quantity > 0) return false;
+      
+      return true;
+    }).toList();
+
+    final hasActiveFilters = _filterWarehouseId != null || 
+        _filterDestination != 'tous' || 
+        _filterReference.isNotEmpty || 
+        _filterStatus != 'tous';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,9 +316,9 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
               PopupMenuButton<String>(
                 onSelected: (value) async {
                   if (value == 'pdf') {
-                    await StockExportService.exportToPdf(context, items);
+                    await StockExportService.exportToPdf(context, filteredItems);
                   } else if (value == 'excel') {
-                    await StockExportService.exportToExcel(context, items);
+                    await StockExportService.exportToExcel(context, filteredItems);
                   }
                 },
                 offset: const Offset(0, 40),
@@ -357,6 +391,228 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 8),
+        // ── Filter Toggle Button ──
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: () => setState(() => _showFilters = !_showFilters),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _showFilters || hasActiveFilters ? AppColors.primary.withValues(alpha: 0.1) : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _showFilters || hasActiveFilters ? AppColors.primary.withValues(alpha: 0.4) : AppColors.border),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.tune_rounded, size: 16, color: _showFilters || hasActiveFilters ? AppColors.primary : AppColors.textSecondary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Filtres',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _showFilters || hasActiveFilters ? AppColors.primary : AppColors.textSecondary),
+                      ),
+                      if (hasActiveFilters) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
+                          child: Text(
+                            '${[_filterWarehouseId != null, _filterDestination != 'tous', _filterReference.isNotEmpty, _filterStatus != 'tous'].where((v) => v).length}',
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              if (hasActiveFilters) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => setState(() {
+                    _filterWarehouseId = null;
+                    _filterDestination = 'tous';
+                    _filterReference = '';
+                    _filterStatus = 'tous';
+                  }),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.clear_all, size: 14, color: AppColors.error),
+                        SizedBox(width: 4),
+                        Text('Réinitialiser', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        // ── Collapsible Filter Panel ──
+        if (_showFilters) ...[
+          const SizedBox(height: 8),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Row 1: Entrepot + Destination
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Entrepôt', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            height: 40,
+                            child: DropdownButtonFormField<String?>(
+                              value: _filterWarehouseId,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                filled: true,
+                                fillColor: const Color(0xFFFAFAFB),
+                              ),
+                              style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                              items: [
+                                const DropdownMenuItem<String?>(value: null, child: Text('Tous', style: TextStyle(fontSize: 12))),
+                                ...warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
+                              ],
+                              onChanged: (v) => setState(() => _filterWarehouseId = v),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Destination', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            height: 40,
+                            child: DropdownButtonFormField<String>(
+                              value: _filterDestination,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                filled: true,
+                                fillColor: const Color(0xFFFAFAFB),
+                              ),
+                              style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                              items: const [
+                                DropdownMenuItem(value: 'tous', child: Text('Toutes', style: TextStyle(fontSize: 12))),
+                                DropdownMenuItem(value: 'vente', child: Text('Vente', style: TextStyle(fontSize: 12))),
+                                DropdownMenuItem(value: 'achat', child: Text('Achat', style: TextStyle(fontSize: 12))),
+                              ],
+                              onChanged: (v) => setState(() => _filterDestination = v ?? 'tous'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                // Row 2: Reference + Status
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Référence', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            height: 40,
+                            child: TextField(
+                              onChanged: (v) => setState(() => _filterReference = v),
+                              decoration: InputDecoration(
+                                hintText: 'Rechercher réf...',
+                                hintStyle: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                                prefixIcon: const Icon(Icons.tag, size: 14, color: AppColors.textTertiary),
+                                prefixIconConstraints: const BoxConstraints(minWidth: 32),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                filled: true,
+                                fillColor: const Color(0xFFFAFAFB),
+                              ),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Statut', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            height: 40,
+                            child: DropdownButtonFormField<String>(
+                              value: _filterStatus,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                filled: true,
+                                fillColor: const Color(0xFFFAFAFB),
+                              ),
+                              style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                              items: const [
+                                DropdownMenuItem(value: 'tous', child: Text('Tous', style: TextStyle(fontSize: 12))),
+                                DropdownMenuItem(value: 'en_stock', child: Text('En Stock', style: TextStyle(fontSize: 12, color: AppColors.success))),
+                                DropdownMenuItem(value: 'rupture', child: Text('En Rupture', style: TextStyle(fontSize: 12, color: AppColors.error))),
+                              ],
+                              onChanged: (v) => setState(() => _filterStatus = v ?? 'tous'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         if (filteredItems.isEmpty)
           Padding(
@@ -532,20 +788,10 @@ class _LowStockCard extends StatelessWidget {
 }
 
 // ────────────────────────────────────────────────────────────
-// Stock Level Item (data class)
-// ────────────────────────────────────────────────────────────
-class _StockLevelItem {
-  final Product product;
-  final Warehouse warehouse;
-  final double quantity;
-  _StockLevelItem({required this.product, required this.warehouse, required this.quantity});
-}
-
-// ────────────────────────────────────────────────────────────
 // Stock Level Card
 // ────────────────────────────────────────────────────────────
 class _StockLevelCard extends StatelessWidget {
-  final _StockLevelItem item;
+  final StockLevelItem item;
 
   const _StockLevelCard({required this.item});
 

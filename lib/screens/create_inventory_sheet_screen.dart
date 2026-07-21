@@ -113,6 +113,12 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
       }
     }
 
+    final uniqueProductIds = _items.map((i) => i.productId).toSet();
+    if (uniqueProductIds.length != _items.length) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Un article ne peut pas être sélectionné plusieurs fois.')));
+      return;
+    }
+
     final newSheet = InventorySheet(
       id: _id,
       number: _number,
@@ -449,22 +455,31 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                         final diff = item.actualQty - theoreticalStock;
                         final surplus = diff > 0 ? diff : 0.0;
                         final missing = diff < 0 ? diff.abs() : 0.0;
-                        
+                        bool isDuplicate = false;
+                        if (!widget.isViewOnly && item.productId.isNotEmpty) {
+                          isDuplicate = _items.where((i) => i.productId == item.productId).length > 1;
+                        }
+
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8.0),
                           child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 flex: 3,
                                 child: Container(
-                                  height: 44,
                                   decoration: BoxDecoration(color: widget.isViewOnly ? AppColors.surfaceAlt : Colors.transparent, borderRadius: BorderRadius.circular(AppRadius.sm)),
                                   child: widget.isViewOnly 
                                   ? Padding(
                                       padding: const EdgeInsets.all(12.0),
                                       child: Text(item.productName ?? ''),
                                     )
-                                  : Autocomplete<Product>(
+                                  : Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        SizedBox(
+                                          height: 44,
+                                          child: Autocomplete<Product>(
                                     key: ValueKey('autocomplete_${item.id}'),
                                     initialValue: TextEditingValue(text: item.productName ?? ''),
                                     optionsBuilder: (TextEditingValue textEditingValue) {
@@ -530,6 +545,14 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                       });
                                     },
                                   ),
+                                ),
+                                if (isDuplicate)
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 4, left: 12),
+                                    child: Text('Article déjà sélectionné', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                                  ),
+                              ],
+                            ),
                                 ),
                               ),
                               const SizedBox(width: 8),

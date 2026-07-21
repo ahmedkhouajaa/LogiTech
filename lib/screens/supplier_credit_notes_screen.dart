@@ -116,14 +116,18 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
           ),
         ),
 
-        // Ã¢a€€Ã¢a€€ Filter Bar Ã¢a€€Ã¢a€€
+        // ── Filter Bar ──
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: _buildFilterBar(),
+          child: BlocBuilder<SupplierCreditNotesBloc, SupplierCreditNotesState>(
+            builder: (context, state) {
+              return _buildFilterBar(state);
+            },
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
 
-        // Ã¢a€€Ã¢a€€ Table Ã¢a€€Ã¢a€€
+        // ── Table ──
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -152,7 +156,30 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
     );
   }
 
-  Widget _buildFilterBar() {
+  Widget _buildFilterBar(SupplierCreditNotesState state) {
+    int totalItems = 0;
+    if (state is SupplierCreditNotesLoaded) {
+      List<SupplierCreditNote> filteredNotes = state.creditNotes;
+      if (_selectedFournisseurId != null && _selectedFournisseurId != 'all') {
+        filteredNotes = filteredNotes.where((q) => q.supplierId == _selectedFournisseurId).toList();
+      }
+      if (_dateFrom != null) {
+        filteredNotes = filteredNotes.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
+      }
+      if (_dateTo != null) {
+        filteredNotes = filteredNotes.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
+      }
+      if (_statusFilter != null) {
+        filteredNotes = filteredNotes.where((q) => q.status == _statusFilter!.name).toList();
+      }
+      totalItems = filteredNotes.length;
+    }
+
+    final activeFilterCount = (_selectedFournisseurId != null && _selectedFournisseurId != 'all' ? 1 : 0) +
+        (_dateFrom != null ? 1 : 0) +
+        (_dateTo != null ? 1 : 0) +
+        (_statusFilter != null ? 1 : 0);
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -160,15 +187,18 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
         border: Border.all(color: AppColors.border),
       ),
       padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Fournisseur dropdown
-          Expanded(
-            flex: 3,
-            child: _filterSection(
-              label: 'Fournisseur',
-              child: BlocBuilder<SuppliersBloc, SuppliersState>(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Fournisseur dropdown
+              Expanded(
+                flex: 3,
+                child: _filterSection(
+                  label: 'Fournisseur',
+                  child: BlocBuilder<SuppliersBloc, SuppliersState>(
                 builder: (context, state) {
                   List<Supplier> Suppliers = [];
                   if (state is SuppliersLoaded) Suppliers = state.suppliers;
@@ -251,34 +281,49 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
               ),
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
-
-          // Reset button
-          Container(
-            height: 40,
-            width: 40,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.tune, size: 18, color: AppColors.textSecondary),
-              padding: EdgeInsets.zero,
-              onPressed: () {
-                setState(() {
-                  _selectedFournisseurId = null;
-                  _dateFrom = null;
-                  _dateTo = null;
-                  _statusFilter = null;
-                });
-                _applyFilters();
-              },
-            ),
-          ),
         ],
       ),
-    );
-  }
+      if (activeFilterCount > 0)
+        Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '$totalItems résultat${totalItems > 1 ? 's' : ''}',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _selectedFournisseurId = null;
+                    _dateFrom = null;
+                    _dateTo = null;
+                    _statusFilter = null;
+                  });
+                  _applyFilters();
+                },
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: const Text('Réinitialiser les filtres'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _filterSection({required String label, required Widget child}) {
     return Column(

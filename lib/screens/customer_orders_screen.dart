@@ -111,7 +111,11 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         // Filter bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: _buildFilterBar(),
+          child: BlocBuilder<CustomerOrdersBloc, CustomerOrdersState>(
+            builder: (context, state) {
+              return _buildFilterBar(state);
+            },
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
         // Table
@@ -126,7 +130,30 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
     );
   }
 
-  Widget _buildFilterBar() {
+  Widget _buildFilterBar(CustomerOrdersState state) {
+    int totalItems = 0;
+    if (state is CustomerOrdersLoaded) {
+      List<CustomerOrder> filteredOrders = state.orders;
+      if (_selectedClientId != null && _selectedClientId != 'all') {
+        filteredOrders = filteredOrders.where((q) => q.customerId == _selectedClientId).toList();
+      }
+      if (_dateFrom != null) {
+        filteredOrders = filteredOrders.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
+      }
+      if (_dateTo != null) {
+        filteredOrders = filteredOrders.where((q) => q.date.isBefore(_dateTo!.add(const Duration(days: 1)))).toList();
+      }
+      if (_statusFilter != null) {
+        filteredOrders = filteredOrders.where((q) => q.status == _statusFilter!.name).toList();
+      }
+      totalItems = filteredOrders.length;
+    }
+
+    final activeFilterCount = (_selectedClientId != null && _selectedClientId != 'all' ? 1 : 0) +
+        (_dateFrom != null ? 1 : 0) +
+        (_dateTo != null ? 1 : 0) +
+        (_statusFilter != null ? 1 : 0);
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -134,10 +161,13 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         border: Border.all(color: AppColors.border),
       ),
       padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Client
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Client
           Expanded(
             flex: 3,
             child: Column(
@@ -351,8 +381,48 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
           ),
         ],
       ),
-    );
-  }
+      if (activeFilterCount > 0)
+        Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '$totalItems résultat${totalItems > 1 ? 's' : ''}',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _selectedClientId = null;
+                    _dateFrom = null;
+                    _dateTo = null;
+                    _statusFilter = null;
+                    _currentPage = 0;
+                  });
+                  _applyFilters();
+                },
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: const Text('Réinitialiser les filtres'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildTable() {
     return BlocBuilder<CustomerOrdersBloc, CustomerOrdersState>(

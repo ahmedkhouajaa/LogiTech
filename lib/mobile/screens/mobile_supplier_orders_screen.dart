@@ -159,6 +159,7 @@ class _MobileSupplierOrdersScreenState extends State<MobileSupplierOrdersScreen>
           isLoading: isLoading,
           isEmpty: isEmpty,
           emptyMessage: 'Aucun élément trouvé.',
+          itemCount: cards.length,
           fabText: _config.fabText,
           onFabPressed: () {
               Navigator.push(

@@ -86,6 +86,17 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
       return;
     }
 
+    final seenProducts = <String>{};
+    for (var item in validItems) {
+      if (seenProducts.contains(item.productId)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur: Ce produit est déjà ajouté dans une autre ligne')),
+        );
+        return;
+      }
+      seenProducts.add(item.productId);
+    }
+
     final entry = StockEntry(
       id: widget.existing?.id,
       number: widget.existing?.number ?? '',
@@ -539,14 +550,17 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
           Row(
             children: [
               Expanded(
-                child: Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Autocomplete<Product>(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Autocomplete<Product>(
                     initialValue: TextEditingValue(
                       text: item.productId.isNotEmpty ? products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', code: '', name: '', sellingPrice: 0, purchasePrice: 0, tvaRate: 0, unit: '', productType: '')).name : '',
                     ),
@@ -604,11 +618,18 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                     },
                   ),
                 ),
-              ),
+                if (_items.where((i) => i.productId == item.productId && i.productId.isNotEmpty).length > 1)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 4.0),
+                    child: Text('Ce produit est déjà ajouté dans une autre ligne', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                  ),
               ],
             ),
-          const SizedBox(height: 12),
-          // Quantities row
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      // Quantities row
           Row(
             children: [
               Expanded(
@@ -655,6 +676,11 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                         },
                       ),
                     ),
+                    if (_items.where((i) => i.productId == item.productId && i.productId.isNotEmpty).length > 1)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4.0),
+                        child: Text('Ce produit est déjà ajouté dans une autre ligne', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                      ),
                   ],
                 ),
               ),
@@ -710,22 +736,26 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
               
               // Inputs Row
               Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Produit Autocompl
                   Expanded(
                     flex: 3,
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: Container(
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Autocomplete<Product>(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Autocomplete<Product>(
                               initialValue: TextEditingValue(
                                 text: item.productId.isNotEmpty ? products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', code: '', name: '', sellingPrice: 0, purchasePrice: 0, tvaRate: 0, unit: '', productType: '')).name : '',
                               ),
@@ -783,10 +813,17 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                               },
                             ),
                           ),
-                        ),
-                      ],
+                          if (_items.where((i) => i.productId == item.productId && i.productId.isNotEmpty).length > 1)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 4.0),
+                              child: Text('Ce produit est déjà ajouté dans une autre ligne', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
+                ),
+              ),
                   const SizedBox(width: 16),
                   
                   // Qté en stock
