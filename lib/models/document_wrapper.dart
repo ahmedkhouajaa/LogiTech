@@ -44,15 +44,19 @@ class DocumentWrapper {
       totalHT: inv.totalHT,
       totalTva: inv.totalTva,
       totalTTC: inv.totalTTC,
-      stampTax: (inv.runtimeType.toString() == 'Invoice') ? inv.timbreFiscal ?? 0 : 0,
+      stampTax: inv.timbreFiscal ?? 0,
       notes: inv.notes,
-      items: (inv.items as List).map((i) => DocumentItemWrapper(
-        productName: i.productName ?? 'Produit Inconnu',
+      conditionsGenerales: inv.conditionsGenerales,
+      customData: {
+        'projectName': inv.projectName,
+      },
+      items: (inv.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
+        productName: i.productName ?? i.description ?? 'Produit Inconnu',
         quantity: i.quantity,
         unitPrice: i.unitPrice,
         tvaRate: i.tvaRate,
         discountPercent: i.discountPercent,
-        totalHT: (i.runtimeType.toString() == 'InvoiceItem') ? i.computedTotalHT : i.totalHT,
+        totalHT: i.totalHT,
       )).toList(),
     );
   }
@@ -68,14 +72,47 @@ class DocumentWrapper {
       totalHT: quote.totalHT,
       totalTva: quote.totalTva,
       totalTTC: quote.totalTTC,
+      stampTax: quote.timbreFiscal ?? 1.0,
       notes: quote.notes,
-      items: (quote.items as List).map((i) => DocumentItemWrapper(
+      conditionsGenerales: quote.conditionsGenerales,
+      customData: {
+        'projectName': quote.projectName,
+      },
+      items: (quote.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
         productName: i.productName ?? 'Produit Inconnu',
         quantity: i.quantity,
         unitPrice: i.unitPrice,
         tvaRate: i.tvaRate,
         discountPercent: i.discountPercent,
-        totalHT: (i.runtimeType.toString() == 'QuoteItem') ? i.computedTotalHT : i.totalHT,
+        totalHT: (() { try { return i.computedTotalHT; } catch(_) { return i.totalHT; } })(),
+      )).toList(),
+    );
+  }
+
+  static DocumentWrapper fromCustomerOrder(dynamic order) {
+    return DocumentWrapper(
+      id: order.id,
+      number: order.number,
+      documentTitle: 'COMMANDE CLIENT',
+      customerName: order.customerName,
+      date: order.date,
+      dueDate: order.deliveryDate,
+      totalHT: order.subTotalHT,
+      totalTva: order.totalTVA,
+      totalTTC: order.subTotalTTC,
+      stampTax: order.timbreFiscal ?? 1.0,
+      notes: order.notes,
+      conditionsGenerales: order.conditionsGenerales,
+      customData: {
+        'projectName': order.projectName,
+      },
+      items: (order.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
+        productName: i.description ?? 'Produit Inconnu',
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        tvaRate: i.tvaRate,
+        discountPercent: i.discountPercent,
+        totalHT: i.totalHT,
       )).toList(),
     );
   }
@@ -84,17 +121,20 @@ class DocumentWrapper {
     return DocumentWrapper(
       id: doc.id,
       number: doc.number,
-      documentTitle: 'BON DE SORTIE',
+      documentTitle: 'BON DE LIVRAISON',
       customerName: doc.customerName,
       date: doc.date,
-      totalHT: doc.totalHTAfterDiscount,
+      totalHT: doc.subTotalHT,
       totalTva: doc.totalTVA,
-      totalTTC: doc.totalTTC,
-      stampTax: doc.timbreFiscal,
+      totalTTC: doc.subTotalTTC,
+      stampTax: doc.timbreFiscal ?? 1.0,
       notes: doc.notes,
       conditionsGenerales: doc.conditionsGenerales,
-      items: (doc.items as List).map((i) => DocumentItemWrapper(
-        productName: 'Produit Inconnu', // DeliveryNoteItem often doesn't have productName directly, we can fetch it or just show description
+      customData: {
+        'projectName': doc.projectName,
+      },
+      items: (doc.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
+        productName: i.description ?? 'Produit Inconnu',
         quantity: i.quantity,
         unitPrice: i.unitPrice,
         tvaRate: i.tvaRate,
@@ -111,13 +151,16 @@ class DocumentWrapper {
       documentTitle: 'BON DE SORTIE',
       customerName: doc.customerName,
       date: doc.date,
-      totalHT: doc.totalHTAfterDiscount,
+      totalHT: doc.subTotalHT,
       totalTva: doc.totalTVA,
-      totalTTC: doc.totalTTC,
-      stampTax: doc.timbreFiscal,
+      totalTTC: doc.subTotalTTC,
+      stampTax: doc.timbreFiscal ?? 0.0,
       notes: doc.notes,
       conditionsGenerales: doc.conditionsGenerales,
-      items: (doc.items as List).map((i) => DocumentItemWrapper(
+      customData: {
+        'projectName': doc.projectName,
+      },
+      items: (doc.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
         productName: i.description ?? 'Produit Inconnu',
         quantity: i.quantity,
         unitPrice: i.unitPrice,
@@ -141,14 +184,21 @@ class DocumentWrapper {
       totalTTC: inv.totalTTC,
       stampTax: inv.timbreFiscal ?? 0,
       notes: inv.notes,
-      items: (inv.items as List).map((i) => DocumentItemWrapper(
-        productName: (i.runtimeType.toString() == 'PurchaseInvoiceItem' ? i.productName : null) ?? 'Produit Inconnu',
-        quantity: i.quantity,
-        unitPrice: i.unitPrice,
-        tvaRate: i.tvaRate,
-        discountPercent: i.discountPercent,
-        totalHT: (i.runtimeType.toString() == 'PurchaseInvoiceItem') ? i.computedTotalHT : i.totalHT,
-      )).toList(),
+      conditionsGenerales: inv.conditionsGenerales,
+      items: (inv.items as List).map((i) {
+        String pName = 'Produit Inconnu';
+        try { pName = i.productName ?? 'Produit Inconnu'; } catch (_) {}
+        try { pName = i.description ?? pName; } catch (_) {}
+        
+        return DocumentItemWrapper(productId: i.productId,
+          productName: pName,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          tvaRate: i.tvaRate,
+          discountPercent: i.discountPercent,
+          totalHT: (() { try { return i.computedTotalHT; } catch(_) { return i.totalHT; } })(),
+        );
+      }).toList(),
     );
   }
 
@@ -164,39 +214,24 @@ class DocumentWrapper {
       totalTTC: order.totalTTC ?? 0,
       stampTax: order.timbreFiscal ?? 0,
       notes: order.notes,
-      items: (order.items as List).map((i) => DocumentItemWrapper(
-        productName: (i.runtimeType.toString() == 'SupplierOrderItem' ? i.description : null) ?? 'Produit Inconnu',
-        quantity: i.quantity,
-        unitPrice: i.unitPrice ?? 0,
-        tvaRate: i.tvaRate ?? 0,
-        discountPercent: i.discountPercent ?? 0,
-        totalHT: i.totalHT ?? 0,
-      )).toList(),
+      conditionsGenerales: order.conditionsGenerales,
+      items: (order.items as List).map((i) {
+        String pName = 'Produit Inconnu';
+        try { pName = i.description ?? 'Produit Inconnu'; } catch (_) {}
+        try { pName = i.productName ?? pName; } catch (_) {}
+        
+        return DocumentItemWrapper(productId: i.productId,
+          productName: pName,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice ?? 0,
+          tvaRate: i.tvaRate ?? 0,
+          discountPercent: i.discountPercent ?? 0,
+          totalHT: i.totalHT ?? 0,
+        );
+      }).toList(),
     );
   }
 
-  static DocumentWrapper fromCustomerOrder(dynamic order) {
-    return DocumentWrapper(
-      id: order.id,
-      number: order.number,
-      documentTitle: 'COMMANDE',
-      customerName: order.customerName,
-      date: order.date,
-      dueDate: order.deliveryDate,
-      totalHT: order.totalHTAfterDiscount ?? 0,
-      totalTva: order.totalTVA ?? 0,
-      totalTTC: order.totalTTC ?? 0,
-      notes: order.notes,
-      items: (order.items as List).map((i) => DocumentItemWrapper(
-        productName: i.description ?? 'Produit Inconnu',
-        quantity: i.quantity,
-        unitPrice: i.unitPrice ?? 0,
-        tvaRate: i.tvaRate ?? 0,
-        discountPercent: i.discountPercent ?? 0,
-        totalHT: i.totalHT ?? 0,
-      )).toList(),
-    );
-  }
 
   static DocumentWrapper fromReturnNote(dynamic note) {
     return DocumentWrapper(
@@ -209,7 +244,8 @@ class DocumentWrapper {
       totalTva: (note.totalTTC ?? 0) - (note.subtotalHT ?? 0),
       totalTTC: note.totalTTC ?? 0,
       notes: note.notes,
-      items: (note.items as List).map((i) => DocumentItemWrapper(
+      conditionsGenerales: note.conditions,
+      items: (note.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
         productName: i.designation ?? 'Produit Inconnu',
         quantity: i.quantity,
         unitPrice: i.unitPrice ?? 0,
@@ -227,34 +263,36 @@ class DocumentWrapper {
       documentTitle: 'BON DE RECEPTION',
       customerName: voucher.supplierName,
       date: voucher.date,
-      totalHT: 0,
-      totalTva: 0,
-      totalTTC: 0,
+      totalHT: voucher.computedTotalHTAfterDiscount ?? 0,
+      totalTva: voucher.computedTotalTvaAfterDiscount ?? 0,
+      totalTTC: voucher.computedTotalTTC ?? 0,
+      stampTax: voucher.timbreFiscal ?? 0,
       notes: voucher.notes,
-      items: (voucher.items as List).map((i) => DocumentItemWrapper(
-        productName: 'Produit Inconnu', // ReceivingVoucherItem doesn't store productName natively in the model
-        quantity: i.quantityReceived ?? i.quantityExpected ?? 0,
-        unitPrice: 0,
-        tvaRate: 0,
-        discountPercent: 0,
-        totalHT: 0,
+      conditionsGenerales: voucher.conditionsGenerales,
+      items: (voucher.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
+        productName: i.productName ?? 'Produit Inconnu',
+        quantity: i.quantityReceived > 0 ? i.quantityReceived : (i.quantityExpected ?? 0),
+        unitPrice: i.unitPrice ?? 0,
+        tvaRate: i.tvaRate ?? 0,
+        discountPercent: i.discountPercent ?? 0,
+        totalHT: i.computedTotalHT ?? 0,
       )).toList(),
     );
   }
 
-  static DocumentWrapper fromSupplierCreditNote(dynamic note) {
+  static DocumentWrapper fromSupplierCreditNote(dynamic note, [String? supplierName]) {
     return DocumentWrapper(
       id: note.id,
       number: note.number,
       documentTitle: 'AVOIR FOURNISSEUR',
-      customerName: note.supplierName,
+      customerName: supplierName ?? 'Fournisseur',
       date: note.date,
       totalHT: note.totalHT ?? 0,
       totalTva: note.totalTVA ?? 0,
       totalTTC: note.totalTTC ?? 0,
-      notes: note.notes,
-      items: (note.items as List).map((i) => DocumentItemWrapper(
-        productName: i.designation ?? i.productName ?? 'Produit Inconnu',
+      notes: note.reason,
+      items: (note.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
+        productName: i.designation ?? 'Produit Inconnu',
         quantity: i.quantity,
         unitPrice: i.unitPrice ?? 0,
         tvaRate: i.tvaRate ?? 0,
@@ -269,14 +307,14 @@ class DocumentWrapper {
       id: note.id,
       number: note.number,
       documentTitle: 'RETOUR FOURNISSEUR',
-      customerName: note.supplierName,
+      customerName: note.supplierName ?? 'Fournisseur Inconnu',
       date: note.date,
       totalHT: note.totalHT ?? 0,
       totalTva: note.totalTVA ?? 0,
       totalTTC: note.totalTTC ?? 0,
-      notes: note.notes,
-      items: (note.items as List).map((i) => DocumentItemWrapper(
-        productName: i.designation ?? i.productName ?? 'Produit Inconnu',
+      notes: note.reason,
+      items: (note.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
+        productName: i.designation ?? 'Produit Inconnu',
         quantity: i.quantity,
         unitPrice: i.unitPrice ?? 0,
         tvaRate: i.tvaRate ?? 0,
@@ -297,13 +335,13 @@ class DocumentWrapper {
       totalTva: note.totalTva ?? 0,
       totalTTC: note.totalTTC ?? 0,
       notes: note.notes,
-      items: (note.items as List).map((i) => DocumentItemWrapper(
+      items: (note.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
         productName: i.productName ?? 'Produit Inconnu',
         quantity: i.quantity,
         unitPrice: i.unitPrice ?? 0,
         tvaRate: i.tvaRate ?? 0,
         discountPercent: i.discountPercent ?? 0,
-        totalHT: (i.runtimeType.toString() == 'CreditNoteItem') ? i.computedTotalHT : i.totalHT,
+        totalHT: (() { try { return i.computedTotalHT; } catch(_) { return i.totalHT; } })(),
       )).toList(),
     );
   }
@@ -343,7 +381,7 @@ class DocumentWrapper {
       totalTva: 0,
       totalTTC: 0,
       notes: transfer.notes,
-      items: (transfer.items as List).map((i) => DocumentItemWrapper(
+      items: (transfer.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
         productName: i.productName ?? 'Produit Inconnu',
         quantity: i.quantityToTransfer,
         unitPrice: 0,
@@ -365,7 +403,7 @@ class DocumentWrapper {
       totalTva: 0,
       totalTTC: 0,
       notes: sheet.notes,
-      items: (sheet.items as List).map((i) => DocumentItemWrapper(
+      items: (sheet.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
         productName: i.productName ?? 'Produit Inconnu',
         quantity: i.actualQty,
         unitPrice: 0,
@@ -378,6 +416,7 @@ class DocumentWrapper {
 }
 
 class DocumentItemWrapper {
+  final String? productId;
   final String productName;
   final double quantity;
   final double unitPrice;
@@ -387,12 +426,13 @@ class DocumentItemWrapper {
   final Map<String, dynamic> customFields;
 
   DocumentItemWrapper({
+    this.productId,
     required this.productName,
     required this.quantity,
     required this.unitPrice,
     required this.tvaRate,
     required this.discountPercent,
     required this.totalHT,
-    this.customFields = const {},
-  });
+    Map<String, dynamic>? customFields,
+  }) : customFields = customFields ?? <String, dynamic>{};
 }

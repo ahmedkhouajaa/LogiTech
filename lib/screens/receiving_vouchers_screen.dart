@@ -19,6 +19,8 @@ import 'package:uuid/uuid.dart';
 import '../blocs/supplier_returns/supplier_returns_bloc.dart';
 import '../blocs/supplier_returns/supplier_returns_event.dart';
 import '../models/supplier_return.dart';
+import 'document_preview_screen.dart';
+import '../models/document_wrapper.dart';
 import 'app_shell_screen.dart';
 import '../widgets/sidebar_menu.dart';
 import '../services/pdf_service.dart';
@@ -350,6 +352,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
           ),
         ],
       ),
+
       if (activeFilterCount > 0)
         Padding(
           padding: const EdgeInsets.only(top: 16),
@@ -552,37 +555,26 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                 itemBuilder: (ctx) => _buildActionMenu(context, voucher),
                                                 onSelected: (val) {
                                                   if (val == 'view') {
-                                                    if (voucher.orderId != null) {
-                                                      final state = context.read<SupplierOrdersBloc>().state;
-                                                      SupplierOrder? originalOrder;
-                                                      if (state is SupplierOrdersLoaded) {
-                                                        try {
-                                                          originalOrder = state.orders.firstWhere((o) => o.id == voucher.orderId);
-                                                        } catch (_) {}
-                                                      }
-                                                      if (originalOrder != null) {
-                                                        final receiptOrder = originalOrder.copyWith(
-                                                          number: voucher.number,
-                                                          date: voucher.date,
-                                                          status: voucher.status,
-                                                        );
-                                                        Navigator.push(context, MaterialPageRoute(
-                                                          builder: (_) => CreateSupplierOrderScreen(
-                                                            existing: receiptOrder,
-                                                            isReadOnly: true,
-                                                            overrideTitle: 'Détails du bon de réception',
-                                                          ),
-                                                        ));
-                                                        return;
-                                                      }
-                                                    }
-                                                    // Fallback
+                                                    final doc = DocumentWrapper.fromReceivingVoucher(voucher);
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) => DocumentPreviewScreen(document: doc),
+                                                      ),
+                                                    );
+                                                  } else if (val == 'edit') {
                                                     Navigator.push(
                                                       context,
                                                       MaterialPageRoute(
                                                         builder: (_) => CreateReceivingVoucherScreen(existing: voucher),
                                                       ),
-                                                    );
+                                                    ).then((_) {
+                                                      if (context.mounted) {
+                                                        context.read<ReceivingVouchersBloc>().add(LoadReceivingVouchers());
+                                                      }
+                                                    });
+                                                  } else if (val == 'delete') {
+                                                    _confirmDelete(voucher);
                                                   } else if (val == 'convert_invoice') {
                                                     _showConvertToInvoiceDialog(voucher);
                                                   } else if (val == 'convert_return') {
@@ -843,6 +835,33 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     ));
   }
 
+  void _confirmDelete(ReceivingVoucher voucher) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: Text('Êtes-vous sûr de vouloir supprimer le bon de réception ${voucher.number} ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            onPressed: () {
+              context.read<ReceivingVouchersBloc>().add(DeleteReceivingVoucher(voucher.id));
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Bon de réception supprimé')),
+              );
+            },
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showConvertToReturnDialog(ReceivingVoucher voucher) {
     showDialog(
       context: context,
@@ -1009,8 +1028,8 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     items.add(_buildMenuItem('email', Icons.email_outlined, 'Envoyer par email', const Color(0xFF2563EB)));
     items.add(_buildMenuItem('whatsapp', Icons.chat_bubble_outline, 'Envoyer par WhatsApp', const Color(0xFF10B981)));
     items.add(_buildMenuItem('status', Icons.swap_horiz_outlined, 'Changer le statut', const Color(0xFFF59E0B)));
-    items.add(_buildMenuItem('duplicate', Icons.content_copy_outlined, 'Dupliquer', const Color(0xFF475569)));
-    items.add(_buildMenuItem('attachments', Icons.attach_file_outlined, 'Gerer les pieces jointes', const Color(0xFF475569), showBorder: false));
+//     items.add(_buildMenuItem('duplicate', Icons.content_copy_outlined, 'Dupliquer', const Color(0xFF475569)));
+//     items.add(_buildMenuItem('attachments', Icons.attach_file_outlined, 'Gerer les pieces jointes', const Color(0xFF475569), showBorder: false));
 
     return items;
   }

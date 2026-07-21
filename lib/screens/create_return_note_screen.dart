@@ -679,7 +679,7 @@ class _CreateReturnNoteScreenState
                   children: [
                     InkWell(
                       onTap: () => setState(() => _items[index] =
-                          item.copyWith(quantity: item.quantity + 1)),
+                          item.copyWith(quantity: item.quantity < -1 ? item.quantity + 1 : item.quantity)),
                       borderRadius: BorderRadius.circular(4),
                       child: Container(
                         width: 28,
@@ -704,8 +704,10 @@ class _CreateReturnNoteScreenState
                         keyboardType: TextInputType.number,
                         onChanged: (v) => setState(() =>
                             _items[index] = item.copyWith(
-                                quantity:
-                                    double.tryParse(v) ?? 1)),
+                                quantity: (() {
+                                  final rawQty = double.tryParse(v) ?? -1;
+                                  return rawQty > 0 ? -rawQty : rawQty;
+                                })())),
                       ),
                     ),
                   ],

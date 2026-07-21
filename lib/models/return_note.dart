@@ -62,15 +62,17 @@ class ReturnNoteItem extends Equatable {
   }
 
   factory ReturnNoteItem.fromMap(Map<String, dynamic> map) {
+    final rawQty = double.tryParse(map['quantity']?.toString() ?? '0') ?? 0.0;
+    final rawHT = double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0;
     return ReturnNoteItem(
       id: map['id']?.toString() ?? '',
       returnNoteId: map['return_note_id']?.toString() ?? '',
       productId: map['product_id']?.toString(),
       designation: map['designation']?.toString() ?? '',
-      quantity: double.tryParse(map['quantity']?.toString() ?? '0') ?? 0.0,
+      quantity: rawQty > 0 ? -rawQty : rawQty,
       unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
       tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
-      totalHT: double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0,
+      totalHT: rawHT > 0 ? -rawHT : rawHT,
       reason: map['reason']?.toString(),
     );
   }
@@ -185,6 +187,9 @@ class ReturnNote extends Equatable {
       parsedItems = (map['items'] as List).map((i) => ReturnNoteItem.fromMap(Map<String, dynamic>.from(i))).toList();
     }
 
+    final rawSubtotal = double.tryParse(map['subtotal_ht']?.toString() ?? '0') ?? 0.0;
+    final rawTotal = double.tryParse(map['total_ttc']?.toString() ?? '0') ?? 0.0;
+
     return ReturnNote(
       id: map['id']?.toString() ?? '',
       returnNumber: map['return_number']?.toString() ?? '',
@@ -193,8 +198,8 @@ class ReturnNote extends Equatable {
       customerCompany: map['customer_company']?.toString(),
       deliveryNoteId: map['delivery_note_id']?.toString(),
       dateEmission: map['date_emission'] != null ? DateTime.tryParse(map['date_emission'].toString()) ?? DateTime.now() : DateTime.now(),
-      subtotalHT: double.tryParse(map['subtotal_ht']?.toString() ?? '0') ?? 0.0,
-      totalTTC: double.tryParse(map['total_ttc']?.toString() ?? '0') ?? 0.0,
+      subtotalHT: rawSubtotal > 0 ? -rawSubtotal : rawSubtotal,
+      totalTTC: rawTotal > 0 ? -rawTotal : rawTotal,
       notes: map['notes']?.toString(),
       conditions: map['conditions']?.toString(),
       status: map['status']?.toString() ?? 'draft',

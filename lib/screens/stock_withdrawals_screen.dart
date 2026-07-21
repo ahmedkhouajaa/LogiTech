@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
-
+import '../models/product.dart';
 
 
 import '../database/database_helper.dart';
@@ -67,14 +67,18 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
     }
   }
 
-  String _getProductName(String id) {
+  Product? _getProduct(String id) {
     final state = context.read<ProductsBloc>().state;
     if (state is ProductsLoaded) {
       try {
-        return state.products.firstWhere((p) => p.id == id).name;
+        return state.products.firstWhere((p) => p.id == id);
       } catch (_) {}
     }
-    return '';
+    return null;
+  }
+
+  String _getProductName(String id) {
+    return _getProduct(id)?.name ?? '';
   }
 
   void _navigate(BuildContext context, [StockWithdrawal? entry]) {
@@ -376,12 +380,42 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
   }
 
   void _previewDocument(StockWithdrawal entry) {
+    final wrapper = DocumentWrapper(
+      id: entry.id,
+      number: entry.number,
+      documentTitle: "BON DE SORTIE",
+      date: entry.date,
+      totalHT: entry.totalHTAfterDiscount,
+      totalTva: entry.totalTVA,
+      totalTTC: entry.totalTTC,
+      notes: entry.notes,
+      items: entry.items.map((item) {
+        final product = _getProduct(item.productId);
+        return DocumentItemWrapper(
+          productName: product?.name ?? 'Article Inconnu',
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          tvaRate: item.tvaRate,
+          discountPercent: item.discountPercent,
+          totalHT: item.totalHT,
+          customFields: {
+            'code': product?.code ?? '',
+            'unit': product?.unit ?? 'pièce',
+            'purchasePrice': product?.purchasePrice ?? 0,
+          },
+        );
+      }).toList(),
+      customData: {
+        'warehouseId': entry.warehouseId,
+        'warehouseName': _getWarehouseName(entry.warehouseId ?? 'default_warehouse'),
+        'createdBy': 'Admin',
+      },
+    );
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => DocumentPreviewScreen(
-          document: DocumentWrapper.fromStockWithdrawal(entry),
-        ),
+        builder: (_) => DocumentPreviewScreen(document: wrapper),
       ),
     );
   }

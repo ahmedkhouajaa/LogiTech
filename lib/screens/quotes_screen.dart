@@ -24,8 +24,8 @@ import 'create_invoice_screen.dart';
 import 'create_customer_order_screen.dart';
 import 'create_delivery_note_screen.dart';
 import 'create_quote_screen.dart';
-import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
+import '../services/pdf_service.dart';
 import 'document_preview_screen.dart';
 
 class QuotesScreen extends StatefulWidget {
@@ -633,10 +633,10 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                                   _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
                                                   const PopupMenuDivider(height: 1),
                                                   _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-                                                  const PopupMenuDivider(height: 1),
-                                                  _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-                                                  const PopupMenuDivider(height: 1),
-                                                  _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
+//                                                   const PopupMenuDivider(height: 1),
+//                                                   _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
+//                                                   const PopupMenuDivider(height: 1),
+//                                                   _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
                                                 ],
                                               ),
                                             ),
@@ -750,7 +750,14 @@ class _QuotesScreenState extends State<QuotesScreen> {
   void _handleAction(BuildContext context, String action, Quote quote) {
     switch (action) {
       case 'view':
-        // TODO: View quote details
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DocumentPreviewScreen(
+              document: DocumentWrapper.fromQuote(quote),
+            ),
+          ),
+        );
         break;
       case 'edit':
         Navigator.push(

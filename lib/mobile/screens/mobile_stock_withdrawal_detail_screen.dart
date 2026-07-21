@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../blocs/customers/customers_bloc.dart';
+import '../../models/product.dart';
 import '../../blocs/products/products_bloc.dart';
 import '../../blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
 
@@ -42,6 +43,52 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
         currentWithdrawal = fullWithdrawal;
       });
     }
+  }
+
+  Product? _getProduct(String id) {
+    final state = context.read<ProductsBloc>().state;
+    if (state is ProductsLoaded) {
+      try {
+        return state.products.firstWhere((p) => p.id == id);
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  DocumentWrapper _createDocumentWrapper(StockWithdrawal note) {
+    return DocumentWrapper(
+      id: note.id,
+      number: note.number,
+      documentTitle: "BON DE SORTIE",
+      date: note.date,
+      totalHT: note.totalHTAfterDiscount,
+      totalTva: note.totalTVA,
+      totalTTC: note.totalTTC,
+      notes: note.notes,
+      items: note.items.map((item) {
+        final product = _getProduct(item.productId);
+        return DocumentItemWrapper(
+          productName: product?.name ?? 'Article Inconnu',
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          tvaRate: item.tvaRate,
+          discountPercent: item.discountPercent,
+          totalHT: item.totalHT,
+          customFields: {
+            'code': (product?.reference != null && product!.reference!.isNotEmpty) 
+                ? product.reference 
+                : (product?.code ?? ''),
+            'unit': product?.unit ?? 'pièce',
+            'purchasePrice': product?.purchasePrice ?? 0,
+          },
+        );
+      }).toList(),
+      customData: {
+        'warehouseId': note.warehouseId,
+        'warehouseName': 'Entrepôt par défaut', // or fetch if available
+        'createdBy': 'Admin',
+      },
+    );
   }
 
   @override
@@ -293,7 +340,7 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
         );
         break;
       case 'print':
-        final doc = DocumentWrapper.fromStockWithdrawal(withdrawal);
+        final doc = _createDocumentWrapper(withdrawal);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
         break;
       default:

@@ -555,10 +555,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
               const PopupMenuDivider(height: 1),
               _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-              const PopupMenuDivider(height: 1),
-              _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-              const PopupMenuDivider(height: 1),
-              _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
+//               const PopupMenuDivider(height: 1),
+//               _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
+//               const PopupMenuDivider(height: 1),
+//               _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
             ],
           ),
         ),
@@ -690,16 +690,16 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 customerName: inv.customerName,
                 date: now,
                 status: CreditNoteStatus.unused,
-                totalHT: inv.totalHT,
-                totalTva: inv.totalTva,
-                totalTTC: inv.totalTTC,
+                totalHT: inv.totalHT > 0 ? -inv.totalHT : inv.totalHT,
+                totalTva: inv.totalTva > 0 ? -inv.totalTva : inv.totalTva,
+                totalTTC: inv.totalTTC > 0 ? -inv.totalTTC : inv.totalTTC,
                 items: inv.items.map((i) => CreditNoteItem(
-                  id: Uuid().v4(),
+                  id: const Uuid().v4(),
                   productId: i.productId,
-                  quantity: i.quantity,
+                  quantity: i.quantity > 0 ? -i.quantity : i.quantity,
                   unitPrice: i.unitPrice,
                   tvaRate: i.tvaRate,
-                  totalHT: i.totalHT,
+                  totalHT: i.totalHT > 0 ? -i.totalHT : i.totalHT,
                 )).toList(),
                 createdAt: now,
                 updatedAt: now,
@@ -745,7 +745,14 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   void _handleAction(BuildContext context, String action, Invoice inv) {
     switch (action) {
       case 'view':
-        // TODO: View details
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DocumentPreviewScreen(
+              document: DocumentWrapper.fromInvoice(inv),
+            ),
+          ),
+        );
         break;
       case 'edit':
         Navigator.push(

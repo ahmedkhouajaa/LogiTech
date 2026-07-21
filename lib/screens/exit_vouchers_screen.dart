@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/exit_vouchers/exit_vouchers_bloc.dart';
+import '../models/product.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
@@ -9,6 +10,9 @@ import '../models/customer.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'create_exit_voucher_screen.dart';
+import '../models/document_wrapper.dart';
+import 'document_preview_screen.dart';
+import '../services/pdf_service.dart';
 
 enum ExitVoucherStatus {
   draft('Brouillon', AppColors.textSecondary),
@@ -41,6 +45,52 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
     super.initState();
     context.read<ExitVouchersBloc>().add(LoadExitVouchers());
     context.read<CustomersBloc>().add(LoadCustomers());
+  }
+
+  Product? _getProduct(String id) {
+    final state = context.read<ProductsBloc>().state;
+    if (state is ProductsLoaded) {
+      try {
+        return state.products.firstWhere((p) => p.id == id);
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  DocumentWrapper _createDocumentWrapper(StockWithdrawal note) {
+    return DocumentWrapper(
+      id: note.id,
+      number: note.number,
+      documentTitle: "BON DE SORTIE",
+      date: note.date,
+      totalHT: note.totalHTAfterDiscount,
+      totalTva: note.totalTVA,
+      totalTTC: note.totalTTC,
+      notes: note.notes,
+      items: note.items.map((item) {
+        final product = _getProduct(item.productId);
+        return DocumentItemWrapper(
+          productName: product?.name ?? 'Article Inconnu',
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          tvaRate: item.tvaRate,
+          discountPercent: item.discountPercent,
+          totalHT: item.totalHT,
+          customFields: {
+            'code': (product?.reference != null && product!.reference!.isNotEmpty) 
+                ? product.reference 
+                : (product?.code ?? ''),
+            'unit': product?.unit ?? 'pièce',
+            'purchasePrice': product?.purchasePrice ?? 0,
+          },
+        );
+      }).toList(),
+      customData: {
+        'warehouseId': note.warehouseId,
+        'warehouseName': 'Entrepôt par défaut', // or fetch if available
+        'createdBy': 'Admin',
+      },
+    );
   }
 
   void _applyFilters() {
@@ -807,17 +857,53 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                     borderRadius: BorderRadius.circular(8)),
                 color: AppColors.surface,
                 onSelected: (val) {
+                  if (val == 'view' || val == 'print') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DocumentPreviewScreen(
+                          document: _createDocumentWrapper(note),
+                        ),
+                      ),
+                    );
+                  }
                   if (val == 'edit') _navigate(context, note);
                   if (val == 'delete') _confirmDelete(note);
+                  if (val == 'pdf') {
+                    final doc = _createDocumentWrapper(note);
+                    PdfService.instance.downloadDocument(context, doc);
+                  }
+                  if (val == 'email' || val == 'whatsapp') {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fonctionnalité en cours de développement')));
+                  }
+                  if (val == 'status') {
+                    _showChangeStatusDialog(context, note);
+                  }
                 },
                 itemBuilder: (_) => [
+                  const PopupMenuItem(
+                      value: 'view',
+                      child: Row(children: [
+                        Icon(Icons.visibility_outlined,
+                            size: 16, color: AppColors.textSecondary),
+                        SizedBox(width: 8),
+                        Text('Voir')
+                      ])),
                   const PopupMenuItem(
                       value: 'edit',
                       child: Row(children: [
                         Icon(Icons.edit_rounded,
-                            size: 16, color: AppColors.primary),
+                            size: 16, color: AppColors.textSecondary),
                         SizedBox(width: 8),
                         Text('Modifier')
+                      ])),
+                  const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(children: [
+                        Icon(Icons.delete_rounded,
+                            size: 16, color: AppColors.textSecondary),
+                        SizedBox(width: 8),
+                        Text('Supprimer')
                       ])),
                   const PopupMenuItem(
                       value: 'print',
@@ -828,13 +914,36 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                         Text('Imprimer')
                       ])),
                   const PopupMenuItem(
-                      value: 'delete',
+                      value: 'pdf',
                       child: Row(children: [
-                        Icon(Icons.delete_rounded,
-                            size: 16, color: AppColors.error),
+                        Icon(Icons.picture_as_pdf_outlined,
+                            size: 16, color: AppColors.textSecondary),
                         SizedBox(width: 8),
-                        Text('Supprimer',
-                            style: TextStyle(color: AppColors.error))
+                        Text('Télécharger PDF')
+                      ])),
+                  const PopupMenuItem(
+                      value: 'email',
+                      child: Row(children: [
+                        Icon(Icons.email_outlined,
+                            size: 16, color: AppColors.textSecondary),
+                        SizedBox(width: 8),
+                        Text('Envoyer par email')
+                      ])),
+                  const PopupMenuItem(
+                      value: 'whatsapp',
+                      child: Row(children: [
+                        Icon(Icons.chat_outlined,
+                            size: 16, color: AppColors.textSecondary),
+                        SizedBox(width: 8),
+                        Text('Envoyer par WhatsApp')
+                      ])),
+                  const PopupMenuItem(
+                      value: 'status',
+                      child: Row(children: [
+                        Icon(Icons.swap_horiz_outlined,
+                            size: 16, color: AppColors.textSecondary),
+                        SizedBox(width: 8),
+                        Text('Changer le statut')
                       ])),
                 ],
               ),
@@ -1026,6 +1135,68 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
             child: const Text('Supprimer'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showChangeStatusDialog(BuildContext context, StockWithdrawal note) {
+    ExitVoucherStatus selectedStatus = ExitVoucherStatus.values.firstWhere(
+      (e) => e.name == note.status,
+      orElse: () => ExitVoucherStatus.draft,
+    );
+    final notesController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Changer le statut'),
+            content: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Nouveau statut:'),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<ExitVoucherStatus>(
+                    value: selectedStatus,
+                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    items: ExitVoucherStatus.values.map((s) => DropdownMenuItem(
+                      value: s,
+                      child: Text(s.label, style: TextStyle(color: s.color, fontWeight: FontWeight.bold)),
+                    )).toList(),
+                    onChanged: (v) {
+                      if (v != null) setDialogState(() => selectedStatus = v);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: notesController,
+                    maxLines: 2,
+                    decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              ElevatedButton(
+                onPressed: () {
+                  final updatedNote = note.copyWith(
+                    status: selectedStatus.name,
+                    notes: notesController.text.isNotEmpty ? '${note.notes ?? ''}\n${notesController.text}' : note.notes,
+                  );
+                  context.read<ExitVouchersBloc>().add(UpdateExitVoucher(updatedNote));
+                  Navigator.pop(dialogCtx);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                child: const Text('Confirmer'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

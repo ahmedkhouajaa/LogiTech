@@ -4,6 +4,7 @@ import '../blocs/stock_entries/stock_entries_bloc.dart';
 import '../blocs/stock_entries/stock_entries_event.dart';
 import '../blocs/stock_entries/stock_entries_state.dart';
 import '../blocs/products/products_bloc.dart';
+import '../models/product.dart';
 import '../models/stock_entry.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
@@ -63,14 +64,18 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
     }
   }
 
-  String _getProductName(String id) {
+  Product? _getProduct(String id) {
     final state = context.read<ProductsBloc>().state;
     if (state is ProductsLoaded) {
       try {
-        return state.products.firstWhere((p) => p.id == id).name;
+        return state.products.firstWhere((p) => p.id == id);
       } catch (_) {}
     }
-    return '';
+    return null;
+  }
+
+  String _getProductName(String id) {
+    return _getProduct(id)?.name ?? '';
   }
 
   void _previewDocument(StockEntry entry) {
@@ -84,14 +89,19 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
       totalTTC: 0,
       notes: entry.notes,
       items: entry.items.map((item) {
-        final pName = _getProductName(item.productId);
+        final product = _getProduct(item.productId);
         return DocumentItemWrapper(
-          productName: pName.isNotEmpty ? pName : 'Article Inconnu',
+          productName: product?.name ?? 'Article Inconnu',
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           tvaRate: 0,
           discountPercent: 0,
           totalHT: item.quantity * item.unitPrice,
+          customFields: {
+            'code': product?.code ?? '',
+            'unit': product?.unit ?? 'pièce',
+            'purchasePrice': product?.purchasePrice ?? 0,
+          },
         );
       }).toList(),
       customData: {

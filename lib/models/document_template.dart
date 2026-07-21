@@ -87,6 +87,8 @@ class DocumentTemplate {
 
         // Table Columns Configuration
         'tableColumns': [
+          {'id': 'index', 'label': '#', 'visible': true, 'type': 'standard'},
+          {'id': 'reference', 'label': 'Référence', 'visible': true, 'type': 'custom'},
           {'id': 'designation', 'label': 'Désignation', 'visible': true, 'type': 'standard'},
           {'id': 'quantity', 'label': 'Qté', 'visible': true, 'type': 'standard'},
           {'id': 'unitPrice', 'label': 'Prix Unitaire', 'visible': true, 'type': 'standard'},

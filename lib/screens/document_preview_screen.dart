@@ -11,9 +11,9 @@ class DocumentPreviewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate max width to fit the A4 page (ratio ~1.414) in the available screen height
-    final availableHeight = MediaQuery.of(context).size.height - 150; // accounting for AppBar and toolbars
-    final fitHeightWidth = availableHeight / 1.414;
+    // Adjust the max width to make the document appear more zoomed in by default
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxPageWidth = screenWidth > 1000 ? 850.0 : screenWidth * 0.9;
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -30,7 +30,7 @@ class DocumentPreviewScreen extends StatelessWidget {
         canChangeOrientation: false,
         canChangePageFormat: false,
         canDebug: false,
-        maxPageWidth: fitHeightWidth,
+        maxPageWidth: maxPageWidth,
         pdfFileName: '${document.documentTitle}_${document.number}.pdf',
         dpi: 300,
       ),

@@ -9,7 +9,6 @@ import '../models/customer.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
-import '../widgets/custom_app_bar.dart';
 import 'create_customer_order_screen.dart';
 import '../blocs/invoices/invoices_bloc.dart';
 import '../blocs/delivery_notes/delivery_notes_bloc.dart';
@@ -620,10 +619,10 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                                   _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
                                                   const PopupMenuDivider(height: 1),
                                                   _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-                                                  const PopupMenuDivider(height: 1),
-                                                  _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-                                                  const PopupMenuDivider(height: 1),
-                                                  _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
+//                                                   const PopupMenuDivider(height: 1),
+//                                                   _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
+//                                                   const PopupMenuDivider(height: 1),
+//                                                   _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
                                                 ],
                                               ),
                                             ),
@@ -761,7 +760,14 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   void _handleAction(BuildContext context, String action, CustomerOrder order) {
     switch (action) {
       case 'view':
-        // TODO: View order details
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DocumentPreviewScreen(
+              document: DocumentWrapper.fromCustomerOrder(order),
+            ),
+          ),
+        );
         break;
       case 'edit':
         Navigator.push(

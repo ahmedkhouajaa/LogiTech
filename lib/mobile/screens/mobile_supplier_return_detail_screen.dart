@@ -263,10 +263,10 @@ class _MobileSupplierReturnDetailScreenState extends State<MobileSupplierReturnD
     items.add(_buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'));
     items.add(const PopupMenuDivider(height: 1));
     items.add(_buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'));
+//     items.add(const PopupMenuDivider(height: 1));
+//     items.add(_buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'));
+//     items.add(const PopupMenuDivider(height: 1));
+//     items.add(_buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'));
 
     return items;
   }

@@ -565,18 +565,11 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                                 itemBuilder: (ctx) => _buildActionMenu(context, order),
                                                 onSelected: (val) {
                                                   if (val == 'view') {
+                                                    final doc = DocumentWrapper.fromSupplierOrder(order);
                                                     Navigator.push(
                                                       context,
                                                       MaterialPageRoute(
-                                                        builder: (_) => MultiBlocProvider(
-                                                          providers: [
-                                                            BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
-                                                            BlocProvider.value(value: context.read<SuppliersBloc>()),
-                                                            BlocProvider.value(value: context.read<ProductsBloc>()),
-                                                            BlocProvider.value(value: context.read<ProjectsBloc>()),
-                                                          ],
-                                                          child: CreateSupplierOrderScreen(existing: order, isReadOnly: true),
-                                                        ),
+                                                        builder: (_) => DocumentPreviewScreen(document: doc),
                                                       ),
                                                     );
                                                   } else if (val == 'to_invoice') {
@@ -802,8 +795,8 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     items.add(_buildMenuItem('email', Icons.email_outlined, 'Envoyer par email', const Color(0xFF2563EB)));
     items.add(_buildMenuItem('whatsapp', Icons.chat_bubble_outline, 'Envoyer par WhatsApp', const Color(0xFF10B981)));
     items.add(_buildMenuItem('status', Icons.swap_horiz_outlined, 'Changer le statut', const Color(0xFFF59E0B)));
-    items.add(_buildMenuItem('duplicate', Icons.content_copy_outlined, 'Dupliquer', const Color(0xFF475569)));
-    items.add(_buildMenuItem('attachments', Icons.attach_file_outlined, 'Gerer les pieces jointes', const Color(0xFF475569), showBorder: false));
+//     items.add(_buildMenuItem('duplicate', Icons.content_copy_outlined, 'Dupliquer', const Color(0xFF475569)));
+//     items.add(_buildMenuItem('attachments', Icons.attach_file_outlined, 'Gerer les pieces jointes', const Color(0xFF475569), showBorder: false));
 
     return items;
   }

@@ -10,6 +10,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import 'document_preview_screen.dart';
+import 'create_credit_note_screen.dart';
 
 class CreditNotesScreen extends StatefulWidget {
   const CreditNotesScreen({super.key});
@@ -74,7 +75,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                 label: 'Nouvel Avoir',
                 icon: Icons.add_rounded,
                 onPressed: () {
-                  // TODO: Navigate to create credit note screen
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateCreditNoteScreen()));
                 },
               ),
             ],
@@ -587,25 +588,33 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                                                 color: AppColors.surface,
                                                 onSelected: (val) {
                                                   if (val == 'delete') {
-                                                    context.read<CreditNotesBloc>().add(DeleteCreditNote(note.id));
+                                                    _confirmDelete(note);
                                                   } else if (val == 'pdf') {
                                                     final doc = DocumentWrapper.fromCreditNote(note);
                                                     PdfService.instance.downloadDocument(context, doc);
-                                                  } else if (val == 'print') {
+                                                  } else if (val == 'print' || val == 'view') {
                                                     final doc = DocumentWrapper.fromCreditNote(note);
                                                     Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
+                                                  } else if (val == 'edit') {
+                                                    Navigator.push(context, MaterialPageRoute(builder: (_) => CreateCreditNoteScreen(existing: note)));
+                                                  } else if (val == 'email' || val == 'whatsapp') {
+                                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fonctionnalité en cours de développement')));
                                                   }
                                                 },
                                                 itemBuilder: (_) => [
                                                   _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
                                                   const PopupMenuDivider(height: 1),
-                                                  _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
-                                                  const PopupMenuDivider(height: 1),
-                                                  _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
-                                                  const PopupMenuDivider(height: 1),
                                                   _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
                                                   const PopupMenuDivider(height: 1),
                                                   _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                                                  const PopupMenuDivider(height: 1),
+                                                  _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
+                                                  const PopupMenuDivider(height: 1),
+                                                  _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
+                                                  const PopupMenuDivider(height: 1),
+                                                  _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
+                                                  const PopupMenuDivider(height: 1),
+                                                  _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
                                                 ],
                                               ),
                                             ),
@@ -711,6 +720,31 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
           Icon(icon, size: 18, color: const Color(0xFF64748B)),
           const SizedBox(width: 12),
           Text(text, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(CreditNote note) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: Text('Voulez-vous vraiment supprimer l\'avoir ${note.number} ?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary))),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.read<CreditNotesBloc>().add(DeleteCreditNote(note.id));
+              // Also refresh customers in case of balance update
+              context.read<CustomersBloc>().add(LoadCustomers());
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+            child: const Text('Supprimer'),
+          ),
         ],
       ),
     );

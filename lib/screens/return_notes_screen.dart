@@ -772,10 +772,10 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                   _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
                   const PopupMenuDivider(height: 1),
                   _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
+//                   const PopupMenuDivider(height: 1),
+//                   _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
+//                   const PopupMenuDivider(height: 1),
+//                   _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
                   ]);
                   return items;
                 },
@@ -858,7 +858,13 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
   void _handleAction(BuildContext context, String action, ReturnNote note) {
     switch (action) {
       case 'view':
-        // TODO: View delivery note details
+        final doc = DocumentWrapper.fromReturnNote(note);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DocumentPreviewScreen(document: doc),
+          ),
+        );
         break;
       case 'edit':
         _navigate(context, note);

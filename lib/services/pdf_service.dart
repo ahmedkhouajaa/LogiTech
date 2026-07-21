@@ -22,6 +22,20 @@ class PdfService {
   Future<Uint8List> generateDocumentBytes(DocumentWrapper document, {DocumentTemplate? template}) async {
     final companySettings = await DatabaseHelper.instance.getCompanySettings();
 
+    // Fetch product references for all items if available
+    final db = DatabaseHelper.instance;
+    for (var item in document.items) {
+      if (item.productId != null && item.productId!.isNotEmpty) {
+        final product = await db.getProduct(item.productId!);
+        if (product != null) {
+          item.customFields['reference'] = (product.reference != null && product.reference!.isNotEmpty)
+              ? product.reference
+              : product.code;
+          item.customFields['designation'] = product.name;
+        }
+      }
+    }
+
     // Load template: use provided, or default, or built-in defaults
     template ??= await DatabaseHelper.instance.getDefaultTemplate('invoice');
     final config = template?.config ?? DocumentTemplate.defaultConfig();
@@ -32,6 +46,16 @@ class PdfService {
       return await CanvasPdfGenerator.generateDocumentBytes(document, canvasDoc);
     }
 
+    // Load fonts
+    final fontRegular = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+
+    // Check if this is a stock document
+    final isStockDoc = document.documentTitle == "BON D'ENTRÉE" || document.documentTitle == "BON DE SORTIE" || document.documentTitle == "BON DE TRANSFERT" || document.documentTitle == "FICHE D'INVENTAIRE";
+    if (isStockDoc) {
+      return await _buildStockDocument(document, companySettings, fontRegular, fontBold);
+    }
+
     final pdf = pw.Document();
 
     // Extract template colors
@@ -39,10 +63,6 @@ class PdfService {
     final headerTextColor = PdfColor.fromInt(config['headerTextColor'] as int? ?? 0xFFFFFFFF);
     final fontSize = (config['fontSize'] as num?)?.toDouble() ?? 11.0;
     final rowHeight = (config['rowHeight'] as num?)?.toDouble() ?? 8.0;
-
-    // Load fonts
-    final fontRegular = await PdfGoogleFonts.robotoRegular();
-    final fontBold = await PdfGoogleFonts.robotoBold();
     
     // Force currency to TND if requested, or use settings if not DZD
     final currency = companySettings.currency == 'DZD' || companySettings.currency.isEmpty ? 'TND' : companySettings.currency;
@@ -337,9 +357,19 @@ class PdfService {
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('Adressé à :', style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.grey600)),
-              pw.SizedBox(height: 4),
-              pw.Text(document.customerName ?? 'Client Inconnu', style: pw.TextStyle(font: fontBold, fontSize: 16, color: PdfColors.black)),
+              if (document.documentTitle == "BON D'ENTRÉE" || document.documentTitle == "BON DE SORTIE" || document.documentTitle == "BON DE TRANSFERT" || document.documentTitle == "FICHE D'INVENTAIRE") ...[
+                pw.Text('Entrepôt :', style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.grey600)),
+                pw.SizedBox(height: 4),
+                pw.Text(document.customData?['warehouseName'] ?? 'Non spécifié', style: pw.TextStyle(font: fontBold, fontSize: 16, color: PdfColors.black)),
+              ] else ...[
+                pw.Text('Adressé à :', style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.grey600)),
+                pw.SizedBox(height: 4),
+                pw.Text(document.customerName ?? 'Client Inconnu', style: pw.TextStyle(font: fontBold, fontSize: 16, color: PdfColors.black)),
+                if (document.customData.containsKey('projectName') && document.customData['projectName'] != null && document.customData['projectName'].toString().isNotEmpty) ...[
+                  pw.SizedBox(height: 8),
+                  pw.Text('Projet : ${document.customData['projectName']}', style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.grey800)),
+                ],
+              ],
             ],
           ),
         ),
@@ -349,12 +379,25 @@ class PdfService {
 
   pw.Widget _buildItemsTable(DocumentWrapper document, PdfColor headerBg, PdfColor headerText, Map<String, dynamic> config, double fontSize, double rowHeight) {
     final defaultCols = DocumentTemplate.defaultConfig()['tableColumns'] as List;
-    final columnsConfig = (config['tableColumns'] as List?) ?? defaultCols;
-    
+    var columnsConfig = (config['tableColumns'] as List?) ?? defaultCols;
+
+    // Ensure all default columns exist in columnsConfig (e.g., if a new column was added to defaults)
+    final existingIds = columnsConfig.map((c) => c['id']).toSet();
+    for (int i = 0; i < defaultCols.length; i++) {
+      if (!existingIds.contains(defaultCols[i]['id'])) {
+        final newCols = List<dynamic>.from(columnsConfig);
+        newCols.insert(i.clamp(0, newCols.length), defaultCols[i]);
+        columnsConfig = newCols;
+        existingIds.add(defaultCols[i]['id']);
+      }
+    }
+
     final activeColumns = columnsConfig.where((c) => c['visible'] == true).toList();
     final headers = activeColumns.map((c) => c['label'] as String).toList();
 
-    final data = document.items.map((item) {
+    final data = document.items.asMap().entries.map((entry) {
+      final index = entry.key + 1;
+      final item = entry.value;
       return activeColumns.map((c) {
         final id = c['id'] as String;
         final type = c['type'] as String?;
@@ -362,7 +405,8 @@ class PdfService {
           return item.customFields[id] ?? '';
         }
         switch (id) {
-          case 'designation': return item.productName;
+          case 'index': return index.toString();
+          case 'designation': return item.customFields['designation'] ?? item.productName;
           case 'quantity': return formatQuantity(item.quantity);
           case 'unitPrice': return formatCurrency(item.unitPrice, symbol: '');
           case 'tva': return formatPercentage(item.tvaRate);
@@ -379,8 +423,10 @@ class PdfService {
     final Map<int, pw.Alignment> alignments = {};
     for (int i = 0; i < activeColumns.length; i++) {
       final id = activeColumns[i]['id'] as String;
-      if (id == 'designation') {
+      if (id == 'designation' || id == 'reference') {
         alignments[i] = pw.Alignment.centerLeft;
+      } else if (id == 'quantity' || id == 'index') {
+        alignments[i] = pw.Alignment.center;
       } else {
         alignments[i] = pw.Alignment.centerRight;
       }
@@ -404,14 +450,37 @@ class PdfService {
   }
 
   pw.Widget _buildTotals(DocumentWrapper document, CompanySettings settings, Map<String, dynamic> config, String currency) {
+
     final totalTTCConfig = config['totalTTC'] as Map<String, dynamic>? ?? {};
     final isBoldTTC = totalTTCConfig['style'] == 'Gras';
 
     return pw.Container(
       alignment: pw.Alignment.centerRight,
       child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Spacer(flex: 6),
+          pw.Expanded(
+            flex: 6,
+            child: pw.Padding(
+              padding: const pw.EdgeInsets.only(right: 32),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  if (document.notes != null && document.notes!.trim().isNotEmpty) ...[
+                    pw.Text('Notes :', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: PdfColors.grey700)),
+                    pw.SizedBox(height: 4),
+                    pw.Text(document.notes!, style: pw.TextStyle(fontSize: 10, color: PdfColors.black)),
+                    pw.SizedBox(height: 16),
+                  ],
+                  if (document.conditionsGenerales != null && document.conditionsGenerales!.trim().isNotEmpty) ...[
+                    pw.Text('Conditions Générales :', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11, color: PdfColors.grey700)),
+                    pw.SizedBox(height: 4),
+                    pw.Text(document.conditionsGenerales!, style: pw.TextStyle(fontSize: 10, color: PdfColors.black)),
+                  ],
+                ],
+              ),
+            ),
+          ),
           pw.Expanded(
             flex: 4,
             child: pw.Container(
@@ -456,20 +525,263 @@ class PdfService {
 
   pw.Widget _buildFooter(CompanySettings settings) {
     return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
         pw.Divider(color: PdfColors.grey400),
         pw.SizedBox(height: 8),
-        pw.Text(
-          'Merci de votre confiance!',
-          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  if (settings.bankName != null && settings.bankAccount != null) ...[
+                    pw.Text('Reglement par virement bancaire sur le compte:', style: const pw.TextStyle(fontSize: 10)),
+                    pw.SizedBox(height: 2),
+                    pw.Text('${settings.bankName} - RIB: ${settings.rib ?? settings.bankAccount}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                  ]
+                ],
+              ),
+            ),
+            pw.Container(
+              width: 150,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Text(
+                    'Signature',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14),
+                  ),
+                  pw.SizedBox(height: 40), // Space for the actual signature
+                  pw.Container(
+                    height: 1,
+                    width: 130,
+                    color: PdfColors.grey800,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        if (settings.bankName != null && settings.bankAccount != null) ...[
-          pw.SizedBox(height: 4),
-          pw.Text('Reglement par virement bancaire sur le compte:'),
-          pw.Text('${settings.bankName} - RIB: ${settings.rib ?? settings.bankAccount}'),
-        ]
       ],
+    );
+  }
+
+  /// Dedicated professional PDF layout for stock documents (Bon d'entrée, Bon de sortie, etc.)
+  Future<Uint8List> _buildStockDocument(DocumentWrapper document, CompanySettings settings, pw.Font fontRegular, pw.Font fontBold) async {
+    final pdf = pw.Document();
+    const accentColor = PdfColor.fromInt(0xFF1a56db);
+    const accentLight = PdfColor.fromInt(0xFFe8edfb);
+
+    final warehouseName = document.customData['warehouseName'] ?? 'Non spécifié';
+    final createdBy = document.customData['createdBy'] ?? '';
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
+        build: (context) {
+          return [
+            // ── Header Row ──
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Company info
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        settings.name.isNotEmpty ? settings.name : 'Ma Société',
+                        style: pw.TextStyle(font: fontBold, fontSize: 22, color: accentColor),
+                      ),
+                      pw.SizedBox(height: 4),
+                      if (settings.address != null && settings.address!.isNotEmpty)
+                        pw.Text(settings.address!, style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColors.grey700)),
+                      if (settings.phone != null && settings.phone!.isNotEmpty)
+                        pw.Text('Tél: ${settings.phone}', style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColors.grey700)),
+                      if (settings.email != null && settings.email!.isNotEmpty)
+                        pw.Text(settings.email!, style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColors.grey700)),
+                    ],
+                  ),
+                ),
+                // Document badge
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  decoration: pw.BoxDecoration(
+                    color: accentColor,
+                    borderRadius: pw.BorderRadius.circular(6),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.center,
+                    children: [
+                      pw.Text(document.documentTitle, style: pw.TextStyle(font: fontBold, fontSize: 18, color: PdfColors.white, letterSpacing: 1)),
+                      pw.SizedBox(height: 2),
+                      pw.Text('N° ${document.number}', style: pw.TextStyle(font: fontRegular, fontSize: 11, color: PdfColors.white)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            pw.SizedBox(height: 20),
+
+            // ── Info cards row ──
+            pw.Container(
+              padding: const pw.EdgeInsets.all(14),
+              decoration: pw.BoxDecoration(
+                color: accentLight,
+                borderRadius: pw.BorderRadius.circular(6),
+                border: pw.Border.all(color: const PdfColor.fromInt(0xFFc7d2fe), width: 0.5),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  _stockInfoCell('Référence', document.number, fontRegular, fontBold),
+                  _stockInfoCell('Date', formatDate(document.date), fontRegular, fontBold),
+                  _stockInfoCell('Entrepôt', warehouseName, fontRegular, fontBold),
+                ],
+              ),
+            ),
+
+            pw.SizedBox(height: 20),
+
+            // ── Articles table ──
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+              columnWidths: {
+                0: const pw.FixedColumnWidth(32),
+                1: const pw.FlexColumnWidth(2),
+                2: const pw.FlexColumnWidth(4),
+                3: const pw.FlexColumnWidth(2.5),
+                4: const pw.FlexColumnWidth(2),
+              },
+              children: [
+                // Header row
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFF1F5F9)),
+                  children: [
+                    _stockTableHeaderCell('#', fontBold, color: PdfColors.grey800, align: pw.Alignment.centerLeft),
+                    _stockTableHeaderCell('Référence', fontBold, color: PdfColors.grey800),
+                    _stockTableHeaderCell('Produit', fontBold, color: PdfColors.grey800),
+                    _stockTableHeaderCell('Coût prod. unit.', fontBold, color: PdfColors.grey800),
+                    _stockTableHeaderCell('Quantité', fontBold, color: PdfColors.grey800),
+                  ],
+                ),
+                // Data rows
+                ...document.items.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final item = entry.value;
+                  final code = item.customFields['code'] ?? '';
+                  final unit = item.customFields['unit'] ?? 'pièce';
+                  final purchasePrice = item.customFields['purchasePrice'];
+                  final costStr = (purchasePrice != null && purchasePrice is num && purchasePrice > 0)
+                      ? formatCurrency(purchasePrice.toDouble(), symbol: '')
+                      : '-';
+                  final qtyStr = '${formatQuantity(item.quantity)} $unit';
+                  return pw.TableRow(
+                    children: [
+                      _stockTableCell('${idx + 1}', fontRegular),
+                      _stockTableCell(code, fontRegular),
+                      _stockTableCell(item.productName, fontBold),
+                      _stockTableCell(costStr, fontRegular),
+                      _stockTableCell(qtyStr, fontRegular),
+                    ],
+                  );
+                }),
+              ],
+            ),
+
+            // ── Notes ──
+            if (document.notes != null && document.notes!.isNotEmpty) ...[
+              pw.SizedBox(height: 16),
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.amber50,
+                  borderRadius: pw.BorderRadius.circular(4),
+                  border: pw.Border.all(color: PdfColors.amber200),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Notes :', style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColors.grey800)),
+                    pw.SizedBox(height: 4),
+                    pw.Text(document.notes!, style: pw.TextStyle(font: fontRegular, fontSize: 10, color: PdfColors.grey700)),
+                  ],
+                ),
+              ),
+            ],
+
+            pw.SizedBox(height: 40),
+
+            // ── Signature section ──
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.end,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                _signatureBlock('Signature', fontRegular, fontBold),
+              ],
+            ),
+          ];
+        },
+      ),
+    );
+
+    return await pdf.save();
+  }
+
+  pw.Widget _stockInfoCell(String label, String value, pw.Font font, pw.Font fontBold) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(label, style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey600)),
+        pw.SizedBox(height: 3),
+        pw.Text(value, style: pw.TextStyle(font: fontBold, fontSize: 11, color: PdfColors.grey900)),
+      ],
+    );
+  }
+
+  pw.Widget _stockTableHeaderCell(String text, pw.Font fontBold, {pw.Alignment align = pw.Alignment.centerLeft, PdfColor color = PdfColors.white}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: pw.Align(
+        alignment: align,
+        child: pw.Text(text, style: pw.TextStyle(font: fontBold, fontSize: 11, color: color)),
+      ),
+    );
+  }
+
+  pw.Widget _stockTableCell(String text, pw.Font font, {pw.Alignment align = pw.Alignment.centerLeft}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: pw.Align(
+        alignment: align,
+        child: pw.Text(text, style: pw.TextStyle(font: font, fontSize: 10)),
+      ),
+    );
+  }
+
+  pw.Widget _signatureBlock(String title, pw.Font font, pw.Font fontBold) {
+    return pw.Container(
+      width: 150,
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Text(title, style: pw.TextStyle(font: fontBold, fontSize: 10, color: PdfColors.grey800)),
+          pw.SizedBox(height: 6),
+          pw.Container(
+            height: 60,
+            decoration: pw.BoxDecoration(
+              border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.8)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

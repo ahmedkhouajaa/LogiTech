@@ -520,10 +520,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
               const PopupMenuDivider(height: 1),
               _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-              const PopupMenuDivider(height: 1),
-              _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-              const PopupMenuDivider(height: 1),
-              _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
+//               const PopupMenuDivider(height: 1),
+//               _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
+//               const PopupMenuDivider(height: 1),
+//               _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
             ],
           ),
         ),
@@ -707,7 +707,13 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
   void _handleAction(BuildContext context, String action, PurchaseInvoice inv) {
     switch (action) {
       case 'view':
-        // TODO: View details
+        final doc = DocumentWrapper.fromPurchaseInvoice(inv);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DocumentPreviewScreen(document: doc),
+          ),
+        );
         break;
       case 'edit':
         Navigator.push(

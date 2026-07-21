@@ -130,15 +130,17 @@ class SupplierCreditNoteItem {
   }
 
   factory SupplierCreditNoteItem.fromMap(Map<String, dynamic> map) {
+    final rawQty = double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0;
+    final rawHT = double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0;
     return SupplierCreditNoteItem(
-      id: map['id'],
-      supplierCreditNoteId: map['supplier_credit_note_id'],
-      productId: map['product_id'],
-      designation: map['designation'],
-      quantity: map['quantity'],
-      unitPrice: map['unit_price'],
-      tvaRate: map['tva_rate'],
-      totalHT: map['total_ht'],
+      id: map['id']?.toString() ?? '',
+      supplierCreditNoteId: map['supplier_credit_note_id']?.toString() ?? '',
+      productId: map['product_id']?.toString() ?? '',
+      designation: map['designation']?.toString(),
+      quantity: rawQty > 0 ? -rawQty : rawQty,
+      unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
+      tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
+      totalHT: rawHT > 0 ? -rawHT : rawHT,
     );
   }
 
