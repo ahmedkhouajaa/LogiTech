@@ -29,10 +29,10 @@ class MobileArticleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 12),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
         boxShadow: AppShadows.sm,
@@ -70,29 +70,29 @@ class MobileArticleCard extends StatelessWidget {
                       ),
                       child: Text(
                         '${index + 1}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         designation,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                       ),
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit_rounded, size: 20, color: AppColors.textSecondary),
+                          icon: Icon(Icons.edit_rounded, size: 20, color: AppColors.textSecondary),
                           onPressed: onEdit,
                           padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
+                          constraints: BoxConstraints(),
                           splashRadius: 20,
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.error),
+                          icon: Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.error),
                           onPressed: onDelete,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
@@ -104,9 +104,9 @@ class MobileArticleCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: AppColors.background,
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child: Row(
@@ -119,14 +119,14 @@ class MobileArticleCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    const Text('Total HT: ', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                    Text('Total HT: ', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                     Text(
                       formatCurrencyDT(totalHT),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
                     ),
                   ],
                 )
@@ -142,9 +142,9 @@ class MobileArticleCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-        const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+        Text(label, style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+        SizedBox(height: 4),
+        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
       ],
     );
   }

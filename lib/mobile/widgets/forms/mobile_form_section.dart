@@ -66,9 +66,9 @@ class _MobileFormSectionState extends State<MobileFormSection> with SingleTicker
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
         boxShadow: AppShadows.sm,
@@ -79,11 +79,11 @@ class _MobileFormSectionState extends State<MobileFormSection> with SingleTicker
           InkWell(
             onTap: _handleTap,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -97,17 +97,17 @@ class _MobileFormSectionState extends State<MobileFormSection> with SingleTicker
                       children: [
                         Text(
                           widget.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
                           ),
                         ),
                         if (widget.showProgress && widget.totalFields > 0) ...[
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             '${widget.completedFields}/${widget.totalFields} complétés',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: AppColors.textTertiary,
                             ),
@@ -127,11 +127,11 @@ class _MobileFormSectionState extends State<MobileFormSection> with SingleTicker
                         strokeWidth: 3,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                   ],
                   RotationTransition(
                     turns: _iconTurns,
-                    child: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
+                    child: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
                   ),
                 ],
               ),

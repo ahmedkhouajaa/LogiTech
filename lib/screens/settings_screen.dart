@@ -3,6 +3,8 @@ import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/sidebar_menu.dart';
 import 'app_shell_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../blocs/theme/theme_cubit.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -20,7 +22,22 @@ class SettingsScreen extends StatelessWidget {
             'General',
             [
               _buildSettingItem(Icons.business_rounded, 'Informations de l\'entreprise', 'Gerer les details de la societe, logo, NIF, RC'),
-              _buildSettingItem(Icons.palette_rounded, 'Apparence', 'Theme clair/sombre, couleurs de l\'interface'),
+              BlocBuilder<ThemeCubit, ThemeMode>(
+                builder: (context, themeMode) {
+                  return _buildSettingItem(
+                    Icons.palette_rounded,
+                    'Mode sombre',
+                    'Basculer entre le theme clair et sombre',
+                    trailing: Switch(
+                      value: themeMode == ThemeMode.dark,
+                      onChanged: (value) {
+                        context.read<ThemeCubit>().toggleTheme();
+                      },
+                      activeColor: AppColors.primary,
+                    ),
+                  );
+                },
+              ),
               _buildSettingItem(Icons.language_rounded, 'Langue et region', 'Francais (Algerie), devise par defaut'),
             ],
           ),
@@ -65,8 +82,8 @@ class SettingsScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 8, bottom: 8),
-          child: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary)),
+          padding: EdgeInsets.only(left: 8, bottom: 8),
+          child: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary)),
         ),
         Container(
           decoration: BoxDecoration(
@@ -90,19 +107,19 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSettingItem(IconData icon, String title, String subtitle, {bool isAction = false, VoidCallback? onTap}) {
+  Widget _buildSettingItem(IconData icon, String title, String subtitle, {bool isAction = false, VoidCallback? onTap, Widget? trailing}) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: Container(
-        padding: const EdgeInsets.all(8),
+        padding: EdgeInsets.all(8),
         decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
         child: Icon(icon, color: AppColors.primary, size: 20),
       ),
-      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-      trailing: isAction
+      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+      trailing: trailing ?? (isAction
           ? AppButton(label: 'Forcer la synchro', isSmall: true, onPressed: () {})
-          : const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
+          : Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary)),
       onTap: onTap ?? () {},
     );
   }

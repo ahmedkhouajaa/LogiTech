@@ -66,7 +66,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Informations enregistrées avec succès'),
           backgroundColor: AppColors.success,
         ),
@@ -94,14 +94,14 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Informations sur la société', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Text('Informations sur la société', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               AppButton(
                 label: 'Enregistrer',
                 icon: Icons.save_rounded,
@@ -109,9 +109,9 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
           Container(
-            padding: const EdgeInsets.all(AppSpacing.xl),
+            padding: EdgeInsets.all(AppSpacing.xl),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(AppRadius.lg),

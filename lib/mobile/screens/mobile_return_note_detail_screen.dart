@@ -68,46 +68,46 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('BR ${currentReturnNote.returnNumber}', style: const TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('BR ${currentReturnNote.returnNumber}', style: TextStyle(color: Colors.white, fontSize: 18)),
           backgroundColor: AppColors.primary,
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
+              icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentReturnNote),
               itemBuilder: (_) => [
                 _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-//                 const PopupMenuDivider(height: 1),
+//                 PopupMenuDivider(height: 1),
 //                 _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-//                 const PopupMenuDivider(height: 1),
+//                 PopupMenuDivider(height: 1),
 //                 _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'),
               ],
             ),
           ],
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                color: AppColors.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -116,14 +116,14 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Réf: ${currentReturnNote.returnNumber}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Réf: ${currentReturnNote.returnNumber}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(translateStatus(currentReturnNote.status), style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12)),
+                            child: Text(translateStatus(currentReturnNote.status), style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12)),
                           ),
                         ],
                       ),
@@ -132,22 +132,22 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                       const SizedBox(height: 8),
                       _buildInfoRow('Client', currentReturnNote.customerName ?? currentReturnNote.customerCompany ?? 'Non spécifié'),
                       if (currentReturnNote.deliveryNoteId != null) ...[
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
                         _buildInfoRow('BL lié', currentReturnNote.deliveryNoteId!),
                       ],
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              const SizedBox(height: 8),
+              SizedBox(height: 16),
+              Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              SizedBox(height: 8),
               if (currentReturnNote.items.isEmpty)
                 Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
-                  child: const Padding(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
+                  child: Padding(
                     padding: EdgeInsets.all(16.0),
                     child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
                   ),
@@ -155,11 +155,11 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
               else
                 ...currentReturnNote.items.map((item) => Card(
                   elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
+                  margin: EdgeInsets.only(bottom: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
                   child: Padding(
-                    padding: const EdgeInsets.all(12.0),
+                    padding: EdgeInsets.all(12.0),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -167,37 +167,37 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
+                          child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(item.designation, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              const SizedBox(height: 4),
+                              Text(item.designation, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              SizedBox(height: 4),
                               Row(
                                 children: [
-                                  Text('${item.quantity.abs()} x ', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                  Text(formatCurrencyDT(item.unitPrice), style: const TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+                                  Text('${item.quantity.abs()} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                  Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
                                 ],
                               ),
                               if (item.reason != null) ...[
-                                const SizedBox(height: 4),
-                                Text(item.reason!, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                                SizedBox(height: 4),
+                                Text(item.reason!, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                               ]
                             ],
                           ),
                         ),
-                        Text(formatCurrencyDT(item.totalHT * (1 + item.tvaRate / 100)), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        Text(formatCurrencyDT(item.totalHT * (1 + item.tvaRate / 100)), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
                       ],
                     ),
                   ),
                 )),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surfaceAlt,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -210,8 +210,8 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentReturnNote.totalTTC), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
+                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(formatCurrencyDT(currentReturnNote.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
                         ],
                       ),
                     ],
@@ -219,16 +219,16 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                 ),
               ),
               if (currentReturnNote.notes != null && currentReturnNote.notes!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 16),
+                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
                 Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(currentReturnNote.notes!, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(currentReturnNote.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                   ),
                 ),
               ],
@@ -244,8 +244,8 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
+        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
       ],
     );
   }
@@ -256,9 +256,9 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF64748B)),
-          const SizedBox(width: 12),
-          Text(text, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+          Icon(icon, size: 18, color: Color(0xFF64748B)),
+          SizedBox(width: 12),
+          Text(text, style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -341,7 +341,10 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                 children: [
                   const Text('Nouveau statut:'),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
+                  DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: selectedStatus,
                     decoration: const InputDecoration(border: OutlineInputBorder()),
                     isExpanded: true,

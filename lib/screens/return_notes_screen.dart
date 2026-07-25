@@ -76,7 +76,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                 children: [
                   Row(
                     children: [
-                      const Text(
+                      Text(
                         'Bon de retour',
                         style: TextStyle(
                           fontSize: 24,
@@ -84,12 +84,12 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
+                  SizedBox(height: 4),
+                  Text(
                     'Gerer vos Bons de retour',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
@@ -97,8 +97,8 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
               ),
               ElevatedButton.icon(
                 onPressed: () => _navigate(context, null),
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Creer un Bon de retour'),
+                icon: Icon(Icons.add_rounded, size: 18),
+                label: Text('Creer un Bon de retour'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -194,24 +194,57 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                   label: 'Client',
                   child: BlocBuilder<CustomersBloc, CustomersState>(
                     builder: (context, state) {
-                  List<Customer> customers = [];
-                  if (state is CustomersLoaded) customers = state.customers;
-                  return _dropdownField(
-                    hint: 'Selectionner un client...',
-                    value: _selectedClientId,
-                    items: [
-                      const DropdownMenuItem(
-                          value: 'all',
-                          child: Text('Tous les clients',
-                              style: TextStyle(color: AppColors.textSecondary))),
-                      ...customers.map((c) => DropdownMenuItem(
-                          value: c.id,
-                          child: Text(c.companyName ?? c.responsibleName ?? 'Inconnu'))),
-                    ],
-                    onChanged: (val) {
-                      setState(() => _selectedClientId = val);
-                      _applyFilters();
+                  final customers = state is CustomersLoaded ? state.customers : <Customer>[];
+                  String selectedCustomerName = 'Tous les clients';
+                  if (_selectedClientId != null && _selectedClientId != 'all') {
+                    final found = customers.firstWhere(
+                      (c) => c.id == _selectedClientId,
+                      orElse: () => Customer(id: '', code: '', name: 'Inconnu', country: ''),
+                    );
+                    selectedCustomerName = found.companyName?.isNotEmpty == true
+                        ? found.companyName!
+                        : (found.responsibleName?.isNotEmpty == true ? found.responsibleName! : found.name);
+                  }
+
+                  return InkWell(
+                    onTap: () async {
+                      final selected = await _showCustomerSearchDialog(context, customers, _selectedClientId);
+                      if (selected != null) {
+                        setState(() {
+                          _selectedClientId = selected.id == 'all' ? null : selected.id;
+                        });
+                        _applyFilters();
+                      }
                     },
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedClientId == null || _selectedClientId == 'all'
+                                  ? 'Tous les clients'
+                                  : selectedCustomerName,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: _selectedClientId != null && _selectedClientId != 'all'
+                                    ? AppColors.textPrimary
+                                    : AppColors.textSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                        ],
+                      ),
+                    ),
                   );
                 },
               ),
@@ -258,63 +291,133 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
             flex: 2,
             child: _filterSection(
               label: 'Statut',
-              child: _dropdownField(
-                hint: 'Tous',
-                value: _statusFilter,
-                items: [
-                  const DropdownMenuItem(
-                      value: null,
-                      child: Text('Tous', style: TextStyle(color: AppColors.textPrimary))),
-                  ...ReturnNoteStatus.values.map((s) =>
-                      DropdownMenuItem(value: s, child: Text(s.label))),
-                ],
-                onChanged: (val) {
+              child: PopupMenuButton<ReturnNoteStatus?>(
+                tooltip: 'Filtrer par statut',
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  side: BorderSide(color: AppColors.border),
+                ),
+                color: AppColors.surface,
+                elevation: 6,
+                offset: const Offset(0, 44),
+                initialValue: _statusFilter,
+                onSelected: (val) {
                   setState(() => _statusFilter = val);
                   _applyFilters();
                 },
+                itemBuilder: (context) => [
+                  PopupMenuItem<ReturnNoteStatus?>(
+                    value: null,
+                    height: 38,
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.textTertiary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: Text(
+                            'Tous',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                          ),
+                        ),
+                        Spacer(),
+                        if (_statusFilter == null)
+                          Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(height: 1),
+                  ...ReturnNoteStatus.values.map(
+                    (s) => PopupMenuItem<ReturnNoteStatus?>(
+                      value: s,
+                      height: 38,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: s.color.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                            child: Text(
+                              s.label,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: s.color,
+                              ),
+                            ),
+                          ),
+                          Spacer(),
+                          if (_statusFilter == s)
+                            Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(
+                      color: _statusFilter != null ? AppColors.primary : AppColors.border,
+                    ),
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _statusFilter == null
+                            ? Text(
+                                'Tous',
+                                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            : Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: _statusFilter!.color.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                ),
+                                child: Text(
+                                  _statusFilter!.label,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: _statusFilter!.color,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-
-          // Reset button
-          Container(
-            height: 40,
-            width: 40,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.tune, size: 18, color: AppColors.textSecondary),
-              padding: EdgeInsets.zero,
-              onPressed: () {
-                setState(() {
-                  _selectedClientId = null;
-                  _dateFrom = null;
-                  _dateTo = null;
-                  _statusFilter = null;
-                });
-                _applyFilters();
-              },
             ),
           ),
         ],
       ),
       if (activeFilterCount > 0)
         Padding(
-          padding: const EdgeInsets.only(top: 16),
+          padding: EdgeInsets.only(top: 16),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   '$totalItems résultat${totalItems > 1 ? 's' : ''}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                 ),
               ),
               const Spacer(),
@@ -329,8 +432,8 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                   });
                   _applyFilters();
                 },
-                icon: const Icon(Icons.refresh_rounded, size: 16),
-                label: const Text('Réinitialiser les filtres'),
+                icon: Icon(Icons.refresh_rounded, size: 16),
+                label: Text('Réinitialiser les filtres'),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.textSecondary,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -344,13 +447,180 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
   );
 }
 
+  Future<Customer?> _showCustomerSearchDialog(
+    BuildContext context,
+    List<Customer> customers,
+    String? selectedCustomerId,
+  ) async {
+    return showDialog<Customer?>(
+      context: context,
+      builder: (context) {
+        String search = '';
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final query = search.trim().toLowerCase();
+            final filtered = customers.where((c) {
+              if (query.isEmpty) return true;
+              final nameMatch = c.name.toLowerCase().contains(query);
+              final companyMatch = c.companyName?.toLowerCase().contains(query) ?? false;
+              final respMatch = c.responsibleName?.toLowerCase().contains(query) ?? false;
+              final codeMatch = c.code.toLowerCase().contains(query);
+              final phoneMatch = c.phone?.toLowerCase().contains(query) ?? false;
+              return nameMatch || companyMatch || respMatch || codeMatch || phoneMatch;
+            }).toList();
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+              backgroundColor: AppColors.surface,
+              child: Container(
+                width: 440,
+                constraints: const BoxConstraints(maxHeight: 520),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Title & Close Button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Sélectionner un client',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
+                          onPressed: () => Navigator.of(context).pop(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    // Live Search Bar
+                    SizedBox(
+                      height: 38,
+                      child: TextField(
+                        autofocus: true,
+                        onChanged: (val) => setDialogState(() => search = val),
+                        style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                        decoration: InputDecoration(
+                          hintText: 'Rechercher un client...',
+                          hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                          prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    Divider(height: 1, color: AppColors.border),
+                    SizedBox(height: 4),
+
+                    // "Tous les clients" Option
+                    ListTile(
+                      dense: true,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      selected: selectedCustomerId == null || selectedCustomerId == 'all',
+                      selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
+                      title: Text(
+                        'Tous les clients',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                      ),
+                      trailing: (selectedCustomerId == null || selectedCustomerId == 'all')
+                          ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        Navigator.of(context).pop(Customer(id: 'all', code: '', name: 'Tous les clients', country: ''));
+                      },
+                    ),
+
+                    // Scrollable Client List
+                    Flexible(
+                      child: filtered.isEmpty
+                          ? Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: Center(
+                                child: Text(
+                                  'Aucun client trouvé',
+                                  style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final customer = filtered[index];
+                                final isSelected = customer.id == selectedCustomerId;
+                                final displayName = customer.companyName?.isNotEmpty == true
+                                    ? customer.companyName!
+                                    : (customer.responsibleName?.isNotEmpty == true
+                                        ? customer.responsibleName!
+                                        : customer.name);
+
+                                return ListTile(
+                                  dense: true,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                  selected: isSelected,
+                                  selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
+                                  title: Text(
+                                    displayName,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  subtitle: (customer.code.isNotEmpty || (customer.phone?.isNotEmpty ?? false))
+                                      ? Text(
+                                          [
+                                            if (customer.code.isNotEmpty) customer.code,
+                                            if (customer.phone?.isNotEmpty ?? false) customer.phone!,
+                                          ].join(' • '),
+                                          style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                                        )
+                                      : null,
+                                  trailing: isSelected
+                                      ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
+                                      : null,
+                                  onTap: () {
+                                    Navigator.of(context).pop(customer);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _filterSection({required String label, required Widget child}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         const SizedBox(height: 8),
         SizedBox(height: 40, child: child),
@@ -371,14 +641,14 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.border),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: EdgeInsets.symmetric(horizontal: 12),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
           value: value,
-          hint: Text(hint, style: const TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+          hint: Text(hint, style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
           isExpanded: true,
-          icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
-          style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          icon: Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           items: items,
           onChanged: onChanged,
         ),
@@ -404,16 +674,16 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
       },
       child: Container(
         height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.border),
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_outlined,
+            Icon(Icons.calendar_today_outlined,
                 size: 16, color: AppColors.textSecondary),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Expanded(
               child: Text(
                 value != null ? formatDateLong(value) : hint,
@@ -439,7 +709,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
         if (state is ReturnNotesError) {
           return Center(
               child: Text(state.message,
-                  style: const TextStyle(color: AppColors.error)));
+                  style: TextStyle(color: AppColors.error)));
         }
         if (state is ReturnNotesLoaded) {
           final notes = state.notes;
@@ -466,9 +736,9 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                       children: [
                         // Header row
                         Container(
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: AppColors.background,
                             border:
                                 Border(bottom: BorderSide(color: AppColors.border)),
@@ -476,35 +746,35 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                           child: Row(
                             children: [
                               const SizedBox(width: 32),
-                              const Expanded(
+                              Expanded(
                                   flex: 2,
                                   child: Text('Reference',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 13,
                                           color: AppColors.textSecondary))),
-                              const Expanded(
+                              Expanded(
                                   flex: 3,
                                   child: Text('Client',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 13,
                                           color: AppColors.textSecondary))),
-                              const Expanded(
+                              Expanded(
                                   flex: 2,
                                   child: Text('Statut',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 13,
                                           color: AppColors.textSecondary))),
-                              const Expanded(
+                              Expanded(
                                   flex: 2,
                                   child: Text('Montant',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 13,
                                           color: AppColors.textSecondary))),
-                              const SizedBox(
+                              SizedBox(
                                   width: 80,
                                   child: Text('Actions',
                                       textAlign: TextAlign.right,
@@ -519,7 +789,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                         // Body
                         Expanded(
                           child: pageNotes.isEmpty
-                              ? const Center(
+                              ? Center(
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
@@ -534,7 +804,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                                 )
                               : ListView.separated(
                                   itemCount: pageNotes.length,
-                                  separatorBuilder: (_, __) => const Divider(
+                                  separatorBuilder: (_, __) => Divider(
                                       height: 1, color: AppColors.border),
                                   itemBuilder: (context, i) =>
                                       _buildRow(context, pageNotes[i], i),
@@ -543,24 +813,24 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
 
                         // Pagination footer
                         Container(
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: AppColors.background,
                             border:
                                 Border(top: BorderSide(color: AppColors.border)),
                           ),
                           child: Row(
                             children: [
-                              const Text('Lignes',
+                              Text('Lignes',
                                   style: TextStyle(
                                       fontSize: 13,
                                       color: AppColors.textSecondary)),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               Container(
                                 height: 32,
                                 padding:
-                                    const EdgeInsets.symmetric(horizontal: 8),
+                                    EdgeInsets.symmetric(horizontal: 8),
                                 decoration: BoxDecoration(
                                   border:
                                       Border.all(color: AppColors.border),
@@ -569,10 +839,10 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                                 ),
                                 child: DropdownButton<int>(
                                   value: _rowsPerPage,
-                                  underline: const SizedBox(),
-                                  icon: const Icon(Icons.keyboard_arrow_down,
+                                  underline: SizedBox(),
+                                  icon: Icon(Icons.keyboard_arrow_down,
                                       size: 16),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 13,
                                       color: AppColors.textPrimary),
                                   items: [10, 20, 50, 100]
@@ -590,9 +860,9 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                                   },
                                 ),
                               ),
-                              const SizedBox(width: 24),
+                              SizedBox(width: 24),
                               Text('Page ${page + 1} sur $totalPages',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 13,
                                       color: AppColors.textSecondary)),
                               const Spacer(),
@@ -600,7 +870,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                                 total == 0
                                     ? 'Affichage de 0 a 0 sur 0 resultats'
                                     : 'Affichage de ${start + 1} a  $end sur $total resultats',
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 13,
                                     color: AppColors.textSecondary),
                               ),
@@ -647,7 +917,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
       color: index % 2 == 0
           ? AppColors.surface
           : AppColors.background.withValues(alpha: 0.3),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           SizedBox(
@@ -655,7 +925,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
             child: Checkbox(
               value: false,
               onChanged: (_) {},
-              side: const BorderSide(color: AppColors.border),
+              side: BorderSide(color: AppColors.border),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
             ),
           ),
@@ -667,13 +937,13 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(note.returnNumber,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                         color: AppColors.textPrimary)),
-                const SizedBox(height: 3),
+                SizedBox(height: 3),
                 Text(formatDateTimeLong(note.dateEmission),
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 12, color: AppColors.textTertiary)),
               ],
             ),
@@ -684,12 +954,12 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
             flex: 3,
             child: Row(
               children: [
-                const Icon(Icons.person_outline,
+                Icon(Icons.person_outline,
                     size: 14, color: AppColors.textSecondary),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 Flexible(
                   child: Text(clientLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 13,
                           color: AppColors.textPrimary),
@@ -741,7 +1011,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
             child: Align(
               alignment: Alignment.centerRight,
               child: PopupMenuButton<String>(
-                icon: const Icon(Icons.more_horiz,
+                icon: Icon(Icons.more_horiz,
                     color: AppColors.textSecondary),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
@@ -750,11 +1020,11 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                 itemBuilder: (_) {
                   final items = <PopupMenuEntry<String>>[
                     _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
-                    const PopupMenuDivider(height: 1),
+                    PopupMenuDivider(height: 1),
                     _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                    const PopupMenuDivider(height: 1),
+                    PopupMenuDivider(height: 1),
                     _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                    const PopupMenuDivider(height: 1),
+                    PopupMenuDivider(height: 1),
                     _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
                     const PopupMenuDivider(height: 1),
                   ];
@@ -766,15 +1036,15 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
 
                   items.addAll([
                     _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
-                    const PopupMenuDivider(height: 1),
+                    PopupMenuDivider(height: 1),
                   _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                  const PopupMenuDivider(height: 1),
+                  PopupMenuDivider(height: 1),
                   _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                  const PopupMenuDivider(height: 1),
+                  PopupMenuDivider(height: 1),
                   _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-//                   const PopupMenuDivider(height: 1),
+//                   PopupMenuDivider(height: 1),
 //                   _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-//                   const PopupMenuDivider(height: 1),
+//                   PopupMenuDivider(height: 1),
 //                   _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
                   ]);
                   return items;
@@ -794,7 +1064,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
     return InkWell(
       onTap: enabled ? onTap : null,
       child: Container(
-        padding: const EdgeInsets.all(4),
+        padding: EdgeInsets.all(4),
         decoration: BoxDecoration(
           border: Border.all(
               color: enabled
@@ -816,13 +1086,13 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
+        title: Text('Confirmer la suppression'),
         content: Text(
             'Voulez-vous vraiment supprimer le bon ${note.returnNumber} ?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuler',
+              child: Text('Annuler',
                   style: TextStyle(color: AppColors.textSecondary))),
           ElevatedButton(
             onPressed: () {
@@ -847,9 +1117,9 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF64748B)),
-          const SizedBox(width: 12),
-          Text(text, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          Icon(icon, size: 18, color: Color(0xFF64748B)),
+          SizedBox(width: 12),
+          Text(text, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -932,7 +1202,10 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                 children: [
                   const Text('Nouveau statut:'),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<ReturnNoteStatus>(
+                  DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: selectedStatus,
                     decoration: const InputDecoration(border: OutlineInputBorder()),
                     items: ReturnNoteStatus.values.map((s) => DropdownMenuItem(

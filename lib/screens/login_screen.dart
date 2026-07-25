@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     _buildFeatureRow(Icons.offline_bolt_rounded, 'Offline-First', 'Fonctionne sans connexion'),
                     const SizedBox(height: 16),
                     _buildFeatureRow(Icons.sync_rounded, 'Synchronisation', 'Sync automatique avec le cloud'),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     _buildFeatureRow(Icons.picture_as_pdf_rounded, 'PDF professionnel', 'Factures et devis imprimables'),
                   ],
                 ),
@@ -84,13 +84,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(48),
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 400),
+                      constraints: BoxConstraints(maxWidth: 400),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Bienvenue !', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                          const SizedBox(height: 8),
-                          const Text('Connectez-vous a votre espace', style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
+                          Text('Bienvenue !', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                          SizedBox(height: 8),
+                          Text('Connectez-vous a votre espace', style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
                           const SizedBox(height: 40),
                           Form(
                             key: _formKey,
@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   hint: 'exemple@entreprise.com',
                                   controller: _emailCtrl,
                                   keyboardType: TextInputType.emailAddress,
-                                  prefix: const Icon(Icons.email_outlined, size: 18, color: AppColors.textTertiary),
+                                  prefix: Icon(Icons.email_outlined, size: 18, color: AppColors.textTertiary),
                                   validator: (v) => v == null || v.isEmpty ? 'Email requis' : null,
                                 ),
                                 const SizedBox(height: 20),
@@ -111,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   hint: '••••••••',
                                   controller: _passwordCtrl,
                                   obscureText: _obscurePassword,
-                                  prefix: const Icon(Icons.lock_outline_rounded, size: 18, color: AppColors.textTertiary),
+                                  prefix: Icon(Icons.lock_outline_rounded, size: 18, color: AppColors.textTertiary),
                                   suffix: IconButton(
                                     icon: Icon(_obscurePassword ? Icons.visibility_off_rounded : Icons.visibility_rounded, size: 18, color: AppColors.textTertiary),
                                     onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
@@ -141,8 +141,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                         const SizedBox(height: 12),
                                         TextButton.icon(
                                           onPressed: loading ? null : _handleOfflineMode,
-                                          icon: const Icon(Icons.offline_bolt_rounded, size: 16),
-                                          label: const Text('Continuer en mode hors ligne'),
+                                          icon: Icon(Icons.offline_bolt_rounded, size: 16),
+                                          label: Text('Continuer en mode hors ligne'),
                                           style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
                                         ),
                                       ],
@@ -168,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildFeatureRow(IconData icon, String title, String subtitle) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
+      padding: EdgeInsets.symmetric(horizontal: 40),
       child: Row(
         children: [
           Container(

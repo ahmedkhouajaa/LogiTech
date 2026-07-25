@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
+import '../utils/constants.dart';
 
 enum CreditNoteStatus {
   unused,
@@ -16,6 +18,19 @@ enum CreditNoteStatus {
         return 'Utilisé';
       case cancelled:
         return 'Annulé';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case unused:
+        return AppColors.info;
+      case partiallyUsed:
+        return AppColors.warning;
+      case used:
+        return AppColors.success;
+      case cancelled:
+        return AppColors.error;
     }
   }
 }

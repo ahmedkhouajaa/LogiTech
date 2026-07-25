@@ -92,10 +92,10 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                 children: [
                   // Title
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
                     child: Text(
                       'Mouvements de Stock',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
@@ -106,27 +106,27 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                   
                   // Search bar
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: EdgeInsets.symmetric(horizontal: 16),
                     child: TextField(
                       onChanged: (v) => setState(() => _searchQuery = v),
                       decoration: InputDecoration(
                         hintText: 'Rechercher un produit...',
-                        hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 14),
-                        prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+                        hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 14),
+                        prefixIcon: Icon(Icons.search, color: AppColors.textSecondary, size: 20),
                         filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                        fillColor: AppColors.surface,
+                        contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 16),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(color: AppColors.border),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(color: AppColors.border),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.primary),
+                          borderSide: BorderSide(color: AppColors.primary),
                         ),
                       ),
                     ),
@@ -141,9 +141,9 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                         GestureDetector(
                           onTap: () => setState(() => _showFilters = !_showFilters),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
-                              color: _showFilters || hasActiveFilters ? AppColors.primary.withValues(alpha: 0.1) : Colors.white,
+                              color: _showFilters || hasActiveFilters ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surface,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(color: _showFilters || hasActiveFilters ? AppColors.primary.withValues(alpha: 0.4) : AppColors.border),
                             ),
@@ -151,15 +151,15 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.tune_rounded, size: 16, color: _showFilters || hasActiveFilters ? AppColors.primary : AppColors.textSecondary),
-                                const SizedBox(width: 6),
+                                SizedBox(width: 6),
                                 Text(
                                   'Filtres',
                                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _showFilters || hasActiveFilters ? AppColors.primary : AppColors.textSecondary),
                                 ),
                                 if (hasActiveFilters) ...[
-                                  const SizedBox(width: 6),
+                                  SizedBox(width: 6),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
                                     child: Text(
                                       '${[_filterWarehouseId != null, _filterType != null, _filterReference.isNotEmpty, _filterDateRange != null].where((v) => v).length}',
@@ -172,17 +172,17 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                           ),
                         ),
                         if (hasActiveFilters) ...[
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           // Results count pill
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               '${filteredItems.length} résultat${filteredItems.length > 1 ? 's' : ''}',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                             ),
                           ),
                           const Spacer(),
@@ -194,13 +194,13 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                               _filterDateRange = null;
                             }),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                               decoration: BoxDecoration(
                                 color: AppColors.error.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.clear_all, size: 14, color: AppColors.error),
@@ -217,12 +217,12 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
 
                   // Collapsible Filter Panel
                   if (_showFilters) ...[
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      padding: const EdgeInsets.all(12),
+                      margin: EdgeInsets.symmetric(horizontal: 16),
+                      padding: EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: AppColors.border),
                         boxShadow: [
@@ -238,21 +238,24 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Entrepôt', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                                    Text('Entrepôt', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                                     const SizedBox(height: 4),
                                     SizedBox(
                                       height: 40,
-                                      child: DropdownButtonFormField<String?>(
+                                      child: DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  
                                         value: _filterWarehouseId,
                                         isExpanded: true,
                                         decoration: InputDecoration(
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
+                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                                           filled: true,
-                                          fillColor: const Color(0xFFFAFAFB),
+                                          fillColor: Color(0xFFFAFAFB),
                                         ),
-                                        style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                                        style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                                         items: [
                                           const DropdownMenuItem<String?>(value: null, child: Text('Tous', style: TextStyle(fontSize: 12))),
                                           ...state.warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
@@ -263,26 +266,29 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              SizedBox(width: 10),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Type', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                                    Text('Type', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                                     const SizedBox(height: 4),
                                     SizedBox(
                                       height: 40,
-                                      child: DropdownButtonFormField<MovementType?>(
+                                      child: DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  
                                         value: _filterType,
                                         isExpanded: true,
                                         decoration: InputDecoration(
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
+                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                                           filled: true,
-                                          fillColor: const Color(0xFFFAFAFB),
+                                          fillColor: Color(0xFFFAFAFB),
                                         ),
-                                        style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                                        style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                                         items: [
                                           const DropdownMenuItem(value: null, child: Text('Tous', style: TextStyle(fontSize: 12))),
                                           ...[MovementType.entry, MovementType.exit, MovementType.transfer, MovementType.adjustment].map((t) => DropdownMenuItem(value: t, child: Text(t.label, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
@@ -303,7 +309,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Référence', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                                    Text('Référence', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                                     const SizedBox(height: 4),
                                     SizedBox(
                                       height: 40,
@@ -311,12 +317,12 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                         onChanged: (v) => setState(() => _filterReference = v),
                                         decoration: InputDecoration(
                                           hintText: 'Rechercher réf...',
-                                          hintStyle: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                                          prefixIcon: const Icon(Icons.tag, size: 14, color: AppColors.textTertiary),
-                                          prefixIconConstraints: const BoxConstraints(minWidth: 32),
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                          hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                                          prefixIcon: Icon(Icons.tag, size: 14, color: AppColors.textTertiary),
+                                          prefixIconConstraints: BoxConstraints(minWidth: 32),
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
+                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                                           filled: true,
                                           fillColor: const Color(0xFFFAFAFB),
                                         ),
@@ -326,12 +332,12 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              SizedBox(width: 10),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Période', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                                    Text('Période', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                                     const SizedBox(height: 4),
                                     SizedBox(
                                       height: 40,
@@ -344,22 +350,22 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                           if (range != null) setState(() => _filterDateRange = range);
                                         },
                                         style: OutlinedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                                          padding: EdgeInsets.symmetric(horizontal: 8),
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                          side: const BorderSide(color: AppColors.border),
-                                          backgroundColor: const Color(0xFFFAFAFB),
+                                          side: BorderSide(color: AppColors.border),
+                                          backgroundColor: Color(0xFFFAFAFB),
                                           alignment: Alignment.centerLeft,
                                         ),
                                         child: Row(
                                           children: [
-                                            const Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textTertiary),
+                                            Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textTertiary),
                                             const SizedBox(width: 6),
                                             Expanded(
                                               child: Text(
                                                 _filterDateRange == null 
                                                     ? 'Toutes dates' 
                                                     : '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}',
-                                                style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                                                style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
@@ -376,31 +382,31 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                       ),
                     ),
                   ],
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
 
                   // List Content
                   if (filteredItems.isEmpty)
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      padding: EdgeInsets.symmetric(vertical: 32),
                       child: Center(
                         child: Column(
                           children: [
                             Icon(Icons.swap_horiz_rounded, size: 48, color: AppColors.textTertiary.withValues(alpha: 0.5)),
-                            const SizedBox(height: 8),
-                            const Text('Aucun mouvement trouvé.', style: TextStyle(color: AppColors.textSecondary)),
+                            SizedBox(height: 8),
+                            Text('Aucun mouvement trouvé.', style: TextStyle(color: AppColors.textSecondary)),
                           ],
                         ),
                       ),
                     )
                   else
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             '${filteredItems.length} mouvements',
-                            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                           ),
                           const SizedBox(height: 8),
                           ...filteredItems.map((item) => _MobileStockMovementCard(movement: item, warehouses: state.warehouses)),
@@ -426,8 +432,8 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
             }
           });
         },
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Nouvel ajustement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        icon: Icon(Icons.add, color: Colors.white),
+        label: Text('Nouvel ajustement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
         backgroundColor: AppColors.primary,
       ),
     );
@@ -484,12 +490,12 @@ class _MobileStockMovementCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.border),
       ),
-      color: Colors.white,
+      color: AppColors.surface,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -502,7 +508,7 @@ class _MobileStockMovementCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     formatDate(movement.date),
-                    style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary),
+                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -526,37 +532,37 @@ class _MobileStockMovementCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             // Row 2: Product Name & Quantity
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceAlt,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.inventory_2_outlined, size: 20, color: AppColors.textSecondary),
+                  child: Icon(Icons.inventory_2_outlined, size: 20, color: AppColors.textSecondary),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         movement.productName ?? '—',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Icons.warehouse_outlined, size: 14, color: AppColors.textTertiary),
-                          const SizedBox(width: 4),
+                          Icon(Icons.warehouse_outlined, size: 14, color: AppColors.textTertiary),
+                          SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               warehouseName,
-                              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -583,35 +589,35 @@ class _MobileStockMovementCard extends StatelessWidget {
             const SizedBox(height: 12),
             // Row 3: Reference & Notes (if any)
             if ((movement.referenceId != null && movement.referenceId!.isNotEmpty) || (movement.notes != null && movement.notes!.isNotEmpty)) ...[
-              const Divider(height: 1),
-              const SizedBox(height: 12),
+              Divider(height: 1),
+              SizedBox(height: 12),
               if (movement.referenceId != null && movement.referenceId!.isNotEmpty) ...[
                 Row(
                   children: [
-                    const Icon(Icons.receipt_long_outlined, size: 14, color: AppColors.textTertiary),
-                    const SizedBox(width: 6),
+                    Icon(Icons.receipt_long_outlined, size: 14, color: AppColors.textTertiary),
+                    SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         '${movement.referenceType ?? ''} ${movement.referenceId}'.trim(),
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
-                if (movement.notes != null && movement.notes!.isNotEmpty) const SizedBox(height: 6),
+                if (movement.notes != null && movement.notes!.isNotEmpty) SizedBox(height: 6),
               ],
               if (movement.notes != null && movement.notes!.isNotEmpty)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.notes_rounded, size: 14, color: AppColors.textTertiary),
-                    const SizedBox(width: 6),
+                    Icon(Icons.notes_rounded, size: 14, color: AppColors.textTertiary),
+                    SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         movement.notes!,
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),

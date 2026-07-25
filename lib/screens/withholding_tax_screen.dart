@@ -7,6 +7,7 @@ import '../services/pdf_service.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/dashboard_card.dart';
+import '../widgets/tej_export_dialog.dart';
 import 'document_preview_screen.dart';
 
 class WithholdingTaxScreen extends StatefulWidget {
@@ -47,6 +48,8 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
           if (widget.isSales && p.direction != 'encaissement') return false;
           if (!widget.isSales && p.direction != 'decaissement') return false;
 
+
+
           final matchesSearch = _searchQuery.isEmpty ||
               (p.reference?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
               p.paymentNumber.toLowerCase().contains(_searchQuery.toLowerCase()) || 
@@ -66,23 +69,38 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [            // Toolbar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.isSales ? 'Retenue à la source (Ventes)' : 'Retenue à la source (Achats)',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      ),
+                      SizedBox(height: 4),
+                      Text('Gerer vos retenues à la source', style: TextStyle(color: AppColors.textSecondary)),
+                    ],
+                  ),
+                  const Spacer(),
                   // Export Button
                   ElevatedButton.icon(
                     onPressed: () {
-                       ScaffoldMessenger.of(context).showSnackBar(
-                         const SnackBar(content: Text('Export TEJ bientôt disponible')),
-                       );
+                      showDialog(
+                        context: context,
+                        builder: (context) => TejExportDialog(
+                          payments: payments,
+                          isSales: widget.isSales,
+                        ),
+                      );
                     },
-                    icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.textSecondary),
-                    label: const Text('Export TEJ', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                    icon: Icon(Icons.file_download_outlined, size: 16, color: AppColors.textSecondary),
+                    label: Text('Export TEJ', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.surfaceAlt,
                       elevation: 0,
-                      side: const BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.border),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     ),
@@ -90,9 +108,9 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
+            SizedBox(height: AppSpacing.md),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Container(
                 decoration: BoxDecoration(
                   color: AppColors.surface,
@@ -103,6 +121,7 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -112,7 +131,7 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Recherche',
+                              Text('Recherche',
                                   style: TextStyle(
                                       fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                               const SizedBox(height: 8),
@@ -140,13 +159,13 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(widget.isSales ? 'Client' : 'Fournisseur',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                              const SizedBox(height: 8),
+                              SizedBox(height: 8),
                               SizedBox(
                                 height: 40,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  padding: EdgeInsets.symmetric(horizontal: 12),
                                   decoration: BoxDecoration(
                                     color: AppColors.surface,
                                     border: Border.all(color: AppColors.border),
@@ -157,10 +176,10 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                                       Expanded(
                                         child: Text(
                                           widget.isSales ? 'Rechercher un client...' : 'Rechercher un fournisseur...',
-                                          style: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                                          style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
                                         ),
                                       ),
-                                      const Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
+                                      Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
                                     ],
                                   ),
                                 ),
@@ -176,7 +195,7 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Date de début',
+                              Text('Date de début',
                                   style: TextStyle(
                                       fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                               const SizedBox(height: 8),
@@ -195,7 +214,7 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Date de fin',
+                              Text('Date de fin',
                                   style: TextStyle(
                                       fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                               const SizedBox(height: 8),
@@ -210,18 +229,18 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                     ),
                     if (_searchQuery.isNotEmpty) // Placeholder logic for active filter
                       Padding(
-                        padding: const EdgeInsets.only(top: 16),
+                        padding: EdgeInsets.only(top: 16),
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 '${filtered.length} résultat${filtered.length > 1 ? 's' : ''}',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                               ),
                             ),
                             const Spacer(),
@@ -232,8 +251,8 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                                   _page = 0;
                                 });
                               },
-                              icon: const Icon(Icons.refresh_rounded, size: 16),
-                              label: const Text('Réinitialiser les filtres'),
+                              icon: Icon(Icons.refresh_rounded, size: 16),
+                              label: Text('Réinitialiser les filtres'),
                               style: TextButton.styleFrom(
                                 foregroundColor: AppColors.textSecondary,
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -264,7 +283,7 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                                 Expanded(
                                   child: ListView.separated(
                                     itemCount: pageRows.length,
-                                    separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                                    separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.border),
                                     itemBuilder: (context, index) => _buildRow(pageRows[index]),
                                   ),
                                 ),
@@ -284,7 +303,7 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
   Widget _buildDateDummy(String hint, IconData icon) {
     return Container(
       height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border.all(color: AppColors.border),
@@ -293,8 +312,8 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
       child: Row(
         children: [
           Icon(icon, size: 16, color: AppColors.textTertiary),
-          const SizedBox(width: 8),
-          Text(hint, style: const TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+          SizedBox(width: 8),
+          Text(hint, style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
         ],
       ),
     );
@@ -309,12 +328,12 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), shape: BoxShape.circle),
-            child: const Icon(Icons.account_balance_rounded, size: 40, color: AppColors.primary),
+            child: Icon(Icons.account_balance_rounded, size: 40, color: AppColors.primary),
           ),
-          const SizedBox(height: 16),
-          const Text('Aucun certificat trouvé', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: 6),
-          const Text('Les retenues à la source s\'afficheront ici', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          SizedBox(height: 16),
+          Text('Aucun certificat trouvé', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          SizedBox(height: 6),
+          Text('Les retenues à la source s\'afficheront ici', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
         ],
       ),
     );
@@ -323,18 +342,18 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
   Widget _buildTableHeader() {
     return Container(
       height: 44,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.only(topLeft: Radius.circular(AppRadius.lg), topRight: Radius.circular(AppRadius.lg)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          const Expanded(flex: 3, child: Text('Facture / Réf', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
-          Expanded(flex: 3, child: Text(widget.isSales ? 'Client' : 'Fournisseur', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
-          const Expanded(flex: 2, child: Text('Date', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
-          const Expanded(flex: 2, child: Text('Montant RS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
-          const SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+          Expanded(flex: 3, child: Text('Facture / Réf', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+          Expanded(flex: 3, child: Text(widget.isSales ? 'Client' : 'Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+          Expanded(flex: 2, child: Text('Date', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+          Expanded(flex: 2, child: Text('Montant RS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+          SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
         ],
       ),
     );
@@ -342,16 +361,16 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
 
   Widget _buildRow(Payment p) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       child: Row(
         children: [
           Expanded(
             flex: 3,
             child: Row(
               children: [
-                const Icon(Icons.description_outlined, size: 16, color: AppColors.primary),
-                const SizedBox(width: 8),
-                Text(p.reference ?? p.paymentNumber, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                Icon(Icons.description_outlined, size: 16, color: AppColors.primary),
+                SizedBox(width: 8),
+                Text(p.reference ?? p.paymentNumber, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
               ],
             ),
           ),
@@ -365,8 +384,8 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(p.contactName ?? '—', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
-                      Text(widget.isSales ? 'Client' : 'Fournisseur', style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                      Text(p.contactName ?? '—', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+                      Text(widget.isSales ? 'Client' : 'Fournisseur', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                     ],
                   ),
                 ),
@@ -375,18 +394,18 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
           ),
           Expanded(
             flex: 2,
-            child: Text(formatDate(p.paymentDate), style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            child: Text(formatDate(p.paymentDate), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
           ),
           Expanded(
             flex: 2,
-            child: Text('${formatCurrency(p.amount, symbol: '')} DT', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            child: Text('${formatCurrency(p.amount, symbol: '')} DT', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
           SizedBox(
             width: 60,
             child: Align(
               alignment: Alignment.centerRight,
               child: PopupMenuButton<String>(
-                icon: const Icon(Icons.more_horiz_rounded, color: AppColors.textSecondary),
+                icon: Icon(Icons.more_horiz_rounded, color: AppColors.textSecondary),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 color: AppColors.surface,
                 onSelected: (val) {
@@ -403,19 +422,19 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                     value: 'print',
                     height: 40,
                     child: Row(
-                      children: const [
+                      children: [
                         Icon(Icons.print_outlined, size: 18, color: AppColors.primary),
                         SizedBox(width: 12),
                         Text('Imprimer', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
                       ],
                     ),
                   ),
-                  const PopupMenuDivider(height: 1),
+                  PopupMenuDivider(height: 1),
                   PopupMenuItem<String>(
                     value: 'pdf',
                     height: 40,
                     child: Row(
-                      children: const [
+                      children: [
                         Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.error),
                         SizedBox(width: 12),
                         Text('Télécharger PDF', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
@@ -436,20 +455,20 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
     final end = ((_page + 1) * _rowsPerPage).clamp(0, total);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.border))),
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.border))),
       child: Row(
         children: [
-          const Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          const SizedBox(width: 8),
+          Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          SizedBox(width: 8),
           Container(
             height: 30,
             decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.sm)),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: EdgeInsets.symmetric(horizontal: 8),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<int>(
                 value: _rowsPerPage,
-                style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                 items: [10, 20, 50, 100].map((n) => DropdownMenuItem(value: n, child: Text('$n'))).toList(),
                 onChanged: (v) => setState(() {
                   _rowsPerPage = v!;
@@ -458,10 +477,10 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 24),
-          Text('Page ${_page + 1} sur $totalPages', style: const TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
-          const Spacer(),
-          Text('Affichage de $start à $end sur $total résultats', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          SizedBox(width: 24),
+          Text('Page ${_page + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+          Spacer(),
+          Text('Affichage de $start à $end sur $total résultats', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(width: 16),
           _PaginationButton(icon: Icons.chevron_left_rounded, enabled: _page > 0, onTap: () => setState(() => _page--)),
           const SizedBox(width: 4),
@@ -492,10 +511,10 @@ class _SearchField extends StatelessWidget {
       child: TextField(
         controller: TextEditingController.fromValue(TextEditingValue(text: value, selection: TextSelection.collapsed(offset: value.length))),
         onChanged: onChanged,
-        style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+        style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: AppColors.textTertiary),
+          hintStyle: TextStyle(color: AppColors.textTertiary),
           prefixIcon: Icon(icon, size: 16, color: AppColors.textTertiary),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),

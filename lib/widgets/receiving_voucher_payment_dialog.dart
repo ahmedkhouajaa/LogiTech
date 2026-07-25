@@ -102,7 +102,7 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
 
   void _save() {
     if (_selectedAccountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
       return;
     }
 
@@ -220,11 +220,11 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(horizontal: 40, vertical: 24),
       child: Container(
         width: 800,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: Column(
@@ -243,11 +243,11 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                     icon: const Icon(Icons.close, size: 16),
                     label: const Text('Annuler'),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   ElevatedButton.icon(
                     onPressed: _save,
-                    icon: const Icon(Icons.save, size: 16, color: Colors.white),
-                    label: const Text('Créer', style: TextStyle(color: Colors.white)),
+                    icon: Icon(Icons.save, size: 16, color: Colors.white),
+                    label: Text('Créer', style: TextStyle(color: Colors.white)),
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                   ),
                 ],
@@ -256,13 +256,13 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
             const Divider(height: 1),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // ReceivingVoucher Info Box
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -324,8 +324,8 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                       // Withholding tax toggle
                       Row(
                         children: [
-                          const Text('Retenue à la source', style: TextStyle(fontWeight: FontWeight.w500)),
-                          const SizedBox(width: 24),
+                          Text('Retenue à la source', style: TextStyle(fontWeight: FontWeight.w500)),
+                          SizedBox(width: 24),
                           Container(
                             decoration: BoxDecoration(
                               border: Border.all(color: AppColors.border),
@@ -349,9 +349,12 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Statut: ${widget.receivingVoucher.status}', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                                  Text('Statut: ${widget.receivingVoucher.status}', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
                                   const SizedBox(height: 6),
-                                  DropdownButtonFormField<double>(
+                                  DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                     value: _withholdingTaxRate,
                                     isExpanded: true,
                                     decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
@@ -383,12 +386,12 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Date de la création de la retenue', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                  Text('Date de la création de la retenue', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                   const SizedBox(height: 6),
                                   InkWell(
                                     onTap: () async {
@@ -396,13 +399,13 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                                       if (d != null) setState(() => _withholdingTaxDate = d);
                                     },
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                       decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_withholdingTaxDate)),
-                                          const Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                                          Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
                                         ],
                                       ),
                                     ),
@@ -412,22 +415,22 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(AppRadius.md), border: Border.all(color: AppColors.border)),
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md), border: Border.all(color: AppColors.border)),
                           child: Row(
                             children: [
-                              const Text('Retenue à la source: ', style: TextStyle(color: AppColors.textSecondary)),
-                              Text('-${formatCurrencyDT(taxAmount)}', style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
-                              const Spacer(),
-                              const Text('Montant: ', style: TextStyle(color: AppColors.textSecondary)),
-                              Text(formatCurrencyDT(netAmount), style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
+                              Text('Retenue à la source: ', style: TextStyle(color: AppColors.textSecondary)),
+                              Text('-${formatCurrencyDT(taxAmount)}', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                              Spacer(),
+                              Text('Montant: ', style: TextStyle(color: AppColors.textSecondary)),
+                              Text(formatCurrencyDT(netAmount), style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
                       ],
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24),
 
                       // Payment block
                       Container(
@@ -443,15 +446,15 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(4), border: Border.all(color: AppColors.border)),
-                                    child: const Text('Paiement 1', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                                    child: Text('Paiement 1', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
                                   ),
                                   Row(
                                     children: [
-                                      IconButton(icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 18), onPressed: () {}, constraints: const BoxConstraints(), padding: EdgeInsets.zero),
-                                      const SizedBox(width: 12),
-                                      const Icon(Icons.keyboard_arrow_up, color: AppColors.textSecondary, size: 20),
+                                      IconButton(icon: Icon(Icons.delete_outline, color: AppColors.error, size: 18), onPressed: () {}, constraints: BoxConstraints(), padding: EdgeInsets.zero),
+                                      SizedBox(width: 12),
+                                      Icon(Icons.keyboard_arrow_up, color: AppColors.textSecondary, size: 20),
                                     ],
                                   )
                                 ],
@@ -465,7 +468,10 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: _buildFormField('Méthode de paiement', DropdownButtonFormField<String>(
+                                        child: _buildFormField('Méthode de paiement', DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                           value: _paymentMethod,
                                           decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
                                           items: const [
@@ -496,7 +502,10 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                                             if (state is TreasuryAccountsLoaded) {
                                               accounts = state.accounts;
                                             }
-                                            return DropdownButtonFormField<String>(
+                                            return DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                               value: _selectedAccountId,
                                               hint: const Text('Sélectionner un compte'),
                                               decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
@@ -520,13 +529,13 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                                       if (d != null) setState(() => _paymentDate = d);
                                     },
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                       decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_paymentDate)),
-                                          const Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                                          Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
                                         ],
                                       ),
                                     ),
@@ -560,11 +569,11 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
       child: GestureDetector(
         onTap: () => setState(() => _selectedTab = index),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
+            color: isSelected ? AppColors.surface : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.md),
-            boxShadow: isSelected ? [const BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 1))] : null,
+            boxShadow: isSelected ? [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 1))] : null,
           ),
           alignment: Alignment.center,
           child: Row(
@@ -572,10 +581,10 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
             children: [
               Text(label, style: TextStyle(color: isSelected ? AppColors.textPrimary : AppColors.textSecondary, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500, fontSize: 13)),
               if (index > 0) ...[
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
                   child: const Text('1', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
               ]
@@ -595,9 +604,9 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
       }),
       child: Container(
         width: 100,
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.white,
+          color: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.surface,
           border: isSelected ? Border.all(color: AppColors.primary) : null,
           borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
@@ -607,8 +616,8 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
           children: [
             Text(label, style: TextStyle(color: isSelected ? AppColors.primary : AppColors.textPrimary, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
             if (isSelected && value) ...[
-              const SizedBox(width: 4),
-              const Icon(Icons.check_circle, size: 14, color: AppColors.primary),
+              SizedBox(width: 4),
+              Icon(Icons.check_circle, size: 14, color: AppColors.primary),
             ]
           ],
         ),
@@ -620,7 +629,7 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
         const SizedBox(height: 6),
         child,
       ],

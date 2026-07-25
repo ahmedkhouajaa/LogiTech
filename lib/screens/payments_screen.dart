@@ -75,23 +75,34 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           children: [
             // ─── Toolbar ───────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: EdgeInsets.all(AppSpacing.lg),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Paiements',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      ),
+                      SizedBox(height: 4),
+                      Text('Gerer vos paiements', style: TextStyle(color: AppColors.textSecondary)),
+                    ],
+                  ),
+                  const Spacer(),
                   // Actions button
                   PopupMenuButton<String>(
-                    offset: const Offset(0, 44),
+                    offset: Offset(0, 44),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     child: Container(
                       height: 40,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(color: AppColors.border),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text('Actions',
@@ -105,15 +116,15 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                       PopupMenuItem(
                         value: 'export',
                         child: Row(children: [
-                          const Icon(Icons.file_download_rounded, size: 16, color: AppColors.primary),
-                          const SizedBox(width: 10),
-                          const Text('Exporter CSV'),
+                          Icon(Icons.file_download_rounded, size: 16, color: AppColors.primary),
+                          SizedBox(width: 10),
+                          Text('Exporter CSV'),
                         ]),
                       ),
                       PopupMenuItem(
                         value: 'print',
                         child: Row(children: [
-                          const Icon(Icons.print_rounded, size: 16, color: AppColors.textSecondary),
+                          Icon(Icons.print_rounded, size: 16, color: AppColors.textSecondary),
                           const SizedBox(width: 10),
                           const Text('Imprimer'),
                         ]),
@@ -129,8 +140,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   // New payment button
                   ElevatedButton.icon(
                     onPressed: () => _showCreateDialog(context),
-                    icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                    label: const Text('Nouveau paiement',
+                    icon: Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                    label: Text('Nouveau paiement',
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
@@ -142,9 +153,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
+            SizedBox(height: AppSpacing.md),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Container(
                 decoration: BoxDecoration(
                   color: AppColors.surface,
@@ -165,7 +176,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Référence',
+                              Text('Référence',
                                   style: TextStyle(
                                       fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                               const SizedBox(height: 8),
@@ -192,7 +203,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('Contact',
+                              Text('Contact',
                                   style: TextStyle(
                                       fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                               const SizedBox(height: 8),
@@ -254,18 +265,18 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     ),
                     if (_searchQuery.isNotEmpty || _contactSearch.isNotEmpty || _methodFilter != 'tous' || _statusFilter != 'tous')
                       Padding(
-                        padding: const EdgeInsets.only(top: 16),
+                        padding: EdgeInsets.only(top: 16),
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 '${filtered.length} résultat${filtered.length > 1 ? 's' : ''}',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                               ),
                             ),
                             const Spacer(),
@@ -279,8 +290,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                                   _page = 0;
                                 });
                               },
-                              icon: const Icon(Icons.refresh_rounded, size: 16),
-                              label: const Text('Réinitialiser les filtres'),
+                              icon: Icon(Icons.refresh_rounded, size: 16),
+                              label: Text('Réinitialiser les filtres'),
                               style: TextButton.styleFrom(
                                 foregroundColor: AppColors.textSecondary,
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -312,7 +323,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                                 Expanded(
                                   child: ListView.separated(
                                     itemCount: pageRows.length,
-                                    separatorBuilder: (_, __) => const Divider(
+                                    separatorBuilder: (_, __) => Divider(
                                         height: 1,
                                         color: AppColors.border),
                                     itemBuilder: (context, index) =>
@@ -345,17 +356,17 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
               color: AppColors.primary.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.payment_rounded,
+            child: Icon(Icons.payment_rounded,
                 size: 40, color: AppColors.primary),
           ),
-          const SizedBox(height: 16),
-          const Text('Aucun paiement trouve',
+          SizedBox(height: 16),
+          Text('Aucun paiement trouve',
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary)),
-          const SizedBox(height: 6),
-          const Text('Creez votre premier paiement en cliquant sur le bouton ci-dessus.',
+          SizedBox(height: 6),
+          Text('Creez votre premier paiement en cliquant sur le bouton ci-dessus.',
               style: TextStyle(
                   fontSize: 13, color: AppColors.textSecondary)),
         ],
@@ -366,15 +377,15 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   Widget _buildTableHeader() {
     return Container(
       height: 44,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(AppRadius.lg),
           topRight: Radius.circular(AppRadius.lg),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: const Row(
+      padding: EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
         children: [
           Expanded(
               flex: 3,
@@ -478,14 +489,14 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(p.paymentNumber,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primary)),
-                const SizedBox(height: 3),
+                SizedBox(height: 3),
                 Text(
                   formatDateTime(p.paymentDate),
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 11, color: AppColors.textTertiary),
                 ),
               ],
@@ -501,7 +512,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                   child: Text(
                     (p.contactName ?? '?')[0].toUpperCase(),
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary),
@@ -535,7 +546,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceAlt,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -553,10 +564,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                       size: 14,
                       color: AppColors.textSecondary,
                     ),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Text(
                       methodLabel,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textSecondary),
@@ -602,28 +613,28 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     final end = ((_page + 1) * _rowsPerPage).clamp(0, total);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: const BoxDecoration(
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         children: [
           // Rows per page
-          const Text('Lignes:',
+          Text('Lignes:',
               style: TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Container(
             height: 30,
             decoration: BoxDecoration(
               border: Border.all(color: AppColors.border),
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: EdgeInsets.symmetric(horizontal: 8),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<int>(
                 value: _rowsPerPage,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 12, color: AppColors.textPrimary),
                 items: [10, 20, 50, 100].map((n) {
                   return DropdownMenuItem(value: n, child: Text('$n'));
@@ -635,13 +646,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: 16),
           Text('Page ${_page + 1} sur $totalPages',
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
-          const Spacer(),
+          Spacer(),
           Text('Affichage de $start a $end sur $total resultats',
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(width: 16),
           _PaginationButton(
@@ -798,7 +809,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedContactId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
             content: Text('Veuillez selectionner un contact'),
             backgroundColor: AppColors.error),
       );
@@ -847,10 +858,10 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 60, vertical: 40),
+      insetPadding: EdgeInsets.symmetric(horizontal: 60, vertical: 40),
       child: Container(
         width: 700,
-        constraints: const BoxConstraints(maxHeight: 780),
+        constraints: BoxConstraints(maxHeight: 780),
         decoration: BoxDecoration(
           color: AppColors.background,
           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -910,9 +921,9 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(AppRadius.lg),
           topRight: Radius.circular(AppRadius.lg),
@@ -931,8 +942,8 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
             child: const Icon(Icons.payment_rounded,
                 color: Colors.white, size: 18),
           ),
-          const SizedBox(width: 12),
-          const Column(
+          SizedBox(width: 12),
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Nouveau Paiement',
@@ -945,17 +956,17 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                       fontSize: 12, color: AppColors.textSecondary)),
             ],
           ),
-          const Spacer(),
+          Spacer(),
           OutlinedButton.icon(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close_rounded,
+            icon: Icon(Icons.close_rounded,
                 size: 16, color: AppColors.textSecondary),
-            label: const Text('Annuler',
+            label: Text('Annuler',
                 style: TextStyle(
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.w600)),
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.border),
+              side: BorderSide(color: AppColors.border),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md)),
               padding:
@@ -965,9 +976,9 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
           const SizedBox(width: 10),
           ElevatedButton.icon(
             onPressed: _save,
-            icon: const Icon(Icons.save_rounded,
+            icon: Icon(Icons.save_rounded,
                 size: 16, color: Colors.white),
-            label: const Text('Enregistrer',
+            label: Text('Enregistrer',
                 style: TextStyle(
                     color: Colors.white, fontWeight: FontWeight.w600)),
             style: ElevatedButton.styleFrom(
@@ -988,12 +999,12 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Direction du paiement',
+        Text('Direction du paiement',
             style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textSecondary)),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Row(
           children: [
             Expanded(
@@ -1006,7 +1017,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                 onTap: () => setState(() => _direction = 'encaissement'),
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: _DirectionButton(
                 label: 'Decaissement',
@@ -1027,24 +1038,24 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Contact *',
+        Text('Contact *',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary)),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         TextFormField(
           controller: _contactSearchCtrl,
-          style: const TextStyle(fontSize: 14),
+          style: TextStyle(fontSize: 14),
           decoration: InputDecoration(
             hintText: 'Rechercher un client ou fournisseur...',
-            hintStyle: const TextStyle(
+            hintStyle: TextStyle(
                 color: AppColors.textTertiary, fontSize: 13),
-            prefixIcon: const Icon(Icons.person_rounded,
+            prefixIcon: Icon(Icons.person_rounded,
                 size: 18, color: AppColors.textTertiary),
             suffixIcon: _selectedContactId != null
                 ? IconButton(
-                    icon: const Icon(Icons.clear_rounded,
+                    icon: Icon(Icons.clear_rounded,
                         size: 16, color: AppColors.textTertiary),
                     onPressed: () => setState(() {
                       _selectedContactId = null;
@@ -1071,9 +1082,9 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
         // Selected contact indicator
         if (_selectedContactId != null && _selectedContactName != null)
           Padding(
-            padding: const EdgeInsets.only(top: 6),
+            padding: EdgeInsets.only(top: 6),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: AppColors.successLight,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -1082,11 +1093,11 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.check_circle_rounded,
+                  Icon(Icons.check_circle_rounded,
                       size: 14, color: AppColors.success),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6),
                   Text(_selectedContactName!,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: AppColors.success)),
@@ -1105,10 +1116,10 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
         // Contact search results (inline, not overlaid)
         if (_showContactDropdown && _contactResults.isNotEmpty)
           Container(
-            margin: const EdgeInsets.only(top: 4),
-            constraints: const BoxConstraints(maxHeight: 220),
+            margin: EdgeInsets.only(top: 4),
+            constraints: BoxConstraints(maxHeight: 220),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: AppColors.border),
               boxShadow: AppShadows.sm,
@@ -1161,12 +1172,12 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(c['name'],
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500)),
                               Text(
                                 isCustomer ? 'Client' : 'Fournisseur',
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 11,
                                     color: AppColors.textTertiary),
                               ),
@@ -1182,7 +1193,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
           ),
         // Loading indicator
         if (!_contactsLoaded)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 6),
             child: Text('Chargement des contacts...',
                 style: TextStyle(
@@ -1196,7 +1207,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Montant *',
+        Text('Montant *',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -1205,17 +1216,17 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
         TextFormField(
           controller: _amountCtrl,
           keyboardType:
-              const TextInputType.numberWithOptions(decimal: true),
+              TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [
             FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
           ],
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           decoration: InputDecoration(
             hintText: '0,00',
-            hintStyle: const TextStyle(
+            hintStyle: TextStyle(
                 color: AppColors.textTertiary, fontSize: 13),
             suffixText: 'DT',
-            suffixStyle: const TextStyle(
+            suffixStyle: TextStyle(
                 color: AppColors.textSecondary,
                 fontWeight: FontWeight.w600),
           ),
@@ -1235,12 +1246,12 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Methode *',
+        Text('Methode *',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary)),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         Container(
           height: 48,
           decoration: BoxDecoration(
@@ -1248,12 +1259,12 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
             borderRadius: BorderRadius.circular(AppRadius.md),
             border: Border.all(color: AppColors.border),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: _method,
               isExpanded: true,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 14, color: AppColors.textPrimary),
               items: const [
                 DropdownMenuItem(
@@ -1276,12 +1287,12 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Statut',
+        Text('Statut',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Row(
           children: [
             _StatusChip(
@@ -1292,7 +1303,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
               bg: AppColors.successLight,
               onTap: () => setState(() => _status = 'paid'),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             _StatusChip(
               label: 'En attente',
               value: 'pending',
@@ -1301,7 +1312,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
               bg: AppColors.warningLight,
               onTap: () => setState(() => _status = 'pending'),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             _StatusChip(
               label: 'Annule',
               value: 'cancelled',
@@ -1321,7 +1332,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
       decoration: BoxDecoration(
         border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(AppRadius.md),
-        color: Colors.white,
+        color: AppColors.surface,
       ),
       child: Column(
         children: [
@@ -1330,14 +1341,14 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                 setState(() => _detailsExpanded = !_detailsExpanded),
             borderRadius: BorderRadius.circular(AppRadius.md),
             child: Padding(
-              padding: const EdgeInsets.symmetric(
+              padding: EdgeInsets.symmetric(
                   horizontal: 16, vertical: 14),
               child: Row(
                 children: [
-                  const Icon(Icons.tune_rounded,
+                  Icon(Icons.tune_rounded,
                       size: 16, color: AppColors.primary),
-                  const SizedBox(width: 10),
-                  const Expanded(
+                  SizedBox(width: 10),
+                  Expanded(
                     child: Text('Details de la methode de paiement',
                         style: TextStyle(
                             fontSize: 13,
@@ -1356,7 +1367,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
             ),
           ),
           if (_detailsExpanded) ...[
-            const Divider(height: 1, color: AppColors.border),
+            Divider(height: 1, color: AppColors.border),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -1366,12 +1377,12 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Compte de tresorerie',
+                      Text('Compte de tresorerie',
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppColors.textSecondary)),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       Container(
                         height: 44,
                         decoration: BoxDecoration(
@@ -1395,11 +1406,11 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                               child: DropdownButton<String>(
                                 value: _selectedAccountId,
                                 isExpanded: true,
-                                hint: const Text('Selectionner un compte',
+                                hint: Text('Selectionner un compte',
                                     style: TextStyle(
                                         fontSize: 13,
                                         color: AppColors.textTertiary)),
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 13,
                                     color: AppColors.textPrimary),
                                 items: tAccounts.map((a) {
@@ -1434,7 +1445,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Reference externe (optionnel)',
+                      Text('Reference externe (optionnel)',
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -1442,8 +1453,8 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _referenceCtrl,
-                        style: const TextStyle(fontSize: 14),
-                        decoration: const InputDecoration(
+                        style: TextStyle(fontSize: 14),
+                        decoration: InputDecoration(
                           hintText:
                               'N° de cheque, reference de virement...',
                           hintStyle: TextStyle(
@@ -1460,7 +1471,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Date de paiement',
+                      Text('Date de paiement',
                           style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -1488,18 +1499,18 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                                 BorderRadius.circular(AppRadius.md),
                             border: Border.all(color: AppColors.border),
                           ),
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                               horizontal: 14),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                   Icons.calendar_today_rounded,
                                   size: 16,
                                   color: AppColors.textTertiary),
-                              const SizedBox(width: 10),
+                              SizedBox(width: 10),
                               Text(
                                 formatDate(_paymentDate),
-                                style: const TextStyle(
+                                style: TextStyle(
                                     fontSize: 14,
                                     color: AppColors.textPrimary),
                               ),
@@ -1522,17 +1533,17 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Notes',
+        Text('Notes',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary)),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         TextFormField(
           controller: _notesCtrl,
           maxLines: 3,
-          style: const TextStyle(fontSize: 14),
-          decoration: const InputDecoration(
+          style: TextStyle(fontSize: 14),
+          decoration: InputDecoration(
             hintText: 'Ajouter des notes sur ce paiement...',
             hintStyle:
                 TextStyle(color: AppColors.textTertiary, fontSize: 13),
@@ -1563,29 +1574,29 @@ class _SearchField extends StatelessWidget {
     return SizedBox(
       height: 40,
       child: TextField(
-        style: const TextStyle(fontSize: 13),
+        style: TextStyle(fontSize: 13),
         onChanged: onChanged,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle:
-              const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+              TextStyle(color: AppColors.textTertiary, fontSize: 13),
           prefixIcon:
               Icon(icon, size: 18, color: AppColors.textTertiary),
           contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+              EdgeInsets.symmetric(horizontal: 12, vertical: 0),
           fillColor: AppColors.surfaceAlt,
           filled: true,
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
               borderSide:
-                  const BorderSide(color: AppColors.border)),
+                  BorderSide(color: AppColors.border)),
           enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
               borderSide:
-                  const BorderSide(color: AppColors.border)),
+                  BorderSide(color: AppColors.border)),
           focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: const BorderSide(
+              borderSide: BorderSide(
                   color: AppColors.primary, width: 2)),
         ),
       ),
@@ -1615,14 +1626,14 @@ class _FilterDropdown extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.border),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: EdgeInsets.symmetric(horizontal: 12),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
           hint: Text(label,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 13, color: AppColors.textSecondary)),
-          style: const TextStyle(
+          style: TextStyle(
               fontSize: 13, color: AppColors.textPrimary),
           items: items.entries
               .map((e) => DropdownMenuItem(
@@ -1721,12 +1732,12 @@ class _DirectionButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        duration: Duration(milliseconds: 150),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isSelected
               ? color.withValues(alpha: 0.08)
-              : Colors.white,
+              : AppColors.surface,
           border: Border.all(
             color: isSelected ? color : AppColors.border,
             width: isSelected ? 2 : 1,
@@ -1760,7 +1771,7 @@ class _DirectionButton extends StatelessWidget {
                             ? color
                             : AppColors.textPrimary)),
                 Text(subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 11, color: AppColors.textSecondary)),
               ],
             ),
@@ -1798,9 +1809,9 @@ class _StatusChip extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.full),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+        duration: Duration(milliseconds: 150),
         padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: selected ? bg : AppColors.surfaceAlt,
           borderRadius: BorderRadius.circular(AppRadius.full),

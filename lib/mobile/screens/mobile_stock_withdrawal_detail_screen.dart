@@ -113,32 +113,32 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('BS ${currentWithdrawal.number}', style: const TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('BS ${currentWithdrawal.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
           backgroundColor: AppColors.primary,
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
+              icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentWithdrawal),
               itemBuilder: (_) => [
                 _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
               ],
             ),
           ],
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                color: AppColors.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -168,22 +168,22 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                       const SizedBox(height: 8),
                       _buildInfoRow('Client', currentWithdrawal.customerName ?? currentWithdrawal.customerCompany ?? 'Non spécifié'),
                       if (currentWithdrawal.projectName != null) ...[
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
                         _buildInfoRow('Projet', currentWithdrawal.projectName!),
                       ],
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              const SizedBox(height: 8),
+              SizedBox(height: 16),
+              Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              SizedBox(height: 8),
               if (currentWithdrawal.items.isEmpty)
                 Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
-                  child: const Padding(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
+                  child: Padding(
                     padding: EdgeInsets.all(16.0),
                     child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
                   ),
@@ -191,11 +191,11 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
               else
                 ...currentWithdrawal.items.map((item) => Card(
                   elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
+                  margin: EdgeInsets.only(bottom: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
                   child: Padding(
-                    padding: const EdgeInsets.all(12.0),
+                    padding: EdgeInsets.all(12.0),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -203,35 +203,35 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
+                          child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(item.description ?? 'Article', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              const SizedBox(height: 4),
+                              Text(item.description ?? 'Article', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              SizedBox(height: 4),
                               Row(
                                 children: [
-                                  Text('${item.quantity} x ', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                  Text(formatCurrencyDT(item.unitPrice), style: const TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+                                  Text('${item.quantity} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                  Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
                                   if (item.discountPercent > 0)
-                                    Text(' (-${item.discountPercent}%)', style: const TextStyle(color: AppColors.success, fontSize: 12)),
+                                    Text(' (-${item.discountPercent}%)', style: TextStyle(color: AppColors.success, fontSize: 12)),
                                 ],
                               ),
                             ],
                           ),
                         ),
-                        Text(formatCurrencyDT(item.totalTTC), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        Text(formatCurrencyDT(item.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
                       ],
                     ),
                   ),
                 )),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surfaceAlt,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -248,8 +248,8 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentWithdrawal.totalTTC), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
+                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(formatCurrencyDT(currentWithdrawal.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
                         ],
                       ),
                     ],
@@ -257,16 +257,16 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                 ),
               ),
               if (currentWithdrawal.notes != null && currentWithdrawal.notes!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 16),
+                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
                 Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(currentWithdrawal.notes!, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(currentWithdrawal.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                   ),
                 ),
               ],
@@ -282,8 +282,8 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
+        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
       ],
     );
   }
@@ -294,9 +294,9 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF64748B)),
-          const SizedBox(width: 12),
-          Text(text, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+          Icon(icon, size: 18, color: Color(0xFF64748B)),
+          SizedBox(width: 12),
+          Text(text, style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
         ],
       ),
     );

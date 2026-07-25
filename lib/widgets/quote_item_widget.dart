@@ -24,8 +24,8 @@ class QuoteItemWidget extends StatelessWidget {
         Expanded(flex: 2, child: Text(formatCurrency(item.unitPrice))),
         Expanded(flex: 2, child: Text('\${item.tvaRate}%')),
         Expanded(flex: 2, child: Text(formatCurrency(item.computedTotalHT))),
-        IconButton(icon: const Icon(Icons.edit, size: 18), onPressed: onEdit),
-        IconButton(icon: const Icon(Icons.delete, size: 18, color: AppColors.error), onPressed: onDelete),
+        IconButton(icon: Icon(Icons.edit, size: 18), onPressed: onEdit),
+        IconButton(icon: Icon(Icons.delete, size: 18, color: AppColors.error), onPressed: onDelete),
       ],
     );
   }

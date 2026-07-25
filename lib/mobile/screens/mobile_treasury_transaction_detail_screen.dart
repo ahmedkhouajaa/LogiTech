@@ -92,30 +92,30 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Détails de la transaction', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Détails de la transaction', style: TextStyle(color: Colors.white, fontSize: 18)),
           backgroundColor: AppColors.primary,
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
+              icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: _handleAction,
               itemBuilder: (_) => [
                 _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
               ],
             ),
           ],
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                color: AppColors.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -126,10 +126,10 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
                         children: [
                           Text(
                             currentTransaction.transactionNumber,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: currentTransaction.type == 'income' ? AppColors.success.withOpacity(0.1) : AppColors.error.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
@@ -168,17 +168,17 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
                 ),
               ),
               if (currentTransaction.description != null && currentTransaction.description!.isNotEmpty) ...[
-                 const SizedBox(height: 16),
+                 SizedBox(height: 16),
                  Card(
                    elevation: 0,
-                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                   color: Colors.white,
+                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                   color: AppColors.surface,
                    child: Padding(
-                     padding: const EdgeInsets.all(16.0),
+                     padding: EdgeInsets.all(16.0),
                      child: Column(
                        crossAxisAlignment: CrossAxisAlignment.start,
                        children: [
-                         const Text('Motif / Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textSecondary)),
+                         Text('Motif / Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textSecondary)),
                          const SizedBox(height: 8),
                          Text(currentTransaction.description!, style: const TextStyle(fontSize: 16)),
                        ],
@@ -201,7 +201,7 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
           flex: 2,
           child: Text(
             label,
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
         ),
         Expanded(

@@ -17,7 +17,7 @@ class DocumentTemplatesScreen extends StatelessWidget {
     return BlocBuilder<DocumentTemplatesBloc, DocumentTemplatesState>(
       builder: (context, state) {
         if (state is DocumentTemplatesLoading) {
-          return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+          return Center(child: CircularProgressIndicator(color: AppColors.primary));
         }
         if (state is DocumentTemplatesError) {
           return Center(child: Text('Erreur: ${state.message}'));
@@ -39,12 +39,12 @@ class _DocumentTemplatesBody extends StatelessWidget {
       children: [
         // Action bar
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Row(
             children: [
               Text(
                 '${templates.length} modèle${templates.length > 1 ? 's' : ''}',
-                style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
               const Spacer(),
               AppButton(
@@ -180,7 +180,7 @@ class _TemplateCardState extends State<_TemplateCard> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: Duration(milliseconds: 200),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -210,32 +210,32 @@ class _TemplateCardState extends State<_TemplateCard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(t.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 2),
+                          Text(t.name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          SizedBox(height: 2),
                           Text(
                             _documentTypeLabel(t.documentType),
-                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                           ),
                         ],
                       ),
                     ),
                     if (t.isDefault)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.successLight,
                           borderRadius: BorderRadius.circular(AppRadius.full),
                         ),
-                        child: const Text('Par défaut', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.success)),
+                        child: Text('Par défaut', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.success)),
                       ),
                   ],
                 ),
-                const Spacer(),
+                Spacer(),
                 // Template style preview chips
                 Row(
                   children: [
                     _chip(t.tableStyle, Color(t.headerBgColor)),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     _chip('${t.fontSize.toInt()} pt', AppColors.textSecondary),
                   ],
                 ),
@@ -255,7 +255,7 @@ class _TemplateCardState extends State<_TemplateCard> {
                       _actionBtn(Icons.star_outline_rounded, 'Par défaut', () {
                         context.read<DocumentTemplatesBloc>().add(SetDefaultDocumentTemplate(t.id, t.documentType));
                       }),
-                    const Spacer(),
+                    Spacer(),
                     _actionBtn(Icons.delete_outline_rounded, 'Supprimer', () => _confirmDelete(context, t),
                         color: AppColors.error),
                   ],
@@ -286,7 +286,7 @@ class _TemplateCardState extends State<_TemplateCard> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding: const EdgeInsets.all(6),
+          padding: EdgeInsets.all(6),
           decoration: BoxDecoration(
             color: (color ?? AppColors.textSecondary).withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(6),

@@ -75,53 +75,53 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('Facture ${currentInvoice.number}', style: const TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Facture ${currentInvoice.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
           backgroundColor: AppColors.primary,
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
+              icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentInvoice),
               itemBuilder: (_) => [
                 _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 if (currentInvoice.status != InvoiceStatus.paid) ...[
                   _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
-                  const PopupMenuDivider(height: 1),
+                  PopupMenuDivider(height: 1),
                 ],
                 if (currentInvoice.creditNoteId != null && currentInvoice.creditNoteId!.isNotEmpty)
                   _buildMenuItem('view_credit_note', Icons.receipt_long_outlined, AppColors.primary, 'Voir l\'avoir')
                 else
                   _buildMenuItem('to_credit_note', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Avoir'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-//                 const PopupMenuDivider(height: 1),
+//                 PopupMenuDivider(height: 1),
 //                 _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-//                 const PopupMenuDivider(height: 1),
+//                 PopupMenuDivider(height: 1),
 //                 _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'),
               ],
             ),
           ],
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                color: AppColors.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -159,47 +159,47 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               if (currentInvoice.items.isNotEmpty) ...[
-                const Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: 8),
+                Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
                 ...currentInvoice.items.map((item) => Card(
                   elevation: 1,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  color: Colors.white,
-                  surfaceTintColor: Colors.white,
+                  margin: EdgeInsets.only(bottom: 8),
+                  color: AppColors.surface,
+                  surfaceTintColor: AppColors.surface,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border.withOpacity(0.5))),
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: EdgeInsets.all(16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item.productName ?? item.description ?? 'Produit Inconnu', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
+                        Text(item.productName ?? item.description ?? 'Produit Inconnu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
                         if (item.description != null && item.description!.isNotEmpty && item.productName != null) ...[
-                          const SizedBox(height: 4),
-                          Text(item.description!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                          SizedBox(height: 4),
+                          Text(item.description!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                         ],
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
-                              child: Text('${item.quantity} x ${formatCurrencyDT(item.unitPrice)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                              child: Text('${item.quantity} x ${formatCurrencyDT(item.unitPrice)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
                             ),
-                            Text(formatCurrencyDT(item.totalHT), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
+                            Text(formatCurrencyDT(item.totalHT), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
                           ],
                         ),
                       ],
                     ),
                   ),
                 )),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
               ],
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surfaceAlt,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -216,8 +216,8 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentInvoice.totalTTC), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
+                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(formatCurrencyDT(currentInvoice.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
                         ],
                       ),
                     ],
@@ -225,16 +225,16 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                 ),
               ),
               if (currentInvoice.notes != null && currentInvoice.notes!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 16),
+                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
                 Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(currentInvoice.notes!, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(currentInvoice.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                   ),
                 ),
               ],
@@ -250,8 +250,8 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
+        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
       ],
     );
   }
@@ -262,9 +262,9 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF64748B)),
-          const SizedBox(width: 12),
-          Text(text, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+          Icon(icon, size: 18, color: Color(0xFF64748B)),
+          SizedBox(width: 12),
+          Text(text, style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -360,7 +360,10 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                 children: [
                   const Text('Nouveau statut:'),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<InvoiceStatus>(
+                  DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: selectedStatus,
                     decoration: const InputDecoration(border: OutlineInputBorder()),
                     isExpanded: true,
@@ -424,7 +427,10 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
             const SizedBox(height: 16),
             ValueListenableBuilder<String>(
               valueListenable: methodNotifier,
-              builder: (context, val, child) => DropdownButtonFormField<String>(
+              builder: (context, val, child) => DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                 value: val,
                 decoration: const InputDecoration(
                   labelText: 'Méthode de paiement',
@@ -446,7 +452,7 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
@@ -486,13 +492,13 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                 
                 if (context.mounted) {
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text('Paiement ajouté avec succès'),
                     backgroundColor: AppColors.success,
                   ));
                 }
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text('Veuillez entrer un montant valide'),
                   backgroundColor: AppColors.error,
                 ));
@@ -509,7 +515,7 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: AppColors.warning),
             SizedBox(width: 8),
@@ -522,7 +528,7 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
           children: [
             const Text('Voulez-vous transformer cette facture en avoir ?'),
             const SizedBox(height: 16),
-            Text('Facture: ${inv.number}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text('Facture: ${inv.number}', style: TextStyle(fontWeight: FontWeight.bold)),
             Text('Client: ${inv.customerName ?? 'Inconnu'}'),
             Text('Montant: ${formatCurrencyDT(inv.totalTTC + inv.timbreFiscal)}'),
           ],
@@ -530,7 +536,7 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -597,7 +603,7 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
     final creditNote = await DatabaseHelper.instance.getCreditNote(creditNoteId);
     if (!mounted) return;
     if (creditNote == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Avoir introuvable'),
         backgroundColor: AppColors.error,
       ));

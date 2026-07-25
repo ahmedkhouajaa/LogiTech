@@ -74,11 +74,11 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
   Future<void> _save() async {
     if (widget.isReadOnly) return;
     if (_accountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un compte'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un compte'), backgroundColor: AppColors.error));
       return;
     }
     if (_amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez saisir un montant valide'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez saisir un montant valide'), backgroundColor: AppColors.error));
       return;
     }
 
@@ -291,9 +291,9 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
                   ),
                 ),
                 if (_withholdingTax > 0) ...[
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(AppRadius.md),
@@ -302,8 +302,8 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Montant RS calculé:', style: TextStyle(color: AppColors.textSecondary)),
-                        Text(formatCurrencyDT(_withholdingTax), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        Text('Montant RS calculé:', style: TextStyle(color: AppColors.textSecondary)),
+                        Text(formatCurrencyDT(_withholdingTax), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
                       ],
                     ),
                   ),

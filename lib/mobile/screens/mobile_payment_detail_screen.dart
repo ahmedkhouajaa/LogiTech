@@ -92,30 +92,30 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: const Text('Détails du paiement', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Détails du paiement', style: TextStyle(color: Colors.white, fontSize: 18)),
           backgroundColor: AppColors.primary,
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
+              icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: _handleAction,
               itemBuilder: (_) => [
                 _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
               ],
             ),
           ],
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                color: AppColors.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -168,17 +168,17 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
                 ),
               ),
               if (currentPayment.notes != null && currentPayment.notes!.isNotEmpty) ...[
-                 const SizedBox(height: 16),
+                 SizedBox(height: 16),
                  Card(
                    elevation: 0,
-                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                   color: Colors.white,
+                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                   color: AppColors.surface,
                    child: Padding(
-                     padding: const EdgeInsets.all(16.0),
+                     padding: EdgeInsets.all(16.0),
                      child: Column(
                        crossAxisAlignment: CrossAxisAlignment.start,
                        children: [
-                         const Text('Notes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textSecondary)),
+                         Text('Notes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textSecondary)),
                          const SizedBox(height: 8),
                          Text(currentPayment.notes!, style: const TextStyle(fontSize: 16)),
                        ],
@@ -201,7 +201,7 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
           flex: 2,
           child: Text(
             label,
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
         ),
         Expanded(

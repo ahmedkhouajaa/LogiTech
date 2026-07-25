@@ -32,9 +32,9 @@ class MobileGenericCard extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget card = Card(
       elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.white,
+      color: AppColors.surface,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -49,7 +49,7 @@ class MobileGenericCard extends StatelessWidget {
                 children: [
                   Text(
                     reference,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
@@ -76,18 +76,18 @@ class MobileGenericCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
 
               // Row 2: Name
               if (name != null)
                 Row(
                   children: [
                     Icon(nameIcon ?? Icons.person, size: 16, color: AppColors.textSecondary),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         name!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           color: AppColors.textPrimary,
                         ),
@@ -97,7 +97,7 @@ class MobileGenericCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              if (name != null) const SizedBox(height: 8),
+              if (name != null) SizedBox(height: 8),
 
               // Row 3: Date and Amount
               Row(
@@ -106,11 +106,11 @@ class MobileGenericCard extends StatelessWidget {
                   if (date != null)
                     Row(
                       children: [
-                        const Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
-                        const SizedBox(width: 8),
+                        Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                        SizedBox(width: 8),
                         Text(
                           '${date!.day.toString().padLeft(2, '0')}/${date!.month.toString().padLeft(2, '0')}/${date!.year}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondary,
                           ),
@@ -118,14 +118,14 @@ class MobileGenericCard extends StatelessWidget {
                       ],
                     )
                   else
-                    const SizedBox.shrink(),
+                    SizedBox.shrink(),
                   Row(
                     children: [
-                      const Icon(Icons.attach_money, size: 16, color: AppColors.textSecondary),
-                      const SizedBox(width: 4),
+                      Icon(Icons.attach_money, size: 16, color: AppColors.textSecondary),
+                      SizedBox(width: 4),
                       Text(
                         '${amount.toStringAsFixed(2)} TND',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
@@ -153,13 +153,13 @@ class MobileGenericCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 16.0),
+          padding: EdgeInsets.only(right: 16.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               if (onEdit != null)
                 IconButton(
-                  icon: const Icon(Icons.edit, color: AppColors.primary),
+                  icon: Icon(Icons.edit, color: AppColors.primary),
                   onPressed: onEdit,
                 ),
               if (onPdf != null)

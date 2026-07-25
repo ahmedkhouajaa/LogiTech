@@ -25,7 +25,7 @@ class MobileTotalsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -39,15 +39,15 @@ class MobileTotalsCard extends StatelessWidget {
           if (tvaBreakdown.isNotEmpty) ...[
             const SizedBox(height: 12),
             ...tvaBreakdown.entries.map((e) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.only(bottom: 12),
               child: _buildRow('TVA ${e.key.toInt()}%', formatCurrencyDT(e.value)),
             )),
           ] else ...[
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _buildRow('TVA 0%', '0,000 TND'),
           ],
           
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Divider(color: AppColors.border, height: 1),
           ),
@@ -56,7 +56,7 @@ class MobileTotalsCard extends StatelessWidget {
             onTap: () => onTimbreFiscalChanged(!applyTimbreFiscal),
             borderRadius: BorderRadius.circular(AppRadius.md),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
                   SizedBox(
@@ -69,20 +69,20 @@ class MobileTotalsCard extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Expanded(
+                  SizedBox(width: 8),
+                  Expanded(
                     child: Text('Timbre fiscal', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                   ),
                   Text(
                     formatCurrencyDT(applyTimbreFiscal ? timbreFiscal : 0),
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
                   ),
                 ],
               ),
             ),
           ),
           
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Divider(color: AppColors.border, height: 1),
           ),
@@ -90,20 +90,20 @@ class MobileTotalsCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Total TTC', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Text('Total TTC', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: TweenAnimationBuilder<double>(
                   tween: Tween<double>(begin: 0, end: totalTTC),
-                  duration: const Duration(milliseconds: 500),
+                  duration: Duration(milliseconds: 500),
                   builder: (context, value, child) {
                     return Text(
                       formatCurrencyDT(value),
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
                     );
                   },
                 ),
@@ -119,8 +119,8 @@ class MobileTotalsCard extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-        Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+        Text(label, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
       ],
     );
   }

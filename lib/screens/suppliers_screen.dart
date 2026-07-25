@@ -38,7 +38,14 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           ),
           child: Row(
             children: [
-              const Text('Fournisseurs', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Fournisseurs', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  SizedBox(height: 4),
+                  Text('Gerer vos fournisseurs', style: TextStyle(color: AppColors.textSecondary)),
+                ],
+              ),
               const Spacer(),
               SizedBox(
                 width: 300,
@@ -47,8 +54,8 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
               const SizedBox(width: AppSpacing.md),
               ElevatedButton.icon(
                 onPressed: () => _showDialog(context, null),
-                icon: const Icon(Icons.factory_rounded, size: 20, color: Colors.white),
-                label: const Text('Nouveau Fournisseur', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                icon: Icon(Icons.factory_rounded, size: 20, color: Colors.white),
+                label: Text('Nouveau Fournisseur', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -75,8 +82,8 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.factory_outlined, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
-                        const SizedBox(height: 16),
-                        const Text('Aucun fournisseur trouve', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
+                        SizedBox(height: 16),
+                        Text('Aucun fournisseur trouve', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
                       ],
                     ),
                   );
@@ -90,11 +97,11 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                     final s = filtered[index];
                     return Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(AppRadius.lg),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.01), blurRadius: 4, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: Offset(0, 4)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.01), blurRadius: 4, offset: Offset(0, 2)),
                         ],
                         border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
                       ),
@@ -106,7 +113,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                           onTap: () => _showDialog(context, s),
                           hoverColor: AppColors.primary.withValues(alpha: 0.02),
                           child: Padding(
-                            padding: const EdgeInsets.all(20),
+                            padding: EdgeInsets.all(20),
                             child: Row(
                               children: [
                                 // Avatar
@@ -138,13 +145,13 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                         children: [
                                           Text(
                                             s.name,
-                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
-                                          const SizedBox(width: 8),
+                                          SizedBox(width: 8),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                             decoration: BoxDecoration(
                                               color: s.supplierType == 'entreprise' ? AppColors.infoLight : Colors.purple.shade50,
                                               borderRadius: BorderRadius.circular(6),
@@ -157,23 +164,23 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 6),
+                                      SizedBox(height: 6),
                                       Row(
                                         children: [
-                                          const Icon(Icons.tag_rounded, size: 14, color: AppColors.textTertiary),
-                                          const SizedBox(width: 4),
-                                          Text(s.code, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+                                          Icon(Icons.tag_rounded, size: 14, color: AppColors.textTertiary),
+                                          SizedBox(width: 4),
+                                          Text(s.code, style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
                                           if (s.email != null && s.email!.isNotEmpty) ...[
-                                            const SizedBox(width: 12),
-                                            const Icon(Icons.email_outlined, size: 14, color: AppColors.textTertiary),
-                                            const SizedBox(width: 4),
-                                            Text(s.email!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                            SizedBox(width: 12),
+                                            Icon(Icons.email_outlined, size: 14, color: AppColors.textTertiary),
+                                            SizedBox(width: 4),
+                                            Text(s.email!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                                           ],
                                           if (s.phone != null && s.phone!.isNotEmpty) ...[
-                                            const SizedBox(width: 12),
-                                            const Icon(Icons.phone_outlined, size: 14, color: AppColors.textTertiary),
-                                            const SizedBox(width: 4),
-                                            Text(s.phone!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                            SizedBox(width: 12),
+                                            Icon(Icons.phone_outlined, size: 14, color: AppColors.textTertiary),
+                                            SizedBox(width: 4),
+                                            Text(s.phone!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                                           ],
                                         ],
                                       ),
@@ -187,10 +194,10 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      const Text('Dette', style: TextStyle(fontSize: 11, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
-                                      const SizedBox(height: 4),
+                                      Text('Dette', style: TextStyle(fontSize: 11, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
+                                      SizedBox(height: 4),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: s.balance > 0 ? AppColors.errorLight : AppColors.successLight.withValues(alpha: 0.5),
                                           borderRadius: BorderRadius.circular(8),
@@ -209,9 +216,9 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                 ),
                                 
                                 // Actions
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert_rounded, color: AppColors.textTertiary),
+                                  icon: Icon(Icons.more_vert_rounded, color: AppColors.textTertiary),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   elevation: 4,
                                   onSelected: (val) {
@@ -219,8 +226,8 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                     if (val == 'delete') context.read<SuppliersBloc>().add(DeleteSupplier(s.id));
                                   },
                                   itemBuilder: (context) => [
-                                    const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')])),
-                                    const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))])),
+                                    PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')])),
+                                    PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))])),
                                   ],
                                 ),
                               ],
@@ -334,7 +341,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(horizontal: 40, vertical: 24),
       child: Container(
         width: 800,
         decoration: BoxDecoration(
@@ -347,27 +354,27 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
                 borderRadius: BorderRadius.only(topLeft: Radius.circular(AppRadius.lg), topRight: Radius.circular(AppRadius.lg)),
                 border: Border(bottom: BorderSide(color: AppColors.border)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.factory_rounded, color: AppColors.primary),
-                  const SizedBox(width: 8),
+                  Icon(Icons.factory_rounded, color: AppColors.primary),
+                  SizedBox(width: 8),
                   Text(
                     widget.existing == null ? 'Creer un Nouveau Fournisseur' : 'Modifier le Fournisseur',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
-                  const Spacer(),
+                  Spacer(),
                   OutlinedButton.icon(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
-                    label: const Text('Retour', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                    icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
+                    label: Text('Retour', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.border),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
@@ -375,13 +382,13 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
                     onPressed: _save,
-                    icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
-                    label: Text(widget.existing == null ? 'Creer' : 'Enregistrer', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    icon: Icon(Icons.save_rounded, size: 16, color: Colors.white),
+                    label: Text(widget.existing == null ? 'Creer' : 'Enregistrer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     ),
                   ),
                 ],
@@ -389,8 +396,8 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
             ),
             // TabBar Header
             Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
                 border: Border(bottom: BorderSide(color: AppColors.border)),
               ),
               child: TabBar(
@@ -423,7 +430,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // Section 1: Type d'Entreprise
-                          const Text(
+                          Text(
                             "Type d'Entreprise",
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
                           ),
@@ -568,7 +575,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                     hint: 'JJ/MM/AAAA',
                                     controller: _birthDateCtrl,
                                     readOnly: true,
-                                    suffix: const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
+                                    suffix: Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
                                     onTap: _selectBirthDate,
                                   ),
                                 ),
@@ -583,11 +590,11 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Numero de Telephone',
                                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                               ),
-                              const SizedBox(height: 6),
+                              SizedBox(height: 6),
                               Row(
                                 children: [
                                   Container(
@@ -598,7 +605,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                       border: Border.all(color: AppColors.border),
                                     ),
                                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                                    child: const Row(
+                                    child: Row(
                                       children: [
                                         Text('🇹🇳', style: TextStyle(fontSize: 18)),
                                         SizedBox(width: 6),
@@ -608,29 +615,29 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
+                                  SizedBox(width: 12),
                                   Expanded(
                                     child: TextFormField(
                                       controller: _phoneCtrl,
                                       keyboardType: TextInputType.phone,
-                                      style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                                      style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
                                       decoration: InputDecoration(
                                         hintText: 'Saisissez le numero de telephone',
-                                        hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                                        hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                                         filled: true,
                                         fillColor: AppColors.surfaceAlt,
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(AppRadius.md),
-                                          borderSide: const BorderSide(color: AppColors.border),
+                                          borderSide: BorderSide(color: AppColors.border),
                                         ),
                                         enabledBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(AppRadius.md),
-                                          borderSide: const BorderSide(color: AppColors.border),
+                                          borderSide: BorderSide(color: AppColors.border),
                                         ),
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(AppRadius.md),
-                                          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                                          borderSide: BorderSide(color: AppColors.primary, width: 2),
                                         ),
                                       ),
                                     ),
@@ -678,6 +685,73 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                 ),
               ),
             ),
+            // Bottom Navigation
+            AnimatedBuilder(
+              animation: _tabController,
+              builder: (context, child) {
+                return Container(
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    border: Border(top: BorderSide(color: AppColors.border)),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(AppRadius.lg),
+                      bottomRight: Radius.circular(AppRadius.lg),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _tabController.index > 0
+                          ? OutlinedButton.icon(
+                              onPressed: () => _tabController.animateTo(_tabController.index - 1),
+                              icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
+                              label: Text('Précédent', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: AppColors.border),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                              ),
+                            )
+                          : const SizedBox(width: 100),
+                      _tabController.index < _tabController.length - 1
+                          ? ElevatedButton(
+                              onPressed: () {
+                                if (_formKey.currentState?.validate() ?? true) {
+                                  _tabController.animateTo(_tabController.index + 1);
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                elevation: 0,
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('Suivant', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                  SizedBox(width: 8),
+                                  Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                                ],
+                              ),
+                            )
+                          : ElevatedButton.icon(
+                              onPressed: _save,
+                              icon: Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                              label: Text('Terminer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.success,
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                elevation: 0,
+                              ),
+                            ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -687,15 +761,15 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
   Widget _buildBillingAddressSection() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.border),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Adresse de Facturation',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
           ),
@@ -725,12 +799,12 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Pays', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-              const SizedBox(height: 6),
+              Text('Pays', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              SizedBox(height: 6),
               Container(
                 height: 44,
                 decoration: BoxDecoration(
@@ -738,8 +812,8 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: AppColors.border),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: const Row(
+                padding: EdgeInsets.symmetric(horizontal: 14),
+                child: Row(
                   children: [
                     Text('🇹🇳', style: TextStyle(fontSize: 18)),
                     SizedBox(width: 8),
@@ -759,7 +833,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
   Widget _buildDeliveryAddressSection() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.border),
       ),
@@ -775,14 +849,14 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
               bottomRight: Radius.circular(_deliveryExpanded ? 0 : AppRadius.md),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Row(
                 children: [
-                  const Text(
+                  Text(
                     'Adresse de Livraison',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
-                  const Spacer(),
+                  Spacer(),
                   Icon(
                     _deliveryExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                     color: AppColors.textSecondary,
@@ -792,9 +866,9 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
             ),
           ),
           if (_deliveryExpanded) ...[
-            const Divider(height: 1, color: AppColors.border),
+            Divider(height: 1, color: AppColors.border),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -815,7 +889,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                           });
                         },
                       ),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Identique a l\'adresse de facturation',
                           style: TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
@@ -852,12 +926,12 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Pays', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                      const SizedBox(height: 6),
+                      Text('Pays', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      SizedBox(height: 6),
                       Container(
                         height: 44,
                         decoration: BoxDecoration(
@@ -865,8 +939,8 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                           borderRadius: BorderRadius.circular(AppRadius.md),
                           border: Border.all(color: AppColors.border),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        child: const Row(
+                        padding: EdgeInsets.symmetric(horizontal: 14),
+                        child: Row(
                           children: [
                             Text('🇹🇳', style: TextStyle(fontSize: 18)),
                             SizedBox(width: 8),
@@ -888,7 +962,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
   Widget _buildBankAccountSection() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.border),
       ),
@@ -904,14 +978,14 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
               bottomRight: Radius.circular(_bankExpanded ? 0 : AppRadius.md),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Row(
                 children: [
-                  const Text(
+                  Text(
                     'Comptes Bancaires',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
-                  const Spacer(),
+                  Spacer(),
                   Icon(
                     _bankExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                     color: AppColors.textSecondary,
@@ -921,7 +995,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
             ),
           ),
           if (_bankExpanded) ...[
-            const Divider(height: 1, color: AppColors.border),
+            Divider(height: 1, color: AppColors.border),
             Padding(
               padding: const EdgeInsets.all(16),
               child: AppTextField(
@@ -948,14 +1022,14 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
       child: Container(
         height: 54,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
+          color: isSelected ? Color(0xFFEFF6FF) : AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.border,
             width: isSelected ? 2 : 1,
           ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -968,8 +1042,8 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
               ),
             ),
             if (isSelected) ...[
-              const Spacer(),
-              const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
+              Spacer(),
+              Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
             ],
           ],
         ),
@@ -980,17 +1054,17 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
   Future<void> _selectBirthDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().subtract(const Duration(days: 365 * 30)),
+      initialDate: DateTime.now().subtract(Duration(days: 365 * 30)),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
-      locale: const Locale('fr'),
+      locale: Locale('fr'),
       builder: (BuildContext context, Widget? child) {
         return Theme(
           data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
+            colorScheme: ColorScheme.light(
               primary: AppColors.primary,
-              onPrimary: Colors.white,
-              surface: Colors.white,
+              onPrimary: AppColors.surface,
+              surface: AppColors.surface,
               onSurface: AppColors.textPrimary,
             ),
           ),

@@ -119,7 +119,7 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
   Future<void> _save() async {
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -305,7 +305,7 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
                           backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                           foregroundColor: AppColors.primary,
                           elevation: 0,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: EdgeInsets.symmetric(horizontal: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                           side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
                         ),
@@ -353,10 +353,10 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
               children: [
                 if (_items.isEmpty)
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    padding: EdgeInsets.symmetric(vertical: 32),
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(AppRadius.md)),
-                    child: const Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
+                    decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
+                    child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
                   )
                 else
                   ..._items.asMap().entries.map((e) => MobileArticleCard(
@@ -376,19 +376,19 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () => _showArticleForm(),
-                        icon: const Icon(Icons.add_rounded),
-                        label: const Text('Ajouter une ligne'),
+                        icon: Icon(Icons.add_rounded),
+                        label: Text('Ajouter une ligne'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary,
-                          side: const BorderSide(color: AppColors.primary),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(color: AppColors.primary),
+                          padding: EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                         ),
                       )
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     IconButton(
-                      icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
+                      icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
                       tooltip: 'Créer un nouvel article',
                       onPressed: () {
                         Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));

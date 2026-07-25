@@ -68,64 +68,64 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('Devis ${currentQuote.number}', style: const TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Devis ${currentQuote.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
           backgroundColor: AppColors.primary,
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
+              icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentQuote),
               itemBuilder: (_) => [
                 _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 if (!currentQuote.isConverted && !currentQuote.isConvertedToOrder && !currentQuote.isConvertedToDelivery) ...[
                   _buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture'),
-                  const PopupMenuDivider(height: 1),
+                  PopupMenuDivider(height: 1),
                   _buildMenuItem('to_order', Icons.shopping_cart_outlined, AppColors.textSecondary, 'Transformer en Commande Client'),
-                  const PopupMenuDivider(height: 1),
+                  PopupMenuDivider(height: 1),
                   _buildMenuItem('to_delivery', Icons.local_shipping_outlined, AppColors.textSecondary, 'Transformer en Bon de Livraison'),
-                  const PopupMenuDivider(height: 1),
+                  PopupMenuDivider(height: 1),
                 ] else ...[
                   if (currentQuote.isConverted && currentQuote.convertedTo == 'invoice') ...[
                     _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture créée'),
-                    const PopupMenuDivider(height: 1),
+                    PopupMenuDivider(height: 1),
                   ],
                   if (currentQuote.isConvertedToOrder) ...[
                     _buildMenuItem('view_order', Icons.shopping_cart_outlined, AppColors.success, 'Voir la commande client créée'),
-                    const PopupMenuDivider(height: 1),
+                    PopupMenuDivider(height: 1),
                   ],
                   if (currentQuote.isConvertedToDelivery) ...[
                     _buildMenuItem('view_delivery', Icons.local_shipping_outlined, AppColors.success, 'Voir le bon de livraison créé'),
-                    const PopupMenuDivider(height: 1),
+                    PopupMenuDivider(height: 1),
                   ],
                 ],
                 _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-//                 const PopupMenuDivider(height: 1),
+//                 PopupMenuDivider(height: 1),
 //                 _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
               ],
             ),
           ],
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Header Card
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                color: AppColors.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -158,49 +158,49 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               // Articles
               if (currentQuote.items.isNotEmpty) ...[
-                const Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: 8),
+                Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
                 ...currentQuote.items.map((item) => Card(
                   elevation: 1,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  color: Colors.white,
-                  surfaceTintColor: Colors.white,
+                  margin: EdgeInsets.only(bottom: 8),
+                  color: AppColors.surface,
+                  surfaceTintColor: AppColors.surface,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border.withOpacity(0.5))),
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: EdgeInsets.all(16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item.productName ?? 'Produit Inconnu', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
+                        Text(item.productName ?? 'Produit Inconnu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
                         if (item.description != null && item.description!.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(item.description!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                          SizedBox(height: 4),
+                          Text(item.description!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                         ],
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
-                              child: Text('${item.quantity} x ${formatCurrencyDT(item.unitPrice)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                              child: Text('${item.quantity} x ${formatCurrencyDT(item.unitPrice)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
                             ),
-                            Text(formatCurrencyDT(item.computedTotalHT), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
+                            Text(formatCurrencyDT(item.computedTotalHT), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
                           ],
                         ),
                       ],
                     ),
                   ),
                 )),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
               ],
               // Totals
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surfaceAlt,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -217,8 +217,8 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentQuote.totalTTC), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
+                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(formatCurrencyDT(currentQuote.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
                         ],
                       ),
                     ],
@@ -226,16 +226,16 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                 ),
               ),
               if (currentQuote.notes != null && currentQuote.notes!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 16),
+                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
                 Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(currentQuote.notes!, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(currentQuote.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                   ),
                 ),
               ],
@@ -251,8 +251,8 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
+        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
       ],
     );
   }
@@ -263,9 +263,9 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF64748B)),
-          const SizedBox(width: 12),
-          Text(text, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+          Icon(icon, size: 18, color: Color(0xFF64748B)),
+          SizedBox(width: 12),
+          Text(text, style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -369,7 +369,10 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                 children: [
                   const Text('Nouveau statut:'),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<DocumentStatus>(
+                  DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: selectedStatus,
                     decoration: const InputDecoration(border: OutlineInputBorder()),
                     isExpanded: true,
@@ -413,7 +416,7 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: const Row(children: [Icon(Icons.warning_amber_rounded, color: AppColors.warning), SizedBox(width: 8), Text('Confirmation')]),
+        title: Row(children: [Icon(Icons.warning_amber_rounded, color: AppColors.warning), SizedBox(width: 8), Text('Confirmation')]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -457,7 +460,7 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
     try { context.read<InvoicesBloc>().add(AddInvoice(invoice)); } catch (e) { await DatabaseHelper.instance.insertInvoice(invoice); }
     final updatedQuote = quote.copyWith(isConverted: true, convertedTo: 'invoice', convertedToId: invoiceId, status: DocumentStatus.accepted);
     context.read<QuotesBloc>().add(UpdateQuote(updatedQuote));
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Devis converti en facture avec succes'), backgroundColor: AppColors.success));
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Devis converti en facture avec succes'), backgroundColor: AppColors.success));
   }
 
   Future<void> _convertQuoteToOrder(BuildContext context, Quote quote) async {
@@ -474,7 +477,7 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
     try { context.read<CustomerOrdersBloc>().add(AddCustomerOrder(order)); } catch (e) { await DatabaseHelper.instance.insertCustomerOrder(order); }
     final updatedQuote = quote.copyWith(isConvertedToOrder: true, convertedToOrderId: orderId, status: DocumentStatus.accepted);
     context.read<QuotesBloc>().add(UpdateQuote(updatedQuote));
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Devis converti en commande client avec succes'), backgroundColor: AppColors.success));
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Devis converti en commande client avec succes'), backgroundColor: AppColors.success));
   }
 
   Future<void> _convertQuoteToDelivery(BuildContext context, Quote quote) async {
@@ -491,14 +494,14 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
     try { context.read<DeliveryNotesBloc>().add(AddDeliveryNote(deliveryNote)); } catch (e) { await DatabaseHelper.instance.insertDeliveryNote(deliveryNote); }
     final updatedQuote = quote.copyWith(isConvertedToDelivery: true, convertedToDeliveryId: deliveryId, status: DocumentStatus.accepted);
     context.read<QuotesBloc>().add(UpdateQuote(updatedQuote));
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Devis converti en bon de livraison avec succes'), backgroundColor: AppColors.success));
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Devis converti en bon de livraison avec succes'), backgroundColor: AppColors.success));
   }
 
   Future<void> _openConvertedInvoice(BuildContext context, String? invoiceId) async {
     if (invoiceId == null) return;
     final invoice = await DatabaseHelper.instance.getInvoice(invoiceId);
     if (!mounted) return;
-    if (invoice == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Facture introuvable'), backgroundColor: AppColors.error)); return; }
+    if (invoice == null) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Facture introuvable'), backgroundColor: AppColors.error)); return; }
     try {
       Navigator.push(context, MaterialPageRoute(builder: (_) => MultiBlocProvider(
         providers: [
@@ -515,7 +518,7 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
     if (orderId == null) return;
     final order = await DatabaseHelper.instance.getCustomerOrder(orderId);
     if (!mounted) return;
-    if (order == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Commande introuvable'), backgroundColor: AppColors.error)); return; }
+    if (order == null) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Commande introuvable'), backgroundColor: AppColors.error)); return; }
     try {
       Navigator.push(context, MaterialPageRoute(builder: (_) => MultiBlocProvider(
         providers: [
@@ -532,7 +535,7 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
     if (deliveryId == null) return;
     final delivery = await DatabaseHelper.instance.getDeliveryNote(deliveryId);
     if (!mounted) return;
-    if (delivery == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bon de livraison introuvable'), backgroundColor: AppColors.error)); return; }
+    if (delivery == null) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bon de livraison introuvable'), backgroundColor: AppColors.error)); return; }
     try {
       Navigator.push(context, MaterialPageRoute(builder: (_) => MultiBlocProvider(
         providers: [

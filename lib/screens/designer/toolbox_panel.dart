@@ -20,8 +20,8 @@ class _ToolboxPanelState extends State<ToolboxPanel> {
   Widget build(BuildContext context) {
     return Theme(
       data: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF1E1E2E),
-        colorScheme: const ColorScheme.dark(
+        scaffoldBackgroundColor: Color(0xFF1E1E2E),
+        colorScheme: ColorScheme.dark(
           primary: AppColors.primaryLight,
           surface: Color(0xFF2A2A3C),
         ),
@@ -90,8 +90,8 @@ class _ToolboxPanelState extends State<ToolboxPanel> {
             child: GestureDetector(
               onTap: () => setState(() => _activeCategory = cat.$1),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                margin: const EdgeInsets.symmetric(horizontal: 2),
+                padding: EdgeInsets.symmetric(vertical: 8),
+                margin: EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
                   color: isActive
                       ? AppColors.primary.withValues(alpha: 0.15)
@@ -105,8 +105,8 @@ class _ToolboxPanelState extends State<ToolboxPanel> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(cat.$2, size: 16,
-                        color: isActive ? AppColors.primaryLight : const Color(0xFF8B8BA7)),
-                    const SizedBox(height: 2),
+                        color: isActive ? AppColors.primaryLight : Color(0xFF8B8BA7)),
+                    SizedBox(height: 2),
                     Text(cat.$3,
                         style: TextStyle(
                           fontSize: 10,

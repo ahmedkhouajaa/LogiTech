@@ -337,7 +337,7 @@ class _InvoiceDesignerScreenState extends State<InvoiceDesignerScreen> {
             }
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text('Modèle enregistré avec succès !'),
+                content: Text('Modèle enregistré avec succès !'),
                 backgroundColor: AppColors.success,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

@@ -72,7 +72,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
+      duration: Duration(milliseconds: 250),
       curve: Curves.easeInOut,
       width: widget.isCollapsed ? 64 : 256,
       color: AppColors.sidebarBg,
@@ -176,7 +176,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
   Widget _buildHeader() {
     return Container(
       height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: AppColors.sidebarBg,
         border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
@@ -258,11 +258,11 @@ class _SidebarMenuState extends State<SidebarMenu> {
           },
           child: Container(
             height: 42,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
                 Icon(icon, color: AppColors.sidebarText, size: 18),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(child: Text(label, style: TextStyle(color: AppColors.sidebarText, fontSize: 13, fontWeight: FontWeight.w500))),
                 Icon(
                   isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
@@ -283,9 +283,9 @@ class _SidebarMenuState extends State<SidebarMenu> {
     return InkWell(
       onTap: () => widget.onModuleSelected(module),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+        duration: Duration(milliseconds: 150),
         height: 36,
-        padding: const EdgeInsets.only(left: 40),
+        padding: EdgeInsets.only(left: 40),
         decoration: BoxDecoration(
           color: isActive ? AppColors.sidebarActive.withValues(alpha: 0.2) : Colors.transparent,
           border: isActive ? Border(left: BorderSide(color: AppColors.primary, width: 3)) : null,
@@ -334,9 +334,9 @@ class _SidebarItemWidgetState extends State<_SidebarItemWidget> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+          duration: Duration(milliseconds: 150),
           height: 42,
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+          margin: EdgeInsets.symmetric(horizontal: 8, vertical: 1),
           padding: EdgeInsets.symmetric(horizontal: widget.isCollapsed ? 0 : 10),
           decoration: BoxDecoration(
             color: widget.isActive
@@ -351,7 +351,7 @@ class _SidebarItemWidgetState extends State<_SidebarItemWidget> {
               : Row(
                   children: [
                     Icon(widget.icon, color: widget.isActive ? Colors.white : AppColors.sidebarText, size: 18),
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     Text(
                       widget.label,
                       style: TextStyle(

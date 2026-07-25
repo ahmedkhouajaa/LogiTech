@@ -82,58 +82,58 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('BL ${currentDeliveryNote.number}', style: const TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('BL ${currentDeliveryNote.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
           backgroundColor: AppColors.primary,
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
+              icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentDeliveryNote),
               itemBuilder: (_) => [
                 _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 if (currentDeliveryNote.isConvertedToInvoice) ...[
                   _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture créée'),
-                  const PopupMenuDivider(height: 1),
+                  PopupMenuDivider(height: 1),
                 ] else if (currentDeliveryNote.isConvertedToReturn) ...[
                   _buildMenuItem('view_return', Icons.assignment_return_outlined, AppColors.success, 'Voir le bon de retour créé'),
-                  const PopupMenuDivider(height: 1),
+                  PopupMenuDivider(height: 1),
                 ] else ...[
                   _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
-                  const PopupMenuDivider(height: 1),
+                  PopupMenuDivider(height: 1),
                   _buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture'),
-                  const PopupMenuDivider(height: 1),
+                  PopupMenuDivider(height: 1),
                   _buildMenuItem('to_return', Icons.assignment_return_outlined, AppColors.textSecondary, 'Transformer en Bon de Retour'),
-                  const PopupMenuDivider(height: 1),
+                  PopupMenuDivider(height: 1),
                 ],
                 _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-//                 const PopupMenuDivider(height: 1),
+//                 PopupMenuDivider(height: 1),
 //                 _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-//                 const PopupMenuDivider(height: 1),
+//                 PopupMenuDivider(height: 1),
 //                 _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'),
               ],
             ),
           ],
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                color: AppColors.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -169,43 +169,43 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               if (currentDeliveryNote.items.isNotEmpty) ...[
-                const Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: 8),
+                Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
                 ...currentDeliveryNote.items.map((item) => Card(
                   elevation: 1,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  color: Colors.white,
-                  surfaceTintColor: Colors.white,
+                  margin: EdgeInsets.only(bottom: 8),
+                  color: AppColors.surface,
+                  surfaceTintColor: AppColors.surface,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border.withOpacity(0.5))),
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: EdgeInsets.all(16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item.description ?? 'Produit Inconnu', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
-                        const SizedBox(height: 12),
+                        Text(item.description ?? 'Produit Inconnu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
+                        SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
-                              child: Text('${item.quantity} x ${formatCurrencyDT(item.unitPrice)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                              child: Text('${item.quantity} x ${formatCurrencyDT(item.unitPrice)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
                             ),
-                            Text(formatCurrencyDT(item.totalHT), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
+                            Text(formatCurrencyDT(item.totalHT), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
                           ],
                         ),
                       ],
                     ),
                   ),
                 )),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
               ],
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surfaceAlt,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -222,8 +222,8 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentDeliveryNote.totalTTC), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
+                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(formatCurrencyDT(currentDeliveryNote.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
                         ],
                       ),
                     ],
@@ -231,16 +231,16 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                 ),
               ),
               if (currentDeliveryNote.notes != null && currentDeliveryNote.notes!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 16),
+                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
                 Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(currentDeliveryNote.notes!, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(currentDeliveryNote.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                   ),
                 ),
               ],
@@ -256,8 +256,8 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
+        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
       ],
     );
   }
@@ -268,9 +268,9 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF64748B)),
-          const SizedBox(width: 12),
-          Text(text, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+          Icon(icon, size: 18, color: Color(0xFF64748B)),
+          SizedBox(width: 12),
+          Text(text, style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -372,7 +372,10 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                 children: [
                   const Text('Nouveau statut:'),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<DeliveryNoteStatus>(
+                  DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: selectedStatus,
                     decoration: const InputDecoration(border: OutlineInputBorder()),
                     isExpanded: true,
@@ -429,7 +432,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
     ).then((created) {
       if (created == true && context.mounted) {
         context.read<DeliveryNotesBloc>().add(LoadDeliveryNotes());
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Paiement ajouté avec succès', style: TextStyle(color: Colors.white)),
           backgroundColor: AppColors.success,
         ));
@@ -441,7 +444,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: AppColors.warning),
             SizedBox(width: 8),
@@ -454,7 +457,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
           children: [
             const Text('Voulez-vous transformer ce bon de livraison en facture ?'),
             const SizedBox(height: 16),
-            Text('BL: ${note.number}', style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text('BL: ${note.number}', style: TextStyle(fontWeight: FontWeight.w600)),
             Text('Client: ${note.customerName ?? note.customerCompany ?? "Inconnu"}'),
             Text('Montant: ${formatCurrencyDT(note.totalTTC)}'),
           ],
@@ -462,7 +465,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
@@ -540,7 +543,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: AppColors.warning),
             SizedBox(width: 8),
@@ -553,7 +556,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
           children: [
             const Text('Voulez-vous transformer ce bon de livraison en bon de retour ?'),
             const SizedBox(height: 16),
-            Text('BL: ${note.number}', style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text('BL: ${note.number}', style: TextStyle(fontWeight: FontWeight.w600)),
             Text('Client: ${note.customerName ?? note.customerCompany ?? "Inconnu"}'),
             Text('Montant: ${formatCurrencyDT(note.totalTTC)}'),
           ],
@@ -561,7 +564,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
@@ -635,7 +638,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
     final returnNote = await DatabaseHelper.instance.getReturnNote(returnId);
     if (!context.mounted) return;
     if (returnNote == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Bon de retour introuvable'),
         backgroundColor: AppColors.error,
       ));
@@ -657,7 +660,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Impossible d\'ouvrir le bon de retour'),
         backgroundColor: AppColors.error,
       ));
@@ -670,7 +673,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
     final invoice = await DatabaseHelper.instance.getInvoice(invoiceId);
     if (!context.mounted) return;
     if (invoice == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Facture introuvable'),
         backgroundColor: AppColors.error,
       ));

@@ -42,7 +42,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
           child: Row(
             children: [
-              const Text('Articles', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Articles', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  SizedBox(height: 4),
+                  Text('Gerer vos articles', style: TextStyle(color: AppColors.textSecondary)),
+                ],
+              ),
               const Spacer(),
               SizedBox(
                 width: 300,
@@ -53,8 +60,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
               const SizedBox(width: AppSpacing.md),
               ElevatedButton.icon(
                 onPressed: () => _navigateToCreate(context, null),
-                icon: const Icon(Icons.add_rounded, size: 20, color: Colors.white),
-                label: const Text('Nouvel Article', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                icon: Icon(Icons.add_rounded, size: 20, color: Colors.white),
+                label: Text('Nouvel Article', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -90,8 +97,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.inventory_2_outlined, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
-                        const SizedBox(height: 16),
-                        const Text('Aucun article trouve', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
+                        SizedBox(height: 16),
+                        Text('Aucun article trouve', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
                       ],
                     ),
                   );
@@ -117,11 +124,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     
                     return Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(AppRadius.lg),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.01), blurRadius: 4, offset: const Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: Offset(0, 4)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.01), blurRadius: 4, offset: Offset(0, 2)),
                         ],
                         border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
                       ),
@@ -133,7 +140,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           onTap: () => _navigateToCreate(context, p),
                           hoverColor: AppColors.primary.withValues(alpha: 0.02),
                           child: Padding(
-                            padding: const EdgeInsets.all(20),
+                            padding: EdgeInsets.all(20),
                             child: Row(
                               children: [
                                 // Icon
@@ -145,7 +152,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                     borderRadius: BorderRadius.circular(14),
                                     border: Border.all(color: AppColors.border),
                                   ),
-                                  child: const Center(
+                                  child: Center(
                                     child: Icon(Icons.inventory_2_rounded, color: AppColors.textSecondary, size: 24),
                                   ),
                                 ),
@@ -161,40 +168,40 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                         children: [
                                           Text(
                                             p.name,
-                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
-                                          const SizedBox(width: 8),
+                                          SizedBox(width: 8),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: AppColors.primary.withValues(alpha: 0.1),
                                               borderRadius: BorderRadius.circular(12),
                                             ),
                                             child: Text(
                                               p.productType.capitalize(),
-                                              style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600),
+                                              style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600),
                                             ),
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 6),
+                                      SizedBox(height: 6),
                                       Row(
                                         children: [
-                                          const Icon(Icons.tag_rounded, size: 14, color: AppColors.textTertiary),
-                                          const SizedBox(width: 4),
-                                          Text(p.code, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+                                          Icon(Icons.tag_rounded, size: 14, color: AppColors.textTertiary),
+                                          SizedBox(width: 4),
+                                          Text(p.code, style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
                                           if (p.reference != null && p.reference!.isNotEmpty) ...[
-                                            const SizedBox(width: 12),
-                                            const Icon(Icons.qr_code_2_rounded, size: 14, color: AppColors.textTertiary),
-                                            const SizedBox(width: 4),
-                                            Text(p.reference!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                            SizedBox(width: 12),
+                                            Icon(Icons.qr_code_2_rounded, size: 14, color: AppColors.textTertiary),
+                                            SizedBox(width: 4),
+                                            Text(p.reference!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                                           ],
-                                          const SizedBox(width: 12),
-                                          const Icon(Icons.straighten_rounded, size: 14, color: AppColors.textTertiary),
-                                          const SizedBox(width: 4),
-                                          Text(p.unit, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                          SizedBox(width: 12),
+                                          Icon(Icons.straighten_rounded, size: 14, color: AppColors.textTertiary),
+                                          SizedBox(width: 4),
+                                          Text(p.unit, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                                         ],
                                       ),
                                     ],
@@ -207,10 +214,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      const Text('Stock', style: TextStyle(fontSize: 11, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
-                                      const SizedBox(height: 4),
+                                      Text('Stock', style: TextStyle(fontSize: 11, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
+                                      SizedBox(height: 4),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                           decoration: BoxDecoration(
                                             color: realStock <= 0 ? AppColors.errorLight : AppColors.successLight.withValues(alpha: 0.5),
                                             borderRadius: BorderRadius.circular(8),
@@ -234,20 +241,27 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      const Text('Prix Vente (TTC)', style: TextStyle(fontSize: 11, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        formatCurrency(sellTtc),
-                                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                                      Text('Prix Vente (TTC)', style: TextStyle(fontSize: 11, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
+                                      SizedBox(height: 4),
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.successLight.withValues(alpha: 0.5),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          formatCurrency(sellTtc),
+                                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.success),
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
                                 
                                 // Actions
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert_rounded, color: AppColors.textTertiary),
+                                  icon: Icon(Icons.more_vert_rounded, color: AppColors.textTertiary),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   elevation: 4,
                                   onSelected: (val) {
@@ -255,8 +269,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                     if (val == 'delete') context.read<ProductsBloc>().add(DeleteProduct(p.id));
                                   },
                                   itemBuilder: (context) => [
-                                    const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')])),
-                                    const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))])),
+                                    PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')])),
+                                    PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))])),
                                   ],
                                 ),
                               ],

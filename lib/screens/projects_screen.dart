@@ -49,12 +49,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-        title: const Text('Confirmer la suppression', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Voulez-vous vraiment supprimer le projet "${p.name}" ?\nCette action est irréversible.', style: const TextStyle(color: AppColors.textSecondary)),
+        title: Text('Confirmer la suppression', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Voulez-vous vraiment supprimer le projet "${p.name}" ?\nCette action est irréversible.', style: TextStyle(color: AppColors.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -75,15 +75,35 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.all(AppSpacing.lg),
           child: Row(
             children: [
-              AppSearchBar(onChanged: (v) {}),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Projets', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  SizedBox(height: 4),
+                  Text('Gérer vos projets', style: TextStyle(color: AppColors.textSecondary)),
+                ],
+              ),
               const Spacer(),
               AppButton(label: 'Ajouter un Projet', icon: Icons.add_rounded, onPressed: _showCreateDialog),
             ],
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+          child: Container(
+            padding: EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: AppSearchBar(onChanged: (v) {}),
           ),
         ),
         Expanded(
@@ -104,12 +124,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(8),
+                                padding: EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: AppColors.primary.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Icon(Icons.folder_special_rounded, color: AppColors.primary, size: 20),
+                                child: Icon(Icons.folder_special_rounded, color: AppColors.primary, size: 20),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -117,9 +137,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                                    Text(p.name, style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                                     if (p.description != null && p.description!.isNotEmpty)
-                                      Text(p.description!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                      Text(p.description!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                   ],
                                 ),
                               ),
@@ -127,20 +147,51 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           ),
                         ),
                         DataCell(StatusBadge(label: p.status.label, color: AppColors.primary)),
-                        DataCell(Text(formatDateTime(p.createdAt), style: const TextStyle(color: AppColors.textSecondary))),
+                        DataCell(Text(formatDateTime(p.createdAt), style: TextStyle(color: AppColors.textSecondary))),
                         DataCell(
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit_rounded, size: 20, color: AppColors.textSecondary),
-                                onPressed: () => _editProject(p),
-                                splashRadius: 20,
+                          PopupMenuButton<String>(
+                            icon: Icon(Icons.more_vert_rounded, color: AppColors.textSecondary),
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            onSelected: (value) {
+                              if (value == 'voir') {
+                                _editProject(p); // Fallback to edit for now
+                              } else if (value == 'modifier') {
+                                _editProject(p);
+                              } else if (value == 'supprimer') {
+                                _deleteProject(p);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: 'voir',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.visibility_outlined, size: 18, color: AppColors.textSecondary),
+                                    SizedBox(width: 8),
+                                    Text('Voir'),
+                                  ],
+                                ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_rounded, size: 20, color: AppColors.error),
-                                onPressed: () => _deleteProject(p),
-                                splashRadius: 20,
+                              PopupMenuItem(
+                                value: 'modifier',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary),
+                                    SizedBox(width: 8),
+                                    Text('Modifier'),
+                                  ],
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: 'supprimer',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                                    SizedBox(width: 8),
+                                    Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                                  ],
+                                ),
                               ),
                             ],
                           ),

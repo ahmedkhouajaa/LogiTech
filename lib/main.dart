@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'blocs/auth/auth_bloc.dart';
 import 'blocs/customers/customers_bloc.dart';
@@ -42,6 +43,8 @@ import 'blocs/warehouses/warehouses_bloc.dart';
 import 'blocs/warehouses/warehouses_event.dart';
 import 'blocs/inventory_sheets/inventory_sheets_bloc.dart';
 import 'blocs/inventory_sheets/inventory_sheets_event.dart';
+import 'blocs/reports/reports_bloc.dart';
+import 'blocs/theme/theme_cubit.dart';
 import 'services/auth_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_service.dart';
@@ -84,6 +87,9 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    print('DEBUG: CLEARED SHARED PREFERENCES!');
   } catch (e, stack) {
     print('FIREBASE INIT ERROR: $e');
     print(stack);
@@ -155,21 +161,31 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => DocumentTemplatesBloc()..add(LoadDocumentTemplates())),
         BlocProvider(create: (_) => WarehousesBloc()..add(LoadWarehouses())),
         BlocProvider(create: (_) => InventorySheetsBloc(databaseHelper: DatabaseHelper.instance)..add(InventorySheetsLoadRequested())),
+        BlocProvider(create: (_) => ReportsBloc()..add(ReportsRefreshRequested(dateRange: 'Cette Année'))),
+        BlocProvider(create: (_) => ThemeCubit()),
       ],
-      child: MaterialApp(
-        title: 'LogiTech Pro',
-        debugShowCheckedModeBanner: false,
-        theme: _buildTheme(),
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('fr', 'FR'),
-          Locale('en', 'US'),
-        ],
-        home: const _AppGate(),
+      child: BlocBuilder<ThemeCubit, ThemeMode>(
+        builder: (context, themeMode) {
+          AppColors.isDarkMode = themeMode == ThemeMode.dark;
+          return MaterialApp(
+            key: ValueKey(themeMode),
+            title: 'LogiTech Pro',
+            debugShowCheckedModeBanner: false,
+            theme: _buildTheme(),
+            darkTheme: _buildDarkTheme(),
+            themeMode: themeMode,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('fr', 'FR'),
+              Locale('en', 'US'),
+            ],
+            home: const _AppGate(),
+          );
+        },
       ),
     );
   }
@@ -212,12 +228,64 @@ class BusinessManagerApp extends StatelessWidget {
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 2)),
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: AppColors.surface,
         elevation: 0,
         foregroundColor: AppColors.textPrimary,
       ),
-      dividerTheme: const DividerThemeData(color: AppColors.border, thickness: 1),
+      dividerTheme: DividerThemeData(color: AppColors.border, thickness: 1),
+    );
+  }
+
+  ThemeData _buildDarkTheme() {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.fromSeed(
+        brightness: Brightness.dark,
+        seedColor: AppColors.primary,
+        surface: AppColors.surface,
+        surfaceContainerHighest: AppColors.surfaceAlt,
+      ),
+      textTheme: GoogleFonts.interTextTheme(ThemeData(brightness: Brightness.dark).textTheme).copyWith(
+        bodyLarge: TextStyle(color: AppColors.textPrimary),
+        bodyMedium: TextStyle(color: AppColors.textPrimary),
+      ),
+      scaffoldBackgroundColor: AppColors.background,
+      cardTheme: CardThemeData(
+        color: AppColors.surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: BorderSide(color: AppColors.border),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+        elevation: 8,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.surfaceAlt,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 2)),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        foregroundColor: AppColors.textPrimary,
+      ),
+      dividerTheme: DividerThemeData(color: AppColors.border, thickness: 1),
     );
   }
 }
@@ -230,7 +298,7 @@ class _AppGate extends StatelessWidget {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is AuthLoading || state is AuthInitial) {
-          return const Scaffold(
+          return Scaffold(
             backgroundColor: AppColors.sidebarBg,
             body: Center(
               child: Column(

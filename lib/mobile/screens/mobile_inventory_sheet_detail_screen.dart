@@ -61,7 +61,7 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                 Navigator.pop(ctx);
                 Navigator.pop(context);
               },
-              child: const Text('Supprimer', style: TextStyle(color: AppColors.error)),
+              child: Text('Supprimer', style: TextStyle(color: AppColors.error)),
             ),
           ],
         ),
@@ -91,31 +91,31 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('Fiche ${currentSheet.number}', style: const TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Fiche ${currentSheet.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
           backgroundColor: AppColors.primary,
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             if (currentSheet.status != 'validated')
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: Colors.white),
+                icon: Icon(Icons.more_vert, color: Colors.white),
                 onSelected: (val) => _handleAction(context, val, currentSheet),
                 itemBuilder: (_) => [
                   _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                  const PopupMenuDivider(height: 1),
+                  PopupMenuDivider(height: 1),
                   _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
                 ],
               ),
           ],
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                color: AppColors.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -146,15 +146,15 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              const SizedBox(height: 8),
+              SizedBox(height: 16),
+              Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              SizedBox(height: 8),
               if (currentSheet.items.isEmpty)
                 Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
-                  child: const Padding(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
+                  child: Padding(
                     padding: EdgeInsets.all(16.0),
                     child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
                   ),
@@ -162,11 +162,11 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
               else
                 ...currentSheet.items.map((item) => Card(
                   elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
+                  margin: EdgeInsets.only(bottom: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
                   child: Padding(
-                    padding: const EdgeInsets.all(12.0),
+                    padding: EdgeInsets.all(12.0),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -174,21 +174,21 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
+                          child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(item.productName ?? 'Article inconnu', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              Text(item.productName ?? 'Article inconnu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                               if (item.productSku != null && item.productSku!.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(item.productSku!, style: const TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                SizedBox(height: 2),
+                                Text(item.productSku!, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
                               ],
-                              const SizedBox(height: 4),
-                              Text('Qté Théorique: ${item.theoreticalQty}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                              Text('Qté Physique: ${item.actualQty}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                              SizedBox(height: 4),
+                              Text('Qté Théorique: ${item.theoreticalQty}', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                              Text('Qté Physique: ${item.actualQty}', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                             ],
                           ),
                         ),
@@ -231,7 +231,7 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -239,7 +239,7 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
             width: 100,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
               ),
@@ -248,7 +248,7 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w500,
                 fontSize: 14,

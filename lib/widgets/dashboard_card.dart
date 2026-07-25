@@ -36,7 +36,7 @@ class _DashboardCardState extends State<DashboardCard> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: Duration(milliseconds: 200),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -64,13 +64,13 @@ class _DashboardCardState extends State<DashboardCard> {
                     if (widget.trailing != null) widget.trailing!,
                   ],
                 ),
-                const SizedBox(height: AppSpacing.md),
-                Text(widget.value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: 4),
-                Text(widget.title, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+                SizedBox(height: AppSpacing.md),
+                Text(widget.value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                SizedBox(height: 4),
+                Text(widget.title, style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
                 if (widget.subtitle != null) ...[
-                  const SizedBox(height: 4),
-                  Text(widget.subtitle!, style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                  SizedBox(height: 4),
+                  Text(widget.subtitle!, style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                 ],
               ],
             ),
@@ -90,13 +90,12 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(AppRadius.full),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),
     );
   }
 }
@@ -147,9 +146,9 @@ class SectionHeader extends StatelessWidget {
       children: [
         if (icon != null) ...[
           Icon(icon, size: 18, color: AppColors.primary),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
         ],
-        Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+        Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
         const Spacer(),
         if (action != null) action!,
       ],

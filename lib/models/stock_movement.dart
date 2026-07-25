@@ -42,7 +42,7 @@ class StockMovement {
           (e) => e.name == map['type'], orElse: () => MovementType.entry),
         quantity: (map['quantity'] as num?)?.toDouble() ?? 0,
         referenceType: map['reference_type'] as String?,
-        referenceId: map['reference_id'] as String?,
+        referenceId: map['readable_reference_id'] as String? ?? map['reference_id'] as String?,
         date: DateTime.parse(map['date'] as String),
         notes: map['notes'] as String?,
         firebaseUid: map['firebase_uid'] as String?,

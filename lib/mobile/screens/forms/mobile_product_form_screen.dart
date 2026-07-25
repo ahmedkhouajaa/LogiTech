@@ -75,7 +75,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     
     if (_name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez entrer un nom d\'article'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez entrer un nom d\'article'), backgroundColor: AppColors.error));
       return;
     }
 

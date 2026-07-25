@@ -49,30 +49,30 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('Bon de transfert ${currentTransfer.number}', style: const TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Bon de transfert ${currentTransfer.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
           backgroundColor: AppColors.primary,
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
+              icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentTransfer),
               itemBuilder: (_) => [
                 _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
               ],
             ),
           ],
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Card(
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                color: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                color: AppColors.surface,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -98,21 +98,21 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
                       // Since we don't have direct warehouse names in StockTransfer model without joining, we show ID if names aren't available. 
                       // For a real app we might fetch the warehouse names via DatabaseHelper.
                       _buildInfoRow('Source', 'Entrepôt sélectionné'),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Destination', 'Entrepôt sélectionné'),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              const SizedBox(height: 8),
+              SizedBox(height: 16),
+              Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              SizedBox(height: 8),
               if (currentTransfer.items.isEmpty)
                 Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
-                  child: const Padding(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
+                  child: Padding(
                     padding: EdgeInsets.all(16.0),
                     child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
                   ),
@@ -120,11 +120,11 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
               else
                 ...currentTransfer.items.map((item) => Card(
                   elevation: 0,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
+                  margin: EdgeInsets.only(bottom: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
                   child: Padding(
-                    padding: const EdgeInsets.all(12.0),
+                    padding: EdgeInsets.all(12.0),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -132,20 +132,20 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
+                          child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(item.productName ?? 'Article inconnu', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              Text(item.productName ?? 'Article inconnu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                               if (item.productSku != null && item.productSku!.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(item.productSku!, style: const TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                SizedBox(height: 2),
+                                Text(item.productSku!, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
                               ],
-                              const SizedBox(height: 4),
-                              Text('Quantité: ${item.quantityToTransfer}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                              SizedBox(height: 4),
+                              Text('Quantité: ${item.quantityToTransfer}', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                             ],
                           ),
                         ),
@@ -154,30 +154,30 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
                   ),
                 )),
               if (currentTransfer.reason != null && currentTransfer.reason!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const Text('Raison', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 16),
+                Text('Raison', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
                 Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(currentTransfer.reason!, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(currentTransfer.reason!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                   ),
                 ),
               ],
               if (currentTransfer.notes != null && currentTransfer.notes!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 16),
+                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                SizedBox(height: 8),
                 Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                  color: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surface,
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(currentTransfer.notes!, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(currentTransfer.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                   ),
                 ),
               ],
@@ -193,8 +193,8 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
+        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
       ],
     );
   }
@@ -205,9 +205,9 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF64748B)),
-          const SizedBox(width: 12),
-          Text(text, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+          Icon(icon, size: 18, color: Color(0xFF64748B)),
+          SizedBox(width: 12),
+          Text(text, style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
         ],
       ),
     );

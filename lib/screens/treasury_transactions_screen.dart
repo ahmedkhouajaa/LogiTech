@@ -78,7 +78,7 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
                       'Transactions',
                       style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
@@ -92,11 +92,11 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                 ),
               ),
               PopupMenuButton<String>(
-                offset: const Offset(0, 45),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md), side: const BorderSide(color: AppColors.border)),
+                offset: Offset(0, 45),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md), side: BorderSide(color: AppColors.border)),
                 tooltip: 'Options d\'exportation',
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     border: Border.all(color: AppColors.border),
                     borderRadius: BorderRadius.circular(100), // Rounded pill shape like original outlined button
@@ -104,9 +104,9 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.download_rounded, size: 18, color: AppColors.textPrimary),
-                      const SizedBox(width: 8),
-                      const Text('Exporter', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+                      Icon(Icons.download_rounded, size: 18, color: AppColors.textPrimary),
+                      SizedBox(width: 8),
+                      Text('Exporter', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),
@@ -154,7 +154,7 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
               }).toList();
 
               return Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -171,7 +171,7 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Compte de Tresorerie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              Text('Compte de Tresorerie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                               const SizedBox(height: 8),
                               BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
                                 builder: (context, accountState) {
@@ -183,12 +183,15 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                                   }
                                   return SizedBox(
                                     height: 40,
-                                    child: DropdownButtonFormField<String>(
+                                    child: DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                       value: _selectedAccountId,
                                       decoration: InputDecoration(
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                                       ),
                                       isExpanded: true,
                                       items: items,
@@ -202,22 +205,25 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                             ],
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.md),
+                        SizedBox(width: AppSpacing.md),
                         Expanded(
                           flex: 3,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Categorie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              Text('Categorie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                               const SizedBox(height: 8),
                               SizedBox(
                                 height: 40,
-                                child: DropdownButtonFormField<String>(
+                                child: DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                   value: _selectedCategoryId,
                                   decoration: InputDecoration(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                                   ),
                                   isExpanded: true,
                                   items: [
@@ -233,13 +239,13 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                             ],
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.md),
+                        SizedBox(width: AppSpacing.md),
                         Expanded(
                           flex: 2,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Date de debut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              Text('Date de debut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                               const SizedBox(height: 8),
                               SizedBox(
                                 height: 40,
@@ -247,10 +253,10 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                                   readOnly: true,
                                   controller: TextEditingController(text: DateFormat('dd MMM yyyy', 'fr_FR').format(_startDate)),
                                   decoration: InputDecoration(
-                                    prefixIcon: const Icon(Icons.calendar_today_rounded, size: 16),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                    prefixIcon: Icon(Icons.calendar_today_rounded, size: 16),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                                   ),
                                   onTap: () async {
                                     final picked = await showDatePicker(context: context, initialDate: _startDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
@@ -264,13 +270,13 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                             ],
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.md),
+                        SizedBox(width: AppSpacing.md),
                         Expanded(
                           flex: 2,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Date de fin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              Text('Date de fin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                               const SizedBox(height: 8),
                               SizedBox(
                                 height: 40,
@@ -278,10 +284,10 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                                   readOnly: true,
                                   controller: TextEditingController(text: DateFormat('dd MMM yyyy', 'fr_FR').format(_endDate)),
                                   decoration: InputDecoration(
-                                    prefixIcon: const Icon(Icons.calendar_today_rounded, size: 16),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                    prefixIcon: Icon(Icons.calendar_today_rounded, size: 16),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                                   ),
                                   onTap: () async {
                                     final picked = await showDatePicker(context: context, initialDate: _endDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
@@ -299,25 +305,25 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                     ),
                     if (_selectedAccountId != 'all' || _selectedCategoryId != 'all')
                       Padding(
-                        padding: const EdgeInsets.only(top: 16),
+                        padding: EdgeInsets.only(top: 16),
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 '${filtered.length} résultat${filtered.length > 1 ? 's' : ''}',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                               ),
                             ),
-                            const Spacer(),
+                            Spacer(),
                             TextButton.icon(
                               onPressed: _resetFilters,
-                              icon: const Icon(Icons.refresh_rounded, size: 16),
-                              label: const Text('Réinitialiser les filtres'),
+                              icon: Icon(Icons.refresh_rounded, size: 16),
+                              label: Text('Réinitialiser les filtres'),
                               style: TextButton.styleFrom(
                                 foregroundColor: AppColors.textSecondary,
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -349,10 +355,10 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                 }).toList();
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(color: AppColors.border),
                     ),
@@ -372,28 +378,28 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(tx.transactionNumber, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
-                              Text(DateFormat('dd MMM yyyy - HH:mm', 'fr_FR').format(tx.dateTransaction), style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                              Text(tx.transactionNumber, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
+                              Text(DateFormat('dd MMM yyyy - HH:mm', 'fr_FR').format(tx.dateTransaction), style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                             ],
                           )),
-                          DataCell(Text(tx.accountName ?? '—', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary))),
+                          DataCell(Text(tx.accountName ?? '—', style: TextStyle(fontSize: 13, color: AppColors.textSecondary))),
                           DataCell(
                             isDebit 
-                              ? Text('+ ${formatCurrencyDT(tx.amount)}', style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w600))
-                              : const Text('-', style: TextStyle(color: AppColors.textTertiary)),
+                              ? Text('+ ${formatCurrencyDT(tx.amount)}', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.w600))
+                              : Text('-', style: TextStyle(color: AppColors.textTertiary)),
                           ),
                           DataCell(
                             isCredit 
-                              ? Text('- ${formatCurrencyDT(tx.amount)}', style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w600))
-                              : const Text('-', style: TextStyle(color: AppColors.textTertiary)),
+                              ? Text('- ${formatCurrencyDT(tx.amount)}', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600))
+                              : Text('-', style: TextStyle(color: AppColors.textTertiary)),
                           ),
                           DataCell(
                             Text(formatCurrencyDT(balance), style: TextStyle(color: balanceColor, fontWeight: FontWeight.bold)),
                           ),
-                          DataCell(Text(tx.description ?? '—', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary))),
+                          DataCell(Text(tx.description ?? '—', style: TextStyle(fontSize: 13, color: AppColors.textSecondary))),
                           DataCell(
                             IconButton(
-                              icon: const Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textSecondary),
+                              icon: Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textSecondary),
                               onPressed: () {
                                 // Options menu
                                 _showOptions(context, tx);
@@ -423,8 +429,8 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
-              title: const Text('Supprimer', style: TextStyle(color: AppColors.error)),
+              leading: Icon(Icons.delete_outline_rounded, color: AppColors.error),
+              title: Text('Supprimer', style: TextStyle(color: AppColors.error)),
               onTap: () {
                 Navigator.pop(ctx);
                 _confirmDelete(context, tx.id);
@@ -449,7 +455,7 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
               context.read<TreasuryTransactionsBloc>().add(DeleteTreasuryTransaction(id));
               Navigator.pop(ctx);
             },
-            child: const Text('Supprimer', style: TextStyle(color: AppColors.error)),
+            child: Text('Supprimer', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),

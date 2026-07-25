@@ -47,20 +47,20 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
   void _save() {
     if (_selectedProduct == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez sélectionner un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Veuillez sélectionner un article'), backgroundColor: AppColors.error),
       );
       return;
     }
     if (_selectedWarehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez sélectionner un entrepôt'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Veuillez sélectionner un entrepôt'), backgroundColor: AppColors.error),
       );
       return;
     }
     final qtyText = _quantityCtrl.text.trim();
     if (qtyText.isEmpty || double.tryParse(qtyText) == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez entrer une quantité valide'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Veuillez entrer une quantité valide'), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -89,7 +89,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
 
       if (qtyToRegister == 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('La quantité d\'ajustement ne peut pas être nulle.'), backgroundColor: AppColors.warning),
+          SnackBar(content: Text('La quantité d\'ajustement ne peut pas être nulle.'), backgroundColor: AppColors.warning),
         );
         setState(() => _isLoading = false);
         return;
@@ -115,7 +115,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
 
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ajustement de stock enregistré avec succès'), backgroundColor: AppColors.success),
+        SnackBar(content: Text('Ajustement de stock enregistré avec succès'), backgroundColor: AppColors.success),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -173,22 +173,22 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                           focusNode: focusNode,
                           decoration: InputDecoration(
                             hintText: 'Rechercher un article par nom ou code...',
-                            hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 14),
-                            prefixIcon: const Icon(Icons.search, color: AppColors.textTertiary),
+                            hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 14),
+                            prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
                             filled: true,
-                            fillColor: const Color(0xFFF8FAFC),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            fillColor: AppColors.background,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(AppRadius.md),
-                              borderSide: const BorderSide(color: AppColors.border),
+                              borderSide: BorderSide(color: AppColors.border),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(AppRadius.md),
-                              borderSide: const BorderSide(color: AppColors.border),
+                              borderSide: BorderSide(color: AppColors.border),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(AppRadius.md),
-                              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
                             ),
                           ),
                         );
@@ -212,17 +212,17 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                                   final option = options.elementAt(i);
                                   return ListTile(
                                     leading: Container(
-                                      padding: const EdgeInsets.all(8),
+                                      padding: EdgeInsets.all(8),
                                       decoration: BoxDecoration(
                                         color: AppColors.primary.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: const Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.primary),
+                                      child: Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.primary),
                                     ),
-                                    title: Text(option.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                    title: Text(option.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                                     subtitle: Text(
                                       'Code: ${option.code} • Stock: ${formatQuantity(option.stockQty)} ${option.unit}',
-                                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                                     ),
                                     onTap: () => onSelected(option),
                                     dense: true,
@@ -237,9 +237,9 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                   },
                 ),
                 if (_selectedProduct != null) ...[
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [AppColors.primary.withValues(alpha: 0.08), AppColors.primary.withValues(alpha: 0.03)],
@@ -252,12 +252,12 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.primary),
+                          child: Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.primary),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -266,12 +266,12 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                             children: [
                               Text(
                                 _selectedProduct!.name,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary),
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary),
                               ),
-                              const SizedBox(height: 2),
+                              SizedBox(height: 2),
                               Text(
                                 'Stock actuel: ${formatQuantity(_selectedProduct!.stockQty)} ${_selectedProduct!.unit}',
-                                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
+                                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
                               ),
                             ],
                           ),
@@ -313,46 +313,46 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                       label: 'Entrepôt',
                       value: _selectedWarehouseId,
                       items: stockState.warehouses.map((w) =>
-                        DropdownMenuItem(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 16))),
+                        DropdownMenuItem(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 16))),
                       ).toList(),
                       onChanged: (v) => setState(() => _selectedWarehouseId = v),
                       hint: 'Sélectionner un entrepôt',
                     ),
-                    const SizedBox(height: 20),
-                    const Text("Type d'action", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 20),
+                    Text("Type d'action", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    SizedBox(height: 8),
                     _buildActionSelector(),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
                     Text(
                       _adjustmentAction == 'correct' ? 'Nouveau stock réel' : 'Quantité',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _quantityCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       decoration: InputDecoration(
                         hintText: '0',
-                        hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 20),
+                        hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 20),
                         filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        fillColor: AppColors.background,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(AppRadius.md),
-                          borderSide: const BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(color: AppColors.border),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(AppRadius.md),
-                          borderSide: const BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(color: AppColors.border),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(AppRadius.md),
-                          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                          borderSide: BorderSide(color: AppColors.primary, width: 1.5),
                         ),
                         suffixText: _selectedProduct?.unit ?? '',
-                        suffixStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                        suffixStyle: TextStyle(color: AppColors.textSecondary, fontSize: 14),
                       ),
                     ),
                   ],
@@ -383,17 +383,17 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
 
   Widget _buildActionSelector() {
     return Container(
-      padding: const EdgeInsets.all(4),
+      padding: EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(
         children: [
           _buildActionChip('add', 'Ajouter', Icons.add_rounded, AppColors.success),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           _buildActionChip('exit', 'Retirer', Icons.remove_rounded, AppColors.error),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           _buildActionChip('correct', 'Corriger', Icons.edit_rounded, AppColors.warning),
         ],
       ),
@@ -422,14 +422,14 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
             borderRadius: BorderRadius.circular(AppRadius.sm),
             border: isSelected ? Border.all(color: color.withValues(alpha: 0.4)) : null,
             boxShadow: isSelected
-                ? [BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 1))]
+                ? [BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 4, offset: Offset(0, 1))]
                 : [],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, size: 16, color: isSelected ? color : AppColors.textSecondary),
-              const SizedBox(width: 4),
+              SizedBox(width: 4),
               Text(
                 label,
                 style: TextStyle(

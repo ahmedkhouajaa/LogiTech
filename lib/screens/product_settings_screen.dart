@@ -50,11 +50,18 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
         // Action Bar
         Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.transparent,
             border: Border(bottom: BorderSide(color: Colors.transparent)),
           ),
-          child: const Text('Parametres des articles', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Parametres des articles', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              SizedBox(height: 4),
+              Text('Gerer les familles et sous-familles', style: TextStyle(color: AppColors.textSecondary)),
+            ],
+          ),
         ),
         
         Expanded(
@@ -71,9 +78,6 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Gerer les familles et sous-familles', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                  const SizedBox(height: 24),
-                
                 BlocBuilder<ProductSettingsBloc, ProductSettingsState>(
                   builder: (context, state) {
                     if (state is ProductSettingsLoading) {
@@ -100,9 +104,9 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                                   decoration: InputDecoration(
                                     hintText: 'Nom de la famille',
                                     filled: true,
-                                    fillColor: Colors.white,
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                                    fillColor: AppColors.surfaceAlt,
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                   ),
                                 ),
@@ -144,10 +148,10 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
 
   Widget _buildFamilyCard(BuildContext context, ProductFamily family, List<ProductFamily> subFamilies) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
@@ -159,34 +163,74 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
               Expanded(
                 child: Text(
                   family.name,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 20),
+                icon: Icon(Icons.delete_outline_rounded, color: AppColors.textSecondary, size: 20),
                 onPressed: () {
-                  context.read<ProductSettingsBloc>().add(DeleteFamily(family.id));
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Confirmer la suppression'),
+                      content: Text('Voulez-vous vraiment supprimer la famille "${family.name}" ?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Annuler'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            context.read<ProductSettingsBloc>().add(DeleteFamily(family.id));
+                            Navigator.pop(ctx);
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                          child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  );
                 },
               ),
             ],
           ),
           
           if (subFamilies.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            const Text('Sous-familles', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+            SizedBox(height: 16),
+            Text('Sous-familles', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
             const SizedBox(height: 8),
             ...subFamilies.map((subFam) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
-                  const SizedBox(width: 16),
-                  Expanded(child: Text(subFam.name, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary))),
+                  SizedBox(width: 16),
+                  Expanded(child: Text(subFam.name, style: TextStyle(fontSize: 14, color: AppColors.textPrimary))),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 18),
+                    icon: Icon(Icons.delete_outline_rounded, color: AppColors.textSecondary, size: 18),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () {
-                      context.read<ProductSettingsBloc>().add(DeleteSubFamily(subFam.id));
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Confirmer la suppression'),
+                          content: Text('Voulez-vous vraiment supprimer la sous-famille "${subFam.name}" ?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('Annuler'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                context.read<ProductSettingsBloc>().add(DeleteSubFamily(subFam.id));
+                                Navigator.pop(ctx);
+                              },
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                              child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                            ),
+                          ],
+                        ),
+                      );
                     },
                   ),
                 ],
@@ -194,7 +238,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
             )),
           ],
           
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -203,9 +247,9 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                   decoration: InputDecoration(
                     hintText: 'Nom de la nouvelle sous-famille',
                     filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
+                    fillColor: AppColors.surfaceAlt,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),

@@ -4,6 +4,7 @@ import '../blocs/auth/auth_bloc.dart';
 import '../widgets/sidebar_menu.dart';
 import '../widgets/sync_indicator.dart';
 import '../utils/constants.dart';
+import '../blocs/theme/theme_cubit.dart';
 
 class MobileDrawer extends StatefulWidget {
   final AppModule activeModule;
@@ -88,6 +89,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
                   const _DrawerDivider(),
                   _buildItem(AppModule.projects, Icons.folder_rounded, 'Projets'),
                   _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
+                  _buildThemeToggleItem(),
                   _buildItem(AppModule.companyInfo, Icons.business_center_rounded, 'Ma Societe'),
                   _buildItem(AppModule.documentTemplates, Icons.design_services_rounded, 'Modeles'),
                 ],
@@ -104,8 +106,8 @@ class _MobileDrawerState extends State<MobileDrawer> {
                     Navigator.pop(context);
                     context.read<AuthBloc>().add(AuthLogoutRequested());
                   },
-                  icon: const Icon(Icons.logout_rounded, size: 18),
-                  label: const Text('Deconnexion', style: TextStyle(fontWeight: FontWeight.w600)),
+                  icon: Icon(Icons.logout_rounded, size: 18),
+                  label: Text('Deconnexion', style: TextStyle(fontWeight: FontWeight.w600)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.error,
                     side: BorderSide(color: AppColors.error.withValues(alpha: 0.3)),
@@ -137,7 +139,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
             child: const Icon(Icons.business_center_rounded, color: Colors.white, size: 22),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -177,8 +179,8 @@ class _MobileDrawerState extends State<MobileDrawer> {
             Navigator.pop(context);
           },
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            duration: Duration(milliseconds: 200),
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             decoration: BoxDecoration(
               color: isActive ? AppColors.sidebarActive.withValues(alpha: 0.15) : null,
               borderRadius: BorderRadius.circular(10),
@@ -190,7 +192,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
                   size: 20,
                   color: isActive ? AppColors.primaryLight : AppColors.sidebarText,
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     label,
@@ -214,6 +216,59 @@ class _MobileDrawerState extends State<MobileDrawer> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildThemeToggleItem() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: BlocBuilder<ThemeCubit, ThemeMode>(
+        builder: (context, themeMode) {
+          final isDark = themeMode == ThemeMode.dark;
+          return Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () {
+                context.read<ThemeCubit>().toggleTheme();
+              },
+              child: AnimatedContainer(
+                duration: Duration(milliseconds: 200),
+                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.palette_rounded,
+                      size: 20,
+                      color: AppColors.sidebarText,
+                    ),
+                    SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        'Mode sombre',
+                        style: TextStyle(
+                          color: AppColors.sidebarText,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                    Switch(
+                      value: isDark,
+                      onChanged: (value) {
+                        context.read<ThemeCubit>().toggleTheme();
+                      },
+                      activeColor: AppColors.primary,
+                      activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -247,11 +302,11 @@ class _MobileDrawerState extends State<MobileDrawer> {
               });
             },
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 children: [
                   Icon(icon, size: 18, color: AppColors.sidebarText.withValues(alpha: 0.6)),
-                  const SizedBox(width: 14),
+                  SizedBox(width: 14),
                   Expanded(
                     child: Text(
                       title,
@@ -265,7 +320,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
                   ),
                   AnimatedRotation(
                     turns: isExpanded ? 0.25 : 0,
-                    duration: const Duration(milliseconds: 200),
+                    duration: Duration(milliseconds: 200),
                     child: Icon(
                       Icons.chevron_right_rounded,
                       size: 16,

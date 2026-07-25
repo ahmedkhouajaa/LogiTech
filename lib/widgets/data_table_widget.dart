@@ -49,13 +49,13 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
     if (widget.rows.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(48),
+          padding: EdgeInsets.all(48),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.inbox_rounded, size: 48, color: AppColors.textTertiary),
-              const SizedBox(height: 12),
-              Text(widget.emptyMessage, style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              SizedBox(height: 12),
+              Text(widget.emptyMessage, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
             ],
           ),
         ),
@@ -70,8 +70,8 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
           sortColumnIndex: _sortColumnIndex,
           sortAscending: _sortAscending,
           headingRowColor: WidgetStateProperty.resolveWith((_) => AppColors.surfaceAlt),
-          headingTextStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: AppColors.textSecondary),
-          dataTextStyle: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          headingTextStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: AppColors.textSecondary),
+          dataTextStyle: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           dividerThickness: 0.5,
           dataRowMaxHeight: double.infinity,
           dataRowMinHeight: 48.0,
@@ -94,7 +94,7 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
                     widget.customActionsBuilder != null 
                     ? widget.customActionsBuilder!(row)
                     : PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+                        icon: Icon(Icons.more_vert, color: AppColors.textSecondary),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         color: AppColors.surface,
                         onSelected: (val) {
@@ -107,15 +107,15 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
                         },
                         itemBuilder: (_) => [
                           if (widget.onView != null)
-                            PopupMenuItem(value: 'view', height: 40, child: Row(children: const [Icon(Icons.visibility_outlined, size: 18, color: AppColors.info), SizedBox(width: 12), Text('Voir', style: TextStyle(fontSize: 14))])),
+                            PopupMenuItem(value: 'view', height: 40, child: Row(children: [Icon(Icons.visibility_outlined, size: 18, color: AppColors.info), SizedBox(width: 12), Text('Voir', style: TextStyle(fontSize: 14))])),
                           if (widget.onEdit != null)
-                            PopupMenuItem(value: 'edit', height: 40, child: Row(children: const [Icon(Icons.edit_outlined, size: 18, color: AppColors.primary), SizedBox(width: 12), Text('Modifier', style: TextStyle(fontSize: 14))])),
+                            PopupMenuItem(value: 'edit', height: 40, child: Row(children: [Icon(Icons.edit_outlined, size: 18, color: AppColors.primary), SizedBox(width: 12), Text('Modifier', style: TextStyle(fontSize: 14))])),
                           if (widget.onPrint != null)
-                            PopupMenuItem(value: 'print', height: 40, child: Row(children: const [Icon(Icons.print_outlined, size: 18, color: AppColors.success), SizedBox(width: 12), Text('Imprimer', style: TextStyle(fontSize: 14))])),
+                            PopupMenuItem(value: 'print', height: 40, child: Row(children: [Icon(Icons.print_outlined, size: 18, color: AppColors.success), SizedBox(width: 12), Text('Imprimer', style: TextStyle(fontSize: 14))])),
                           if (widget.onDelete != null) ...[
                             if (widget.onView != null || widget.onEdit != null || widget.onPrint != null)
-                              const PopupMenuDivider(height: 1),
-                            PopupMenuItem(value: 'delete', height: 40, child: Row(children: const [Icon(Icons.delete_outline, size: 18, color: AppColors.error), SizedBox(width: 12), Text('Supprimer', style: TextStyle(fontSize: 14, color: AppColors.error))])),
+                              PopupMenuDivider(height: 1),
+                            PopupMenuItem(value: 'delete', height: 40, child: Row(children: [Icon(Icons.delete_outline, size: 18, color: AppColors.error), SizedBox(width: 12), Text('Supprimer', style: TextStyle(fontSize: 14, color: AppColors.error))])),
                           ],
                         ],
                       ),
@@ -162,15 +162,15 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
     final endItem = ((_page + 1) * _rowsPerPage).clamp(0, widget.rows.length);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          const Text('Lignes:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          const SizedBox(width: 8),
+          Text('Lignes:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          SizedBox(width: 8),
           DropdownButtonHideUnderline(
             child: DropdownButton<int>(
               value: _rowsPerPage,
-              style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
               icon: const Icon(Icons.arrow_drop_down, size: 16),
               items: [10, 15, 20, 50, 100].map((int value) {
                 return DropdownMenuItem<int>(
@@ -188,10 +188,10 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
               },
             ),
           ),
-          const SizedBox(width: 24),
-          Text('Affichage de $startItem a $endItem sur ${widget.rows.length} resultats', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          const Spacer(),
-          Text('Page ${_page + 1} sur $_totalPages', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          SizedBox(width: 24),
+          Text('Affichage de $startItem a $endItem sur ${widget.rows.length} resultats', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Spacer(),
+          Text('Page ${_page + 1} sur $_totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(width: 16),
           IconButton(
             icon: const Icon(Icons.chevron_left_rounded),

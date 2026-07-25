@@ -216,25 +216,25 @@ class AppShellScreenState extends State<AppShellScreen> {
                   if (isMobile)
                     Builder(
                       builder: (ctx) => IconButton(
-                        icon: const Icon(Icons.menu),
+                        icon: Icon(Icons.menu),
                         onPressed: () => Scaffold.of(ctx).openDrawer(),
                       ),
                     ),
                   Expanded(
                     child: Text(
                       _getModuleTitle(), 
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SyncIndicator(),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   // User menu
                   PopupMenuButton(
-                    offset: const Offset(0, 40),
+                    offset: Offset(0, 40),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -242,22 +242,22 @@ class AppShellScreenState extends State<AppShellScreen> {
                       ),
                       child: Row(
                         children: [
-                          const CircleAvatar(backgroundColor: AppColors.primary, radius: 14, child: Text('A', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
-                          if (!isMobile) const SizedBox(width: 8),
-                          if (!isMobile) const Text('Admin', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                          if (!isMobile) const SizedBox(width: 4),
-                          if (!isMobile) const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
+                          CircleAvatar(backgroundColor: AppColors.primary, radius: 14, child: Text('A', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
+                          if (!isMobile) SizedBox(width: 8),
+                          if (!isMobile) Text('Admin', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          if (!isMobile) SizedBox(width: 4),
+                          if (!isMobile) Icon(Icons.keyboard_arrow_down_rounded, size: 16),
                         ],
                       ),
                     ),
                     itemBuilder: (_) => [
                       PopupMenuItem(
                         onTap: () => setState(() => _activeModule = AppModule.settings),
-                        child: const Row(children: [Icon(Icons.settings_rounded, size: 16), SizedBox(width: 8), Text('Parametres')]),
+                        child: Row(children: [Icon(Icons.settings_rounded, size: 16), SizedBox(width: 8), Text('Parametres')]),
                       ),
                       PopupMenuItem(
                         onTap: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
-                        child: const Row(children: [Icon(Icons.logout_rounded, size: 16, color: AppColors.error), SizedBox(width: 8), Text('Deconnexion', style: TextStyle(color: AppColors.error))]),
+                        child: Row(children: [Icon(Icons.logout_rounded, size: 16, color: AppColors.error), SizedBox(width: 8), Text('Deconnexion', style: TextStyle(color: AppColors.error))]),
                       ),
                     ],
                   ),
@@ -304,9 +304,9 @@ class _ComingSoonScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.construction_rounded, size: 64, color: AppColors.warning),
-          const SizedBox(height: 16),
-          const Text('Module en developpement', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: 8),
+          SizedBox(height: 16),
+          Text('Module en developpement', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          SizedBox(height: 8),
           Text('Ce module sera disponible prochainement.', style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),

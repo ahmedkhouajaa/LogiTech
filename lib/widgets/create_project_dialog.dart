@@ -85,12 +85,12 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
+            colorScheme: ColorScheme.light(
               primary: AppColors.primary, // header background color and selected day color
-              onPrimary: Colors.white, // header text color and selected day text color
+              onPrimary: AppColors.surface, // header text color and selected day text color
               onSurface: AppColors.textPrimary, // body text color
             ),
-            dialogBackgroundColor: Colors.white,
+            dialogBackgroundColor: AppColors.surface,
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.primary, // button text color
@@ -101,8 +101,8 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                 borderRadius: BorderRadius.circular(AppRadius.lg),
               ),
               headerBackgroundColor: AppColors.primary,
-              headerForegroundColor: Colors.white,
-              backgroundColor: Colors.white,
+              headerForegroundColor: AppColors.surface,
+              backgroundColor: AppColors.surface,
               elevation: 10,
             ),
           ),
@@ -124,7 +124,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
       elevation: 10,
       child: Container(
@@ -136,35 +136,35 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: EdgeInsets.all(AppSpacing.lg),
               decoration: BoxDecoration(
                 color: AppColors.background,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-                border: const Border(bottom: BorderSide(color: AppColors.border)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+                border: Border(bottom: BorderSide(color: AppColors.border)),
               ),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.folder_special_rounded, color: AppColors.primary, size: 24),
+                    child: Icon(Icons.folder_special_rounded, color: AppColors.primary, size: 24),
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(widget.project != null ? 'Modifier le Projet' : 'Créer un Nouveau Projet', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                        const SizedBox(height: 4),
-                        Text(widget.project != null ? 'Modifiez les informations du projet ci-dessous.' : 'Remplissez les informations ci-dessous pour initialiser le projet.', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                        Text(widget.project != null ? 'Modifier le Projet' : 'Créer un Nouveau Projet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                        SizedBox(height: 4),
+                        Text(widget.project != null ? 'Modifiez les informations du projet ci-dessous.' : 'Remplissez les informations ci-dessous pour initialiser le projet.', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, size: 24, color: AppColors.textSecondary),
+                    icon: Icon(Icons.close_rounded, size: 24, color: AppColors.textSecondary),
                     onPressed: () => Navigator.of(context).pop(),
                     splashRadius: 24,
                   ),
@@ -175,13 +175,13 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
             // Body
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.xl),
+                padding: EdgeInsets.all(AppSpacing.xl),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Informations Générales', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      Text('Informations Générales', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       const SizedBox(height: AppSpacing.md),
                       AppTextField(
                         label: 'Nom du Projet',
@@ -197,8 +197,8 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                         maxLines: 3,
                       ),
                       
-                      const SizedBox(height: AppSpacing.xl),
-                      const Text('Planification', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      SizedBox(height: AppSpacing.xl),
+                      Text('Planification', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       const SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
@@ -214,8 +214,8 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.calendar_month_rounded, size: 18, color: AppColors.primary),
-                                    const SizedBox(width: 10),
+                                    Icon(Icons.calendar_month_rounded, size: 18, color: AppColors.primary),
+                                    SizedBox(width: 10),
                                     Text(_startDate != null ? formatDate(_startDate!) : 'Sélectionner la date', style: TextStyle(color: _startDate != null ? AppColors.textPrimary : AppColors.textTertiary)),
                                   ],
                                 ),
@@ -235,8 +235,8 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
-                                    const SizedBox(width: 10),
+                                    Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
+                                    SizedBox(width: 10),
                                     Text(_endDate != null ? formatDate(_endDate!) : 'Sélectionner la date', style: TextStyle(color: _endDate != null ? AppColors.textPrimary : AppColors.textTertiary)),
                                   ],
                                 ),
@@ -246,8 +246,8 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                         ],
                       ),
                       
-                      const SizedBox(height: AppSpacing.xl),
-                      const Text('Détails Financiers', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      SizedBox(height: AppSpacing.xl),
+                      Text('Détails Financiers', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       const SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
@@ -255,21 +255,21 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                             child: AppTextField(
                               label: 'Budget Alloué (Coût Estimé)',
                               controller: _costController,
-                              prefix: const Icon(Icons.payments_outlined, size: 18, color: AppColors.textSecondary),
-                              suffix: const Padding(
+                              prefix: Icon(Icons.payments_outlined, size: 18, color: AppColors.textSecondary),
+                              suffix: Padding(
                                 padding: EdgeInsets.only(top: 14, right: 12),
                                 child: Text('TND', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                               ),
                               keyboardType: TextInputType.number,
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.md),
+                          SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: AppTextField(
                               label: 'Revenu Estimé',
                               controller: _revenueController,
-                              prefix: const Icon(Icons.trending_up_rounded, size: 18, color: AppColors.success),
-                              suffix: const Padding(
+                              prefix: Icon(Icons.trending_up_rounded, size: 18, color: AppColors.success),
+                              suffix: Padding(
                                 padding: EdgeInsets.only(top: 14, right: 12),
                                 child: Text('TND', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                               ),
@@ -286,8 +286,8 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
             
             // Footer
             Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: const BoxDecoration(
+              padding: EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(AppRadius.lg)),
                 border: Border(top: BorderSide(color: AppColors.border)),
@@ -297,20 +297,20 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                 children: [
                   OutlinedButton.icon(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded, size: 18),
-                    label: const Text('Annuler'),
+                    icon: Icon(Icons.close_rounded, size: 18),
+                    label: Text('Annuler'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                      side: const BorderSide(color: AppColors.border),
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      side: BorderSide(color: AppColors.border),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  SizedBox(width: AppSpacing.md),
                   ElevatedButton.icon(
                     onPressed: _submit,
-                    icon: const Icon(Icons.check_rounded, size: 18),
-                    label: const Text('Confirmer'),
+                    icon: Icon(Icons.check_rounded, size: 18),
+                    label: Text('Confirmer'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,

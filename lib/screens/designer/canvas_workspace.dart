@@ -525,7 +525,7 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
               width: handleSize,
               height: handleSize,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 border: Border.all(color: AppColors.primaryLight, width: 1.5),
                 borderRadius: BorderRadius.circular(2),
                 boxShadow: [

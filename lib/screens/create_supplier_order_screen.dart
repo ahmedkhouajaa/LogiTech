@@ -127,7 +127,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
     if (widget.isReadOnly) return;
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
             content: Text('Veuillez selectionner un fournisseur'),
             backgroundColor: AppColors.error),
       );
@@ -236,7 +236,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
       height: 56,
       decoration: BoxDecoration(
         color: AppColors.surface,
-        border: const Border(bottom: BorderSide(color: AppColors.border)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
         boxShadow: AppShadows.sm,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -246,7 +246,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
             widget.overrideTitle ?? (widget.isReadOnly 
                 ? 'Détails de la commande fournisseur' 
                 : (_isEditing ? 'Modifier la commande fournisseur' : 'Ajouter une commande fournisseur')),
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary),
@@ -269,11 +269,11 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
             _buildHeaderButton(Icons.check_circle_rounded, 'Valider', () {
               setState(() => _status = SupplierOrderStatus.validated);
             }, color: AppColors.success),
-            const SizedBox(width: 16),
+            SizedBox(width: 16),
             ElevatedButton.icon(
               onPressed: _save,
-              icon: const Icon(Icons.save_rounded, size: 18),
-              label: const Text('Enregistrer'),
+              icon: Icon(Icons.save_rounded, size: 18),
+              label: Text('Enregistrer'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -297,7 +297,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
       label: Text(label,
           style: TextStyle(color: color ?? AppColors.textSecondary)),
       style: OutlinedButton.styleFrom(
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.border),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -308,7 +308,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
   // ── Form Details ────────────────────────────────────────────────────
   Widget _buildFormCard() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -319,7 +319,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Date d'emission
-          const Text("Date", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          Text("Date", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
           const SizedBox(height: 6),
           GestureDetector(
             onTap: () async {
@@ -336,9 +336,9 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                 controller: TextEditingController(text: formatDateLong(_date)),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: AppColors.surface,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                  suffixIcon: const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+                  fillColor: AppColors.surfaceAlt,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  suffixIcon: Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                 ),
@@ -355,7 +355,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text('Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                     const SizedBox(height: 6),
                     Row(
                       children: [
@@ -363,7 +363,10 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                           child: BlocBuilder<SuppliersBloc, SuppliersState>(
                             builder: (context, state) {
                               final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
-                              return DropdownButtonFormField<String>(
+                              return DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                 value: _selectedSupplierId,
                                 isExpanded: true,
                                 hint: const Text('Rechercher des fournisseurs...', style: TextStyle(fontSize: 13, color: Colors.black87)),
@@ -397,7 +400,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                                   backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                                   foregroundColor: AppColors.primary,
                                   elevation: 0,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  padding: EdgeInsets.symmetric(horizontal: 16),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                   side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
                                 ),
@@ -411,17 +414,20 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Projet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text('Projet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                     const SizedBox(height: 6),
                     BlocBuilder<ProjectsBloc, ProjectsState>(
                       builder: (context, state) {
                         final projects = state is ProjectsLoaded ? state.projects : <Project>[];
-                        return DropdownButtonFormField<String>(
+                        return DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                           value: _selectedProjectId,
                           isExpanded: true,
                           hint: const Text('Projet par defaut', style: TextStyle(fontSize: 13, color: Colors.black87)),
@@ -441,9 +447,9 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           // Pricing mode radio
-          const Text('Les prix des articles sont en', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+          Text('Les prix des articles sont en', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -472,7 +478,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
   InputDecoration _formInputDecoration() {
     return InputDecoration(
       filled: true,
-      fillColor: Colors.white,
+      fillColor: AppColors.surfaceAlt,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
@@ -492,8 +498,8 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.border)),
               color: AppColors.background,
             ),
@@ -519,9 +525,9 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
           ),
           if (_items.isEmpty)
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 32),
+              padding: EdgeInsets.symmetric(vertical: 32),
               width: double.infinity,
-              child: const Text('Aucun article',
+              child: Text('Aucun article',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       fontSize: 13, color: AppColors.textTertiary)),
@@ -535,7 +541,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
 
   
   TextStyle _tableHeaderStyle() {
-    return const TextStyle(
+    return TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
         color: AppColors.textSecondary);
@@ -543,17 +549,17 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
 
   Widget _buildArticleRow(SupplierOrderItem item, int index) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        border: const Border(
+        border: Border(
             bottom: BorderSide(color: AppColors.border, width: 0.5)),
-        color: index % 2 == 0 ? Colors.white : const Color(0xFFF8FAFC),
+        color: index % 2 == 0 ? AppColors.surface : AppColors.background,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Drag handle
-          const SizedBox(
+          SizedBox(
             width: 32,
             height: 40,
             child: Icon(Icons.drag_indicator,
@@ -607,9 +613,9 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                             focusNode: focusNode,
                             decoration: InputDecoration(
                               hintText: 'Rechercher un article...',
-                              hintStyle: const TextStyle(fontSize: 13, color: Colors.black87),
+                              hintStyle: TextStyle(fontSize: 13, color: Colors.black87),
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: AppColors.surfaceAlt,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
@@ -633,8 +639,8 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                                   itemBuilder: (context, i) {
                                     final option = options.elementAt(i);
                                     return ListTile(
-                                      title: Text(option.name, style: const TextStyle(fontSize: 13)),
-                                      subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
+                                      title: Text(option.name, style: TextStyle(fontSize: 13)),
+                                      subtitle: option.reference != null ? Text(option.reference!, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
                                       trailing: Text('${option.purchasePrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                       onTap: () => onSelected(option),
                                       dense: true,
@@ -683,7 +689,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                   child: Container(
                     width: 28, height: 28,
                     decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
-                    child: const Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
+                    child: Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -711,7 +717,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                   child: Container(
                     width: 28, height: 28,
                     decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
-                    child: const Icon(Icons.add, size: 14, color: AppColors.textSecondary),
+                    child: Icon(Icons.add, size: 14, color: AppColors.textSecondary),
                   ),
                 ),
               ],
@@ -733,7 +739,10 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
           const SizedBox(width: 8),
           // TVA Rate
           Expanded(
-            child: DropdownButtonFormField<double>(
+            child: DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
               value: item.tvaRate,
               decoration: _itemInputDecoration(''),
               items: TvaRates.all
@@ -759,13 +768,13 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
               },
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           // Total HT
           Expanded(
             child: Container(
               height: 40,
               alignment: Alignment.centerRight,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: AppColors.surfaceAlt,
                 borderRadius: BorderRadius.circular(AppRadius.md),
@@ -797,7 +806,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                     tooltip: 'Description',
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                    icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
                     onPressed: () {
                       setState(() {
                         _items.removeAt(index);
@@ -823,18 +832,18 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                   orderId: widget.existing?.id ?? '', productId: ''));
             });
           },
-          icon: const Icon(Icons.add_rounded, size: 18),
-          label: const Text('Ajouter un article'),
+          icon: Icon(Icons.add_rounded, size: 18),
+          label: Text('Ajouter un article'),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.surface,
             foregroundColor: AppColors.primary,
             elevation: 0,
-            side: const BorderSide(color: AppColors.primary),
+            side: BorderSide(color: AppColors.primary),
           ),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: 8),
         IconButton(
-          icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+          icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
           tooltip: 'Créer un nouvel article',
           onPressed: () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
@@ -848,9 +857,9 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
   // ── Totals & Global Discount ────────────────────────────────────────
   Widget _buildGlobalDiscountSection() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.border),
       ),
@@ -866,12 +875,12 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                     value: _withGlobalDiscount,
                     onChanged: (v) { if (!widget.isReadOnly) setState(() => _withGlobalDiscount = v ?? false); },
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    side: const BorderSide(color: AppColors.border),
+                    side: BorderSide(color: AppColors.border),
                     activeColor: AppColors.primary,
                   ),
                 ),
-                const SizedBox(width: 8),
-                const Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                SizedBox(width: 8),
+                Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
               ],
             ),
           ),
@@ -885,12 +894,12 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                     initialValue: _globalDiscountPercent > 0 ? _globalDiscountPercent.toString() : '',
                     decoration: _itemInputDecoration('Remise %'),
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13),
                     onChanged: (v) => setState(() => _globalDiscountPercent = double.tryParse(v) ?? 0),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text('= ${formatCurrencyDT(_globalDiscountAmount)}', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                SizedBox(width: 12),
+                Text('= ${formatCurrencyDT(_globalDiscountAmount)}', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
               ],
             ),
           ],
@@ -902,9 +911,9 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
   InputDecoration _itemInputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: Colors.black87, fontSize: 12),
+      hintStyle: TextStyle(color: Colors.black87, fontSize: 12),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: AppColors.surfaceAlt,
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
@@ -944,15 +953,15 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                             value: _withTimbreFiscal,
                             onChanged: (v) { if (!widget.isReadOnly) setState(() => _withTimbreFiscal = v ?? false); },
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            side: const BorderSide(color: AppColors.border),
+                            side: BorderSide(color: AppColors.border),
                             activeColor: AppColors.primary,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        const Text('Timbre fiscal:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                        SizedBox(width: 8),
+                        Text('Timbre fiscal:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                       ],
                     ),
-                    Text(formatCurrencyDT(_timbreFiscal), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                    Text(formatCurrencyDT(_timbreFiscal), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                   ],
                 ),
               ),
@@ -962,13 +971,13 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
               _buildTotalLine('Remise:', '- ${formatCurrencyDT(_globalDiscountAmount)}'),
               const SizedBox(height: 6),
             ],
-            const Divider(),
-            const SizedBox(height: 4),
+            Divider(),
+            SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Total TTC:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                Text(formatCurrencyDT(_totalTTC), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text('Total TTC:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(formatCurrencyDT(_totalTTC), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),
           ],
@@ -981,8 +990,8 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+        Text(label, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
       ],
     );
   }
@@ -995,24 +1004,24 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Notes (Visibles par le fournisseur)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text('Notes (Visibles par le fournisseur)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _notesCtrl,
                 maxLines: 4,
                 readOnly: widget.isReadOnly,
                 decoration: _formInputDecoration().copyWith(hintText: 'Ajouter une note...'),
-                style: const TextStyle(fontSize: 13),
+                style: TextStyle(fontSize: 13),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Conditions d'achat", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              Text("Conditions d'achat", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _conditionsCtrl,

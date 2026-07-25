@@ -53,7 +53,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
   Future<void> _save() async {
     if (widget.isReadOnly) return;
     if (_selectedSupplierId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un fournisseur'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un fournisseur'), backgroundColor: AppColors.error));
       return;
     }
 
@@ -125,7 +125,10 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                   BlocBuilder<ProductsBloc, ProductsState>(
                     builder: (context, state) {
                       final products = state is ProductsLoaded ? state.products : <Product>[];
-                      return DropdownButtonFormField<String>(
+                      return DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         value: selectedProductId,
                         decoration: const InputDecoration(labelText: 'Article'),
                         items: products.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))).toList(),
@@ -239,7 +242,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                             backgroundColor: AppColors.primary.withOpacity(0.1),
                             foregroundColor: AppColors.primary,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: EdgeInsets.symmetric(horizontal: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
@@ -266,10 +269,10 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
               children: [
                 if (_items.isEmpty)
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    padding: EdgeInsets.symmetric(vertical: 32),
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(AppRadius.md)),
-                    child: const Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
+                    decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
+                    child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
                   )
                 else
                   ..._items.asMap().entries.map((e) => _buildArticleItem(e.key, e.value)),
@@ -280,19 +283,19 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: _showAddArticleDialog,
-                          icon: const Icon(Icons.add_rounded),
-                          label: const Text('Ajouter une ligne'),
+                          icon: Icon(Icons.add_rounded),
+                          label: Text('Ajouter une ligne'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
-                            side: const BorderSide(color: AppColors.primary),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: BorderSide(color: AppColors.primary),
+                            padding: EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                           ),
                         )
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
+                        icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
                         tooltip: 'Créer un nouvel article',
                         onPressed: () {
                           Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
@@ -311,8 +314,8 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
 
   Widget _buildArticleItem(int index, ReceivingVoucherItem item) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -328,9 +331,9 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 4),
-                    Text('Attendue: ${item.quantityExpected.toStringAsFixed(0)} | Reçue: ${item.quantityReceived.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    Text(p.name, style: TextStyle(fontWeight: FontWeight.w600)),
+                    SizedBox(height: 4),
+                    Text('Attendue: ${item.quantityExpected.toStringAsFixed(0)} | Reçue: ${item.quantityReceived.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                   ],
                 );
               },
@@ -338,7 +341,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
           ),
           if (!widget.isReadOnly)
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: AppColors.error),
+              icon: Icon(Icons.delete_outline, color: AppColors.error),
               onPressed: () => setState(() => _items.removeAt(index)),
             ),
         ],

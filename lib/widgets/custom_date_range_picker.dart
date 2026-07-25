@@ -56,10 +56,10 @@ class _CustomDateRangePickerState extends State<CustomDateRangePicker> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
+            colorScheme: ColorScheme.light(
               primary: AppColors.primary,
-              onPrimary: Colors.white,
-              surface: Colors.white,
+              onPrimary: AppColors.surface,
+              surface: AppColors.surface,
               onSurface: AppColors.textPrimary,
             ),
           ),
@@ -89,11 +89,11 @@ class _CustomDateRangePickerState extends State<CustomDateRangePicker> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       elevation: 4,
       child: Container(
         width: 420,
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,9 +101,9 @@ class _CustomDateRangePickerState extends State<CustomDateRangePicker> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Filtrer par période', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text('Filtrer par période', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 IconButton(
-                  icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+                  icon: Icon(Icons.close, color: AppColors.textSecondary, size: 20),
                   onPressed: () => Navigator.pop(context),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -123,10 +123,10 @@ class _CustomDateRangePickerState extends State<CustomDateRangePicker> {
                 _QuickSelectChip(label: "Ce mois-ci", onTap: _selectThisMonth),
               ],
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             
             // Custom Range
-            const Text('Ou plage personnalisée', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            Text('Ou plage personnalisée', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -137,7 +137,7 @@ class _CustomDateRangePickerState extends State<CustomDateRangePicker> {
                     onTap: () => _pickDate(true),
                   ),
                 ),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12),
                   child: Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.textTertiary),
                 ),
@@ -165,11 +165,11 @@ class _CustomDateRangePickerState extends State<CustomDateRangePicker> {
                       Navigator.pop(context, null);
                     },
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      side: const BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.border),
                     ),
-                    child: const Text('Toutes les dates', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                    child: Text('Toutes les dates', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -214,13 +214,13 @@ class _QuickSelectChip extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: AppColors.background,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.border),
         ),
-        child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+        child: Text(label, style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
       ),
     );
   }
@@ -238,22 +238,22 @@ class _DateSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-        const SizedBox(height: 6),
+        Text(label, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+        SizedBox(height: 6),
         InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppColors.border),
             ),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary),
-                const SizedBox(width: 8),
+                Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     date != null ? formatDate(date!) : 'Sélectionner',

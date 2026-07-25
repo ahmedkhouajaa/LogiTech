@@ -75,15 +75,15 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
     if (widget.isReadOnly) return;
     
     if (_documentNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez saisir le numéro du document'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez saisir le numéro du document'), backgroundColor: AppColors.error));
       return;
     }
     if (_amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez saisir un montant valide'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez saisir un montant valide'), backgroundColor: AppColors.error));
       return;
     }
     if (_selectedContactId == null && _partyName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner ou saisir un contact'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner ou saisir un contact'), backgroundColor: AppColors.error));
       return;
     }
 

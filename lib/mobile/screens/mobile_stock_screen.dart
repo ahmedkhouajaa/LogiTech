@@ -60,10 +60,10 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                 children: [
                   // ── Title ──
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
                     child: Text(
                       'Vue d\'ensemble du Stock',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
@@ -119,8 +119,8 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
             context.read<ProductsBloc>().add(LoadProducts());
           });
         },
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Nouvel ajustement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        icon: Icon(Icons.add, color: Colors.white),
+        label: Text('Nouvel ajustement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
         backgroundColor: AppColors.primary,
       ),
     );
@@ -192,18 +192,18 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, size: 20, color: AppColors.error),
-              const SizedBox(width: 8),
-              const Text(
+              Icon(Icons.warning_amber_rounded, size: 20, color: AppColors.error),
+              SizedBox(width: 8),
+              Text(
                 'Produits en stock bas',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
-              const Spacer(),
+              Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.error.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -211,7 +211,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                 ),
                 child: Text(
                   '${lowStockProducts.length} alertes',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error),
                 ),
               ),
             ],
@@ -301,14 +301,14 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Niveaux de Stock Actuels',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2),
                     Text(
                       '${filteredItems.length} produits',
-                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                     ),
                   ],
                 ),
@@ -345,14 +345,14 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                   ),
                 ],
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     border: Border.all(color: AppColors.border),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Icon(Icons.download_rounded, size: 16, color: AppColors.textPrimary),
                       SizedBox(width: 6),
                       Text('Exporter', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
@@ -363,30 +363,30 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         // Search bar
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: 16),
           child: TextField(
             onChanged: (v) => setState(() => _searchQuery = v),
             decoration: InputDecoration(
               hintText: 'Rechercher un produit...',
-              hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 14),
-              prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary, size: 20),
+              hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 14),
+              prefixIcon: Icon(Icons.search, color: AppColors.textSecondary, size: 20),
               filled: true,
-              fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+              fillColor: AppColors.surface,
+              contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 16),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.border),
+                borderSide: BorderSide(color: AppColors.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.primary),
+                borderSide: BorderSide(color: AppColors.primary),
               ),
             ),
           ),
@@ -400,9 +400,9 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
               GestureDetector(
                 onTap: () => setState(() => _showFilters = !_showFilters),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: _showFilters || hasActiveFilters ? AppColors.primary.withValues(alpha: 0.1) : Colors.white,
+                    color: _showFilters || hasActiveFilters ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surface,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: _showFilters || hasActiveFilters ? AppColors.primary.withValues(alpha: 0.4) : AppColors.border),
                   ),
@@ -410,15 +410,15 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.tune_rounded, size: 16, color: _showFilters || hasActiveFilters ? AppColors.primary : AppColors.textSecondary),
-                      const SizedBox(width: 6),
+                      SizedBox(width: 6),
                       Text(
                         'Filtres',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _showFilters || hasActiveFilters ? AppColors.primary : AppColors.textSecondary),
                       ),
                       if (hasActiveFilters) ...[
-                        const SizedBox(width: 6),
+                        SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
                           child: Text(
                             '${[_filterWarehouseId != null, _filterDestination != 'tous', _filterReference.isNotEmpty, _filterStatus != 'tous'].where((v) => v).length}',
@@ -440,13 +440,13 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                     _filterStatus = 'tous';
                   }),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     decoration: BoxDecoration(
                       color: AppColors.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.clear_all, size: 14, color: AppColors.error),
@@ -462,12 +462,12 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
         ),
         // ── Collapsible Filter Panel ──
         if (_showFilters) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(12),
+            margin: EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.border),
               boxShadow: [
@@ -487,21 +487,24 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Entrepôt', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          Text('Entrepôt', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                           const SizedBox(height: 4),
                           SizedBox(
                             height: 40,
-                            child: DropdownButtonFormField<String?>(
+                            child: DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  
                               value: _filterWarehouseId,
                               isExpanded: true,
                               decoration: InputDecoration(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                                 filled: true,
-                                fillColor: const Color(0xFFFAFAFB),
+                                fillColor: Color(0xFFFAFAFB),
                               ),
-                              style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                               items: [
                                 const DropdownMenuItem<String?>(value: null, child: Text('Tous', style: TextStyle(fontSize: 12))),
                                 ...warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
@@ -512,26 +515,29 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Destination', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          Text('Destination', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                           const SizedBox(height: 4),
                           SizedBox(
                             height: 40,
-                            child: DropdownButtonFormField<String>(
+                            child: DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  
                               value: _filterDestination,
                               isExpanded: true,
                               decoration: InputDecoration(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                                 filled: true,
-                                fillColor: const Color(0xFFFAFAFB),
+                                fillColor: Color(0xFFFAFAFB),
                               ),
-                              style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                               items: const [
                                 DropdownMenuItem(value: 'tous', child: Text('Toutes', style: TextStyle(fontSize: 12))),
                                 DropdownMenuItem(value: 'vente', child: Text('Vente', style: TextStyle(fontSize: 12))),
@@ -553,7 +559,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Référence', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          Text('Référence', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                           const SizedBox(height: 4),
                           SizedBox(
                             height: 40,
@@ -561,12 +567,12 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                               onChanged: (v) => setState(() => _filterReference = v),
                               decoration: InputDecoration(
                                 hintText: 'Rechercher réf...',
-                                hintStyle: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                                prefixIcon: const Icon(Icons.tag, size: 14, color: AppColors.textTertiary),
-                                prefixIconConstraints: const BoxConstraints(minWidth: 32),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                                prefixIcon: Icon(Icons.tag, size: 14, color: AppColors.textTertiary),
+                                prefixIconConstraints: BoxConstraints(minWidth: 32),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                                 filled: true,
                                 fillColor: const Color(0xFFFAFAFB),
                               ),
@@ -576,27 +582,30 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Statut', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          Text('Statut', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                           const SizedBox(height: 4),
                           SizedBox(
                             height: 40,
-                            child: DropdownButtonFormField<String>(
+                            child: DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  
                               value: _filterStatus,
                               isExpanded: true,
                               decoration: InputDecoration(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.border)),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                                 filled: true,
-                                fillColor: const Color(0xFFFAFAFB),
+                                fillColor: Color(0xFFFAFAFB),
                               ),
-                              style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
-                              items: const [
+                              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                              items: [
                                 DropdownMenuItem(value: 'tous', child: Text('Tous', style: TextStyle(fontSize: 12))),
                                 DropdownMenuItem(value: 'en_stock', child: Text('En Stock', style: TextStyle(fontSize: 12, color: AppColors.success))),
                                 DropdownMenuItem(value: 'rupture', child: Text('En Rupture', style: TextStyle(fontSize: 12, color: AppColors.error))),
@@ -613,16 +622,16 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
             ),
           ),
         ],
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         if (filteredItems.isEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 32),
+            padding: EdgeInsets.symmetric(vertical: 32),
             child: Center(
               child: Column(
                 children: [
                   Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.textTertiary.withValues(alpha: 0.5)),
-                  const SizedBox(height: 8),
-                  const Text('Aucun produit trouvé.', style: TextStyle(color: AppColors.textSecondary)),
+                  SizedBox(height: 8),
+                  Text('Aucun produit trouvé.', style: TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
             ),
@@ -653,9 +662,9 @@ class _KpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
         boxShadow: [
@@ -682,19 +691,19 @@ class _KpiCard extends StatelessWidget {
             ),
             child: Icon(icon, color: Colors.white, size: 20),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w500,
@@ -718,24 +727,24 @@ class _LowStockCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: AppColors.error.withValues(alpha: 0.2)),
       ),
-      color: Colors.white,
+      color: AppColors.surface,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(14),
         child: Row(
           children: [
             // Warning icon
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: AppColors.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.warning_rounded, size: 20, color: AppColors.error),
+              child: Icon(Icons.warning_rounded, size: 20, color: AppColors.error),
             ),
             const SizedBox(width: 12),
             // Product info
@@ -745,7 +754,7 @@ class _LowStockCard extends StatelessWidget {
                 children: [
                   Text(
                     product.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
@@ -753,10 +762,10 @@ class _LowStockCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
+                  SizedBox(height: 2),
                   Text(
                     '${product.code} • ${product.category ?? '—'}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                   ),
                 ],
               ),
@@ -768,7 +777,7 @@ class _LowStockCard extends StatelessWidget {
               children: [
                 Text(
                   '${formatQuantity(product.stockQty)} ${product.unit}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: AppColors.error,
@@ -776,7 +785,7 @@ class _LowStockCard extends StatelessWidget {
                 ),
                 Text(
                   'Min: ${formatQuantity(product.minStockQty)}',
-                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -803,14 +812,14 @@ class _StockLevelCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.border),
       ),
-      color: Colors.white,
+      color: AppColors.surface,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -818,18 +827,18 @@ class _StockLevelCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceAlt,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.textSecondary),
+                  child: Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.textSecondary),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     item.product.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary,
@@ -870,7 +879,7 @@ class _StockLevelCard extends StatelessWidget {
                   icon: Icons.warehouse_outlined,
                   label: item.warehouse.name,
                 ),
-                const Spacer(),
+                Spacer(),
                 Text(
                   formatQuantity(item.quantity),
                   style: TextStyle(
@@ -879,10 +888,10 @@ class _StockLevelCard extends StatelessWidget {
                     color: isInStock ? AppColors.textPrimary : AppColors.error,
                   ),
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 Text(
                   item.product.unit,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
                   ),
@@ -911,10 +920,10 @@ class _DetailChip extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 14, color: AppColors.textTertiary),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),

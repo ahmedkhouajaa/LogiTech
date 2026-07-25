@@ -100,12 +100,12 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
             final isEntreprise = supplier.supplierType.toLowerCase() == 'entreprise';
             
             return Card(
-              margin: const EdgeInsets.only(bottom: 12),
+              margin: EdgeInsets.only(bottom: 12),
               elevation: 0,
-              color: Colors.white,
+              color: AppColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.border),
               ),
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
@@ -113,7 +113,7 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
                   // Detail screen if needed
                 },
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Row(
                     children: [
                       // Avatar
@@ -144,7 +144,7 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
                                 Flexible(
                                   child: Text(
                                     supplier.name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -175,27 +175,27 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.tag, size: 14, color: AppColors.textSecondary),
-                                    const SizedBox(width: 4),
-                                    Text(supplier.code, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                    Icon(Icons.tag, size: 14, color: AppColors.textSecondary),
+                                    SizedBox(width: 4),
+                                    Text(supplier.code, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                                   ],
                                 ),
                                 if (supplier.email != null && supplier.email!.isNotEmpty)
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.email_outlined, size: 14, color: AppColors.textSecondary),
-                                      const SizedBox(width: 4),
-                                      Text(supplier.email!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                      Icon(Icons.email_outlined, size: 14, color: AppColors.textSecondary),
+                                      SizedBox(width: 4),
+                                      Text(supplier.email!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                                     ],
                                   ),
                                 if (supplier.phone != null && supplier.phone!.isNotEmpty)
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.phone_outlined, size: 14, color: AppColors.textSecondary),
-                                      const SizedBox(width: 4),
-                                      Text(supplier.phone!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                      Icon(Icons.phone_outlined, size: 14, color: AppColors.textSecondary),
+                                      SizedBox(width: 4),
+                                      Text(supplier.phone!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                                     ],
                                   ),
                               ],
@@ -203,15 +203,15 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       // Balance & Actions
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('Dette', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                          const SizedBox(height: 4),
+                          Text('Dette', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          SizedBox(height: 4),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
                               color: supplier.balance >= 0 ? AppColors.success.withOpacity(0.1) : AppColors.error.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
@@ -228,7 +228,7 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
                         ],
                       ),
                       PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+                        icon: Icon(Icons.more_vert, color: AppColors.textSecondary),
                         onSelected: (val) {
                           if (val == 'edit') {
                             Navigator.push(
@@ -242,9 +242,9 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
                           }
                         },
                         itemBuilder: (_) => [
-                          const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 20, color: AppColors.primary), SizedBox(width: 8), Text('Modifier')])),
-                          const PopupMenuDivider(),
-                          const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline, size: 20, color: AppColors.error), SizedBox(width: 8), Text('Supprimer')])),
+                          PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 20, color: AppColors.primary), SizedBox(width: 8), Text('Modifier')])),
+                          PopupMenuDivider(),
+                          PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline, size: 20, color: AppColors.error), SizedBox(width: 8), Text('Supprimer')])),
                         ],
                       ),
                     ],

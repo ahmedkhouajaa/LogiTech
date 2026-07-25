@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -42,6 +44,11 @@ class SyncService {
   }
 
   Future<void> triggerSync() async {
+    if (kIsWeb) return;
+    if (Platform.isWindows) {
+      print("DEBUG (Sync): Bypassing sync on Windows due to native crash.");
+      return;
+    }
     print('DEBUG (Sync): === SYNC TRIGGERED ===');
     print('DEBUG (Sync): isOnline = ${ConnectivityService.instance.isOnline}');
     print('DEBUG (Sync): currentUser = ${FirebaseAuth.instance.currentUser?.uid}');

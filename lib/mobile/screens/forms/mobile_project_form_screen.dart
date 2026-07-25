@@ -61,7 +61,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     
     if (_name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez entrer le nom du projet'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez entrer le nom du projet'), backgroundColor: AppColors.error));
       return;
     }
 
@@ -227,8 +227,8 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      Text('Avancement: ${_progress.toInt()}%', style: const TextStyle(fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 8),
+                      Text('Avancement: ${_progress.toInt()}%', style: TextStyle(fontWeight: FontWeight.w500)),
+                      SizedBox(height: 8),
                       Slider(
                         value: _progress,
                         min: 0,

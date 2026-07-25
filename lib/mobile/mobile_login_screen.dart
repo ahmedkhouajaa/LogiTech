@@ -56,8 +56,8 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
               SnackBar(
                 content: Row(
                   children: [
-                    const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
-                    const SizedBox(width: 12),
+                    Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+                    SizedBox(width: 12),
                     Expanded(child: Text(state.message)),
                   ],
                 ),
@@ -255,12 +255,12 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                       disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
                     ),
                     child: loading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.5,
-                              color: Colors.white,
+                              color: AppColors.surface,
                             ),
                           )
                         : const Text(
@@ -302,13 +302,13 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
             fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextFormField(
           controller: controller,
           validator: validator,
           keyboardType: keyboardType,
           obscureText: obscureText,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: TextStyle(color: Colors.white, fontSize: 14),
           cursorColor: AppColors.primary,
           decoration: InputDecoration(
             hintText: hint,
@@ -328,13 +328,13 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.error),
+              borderSide: BorderSide(color: AppColors.error),
             ),
-            errorStyle: const TextStyle(color: AppColors.error, fontSize: 11),
+            errorStyle: TextStyle(color: AppColors.error, fontSize: 11),
           ),
         ),
       ],

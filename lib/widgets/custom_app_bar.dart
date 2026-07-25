@@ -30,14 +30,14 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
-          if (leading != null) ...[leading!, const SizedBox(width: 12)],
+          if (leading != null) ...[leading!, SizedBox(width: 12)],
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Text(title, style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               if (subtitle != null)
-                Text(subtitle!, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                Text(subtitle!, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
             ],
           ),
           const Spacer(),
@@ -83,8 +83,8 @@ class AppTextField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        const SizedBox(height: 6),
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        SizedBox(height: 6),
         TextFormField(
           controller: controller,
           validator: validator,
@@ -94,15 +94,15 @@ class AppTextField extends StatelessWidget {
           readOnly: readOnly,
           onTap: onTap,
           onChanged: onChanged,
-          style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+          style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+            hintStyle: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             prefixIcon: prefix,
             suffixIcon: suffix,
             filled: true,
             fillColor: AppColors.surfaceAlt,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
               borderSide: BorderSide(color: AppColors.border),
@@ -149,7 +149,7 @@ class AppButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color bgColor = isDanger ? AppColors.error : isPrimary ? AppColors.primary : Colors.transparent;
-    Color fgColor = isPrimary || isDanger ? Colors.white : AppColors.primary;
+    Color fgColor = isPrimary || isDanger ? AppColors.surface : AppColors.primary;
     BorderSide? border = !isPrimary && !isDanger ? BorderSide(color: AppColors.primary) : null;
 
     return SizedBox(
@@ -203,11 +203,11 @@ class EmptyState extends StatelessWidget {
             ),
             child: Icon(icon, size: 36, color: AppColors.primary),
           ),
-          const SizedBox(height: 16),
-          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          SizedBox(height: 16),
+          Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
           if (subtitle != null) ...[
-            const SizedBox(height: 8),
-            Text(subtitle!, style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+            SizedBox(height: 8),
+            Text(subtitle!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
           ],
           if (action != null) ...[const SizedBox(height: 24), action!],
         ],
@@ -237,18 +237,21 @@ class AppDropdown<T> extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        const SizedBox(height: 6),
-        DropdownButtonFormField<T>(
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        SizedBox(height: 6),
+        DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           value: value,
           items: items,
           onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
+            hintStyle: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             filled: true,
             fillColor: AppColors.surfaceAlt,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 2)),
@@ -271,14 +274,14 @@ class AppSearchBar extends StatelessWidget {
       width: 280,
       child: TextField(
         onChanged: onChanged,
-        style: const TextStyle(fontSize: 13),
+        style: TextStyle(fontSize: 13),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
-          prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppColors.textTertiary),
+          hintStyle: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textTertiary),
           filled: true,
           fillColor: AppColors.surfaceAlt,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),

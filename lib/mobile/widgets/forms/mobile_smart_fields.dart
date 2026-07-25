@@ -24,7 +24,7 @@ class SmartDatePicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         const SizedBox(height: 8),
         InkWell(
           onTap: () async {
@@ -33,14 +33,14 @@ class SmartDatePicker extends StatelessWidget {
               initialDate: value,
               firstDate: DateTime(2020),
               lastDate: DateTime(2030),
-              locale: const Locale('fr', 'FR'),
+              locale: Locale('fr', 'FR'),
               builder: (context, child) {
                 return Theme(
                   data: Theme.of(context).copyWith(
-                    colorScheme: const ColorScheme.light(
+                    colorScheme: ColorScheme.light(
                       primary: AppColors.primary,
-                      onPrimary: Colors.white,
-                      surface: Colors.white,
+                      onPrimary: AppColors.surface,
+                      surface: AppColors.surface,
                       onSurface: AppColors.textPrimary,
                     ),
                   ),
@@ -54,9 +54,9 @@ class SmartDatePicker extends StatelessWidget {
           },
           borderRadius: BorderRadius.circular(AppRadius.md),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
+              color: AppColors.background,
               border: Border.all(color: AppColors.border),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
@@ -65,10 +65,10 @@ class SmartDatePicker extends StatelessWidget {
                 Expanded(
                   child: Text(
                     formatDateLong(value),
-                    style: const TextStyle(fontSize: 16, color: AppColors.textPrimary),
+                    style: TextStyle(fontSize: 16, color: AppColors.textPrimary),
                   ),
                 ),
-                const Icon(Icons.calendar_today_rounded, size: 20, color: AppColors.textTertiary),
+                Icon(Icons.calendar_today_rounded, size: 20, color: AppColors.textTertiary),
               ],
             ),
           ),
@@ -101,7 +101,7 @@ class SmartDatePicker extends StatelessWidget {
       onTap: () => onChanged(presetDate),
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
           border: Border.all(color: isSelected ? AppColors.primary : AppColors.border),
@@ -146,34 +146,37 @@ class SmartDropdown<T> extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<T>(
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        SizedBox(height: 8),
+        DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           value: value,
           items: items,
           onChanged: onChanged,
           isExpanded: true,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 16),
+            hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 16),
             filled: true,
-            fillColor: const Color(0xFFF8FAFC),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            fillColor: AppColors.background,
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(color: AppColors.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(color: AppColors.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
             ),
             errorText: errorText,
           ),
-          icon: const Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondary),
+          icon: Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondary),
         ),
       ],
     );
@@ -208,7 +211,7 @@ class SmartNumberInput extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -222,18 +225,18 @@ class SmartNumberInput extends StatelessWidget {
                 initialValue: value == value.truncateToDouble() ? value.toInt().toString() : value.toString(),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  fillColor: AppColors.background,
+                  contentPadding: EdgeInsets.symmetric(vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: BorderSide(color: AppColors.border),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: const BorderSide(color: AppColors.border),
+                    borderSide: BorderSide(color: AppColors.border),
                   ),
                   suffixText: suffix,
                 ),
@@ -263,7 +266,7 @@ class SmartNumberInput extends StatelessWidget {
         width: 48,
         height: 48,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           border: Border.all(color: AppColors.border),
           borderRadius: BorderRadius.circular(AppRadius.md),
           boxShadow: AppShadows.sm,
@@ -298,7 +301,7 @@ class SmartToggleChips<T> extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(4),
@@ -313,10 +316,10 @@ class SmartToggleChips<T> extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () => onChanged(option),
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    duration: Duration(milliseconds: 200),
+                    padding: EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: isSelected ? Colors.white : Colors.transparent,
+                      color: isSelected ? AppColors.surface : Colors.transparent,
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                       boxShadow: isSelected
                           ? [const BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 1))]
@@ -376,7 +379,7 @@ class SmartTextInput extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -385,24 +388,24 @@ class SmartTextInput extends StatelessWidget {
           keyboardType: keyboardType,
           onChanged: onChanged,
           validator: validator,
-          style: const TextStyle(fontSize: 16),
+          style: TextStyle(fontSize: 16),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 16),
+            hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 16),
             filled: true,
-            fillColor: const Color(0xFFF8FAFC),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            fillColor: AppColors.background,
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(color: AppColors.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: const BorderSide(color: AppColors.border),
+              borderSide: BorderSide(color: AppColors.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
             ),
             suffixIcon: suffixIcon,
             suffixText: suffixText,
@@ -434,7 +437,7 @@ class SmartCheckbox extends StatelessWidget {
       onTap: onChanged == null ? null : () => onChanged!(!value),
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        padding: EdgeInsets.symmetric(vertical: 8.0),
         child: Row(
           children: [
             SizedBox(
@@ -447,11 +450,11 @@ class SmartCheckbox extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
               ),
             ),
           ],

@@ -29,14 +29,14 @@ class MobileFormScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9), // Light background for contrast with white sections
+      backgroundColor: Color(0xFFF1F5F9), // Light background for contrast with white sections
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         elevation: 0,
         centerTitle: false,
         titleSpacing: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+          icon: Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
           onPressed: onCancel,
         ),
         title: Row(
@@ -44,7 +44,7 @@ class MobileFormScreen extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -53,13 +53,13 @@ class MobileFormScreen extends StatelessWidget {
               ),
             ),
             if (statusLabel != null && statusColor != null) ...[
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               StatusBadge(label: statusLabel!, color: statusColor!),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
             ]
           ],
         ),
-        shape: const Border(
+        shape: Border(
           bottom: BorderSide(color: AppColors.border, width: 1),
         ),
       ),
@@ -68,14 +68,14 @@ class MobileFormScreen extends StatelessWidget {
           children: [
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 children: children,
               ),
             ),
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
                 border: Border(top: BorderSide(color: AppColors.border, width: 1)),
                 boxShadow: [
                   BoxShadow(
@@ -91,13 +91,13 @@ class MobileFormScreen extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: isLoading ? null : onCancel,
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: const BorderSide(color: AppColors.border),
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: AppColors.border),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Annuler',
                         style: TextStyle(
                           color: AppColors.textSecondary,
@@ -107,7 +107,7 @@ class MobileFormScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: (isLoading || !isSaveEnabled) ? null : onSave,
@@ -120,11 +120,11 @@ class MobileFormScreen extends StatelessWidget {
                         elevation: 0,
                       ),
                       child: isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                               height: 24,
                               width: 24,
                               child: CircularProgressIndicator(
-                                color: Colors.white,
+                                color: AppColors.surface,
                                 strokeWidth: 2,
                               ),
                             )

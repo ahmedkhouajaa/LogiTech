@@ -17,9 +17,9 @@ class MobileDevisCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.white,
+      color: AppColors.surface,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -34,7 +34,7 @@ class MobileDevisCard extends StatelessWidget {
                 children: [
                   Text(
                     quote.number,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
@@ -61,17 +61,17 @@ class MobileDevisCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
 
               // Row 2: Name
               Row(
                 children: [
-                  const Icon(Icons.person, size: 16, color: AppColors.textSecondary),
-                  const SizedBox(width: 8),
+                  Icon(Icons.person, size: 16, color: AppColors.textSecondary),
+                  SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       quote.customerName ?? 'Client Inconnu',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         color: AppColors.textPrimary,
                       ),
@@ -81,7 +81,7 @@ class MobileDevisCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
 
               // Row 3: Date and Amount
               Row(
@@ -89,11 +89,11 @@ class MobileDevisCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
-                      const SizedBox(width: 8),
+                      Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                      SizedBox(width: 8),
                       Text(
                         '${quote.date.day.toString().padLeft(2, '0')}/${quote.date.month.toString().padLeft(2, '0')}/${quote.date.year}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           color: AppColors.textSecondary,
                         ),
@@ -102,11 +102,11 @@ class MobileDevisCard extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      const Icon(Icons.attach_money, size: 16, color: AppColors.textSecondary),
-                      const SizedBox(width: 4),
+                      Icon(Icons.attach_money, size: 16, color: AppColors.textSecondary),
+                      SizedBox(width: 4),
                       Text(
                         '${quote.totalTTC.toStringAsFixed(2)} TND',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,

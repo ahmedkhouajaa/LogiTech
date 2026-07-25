@@ -86,7 +86,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
   Future<void> _save() async {
     if (widget.isReadOnly) return;
     if (_selectedCustomerId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error));
       return;
     }
 
@@ -263,7 +263,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_items.isEmpty)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.all(24),
                   child: Center(child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary))),
                 )
@@ -296,18 +296,18 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
      Expanded(
        child: OutlinedButton.icon(
                           onPressed: () => _addOrEditItem(),
-                          icon: const Icon(Icons.add_circle_outline_rounded),
-                          label: const Text('Ajouter un article'),
+                          icon: Icon(Icons.add_circle_outline_rounded),
+                          label: Text('Ajouter un article'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                           ),
                         )
      ),
-     const SizedBox(width: 8),
+     SizedBox(width: 8),
      IconButton(
-       icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
+       icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
        tooltip: 'Créer un nouvel article',
        onPressed: () {
          Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));

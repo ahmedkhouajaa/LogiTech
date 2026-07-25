@@ -54,7 +54,7 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     
     if (_name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez entrer un nom ou une raison sociale'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez entrer un nom ou une raison sociale'), backgroundColor: AppColors.error));
       return;
     }
 

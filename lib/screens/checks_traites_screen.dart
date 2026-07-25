@@ -31,29 +31,34 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
       children: [
         // Header
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.all(AppSpacing.lg),
           child: Row(
             children: [
-              const Text(
-                'Cheques & Traites',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Cheques & Traites',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  SizedBox(height: 4),
+                  Text('Gerer vos cheques et traites', style: TextStyle(color: AppColors.textSecondary)),
+                ],
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.receipt_long_rounded, color: AppColors.primary),
-              const Spacer(),
+              Spacer(),
               // Type Filter
               Container(
                 height: 36,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: AppColors.border),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _filterType,
-                    style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                    style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     items: const [
                       DropdownMenuItem(value: 'all', child: Text('Tous les types')),
                       DropdownMenuItem(value: 'check_received', child: Text('Cheque (Client)')),
@@ -100,20 +105,20 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                 }).toList();
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(color: AppColors.border),
                     ),
                     child: DataTableWidget<CheckTraite>(
-                      columns: const ['N° Document', 'Type', 'Tiers', 'Montant', 'Echeance', 'Banque', 'Statut', 'Actions'],
+                      columns: ['N° Document', 'Type', 'Tiers', 'Montant', 'Echeance', 'Banque', 'Statut', 'Actions'],
                       rows: filtered,
                       emptyMessage: 'Aucun document trouve',
                       cellBuilder: (doc) {
                         return [
-                          DataCell(Text(doc.documentNumber, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary))),
+                          DataCell(Text(doc.documentNumber, style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary))),
                           DataCell(Text(_getTypeLabel(doc.type))),
                           DataCell(Text(doc.partyName, style: const TextStyle(fontWeight: FontWeight.w500))),
                           DataCell(Text(formatCurrencyDT(doc.amount), style: const TextStyle(fontWeight: FontWeight.bold))),
@@ -126,12 +131,12 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                               children: [
                                 if (doc.status == 'pending') ...[
                                   IconButton(
-                                    icon: const Icon(Icons.check_circle_outline_rounded, size: 18, color: AppColors.success),
+                                    icon: Icon(Icons.check_circle_outline_rounded, size: 18, color: AppColors.success),
                                     onPressed: () => context.read<ChecksTraitesBloc>().add(UpdateCheckTraiteStatus(doc.id, 'cashed')),
                                     tooltip: 'Marquer encaisse',
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.cancel_outlined, size: 18, color: AppColors.error),
+                                    icon: Icon(Icons.cancel_outlined, size: 18, color: AppColors.error),
                                     onPressed: () => context.read<ChecksTraitesBloc>().add(UpdateCheckTraiteStatus(doc.id, 'bounced')),
                                     tooltip: 'Marquer impaye',
                                   ),

@@ -46,14 +46,14 @@ class DashboardScreen extends StatelessWidget {
           // Charts + upcoming
           /*
           if (isMobile) ...[
-            _buildCashFlowChart(),
+            // _buildCashFlowChart(),
             const SizedBox(height: AppSpacing.lg),
             _buildUpcomingChecks(state.upcomingChecks),
           ] else
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(flex: 3, child: _buildCashFlowChart()),
+                // Expanded(flex: 3, child: _buildCashFlowChart()),
                 const SizedBox(width: AppSpacing.lg),
                 Expanded(flex: 2, child: _buildUpcomingChecks(state.upcomingChecks)),
               ],
@@ -174,8 +174,8 @@ class DashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(title: 'Prevision de Tresorerie', icon: Icons.trending_up_rounded),
-          const SizedBox(height: 20),
+          SectionHeader(title: 'Prevision de Tresorerie', icon: Icons.trending_up_rounded),
+          SizedBox(height: 20),
           SizedBox(
             height: 200,
             child: LineChart(
@@ -186,7 +186,7 @@ class DashboardScreen extends StatelessWidget {
                   getDrawingVerticalLine: (_) => FlLine(color: Colors.transparent),
                 ),
                 titlesData: FlTitlesData(
-                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 60, getTitlesWidget: (v, _) => Text(formatCurrencyCompact(v), style: const TextStyle(fontSize: 10, color: AppColors.textTertiary)))),
+                  leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 60, getTitlesWidget: (v, _) => Text(formatCurrencyCompact(v), style: TextStyle(fontSize: 10, color: AppColors.textTertiary)))),
                   rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   bottomTitles: AxisTitles(sideTitles: SideTitles(
@@ -195,14 +195,14 @@ class DashboardScreen extends StatelessWidget {
                       const months = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun'];
                       final idx = v.toInt();
                       if (idx < 0 || idx >= months.length) return const SizedBox();
-                      return Text(months[idx], style: const TextStyle(fontSize: 10, color: AppColors.textTertiary));
+                      return Text(months[idx], style: TextStyle(fontSize: 10, color: AppColors.textTertiary));
                     },
                   )),
                 ),
                 borderData: FlBorderData(show: false),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: const [
+                    spots: [
                       FlSpot(0, 120000), FlSpot(1, 180000), FlSpot(2, 150000),
                       FlSpot(3, 220000), FlSpot(4, 195000), FlSpot(5, 260000),
                     ],
@@ -213,7 +213,7 @@ class DashboardScreen extends StatelessWidget {
                     dotData: FlDotData(show: false),
                   ),
                   LineChartBarData(
-                    spots: const [
+                    spots: [
                       FlSpot(0, 80000), FlSpot(1, 95000), FlSpot(2, 110000),
                       FlSpot(3, 130000), FlSpot(4, 115000), FlSpot(5, 140000),
                     ],
@@ -228,11 +228,11 @@ class DashboardScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Row(
             children: [
               _buildLegend(AppColors.primary, 'Recettes'),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               _buildLegend(AppColors.error, 'Depenses'),
             ],
           ),
@@ -244,8 +244,8 @@ class DashboardScreen extends StatelessWidget {
   Widget _buildLegend(Color color, String label) {
     return Row(
       children: [
-        Container(width: 16, height: 3, color: color, margin: const EdgeInsets.only(right: 6)),
-        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+        Container(width: 16, height: 3, color: color, margin: EdgeInsets.only(right: 6)),
+        Text(label, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
       ],
     );
   }
@@ -257,13 +257,13 @@ class DashboardScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: EdgeInsets.all(AppSpacing.lg),
             child: SectionHeader(title: 'Echeancier', icon: Icons.calendar_today_rounded,
               action: Text('${checks.length} a venir', style: TextStyle(fontSize: 12, color: AppColors.primary))),
           ),
-          const Divider(height: 1),
+          Divider(height: 1),
           if (checks.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(24),
               child: Center(child: Text('Aucun echeance prochaine', style: TextStyle(color: AppColors.textTertiary, fontSize: 13))),
             )
@@ -278,7 +278,7 @@ class DashboardScreen extends StatelessWidget {
     final daysLeft = c.daysUntilMaturity;
     final isUrgent = daysLeft <= 7;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
       child: Row(
         children: [
@@ -286,16 +286,16 @@ class DashboardScreen extends StatelessWidget {
               ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
             size: 14, color: c.type == 'check_received' || c.type == 'traite_received'
                 ? AppColors.success : AppColors.error),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(c.partyName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-              Text(formatDate(c.maturityDate), style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+              Text(c.partyName, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              Text(formatDate(c.maturityDate), style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
             ],
           )),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(formatCurrencyCompact(c.amount), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            Text(formatCurrencyCompact(c.amount), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             Text(daysLeft <= 0 ? 'Echu' : 'J-$daysLeft', style: TextStyle(fontSize: 11, color: isUrgent ? AppColors.error : AppColors.textTertiary)),
           ]),
         ],
@@ -310,17 +310,34 @@ class DashboardScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: const SectionHeader(title: 'Factures recentes', icon: Icons.receipt_rounded),
+            padding: EdgeInsets.all(AppSpacing.lg),
+            child: SectionHeader(title: 'Factures recentes', icon: Icons.receipt_rounded),
           ),
-          const Divider(height: 1),
+          Divider(height: 1),
           if (invoices.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(24),
               child: Center(child: Text('Aucune facture', style: TextStyle(color: AppColors.textTertiary, fontSize: 13))),
             )
-          else
+          else ...[
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                border: Border(bottom: BorderSide(color: AppColors.border)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+                  Expanded(flex: 3, child: Text('Client', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+                  Expanded(flex: 2, child: Text('Date', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+                  Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+                  Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text('Montant', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)))),
+                ],
+              ),
+            ),
             ...invoices.map((inv) => _buildInvoiceRow(inv)),
+          ],
         ],
       ),
     );
@@ -328,18 +345,15 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildInvoiceRow(Invoice inv) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
       child: Row(
         children: [
-          Text(inv.number, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary)),
-          const SizedBox(width: 12),
-          Expanded(child: Text(inv.customerName ?? '—', style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
-          Text(formatDate(inv.date), style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
-          const SizedBox(width: 12),
-          StatusBadge(label: inv.status.label, color: inv.status.color),
-          const SizedBox(width: 12),
-          Text(formatCurrencyCompact(inv.totalTTC), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          Expanded(flex: 2, child: Text(inv.number, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary))),
+          Expanded(flex: 3, child: Text(inv.customerName ?? '—', style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
+          Expanded(flex: 2, child: Text(formatDate(inv.date), style: TextStyle(fontSize: 12, color: AppColors.textTertiary))),
+          Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: StatusBadge(label: inv.status.label, color: inv.status.color))),
+          Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text(formatCurrencyDT(inv.totalTTC + inv.timbreFiscal), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)))),
         ],
       ),
     );
@@ -352,22 +366,22 @@ class DashboardScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: EdgeInsets.all(AppSpacing.lg),
             child: SectionHeader(
               title: 'Alertes Stock',
               icon: Icons.warning_rounded,
               action: state.lowStockProducts.isNotEmpty
                   ? Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(12)),
                       child: Text('${state.lowStockProducts.length}', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                     )
                   : null,
             ),
           ),
-          const Divider(height: 1),
+          Divider(height: 1),
           if (state.lowStockProducts.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(24),
               child: Center(child: Column(
                 children: [
@@ -386,14 +400,14 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildStockAlertRow(String name, double qty, String unit, double minQty) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
       child: Row(
         children: [
-          Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle)),
-          const SizedBox(width: 10),
-          Expanded(child: Text(name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
-          Text('${formatQuantity(qty)} $unit', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.error)),
+          Container(width: 6, height: 6, decoration: BoxDecoration(color: AppColors.error, shape: BoxShape.circle)),
+          SizedBox(width: 10),
+          Expanded(child: Text(name, style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
+          Text('${formatQuantity(qty)} $unit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.error)),
         ],
       ),
     );

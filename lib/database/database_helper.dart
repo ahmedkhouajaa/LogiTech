@@ -2706,7 +2706,7 @@ class DatabaseHelper {
   Future<List<CreditNote>> getCreditNotes() async {
     final db = await database;
     final maps = await db.rawQuery('''
-      SELECT cn.*, c.name as customerName
+      SELECT cn.*, c.name as customer_name
       FROM credit_notes cn
       LEFT JOIN customers c ON cn.customer_id = c.id
       WHERE cn.is_deleted = 0
@@ -3372,7 +3372,8 @@ class DatabaseHelper {
                   LEFT JOIN warehouses w2 ON st.destination_warehouse_id = w2.id
                   WHERE st.id = sm.reference_id)
                ELSE w.name 
-             END as warehouse_name
+             END as warehouse_name,
+             'MOV-' || strftime('%Y', sm.date) || '-' || substr('00000' || sm.rowid, -5, 5) as readable_reference_id
       FROM stock_movements sm
       LEFT JOIN products p ON sm.product_id = p.id
       LEFT JOIN warehouses w ON sm.warehouse_id = w.id

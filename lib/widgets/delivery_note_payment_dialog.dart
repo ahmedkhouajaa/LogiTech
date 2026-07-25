@@ -113,7 +113,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
 
   void _save() {
     if (_selectedAccountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
       return;
     }
 
@@ -316,7 +316,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
   Widget _buildSummaryCard(double remainingAmount) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: AppShadows.sm,
         border: Border.all(color: AppColors.border.withOpacity(0.5)),
@@ -325,14 +325,14 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
         children: [
           // Header with gradient accent
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [AppColors.primary.withOpacity(0.06), AppColors.primary.withOpacity(0.02)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: const BorderRadius.only(
+              borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(AppRadius.lg),
                 topRight: Radius.circular(AppRadius.lg),
               ),
@@ -340,26 +340,26 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
-                  child: const Icon(Icons.receipt_long, color: AppColors.primary, size: 20),
+                  child: Icon(Icons.receipt_long, color: AppColors.primary, size: 20),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         widget.deliveryNote.number,
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
                       ),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Text(
                         formatDateShort(widget.deliveryNote.date),
-                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                       ),
                     ],
                   ),
@@ -370,7 +370,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
           ),
           // Details
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               children: [
                 _buildInfoRow(
@@ -378,7 +378,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                   'Client',
                   widget.deliveryNote.customerName ?? '—',
                 ),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 10),
                   child: Divider(height: 1, color: AppColors.borderLight),
                 ),
@@ -451,10 +451,10 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
     return Row(
       children: [
         Icon(icon, size: 18, color: AppColors.textTertiary),
-        const SizedBox(width: 10),
-        Text('$label: ', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        SizedBox(width: 10),
+        Text('$label: ', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
         Expanded(
-          child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary), textAlign: TextAlign.end),
+          child: Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary), textAlign: TextAlign.end),
         ),
       ],
     );
@@ -463,7 +463,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
   Widget _buildAmountBlock(String label, String amount, Color color) {
     return Column(
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+        Text(label, style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
         const SizedBox(height: 4),
         Text(amount, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: color)),
       ],
@@ -495,11 +495,11 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
       child: GestureDetector(
         onTap: () => setState(() => _selectedTab = index),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
+          duration: Duration(milliseconds: 250),
           curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
+            color: isSelected ? AppColors.surface : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.md),
             boxShadow: isSelected ? AppShadows.sm : null,
           ),
@@ -507,7 +507,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, size: 16, color: isSelected ? AppColors.primary : AppColors.textTertiary),
-              const SizedBox(width: 6),
+              SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
@@ -527,7 +527,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
   Widget _buildWithholdingTaxSection(double taxAmount, double netAmount) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: AppShadows.sm,
         border: Border.all(color: AppColors.border.withOpacity(0.5)),
@@ -541,10 +541,10 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
               _applyWithholdingTax = v;
               _updateAmountField();
             }),
-            title: const Text('Retenue à la source', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-            subtitle: const Text('Appliquer la retenue fiscale', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+            title: Text('Retenue à la source', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            subtitle: Text('Appliquer la retenue fiscale', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
             secondary: Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: _applyWithholdingTax ? AppColors.warning.withOpacity(0.1) : AppColors.surfaceAlt,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -557,11 +557,11 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
             ),
             activeColor: AppColors.primary,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           ),
 
           if (_applyWithholdingTax) ...[
-            const Divider(height: 1, color: AppColors.borderLight),
+            Divider(height: 1, color: AppColors.borderLight),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -571,7 +571,10 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                   _buildMobileFormField(
                     'Taux de retenue',
                     Icons.percent,
-                    DropdownButtonFormField<double>(
+                    DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                       value: _withholdingTaxRate,
                       isExpanded: true,
                       decoration: _mobileInputDecoration('Sélectionner le taux'),
@@ -581,14 +584,14 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                           child: Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: AppColors.success.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(AppRadius.sm),
                                 ),
                                 child: Text(
                                   '${t['rate']}%',
-                                  style: const TextStyle(color: AppColors.success, fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: TextStyle(color: AppColors.success, fontSize: 12, fontWeight: FontWeight.bold),
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -630,7 +633,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                       },
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                         decoration: BoxDecoration(
                           border: Border.all(color: AppColors.border),
                           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -638,23 +641,23 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.event, size: 18, color: AppColors.primary),
+                            Icon(Icons.event, size: 18, color: AppColors.primary),
                             const SizedBox(width: 10),
                             Text(
                               DateFormat('dd MMM yyyy', 'fr_FR').format(_withholdingTaxDate),
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                             ),
-                            const Spacer(),
-                            const Icon(Icons.arrow_drop_down, size: 20, color: AppColors.textTertiary),
+                            Spacer(),
+                            Icon(Icons.arrow_drop_down, size: 20, color: AppColors.textTertiary),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   // Tax summary
                   Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [AppColors.warning.withOpacity(0.06), AppColors.warning.withOpacity(0.02)],
@@ -667,10 +670,10 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Retenue à la source', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                            Text('Retenue à la source', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                             Text(
                               '-${formatCurrencyDT(taxAmount)}',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.error),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.error),
                             ),
                           ],
                         ),
@@ -681,10 +684,10 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Montant net', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                            Text('Montant net', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                             Text(
                               formatCurrencyDT(netAmount),
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.success),
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.success),
                             ),
                           ],
                         ),
@@ -705,7 +708,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(left: 4, bottom: 10),
           child: Text(
             'Mode de paiement',
@@ -719,11 +722,11 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
               child: GestureDetector(
                 onTap: () => setState(() => _paymentMethod = method['value'] as String),
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  duration: Duration(milliseconds: 200),
+                  margin: EdgeInsets.symmetric(horizontal: 3),
+                  padding: EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : Colors.white,
+                    color: isSelected ? AppColors.primary : AppColors.surface,
                     borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(
                       color: isSelected ? AppColors.primary : AppColors.border,
@@ -733,7 +736,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                       BoxShadow(
                         color: AppColors.primary.withOpacity(0.2),
                         blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        offset: Offset(0, 2),
                       ),
                     ] : AppShadows.sm,
                   ),
@@ -742,15 +745,15 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                       Icon(
                         method['icon'] as IconData,
                         size: 22,
-                        color: isSelected ? Colors.white : AppColors.textSecondary,
+                        color: isSelected ? AppColors.surface : AppColors.textSecondary,
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       Text(
                         method['label'] as String,
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: isSelected ? Colors.white : AppColors.textSecondary,
+                          color: isSelected ? AppColors.surface : AppColors.textSecondary,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -769,12 +772,12 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
   Widget _buildPaymentFormCard() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: AppShadows.sm,
         border: Border.all(color: AppColors.border.withOpacity(0.5)),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -782,18 +785,18 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
-                child: const Icon(Icons.payments_outlined, size: 16, color: AppColors.primary),
+                child: Icon(Icons.payments_outlined, size: 16, color: AppColors.primary),
               ),
-              const SizedBox(width: 10),
-              const Text('Détails du paiement', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              SizedBox(width: 10),
+              Text('Détails du paiement', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // Amount field
           _buildMobileFormField(
@@ -801,11 +804,11 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
             Icons.attach_money,
             TextField(
               controller: _amountCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.primary),
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.primary),
               decoration: _mobileInputDecoration('0,000').copyWith(
                 suffixText: 'TND',
-                suffixStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
+                suffixStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.primary),
                 filled: true,
                 fillColor: AppColors.primary.withOpacity(0.04),
               ),
@@ -837,7 +840,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
               },
               borderRadius: BorderRadius.circular(AppRadius.md),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                 decoration: BoxDecoration(
                   border: Border.all(color: AppColors.border),
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -845,14 +848,14 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.event, size: 18, color: AppColors.primary),
+                    Icon(Icons.event, size: 18, color: AppColors.primary),
                     const SizedBox(width: 10),
                     Text(
                       DateFormat('dd MMM yyyy', 'fr_FR').format(_paymentDate),
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                     ),
-                    const Spacer(),
-                    const Icon(Icons.arrow_drop_down, size: 20, color: AppColors.textTertiary),
+                    Spacer(),
+                    Icon(Icons.arrow_drop_down, size: 20, color: AppColors.textTertiary),
                   ],
                 ),
               ),
@@ -893,15 +896,15 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
     return Container(
       padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
             blurRadius: 16,
-            offset: const Offset(0, -4),
+            offset: Offset(0, -4),
           ),
         ],
-        border: const Border(top: BorderSide(color: AppColors.borderLight)),
+        border: Border(top: BorderSide(color: AppColors.borderLight)),
       ),
       child: Row(
         children: [
@@ -909,14 +912,14 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
             child: OutlinedButton(
               onPressed: () => Navigator.pop(context),
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                side: const BorderSide(color: AppColors.border),
+                padding: EdgeInsets.symmetric(vertical: 14),
+                side: BorderSide(color: AppColors.border),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
-              child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             flex: 2,
             child: Container(
@@ -953,13 +956,13 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
   Widget _buildTreasuryAccountDropdown() {
     if (_isLoadingAccounts) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.border),
           borderRadius: BorderRadius.circular(AppRadius.md),
           color: AppColors.surfaceAlt.withOpacity(0.3),
         ),
-        child: const Row(
+        child: Row(
           children: [
             SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
             SizedBox(width: 10),
@@ -970,13 +973,13 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
     }
     if (_treasuryAccounts.isEmpty) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.border),
           borderRadius: BorderRadius.circular(AppRadius.md),
           color: AppColors.surfaceAlt.withOpacity(0.3),
         ),
-        child: const Row(
+        child: Row(
           children: [
             Icon(Icons.info_outline, size: 16, color: AppColors.textTertiary),
             SizedBox(width: 8),
@@ -985,7 +988,10 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
         ),
       );
     }
-    return DropdownButtonFormField<String>(
+    return DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
       value: _selectedAccountId,
       hint: const Text('Sélectionner un compte', style: TextStyle(fontSize: 14)),
       isExpanded: true,
@@ -994,13 +1000,12 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
         value: a.id,
         child: Text(
           a.name,
-          style: const TextStyle(fontSize: 14),
+          style: TextStyle(fontSize: 14),
           overflow: TextOverflow.ellipsis,
         ),
       )).toList(),
       onChanged: (v) => setState(() => _selectedAccountId = v),
-      icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary),
-      dropdownColor: Colors.white,
+      icon: Icon(Icons.keyboard_arrow_down, color: AppColors.textSecondary),
       menuMaxHeight: 300,
     );
   }
@@ -1012,10 +1017,10 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
         Row(
           children: [
             Icon(icon, size: 14, color: AppColors.textTertiary),
-            const SizedBox(width: 6),
+            SizedBox(width: 6),
             Text(
               label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -1028,20 +1033,20 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
   InputDecoration _mobileInputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 14),
+      hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        borderSide: BorderSide(color: AppColors.primary, width: 1.5),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       filled: true,
       fillColor: AppColors.surfaceAlt.withOpacity(0.3),
     );
@@ -1051,11 +1056,11 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
   Widget _buildDesktopDialog(double remainingAmount, double taxAmount, double netAmount) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(horizontal: 40, vertical: 24),
       child: Container(
         width: 800,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: Column(
@@ -1074,11 +1079,11 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                     icon: const Icon(Icons.close, size: 16),
                     label: const Text('Annuler'),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   ElevatedButton.icon(
                     onPressed: _save,
-                    icon: const Icon(Icons.save, size: 16, color: Colors.white),
-                    label: const Text('Créer', style: TextStyle(color: Colors.white)),
+                    icon: Icon(Icons.save, size: 16, color: Colors.white),
+                    label: Text('Créer', style: TextStyle(color: Colors.white)),
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                   ),
                 ],
@@ -1087,13 +1092,13 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
             const Divider(height: 1),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // DeliveryNote Info Box
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1155,8 +1160,8 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                       // Withholding tax toggle
                       Row(
                         children: [
-                          const Text('Retenue à la source', style: TextStyle(fontWeight: FontWeight.w500)),
-                          const SizedBox(width: 24),
+                          Text('Retenue à la source', style: TextStyle(fontWeight: FontWeight.w500)),
+                          SizedBox(width: 24),
                           Container(
                             decoration: BoxDecoration(
                               border: Border.all(color: AppColors.border),
@@ -1180,9 +1185,12 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Statut: ${widget.deliveryNote.status}', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                                  Text('Statut: ${widget.deliveryNote.status}', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
                                   const SizedBox(height: 6),
-                                  DropdownButtonFormField<double>(
+                                  DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                     value: _withholdingTaxRate,
                                     isExpanded: true,
                                     decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
@@ -1214,12 +1222,12 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Date de la création de la retenue', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                  Text('Date de la création de la retenue', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                   const SizedBox(height: 6),
                                   InkWell(
                                     onTap: () async {
@@ -1227,13 +1235,13 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                                       if (d != null) setState(() => _withholdingTaxDate = d);
                                     },
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                       decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_withholdingTaxDate)),
-                                          const Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                                          Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
                                         ],
                                       ),
                                     ),
@@ -1243,22 +1251,22 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(AppRadius.md), border: Border.all(color: AppColors.border)),
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md), border: Border.all(color: AppColors.border)),
                           child: Row(
                             children: [
-                              const Text('Retenue à la source: ', style: TextStyle(color: AppColors.textSecondary)),
-                              Text('-${formatCurrencyDT(taxAmount)}', style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
-                              const Spacer(),
-                              const Text('Montant: ', style: TextStyle(color: AppColors.textSecondary)),
-                              Text(formatCurrencyDT(netAmount), style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
+                              Text('Retenue à la source: ', style: TextStyle(color: AppColors.textSecondary)),
+                              Text('-${formatCurrencyDT(taxAmount)}', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                              Spacer(),
+                              Text('Montant: ', style: TextStyle(color: AppColors.textSecondary)),
+                              Text(formatCurrencyDT(netAmount), style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
                       ],
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24),
 
                       // Payment block
                       Container(
@@ -1274,15 +1282,15 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(4), border: Border.all(color: AppColors.border)),
-                                    child: const Text('Paiement 1', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                                    child: Text('Paiement 1', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
                                   ),
                                   Row(
                                     children: [
-                                      IconButton(icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 18), onPressed: () {}, constraints: const BoxConstraints(), padding: EdgeInsets.zero),
-                                      const SizedBox(width: 12),
-                                      const Icon(Icons.keyboard_arrow_up, color: AppColors.textSecondary, size: 20),
+                                      IconButton(icon: Icon(Icons.delete_outline, color: AppColors.error, size: 18), onPressed: () {}, constraints: BoxConstraints(), padding: EdgeInsets.zero),
+                                      SizedBox(width: 12),
+                                      Icon(Icons.keyboard_arrow_up, color: AppColors.textSecondary, size: 20),
                                     ],
                                   )
                                 ],
@@ -1296,7 +1304,10 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: _buildFormField('Méthode de paiement', DropdownButtonFormField<String>(
+                                        child: _buildFormField('Méthode de paiement', DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                           value: _paymentMethod,
                                           decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
                                           items: const [
@@ -1327,7 +1338,10 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                                             if (state is TreasuryAccountsLoaded) {
                                               accounts = state.accounts;
                                             }
-                                            return DropdownButtonFormField<String>(
+                                            return DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                               value: _selectedAccountId,
                                               hint: const Text('Sélectionner un compte'),
                                               decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
@@ -1351,13 +1365,13 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
                                       if (d != null) setState(() => _paymentDate = d);
                                     },
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                       decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_paymentDate)),
-                                          const Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                                          Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
                                         ],
                                       ),
                                     ),
@@ -1391,11 +1405,11 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
       child: GestureDetector(
         onTap: () => setState(() => _selectedTab = index),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
+            color: isSelected ? AppColors.surface : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.md),
-            boxShadow: isSelected ? [const BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 1))] : null,
+            boxShadow: isSelected ? [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 1))] : null,
           ),
           alignment: Alignment.center,
           child: Row(
@@ -1403,10 +1417,10 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
             children: [
               Text(label, style: TextStyle(color: isSelected ? AppColors.textPrimary : AppColors.textSecondary, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500, fontSize: 13)),
               if (index > 0) ...[
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
                   child: const Text('1', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
               ]
@@ -1426,9 +1440,9 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
       }),
       child: Container(
         width: 100,
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.white,
+          color: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.surface,
           border: isSelected ? Border.all(color: AppColors.primary) : null,
           borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
@@ -1438,8 +1452,8 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
           children: [
             Text(label, style: TextStyle(color: isSelected ? AppColors.primary : AppColors.textPrimary, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
             if (isSelected && value) ...[
-              const SizedBox(width: 4),
-              const Icon(Icons.check_circle, size: 14, color: AppColors.primary),
+              SizedBox(width: 4),
+              Icon(Icons.check_circle, size: 14, color: AppColors.primary),
             ]
           ],
         ),
@@ -1451,7 +1465,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
         const SizedBox(height: 6),
         child,
       ],

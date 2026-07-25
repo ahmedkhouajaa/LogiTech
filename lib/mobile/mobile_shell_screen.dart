@@ -37,7 +37,7 @@ import 'screens/mobile_warehouses_screen.dart';
 // Placeholder screens for bottom nav tabs until full mobile screens are built
 // These reuse the existing desktop screens which already handle isMobile layout
 import '../screens/treasury_accounts_screen.dart';
-import '../screens/reports_screen.dart';
+import 'screens/mobile_reports_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/company_info_screen.dart';
 import '../screens/document_templates_screen.dart';
@@ -129,7 +129,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.projects:
         return const MobileProjectsScreen();
       case AppModule.reports:
-        return const ReportsScreen();
+        return const MobileReportsScreen();
       case AppModule.settings:
         return const SettingsScreen();
       case AppModule.payments:
@@ -227,25 +227,25 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         elevation: 0,
         leading: Builder(
           builder: (ctx) => IconButton(
-            icon: const Icon(Icons.menu_rounded, color: AppColors.textPrimary),
+            icon: Icon(Icons.menu_rounded, color: AppColors.textPrimary),
             onPressed: () => Scaffold.of(ctx).openDrawer(),
           ),
         ),
         title: Text(
           _getModuleTitle(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
           ),
         ),
         centerTitle: false,
-        actions: const [
+        actions: [
           SyncIndicator(),
           SizedBox(width: 8),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
+          preferredSize: Size.fromHeight(1),
           child: Container(height: 1, color: AppColors.border),
         ),
       ),
@@ -257,7 +257,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
-              offset: const Offset(0, -2),
+              offset: Offset(0, -2),
             ),
           ],
         ),
@@ -269,7 +269,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
           indicatorColor: AppColors.primary.withValues(alpha: 0.1),
           height: 64,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: const [
+          destinations: [
             NavigationDestination(
               icon: Icon(Icons.dashboard_outlined, size: 22),
               selectedIcon: Icon(Icons.dashboard_rounded, size: 22, color: AppColors.primary),
@@ -321,13 +321,13 @@ class _ComingSoonMobile extends StatelessWidget {
             ),
             child: Icon(Icons.construction_rounded, size: 32, color: AppColors.warning),
           ),
-          const SizedBox(height: 16),
-          const Text(
+          SizedBox(height: 16),
+          Text(
             'Module en developpement',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
           ),
-          const SizedBox(height: 8),
-          const Text(
+          SizedBox(height: 8),
+          Text(
             'Disponible prochainement',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),

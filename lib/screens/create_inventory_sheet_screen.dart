@@ -162,11 +162,11 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     onPressed: () => _save(true),
                     child: const Text('Brouillon'),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   ElevatedButton.icon(
                     onPressed: () => _save(false),
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Valider'),
+                    icon: Icon(Icons.check, size: 18),
+                    label: Text('Valider'),
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
                   ),
                 ],
@@ -214,15 +214,15 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Informations', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
+            Text('Informations', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Date', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      Text('Date', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       TextFormField(
                         initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(_date),
@@ -237,14 +237,17 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Entrepôt', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      Text('Entrepôt', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                         DropdownButtonFormField<String>(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         value: _warehouseId,
                         items: _warehouses.map((Warehouse w) => DropdownMenuItem<String>(value: w.id, child: Text(w.name))).toList(),
                         onChanged: widget.isViewOnly ? null : (v) {
@@ -260,14 +263,14 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Date d\'inventaire', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      Text('Date d\'inventaire', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       InkWell(
                         onTap: widget.isViewOnly ? null : () async {
@@ -293,12 +296,12 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Date de saisie', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      Text('Date de saisie', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       TextFormField(
                         initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(widget.sheet?.createdAt ?? DateTime.now()),
@@ -311,12 +314,12 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Compté par', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      Text('Compté par', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       TextFormField(
                         controller: _countedByController,
@@ -332,14 +335,14 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Raison (optionnel)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      Text('Raison (optionnel)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       TextFormField(
                         controller: _reasonController,
@@ -354,12 +357,12 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Notes (optionnel)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      Text('Notes (optionnel)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       const SizedBox(height: 4),
                       TextFormField(
                         controller: _notesController,
@@ -389,21 +392,21 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Articles', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
+            Text('Articles', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
             
             // Header
             Row(
               children: [
-                const Expanded(flex: 3, child: Text('Produit', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold))),
-                const SizedBox(width: 8),
-                const Expanded(flex: 1, child: Text('Théorique', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                const SizedBox(width: 8),
-                const Expanded(flex: 1, child: Text('Réel', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                const SizedBox(width: 8),
-                const Expanded(flex: 1, child: Text('Surplus', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                const SizedBox(width: 8),
-                const Expanded(flex: 1, child: Text('Manquant', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                Expanded(flex: 3, child: Text('Produit', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold))),
+                SizedBox(width: 8),
+                Expanded(flex: 1, child: Text('Théorique', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                SizedBox(width: 8),
+                Expanded(flex: 1, child: Text('Réel', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                SizedBox(width: 8),
+                Expanded(flex: 1, child: Text('Surplus', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                SizedBox(width: 8),
+                Expanded(flex: 1, child: Text('Manquant', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
                 if (!widget.isViewOnly) const SizedBox(width: 40),
               ],
             ),
@@ -523,7 +526,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                               itemBuilder: (context, i) {
                                                 final option = options.elementAt(i);
                                                 return ListTile(
-                                                  leading: const Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textSecondary),
+                                                  leading: Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textSecondary),
                                                   title: Text(option.name, style: const TextStyle(fontSize: 13)),
                                                   onTap: () => onSelected(option),
                                                   dense: true,
@@ -547,7 +550,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                   ),
                                 ),
                                 if (isDuplicate)
-                                  const Padding(
+                                  Padding(
                                     padding: EdgeInsets.only(top: 4, left: 12),
                                     child: Text('Article déjà sélectionné', style: TextStyle(color: AppColors.error, fontSize: 11)),
                                   ),
@@ -555,11 +558,11 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                             ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               Expanded(
                                 flex: 1,
                                 child: Container(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: EdgeInsets.all(12),
                                   decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.sm)),
                                   child: Text(formatAmount(theoreticalStock, symbol: ''), textAlign: TextAlign.right),
                                 ),
@@ -584,28 +587,28 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                   },
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               Expanded(
                                 flex: 1,
                                 child: Container(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: EdgeInsets.all(12),
                                   decoration: BoxDecoration(color: surplus > 0 ? AppColors.successLight : AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.sm)),
                                   child: Text(surplus > 0 ? formatAmount(surplus, symbol: '') : '—', textAlign: TextAlign.right, style: TextStyle(color: surplus > 0 ? AppColors.success : AppColors.textTertiary, fontWeight: FontWeight.bold)),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               Expanded(
                                 flex: 1,
                                 child: Container(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: EdgeInsets.all(12),
                                   decoration: BoxDecoration(color: missing > 0 ? AppColors.errorLight : AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.sm)),
                                   child: Text(missing > 0 ? formatAmount(missing, symbol: '') : '—', textAlign: TextAlign.right, style: TextStyle(color: missing > 0 ? AppColors.error : AppColors.textTertiary, fontWeight: FontWeight.bold)),
                                 ),
                               ),
                               if (!widget.isViewOnly) ...[
-                                const SizedBox(width: 8),
+                                SizedBox(width: 8),
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                                  icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
                                   onPressed: () => setState(() => _items.removeAt(index)),
                                 ),
                               ]
@@ -630,9 +633,9 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                         _items.add(InventorySheetItem(id: _uuid.v4(), inventoryId: _id, productId: '', theoreticalQty: 0, actualQty: 0));
                       });
                     },
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Ajouter une ligne'),
-                    style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.border)),
+                    icon: Icon(Icons.add, size: 16),
+                    label: Text('Ajouter une ligne'),
+                    style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.border)),
                   ),
                 ],
               ),

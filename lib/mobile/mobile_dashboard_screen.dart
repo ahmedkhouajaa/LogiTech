@@ -13,16 +13,16 @@ class MobileDashboardScreen extends StatelessWidget {
     return BlocBuilder<DashboardBloc, DashboardState>(
       builder: (context, state) {
         if (state is DashboardLoading || state is DashboardInitial) {
-          return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+          return Center(child: CircularProgressIndicator(color: AppColors.primary));
         }
         if (state is DashboardError) {
           return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
-                const SizedBox(height: 12),
-                Text('Erreur: ${state.message}', style: const TextStyle(color: AppColors.textSecondary)),
+                Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
+                SizedBox(height: 12),
+                Text('Erreur: ${state.message}', style: TextStyle(color: AppColors.textSecondary)),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () => context.read<DashboardBloc>().add(DashboardRefreshRequested()),
@@ -73,7 +73,7 @@ class MobileDashboardScreen extends StatelessWidget {
 
   Widget _buildWelcomeCard() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: AppGradients.primary,
         borderRadius: BorderRadius.circular(16),
@@ -166,7 +166,7 @@ class MobileDashboardScreen extends StatelessWidget {
     required LinearGradient gradient,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
@@ -192,10 +192,10 @@ class MobileDashboardScreen extends StatelessWidget {
             ),
             child: Icon(icon, color: Colors.white, size: 18),
           ),
-          const Spacer(),
+          Spacer(),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
@@ -203,10 +203,10 @@ class MobileDashboardScreen extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -219,23 +219,23 @@ class MobileDashboardScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Actions rapides',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
               _quickAction(Icons.receipt_rounded, 'Facture', AppColors.primary),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               _quickAction(Icons.description_rounded, 'Devis', AppColors.info),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               _quickAction(Icons.local_shipping_rounded, 'Bon de livraison', AppColors.success),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               _quickAction(Icons.person_add_rounded, 'Client', AppColors.warning),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               _quickAction(Icons.inventory_2_rounded, 'Article', AppColors.error),
             ],
           ),
@@ -279,7 +279,7 @@ class MobileDashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
             child: Row(
               children: [
@@ -293,7 +293,7 @@ class MobileDashboardScreen extends StatelessWidget {
             ),
           ),
           if (invoices.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(24),
               child: Center(
                 child: Text('Aucune facture', style: TextStyle(color: AppColors.textTertiary)),
@@ -322,19 +322,19 @@ class MobileDashboardScreen extends StatelessWidget {
             ),
             child: Icon(Icons.receipt_outlined, color: statusColor, size: 18),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   inv.number,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary),
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 2),
                 Text(
                   inv.customerName ?? 'Client inconnu',
-                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -346,7 +346,7 @@ class MobileDashboardScreen extends StatelessWidget {
             children: [
               Text(
                 formatCurrency(inv.totalTTC),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary),
               ),
               const SizedBox(height: 2),
               Container(
@@ -378,18 +378,18 @@ class MobileDashboardScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 8),
             child: Row(
               children: [
                 Icon(Icons.warning_amber_rounded, size: 18, color: AppColors.warning),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: 8),
+                Text(
                   'Alertes stock bas',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
-                const Spacer(),
+                Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColors.warningLight,
                     borderRadius: BorderRadius.circular(8),
@@ -403,7 +403,7 @@ class MobileDashboardScreen extends StatelessWidget {
             ),
           ),
           ...state.lowStockProducts.take(5).map((p) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 child: Row(
                   children: [
                     Container(
@@ -415,11 +415,11 @@ class MobileDashboardScreen extends StatelessWidget {
                       ),
                       child: Icon(Icons.inventory_2_outlined, color: AppColors.warning, size: 16),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         p.name,
-                        style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                        style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

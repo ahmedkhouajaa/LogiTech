@@ -20,8 +20,8 @@ class TemplateColorPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        const SizedBox(height: 6),
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        SizedBox(height: 6),
         GestureDetector(
           onTap: () => _showPicker(context),
           child: Container(
@@ -91,16 +91,16 @@ class TemplateMeasurementInput extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('$label ($unit)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        const SizedBox(height: 6),
+        Text('$label ($unit)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        SizedBox(height: 6),
         TextFormField(
           initialValue: value.toStringAsFixed(value == value.roundToDouble() ? 0 : 1),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: const TextStyle(fontSize: 14),
+          keyboardType: TextInputType.numberWithOptions(decimal: true),
+          style: TextStyle(fontSize: 14),
           decoration: InputDecoration(
             filled: true,
             fillColor: AppColors.surfaceAlt,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 2)),
@@ -140,16 +140,19 @@ class TemplateFontStyleSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           value: options.contains(value) ? value : options.first,
           items: options.map((o) => DropdownMenuItem(value: o, child: Text(o, style: const TextStyle(fontSize: 14)))).toList(),
           onChanged: (v) { if (v != null) onChanged(v); },
           decoration: InputDecoration(
             filled: true,
             fillColor: AppColors.surfaceAlt,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 2)),
@@ -178,7 +181,7 @@ class TemplateSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 20, bottom: 8),
+      padding: EdgeInsets.only(top: 20, bottom: 8),
       child: Row(
         children: [
           Text(
@@ -189,7 +192,7 @@ class TemplateSectionHeader extends StatelessWidget {
               color: titleColor ?? AppColors.textPrimary,
             ),
           ),
-          const Spacer(),
+          Spacer(),
           if (visible != null && onVisibleChanged != null)
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -201,7 +204,7 @@ class TemplateSectionHeader extends StatelessWidget {
                 ),
                 Text(
                   visible! ? 'Visible' : 'Masqué',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -356,17 +359,17 @@ class TemplateEnableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 20, bottom: 8),
+      padding: EdgeInsets.only(top: 20, bottom: 8),
       child: Row(
         children: [
-          Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-          const Spacer(),
+          Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          Spacer(),
           Checkbox(
             value: enabled,
             onChanged: (v) => onChanged(v ?? false),
             activeColor: AppColors.primary,
           ),
-          const Text('Activé', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Text('Activé', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
         ],
       ),
     );

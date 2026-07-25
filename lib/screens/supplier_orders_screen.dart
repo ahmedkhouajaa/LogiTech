@@ -77,18 +77,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'Commandes Fournisseur',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(Icons.shopping_cart_checkout, color: Colors.blue[600], size: 24),
-                    ],
+                  Text(
+                    'Commandes Fournisseur',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
-                  const SizedBox(height: 4),
-                  const Text('Gerer vos commandes fournisseur', style: TextStyle(color: AppColors.textSecondary)),
+                  SizedBox(height: 4),
+                  Text('Gerer vos commandes fournisseur', style: TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
               AppButton(
@@ -179,7 +173,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text('Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 8),
                 SizedBox(
                   height: 40,
@@ -189,29 +183,54 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                       if (state is SuppliersLoaded) {
                         suppliers = state.suppliers;
                       }
-                      return Container(
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _selectedSupplierId,
-                            hint: const Text('Selectionner un fournisseur...', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
-                            isExpanded: true,
-                            icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
-                            style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                            items: [
-                              const DropdownMenuItem(value: 'all', child: Text('Tous les fournisseurs', style: TextStyle(color: AppColors.textSecondary))),
-                              ...suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))),
+                      String selectedSupplierName = 'Tous les fournisseurs';
+                      if (_selectedSupplierId != null && _selectedSupplierId != 'all') {
+                        final found = suppliers.firstWhere(
+                          (s) => s.id == _selectedSupplierId,
+                          orElse: () => Supplier(id: '', code: '', name: 'Inconnu', country: ''),
+                        );
+                        selectedSupplierName = found.companyName?.isNotEmpty == true
+                            ? found.companyName!
+                            : (found.responsibleName?.isNotEmpty == true ? found.responsibleName! : found.name);
+                      }
+
+                      return InkWell(
+                        onTap: () async {
+                          final selected = await _showSupplierSearchDialog(context, suppliers, _selectedSupplierId);
+                          if (selected != null) {
+                            setState(() {
+                              _selectedSupplierId = selected.id == 'all' ? null : selected.id;
+                            });
+                            _applyFilters();
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        child: Container(
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _selectedSupplierId == null || _selectedSupplierId == 'all'
+                                      ? 'Tous les fournisseurs'
+                                      : selectedSupplierName,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: _selectedSupplierId != null && _selectedSupplierId != 'all'
+                                        ? AppColors.textPrimary
+                                        : AppColors.textSecondary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
                             ],
-                            onChanged: (val) {
-                              setState(() => _selectedSupplierId = val);
-                              _applyFilters();
-                            },
                           ),
                         ),
                       );
@@ -221,7 +240,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           // Date From
           Expanded(
             flex: 2,
@@ -229,7 +248,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Date de debut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text('Date de debut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
@@ -247,19 +266,19 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                   },
                   child: Container(
                     height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
                       border: Border.all(color: AppColors.border),
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
-                        const SizedBox(width: 8),
+                        Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
+                        SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _dateFrom != null ? formatDateLong(_dateFrom!) : 'Selectionner une date',
-                            style: TextStyle(fontSize: 13, color: _dateFrom != null ? AppColors.textPrimary : AppColors.textTertiary),
+                            style: TextStyle(fontSize: 13, color: _dateFrom != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -270,7 +289,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           // Date To
           Expanded(
             flex: 2,
@@ -278,7 +297,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Date de fin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text('Date de fin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
@@ -296,19 +315,19 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                   },
                   child: Container(
                     height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
                       border: Border.all(color: AppColors.border),
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
-                        const SizedBox(width: 8),
+                        Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
+                        SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _dateTo != null ? formatDateLong(_dateTo!) : 'Selectionner une date',
-                            style: TextStyle(fontSize: 13, color: _dateTo != null ? AppColors.textPrimary : AppColors.textTertiary),
+                            style: TextStyle(fontSize: 13, color: _dateTo != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -319,7 +338,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               ],
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           // Status
           Expanded(
             flex: 2,
@@ -327,33 +346,116 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Statut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
+                Text('Statut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                SizedBox(height: 8),
                 SizedBox(
                   height: 40,
-                  child: Container(
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
+                  child: PopupMenuButton<SupplierOrderStatus?>(
+                    tooltip: 'Filtrer par statut',
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
-                      border: Border.all(color: AppColors.border),
+                      side: BorderSide(color: AppColors.border),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<SupplierOrderStatus?>(
-                        value: _statusFilter,
-                        hint: const Text('Tous', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
-                        isExpanded: true,
-                        icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
-                        style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                        items: [
-                          const DropdownMenuItem(value: null, child: Text('Tous', style: TextStyle(color: AppColors.textPrimary))),
-                          ...SupplierOrderStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.label))),
+                    color: AppColors.surface,
+                    elevation: 6,
+                    offset: const Offset(0, 44),
+                    initialValue: _statusFilter,
+                    onSelected: (val) {
+                      setState(() => _statusFilter = val);
+                      _applyFilters();
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem<SupplierOrderStatus?>(
+                        value: null,
+                        height: 38,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.textTertiary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(AppRadius.sm),
+                              ),
+                              child: Text(
+                                'Tous',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                              ),
+                            ),
+                            Spacer(),
+                            if (_statusFilter == null)
+                              Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(height: 1),
+                      ...SupplierOrderStatus.values.map(
+                        (s) => PopupMenuItem<SupplierOrderStatus?>(
+                          value: s,
+                          height: 38,
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: s.color.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                ),
+                                child: Text(
+                                  s.label,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: s.color,
+                                  ),
+                                ),
+                              ),
+                              Spacer(),
+                              if (_statusFilter == s)
+                                Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(
+                          color: _statusFilter != null ? AppColors.primary : AppColors.border,
+                        ),
+                      ),
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _statusFilter == null
+                                ? Text(
+                                    'Tous',
+                                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                    overflow: TextOverflow.ellipsis,
+                                  )
+                                : Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: _statusFilter!.color.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                                    ),
+                                    child: Text(
+                                      _statusFilter!.label,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: _statusFilter!.color,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
                         ],
-                        onChanged: (val) {
-                          setState(() => _statusFilter = val);
-                          _applyFilters();
-                        },
                       ),
                     ),
                   ),
@@ -365,18 +467,18 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
       ),
       if (activeFilterCount > 0)
         Padding(
-          padding: const EdgeInsets.only(top: 16),
+          padding: EdgeInsets.only(top: 16),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   '$totalItems résultat${totalItems > 1 ? 's' : ''}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                 ),
               ),
               const Spacer(),
@@ -390,8 +492,8 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                   });
                   _applyFilters();
                 },
-                icon: const Icon(Icons.refresh_rounded, size: 16),
-                label: const Text('Réinitialiser les filtres'),
+                icon: Icon(Icons.refresh_rounded, size: 16),
+                label: Text('Réinitialiser les filtres'),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.textSecondary,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -400,10 +502,177 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
             ],
           ),
         ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
+
+  Future<Supplier?> _showSupplierSearchDialog(
+    BuildContext context,
+    List<Supplier> suppliers,
+    String? selectedSupplierId,
+  ) async {
+    return showDialog<Supplier?>(
+      context: context,
+      builder: (context) {
+        String search = '';
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final query = search.trim().toLowerCase();
+            final filtered = suppliers.where((s) {
+              if (query.isEmpty) return true;
+              final nameMatch = s.name.toLowerCase().contains(query);
+              final companyMatch = s.companyName?.toLowerCase().contains(query) ?? false;
+              final respMatch = s.responsibleName?.toLowerCase().contains(query) ?? false;
+              final codeMatch = s.code.toLowerCase().contains(query);
+              final phoneMatch = s.phone?.toLowerCase().contains(query) ?? false;
+              return nameMatch || companyMatch || respMatch || codeMatch || phoneMatch;
+            }).toList();
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+              backgroundColor: AppColors.surface,
+              child: Container(
+                width: 440,
+                constraints: const BoxConstraints(maxHeight: 520),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Title & Close Button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Sélectionner un fournisseur',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
+                          onPressed: () => Navigator.of(context).pop(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    // Live Search Bar
+                    SizedBox(
+                      height: 38,
+                      child: TextField(
+                        autofocus: true,
+                        onChanged: (val) => setDialogState(() => search = val),
+                        style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                        decoration: InputDecoration(
+                          hintText: 'Rechercher un fournisseur...',
+                          hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                          prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    Divider(height: 1, color: AppColors.border),
+                    SizedBox(height: 4),
+
+                    // "Tous les fournisseurs" Option
+                    ListTile(
+                      dense: true,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      selected: selectedSupplierId == null || selectedSupplierId == 'all',
+                      selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
+                      title: Text(
+                        'Tous les fournisseurs',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                      ),
+                      trailing: (selectedSupplierId == null || selectedSupplierId == 'all')
+                          ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        Navigator.of(context).pop(Supplier(id: 'all', code: '', name: 'Tous les fournisseurs', country: ''));
+                      },
+                    ),
+
+                    // Scrollable Supplier List
+                    Flexible(
+                      child: filtered.isEmpty
+                          ? Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: Center(
+                                child: Text(
+                                  'Aucun fournisseur trouvé',
+                                  style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final supplier = filtered[index];
+                                final isSelected = supplier.id == selectedSupplierId;
+                                final displayName = supplier.companyName?.isNotEmpty == true
+                                    ? supplier.companyName!
+                                    : (supplier.responsibleName?.isNotEmpty == true
+                                        ? supplier.responsibleName!
+                                        : supplier.name);
+
+                                return ListTile(
+                                  dense: true,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                  selected: isSelected,
+                                  selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
+                                  title: Text(
+                                    displayName,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  subtitle: (supplier.code.isNotEmpty || (supplier.phone?.isNotEmpty ?? false))
+                                      ? Text(
+                                          [
+                                            if (supplier.code.isNotEmpty) supplier.code,
+                                            if (supplier.phone?.isNotEmpty ?? false) supplier.phone!,
+                                          ].join(' • '),
+                                          style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                                        )
+                                      : null,
+                                  trailing: isSelected
+                                      ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
+                                      : null,
+                                  onTap: () {
+                                    Navigator.of(context).pop(supplier);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   Widget _buildTable() {
     return BlocBuilder<SupplierOrdersBloc, SupplierOrdersState>(
@@ -412,7 +681,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (state is SupplierOrdersError) {
-          return Center(child: Text(state.message, style: const TextStyle(color: AppColors.error)));
+          return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
         }
         if (state is SupplierOrdersLoaded) {
           final orders = state.orders;
@@ -444,26 +713,26 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                       children: [
                         // Table header
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: const BoxDecoration(
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
                             border: Border(bottom: BorderSide(color: AppColors.border)),
                             color: AppColors.background,
                           ),
                           child: Row(
                             children: [
-                              const SizedBox(width: 32), // Checkbox space
-                              const Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                              const Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: const Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)))),
-                              const Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                              const SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                              SizedBox(width: 32), // Checkbox space
+                              Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                              Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)))),
+                              Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                              SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
                             ],
                           ),
                         ),
                         // Table body
                         Expanded(
                           child: paginatedOrders.isEmpty
-                              ? const Center(
+                              ? Center(
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
@@ -475,7 +744,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                 )
                               : ListView.separated(
                                   itemCount: paginatedOrders.length,
-                                  separatorBuilder: (context, index) => const Divider(height: 1, color: AppColors.border),
+                                  separatorBuilder: (context, index) => Divider(height: 1, color: AppColors.border),
                                   itemBuilder: (context, index) {
                                     final order = paginatedOrders[index];
                                     final statusEnum = SupplierOrderStatus.values.firstWhere(
@@ -484,7 +753,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                     );
 
                                     return Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                       color: index % 2 == 0 ? AppColors.surface : AppColors.background.withOpacity(0.3),
                                       child: Row(
                                         children: [
@@ -493,7 +762,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                             child: Checkbox(
                                               value: false,
                                               onChanged: (_) {},
-                                              side: const BorderSide(color: AppColors.border),
+                                              side: BorderSide(color: AppColors.border),
                                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
                                             ),
                                           ),
@@ -502,9 +771,9 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                Text(order.number, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary)),
-                                                const SizedBox(height: 4),
-                                                Text(formatDateTimeLong(order.date), style: const TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                                                Text(order.number, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary)),
+                                                SizedBox(height: 4),
+                                                Text(formatDateTimeLong(order.date), style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
                                               ],
                                             ),
                                           ),
@@ -512,12 +781,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                             flex: 3,
                                             child: Row(
                                               children: [
-                                                const Icon(Icons.business_outlined, size: 14, color: AppColors.textSecondary),
-                                                const SizedBox(width: 6),
+                                                Icon(Icons.business_outlined, size: 14, color: AppColors.textSecondary),
+                                                SizedBox(width: 6),
                                                 Flexible(
                                                   child: Text(
                                                     order.supplierName ?? 'Fournisseur Inconnu',
-                                                    style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textPrimary),
+                                                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textPrimary),
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
@@ -557,9 +826,9 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                             child: Align(
                                               alignment: Alignment.centerRight,
                                               child: PopupMenuButton<String>(
-                                                icon: const Icon(Icons.more_horiz, color: AppColors.textSecondary),
+                                                icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
                                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                                color: const Color(0xFFF8FAFC), // Light gray background
+                                                color: AppColors.background, // Light gray background
                                                 elevation: 4,
                                                 padding: EdgeInsets.zero,
                                                 itemBuilder: (ctx) => _buildActionMenu(context, order),
@@ -618,7 +887,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                                       }
                                                     });
                                                   } else if (val == 'print' || val == 'credit_note' || val == 'email' || val == 'whatsapp' || val == 'status' || val == 'duplicate' || val == 'attachments') {
-                                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                                                       content: Text('Cette fonctionnalité sera disponible prochainement'),
                                                       backgroundColor: AppColors.info,
                                                     ));
@@ -635,18 +904,18 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                         ),
                         // Pagination footer
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: const BoxDecoration(
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
                             border: Border(top: BorderSide(color: AppColors.border)),
                             color: AppColors.background,
                           ),
                           child: Row(
                             children: [
-                              const Text('Lignes', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                              const SizedBox(width: 8),
+                              Text('Lignes', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                              SizedBox(width: 8),
                               Container(
                                 height: 32,
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                padding: EdgeInsets.symmetric(horizontal: 8),
                                 decoration: BoxDecoration(
                                   border: Border.all(color: AppColors.border),
                                   borderRadius: BorderRadius.circular(6),
@@ -654,9 +923,9 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                 ),
                                 child: DropdownButton<int>(
                                   value: _rowsPerPage,
-                                  underline: const SizedBox(),
-                                  icon: const Icon(Icons.keyboard_arrow_down, size: 16),
-                                  style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                  underline: SizedBox(),
+                                  icon: Icon(Icons.keyboard_arrow_down, size: 16),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                   items: [10, 20, 50, 100].map((v) => DropdownMenuItem(value: v, child: Text(v.toString()))).toList(),
                                   onChanged: (v) {
                                     if (v != null) setState(() {
@@ -666,12 +935,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                   },
                                 ),
                               ),
-                              const SizedBox(width: 24),
-                              Text('Page ${_currentPage + 1} sur $totalPages', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                              const Spacer(),
+                              SizedBox(width: 24),
+                              Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                              Spacer(),
                               Text(
                                 totalItems == 0 ? 'Affichage de 0 a 0 sur 0 resultats' : 'Affichage de ${startIndex + 1} a $endIndex sur $totalItems resultats',
-                                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                               ),
                               const SizedBox(width: 16),
                               Row(
@@ -679,7 +948,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                   InkWell(
                                     onTap: _currentPage > 0 ? () => setState(() => _currentPage--) : null,
                                     child: Container(
-                                      padding: const EdgeInsets.all(4),
+                                      padding: EdgeInsets.all(4),
                                       decoration: BoxDecoration(
                                         border: Border.all(color: _currentPage > 0 ? AppColors.border : AppColors.border.withOpacity(0.5)),
                                         borderRadius: BorderRadius.circular(4),
@@ -692,7 +961,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                   InkWell(
                                     onTap: _currentPage < totalPages - 1 ? () => setState(() => _currentPage++) : null,
                                     child: Container(
-                                      padding: const EdgeInsets.all(4),
+                                      padding: EdgeInsets.all(4),
                                       decoration: BoxDecoration(
                                         border: Border.all(color: _currentPage < totalPages - 1 ? AppColors.border : AppColors.border.withOpacity(0.5)),
                                         borderRadius: BorderRadius.circular(4),
@@ -723,12 +992,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
+        title: Text('Confirmer la suppression'),
         content: Text('Voulez-vous vraiment supprimer la commande ${order.number} ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -928,7 +1197,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Facture introuvable', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Facture introuvable', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
     }
   }
 
@@ -950,7 +1219,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bon de réception introuvable', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bon de réception introuvable', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
     }
   }
 }

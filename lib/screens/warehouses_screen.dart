@@ -62,33 +62,44 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     return Column(
       children: [
-        CustomAppBar(
-          title: 'Entrepôts',
-          actions: [
-            ElevatedButton.icon(
-              onPressed: () => _showWarehouseDialog(),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Ajouter un Entrepôt'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        Padding(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          child: Row(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Entrepôts', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  SizedBox(height: 4),
+                  Text('Gérer vos entrepôts', style: TextStyle(color: AppColors.textSecondary)),
+                ],
               ),
-            ),
-          ],
+              Spacer(),
+              ElevatedButton.icon(
+                onPressed: () => _showWarehouseDialog(),
+                icon: Icon(Icons.add, size: 18),
+                label: Text('Ajouter un Entrepôt'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+            ],
+          ),
         ),
         
         // Tabs
         Container(
           color: AppColors.surface,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: EdgeInsets.symmetric(horizontal: 24),
           child: TabBar(
             controller: _tabController,
             labelColor: AppColors.primary,
             unselectedLabelColor: AppColors.textSecondary,
             indicatorColor: AppColors.primary,
-            tabs: const [
+            tabs: [
               Tab(text: 'Entrepôts'),
               Tab(text: 'Départements'),
             ],
@@ -100,7 +111,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
             controller: _tabController,
             children: [
               _buildWarehousesTab(),
-              const Center(child: Text('Les départements seront bientôt disponibles', style: TextStyle(color: AppColors.textSecondary))),
+              Center(child: Text('Les départements seront bientôt disponibles', style: TextStyle(color: AppColors.textSecondary))),
             ],
           ),
         ),
@@ -114,22 +125,22 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
         if (state is WarehousesLoading) {
           return const Center(child: CircularProgressIndicator());
         } else if (state is WarehousesError) {
-          return Center(child: Text('Erreur: ${state.message}', style: const TextStyle(color: AppColors.error)));
+          return Center(child: Text('Erreur: ${state.message}', style: TextStyle(color: AppColors.error)));
         } else if (state is WarehousesLoaded) {
           final warehouses = state.warehouses;
 
           if (warehouses.isEmpty) {
-            return const Center(child: Text('Aucun entrepôt trouvé', style: TextStyle(color: AppColors.textSecondary)));
+            return Center(child: Text('Aucun entrepôt trouvé', style: TextStyle(color: AppColors.textSecondary)));
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(24),
             child: Card(
               color: AppColors.surface,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.border),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -147,20 +158,20 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                   rows: warehouses.map((w) {
                     return DataRow(
                       cells: [
-                        DataCell(Text(w.name, style: const TextStyle(fontWeight: FontWeight.w500))),
-                        DataCell(Text(w.reference?.isNotEmpty == true ? w.reference! : 'Aucune référence', style: const TextStyle(color: AppColors.textSecondary))),
+                        DataCell(Text(w.name, style: TextStyle(fontWeight: FontWeight.w500))),
+                        DataCell(Text(w.reference?.isNotEmpty == true ? w.reference! : 'Aucune référence', style: TextStyle(color: AppColors.textSecondary))),
                         DataCell(
                           Row(
                             children: [
-                              const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textSecondary),
-                              const SizedBox(width: 4),
-                              Text(w.address?.isNotEmpty == true ? w.address! : 'Adresse par défaut', style: const TextStyle(color: AppColors.textSecondary)),
+                              Icon(Icons.location_on_outlined, size: 14, color: AppColors.textSecondary),
+                              SizedBox(width: 4),
+                              Text(w.address?.isNotEmpty == true ? w.address! : 'Adresse par défaut', style: TextStyle(color: AppColors.textSecondary)),
                             ],
                           ),
                         ),
                         /* DataCell(
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
                               color: w.isDefault ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surfaceAlt,
                               borderRadius: BorderRadius.circular(12),
@@ -173,7 +184,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                                   color: w.isDefault ? AppColors.primary : AppColors.textTertiary,
                                   size: 20,
                                 ),
-                                const SizedBox(width: 6),
+                                SizedBox(width: 6),
                                 Text(
                                   w.isDefault ? 'Oui' : 'Non',
                                   style: TextStyle(
@@ -188,7 +199,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                         ), */
                         DataCell(
                           PopupMenuButton(
-                            icon: const Icon(Icons.more_horiz, color: AppColors.textSecondary),
+                            icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
                             itemBuilder: (context) => [
                               PopupMenuItem(
                                 value: 'edit',
@@ -202,7 +213,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                               ),
                               PopupMenuItem(
                                 value: 'delete',
-                                child: const Row(children: [Icon(Icons.delete_outline, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))]),
+                                child: Row(children: [Icon(Icons.delete_outline, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))]),
                                 onTap: () {
                                   Future.delayed(Duration.zero, () {
                                     _deleteWarehouse(w.id);
@@ -387,7 +398,7 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       
                       _buildLabel('Pays'),
                       Container(
@@ -419,7 +430,7 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24),
                       
                       Row(
                         children: [
@@ -441,7 +452,7 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
                             onChanged: (val) => setState(() => _isDefault = val ?? false),
                             activeColor: AppColors.primary,
                           ),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -465,22 +476,22 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
             ),
             
             // Footer
-            const Divider(height: 1),
+            Divider(height: 1),
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   OutlinedButton(
                     onPressed: () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.border),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      side: BorderSide(color: AppColors.border),
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     ),
-                    child: const Text('Annuler', style: TextStyle(color: AppColors.textPrimary)),
+                    child: Text('Annuler', style: TextStyle(color: AppColors.textPrimary)),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   ElevatedButton(
                     onPressed: _save,
                     style: ElevatedButton.styleFrom(
@@ -503,8 +514,8 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
 
   Widget _buildLabel(String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(text, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+      padding: EdgeInsets.only(bottom: 8.0),
+      child: Text(text, style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
     );
   }
 
@@ -513,18 +524,18 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
       hintText: hint,
       filled: true,
       fillColor: AppColors.surfaceAlt,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        borderSide: const BorderSide(color: AppColors.primary),
+        borderSide: BorderSide(color: AppColors.primary),
       ),
     );
   }

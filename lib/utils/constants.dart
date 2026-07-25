@@ -17,35 +17,37 @@ class AppBreakpoints {
 
 // ─── Colors ───────────────────────────────────────────────────────
 class AppColors {
-  static const Color primary = Color(0xFF1a56db);
-  static const Color primaryLight = Color(0xFF3B82F6);
-  static const Color primaryDark = Color(0xFF1E40AF);
-  static const Color accent = Color(0xFF0EA5E9);
+  static bool isDarkMode = false;
 
-  static const Color success = Color(0xFF10B981);
-  static const Color successLight = Color(0xFFD1FAE5);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color warningLight = Color(0xFFFEF3C7);
-  static const Color error = Color(0xFFEF4444);
-  static const Color errorLight = Color(0xFFFEE2E2);
-  static const Color info = Color(0xFF6366F1);
-  static const Color infoLight = Color(0xFFE0E7FF);
+  static Color get primary => const Color(0xFF1a56db);
+  static Color get primaryLight => const Color(0xFF3B82F6);
+  static Color get primaryDark => const Color(0xFF1E40AF);
+  static Color get accent => const Color(0xFF0EA5E9);
 
-  static const Color background = Color(0xFFF8FAFC);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceAlt = Color(0xFFF1F5F9);
-  static const Color border = Color(0xFFE2E8F0);
-  static const Color borderLight = Color(0xFFF1F5F9);
+  static Color get success => isDarkMode ? const Color(0xFF34D399) : const Color(0xFF10B981);
+  static Color get successLight => isDarkMode ? const Color(0xFF064E3B) : const Color(0xFFD1FAE5);
+  static Color get warning => isDarkMode ? const Color(0xFFFBBF24) : const Color(0xFFF59E0B);
+  static Color get warningLight => isDarkMode ? const Color(0xFF78350F) : const Color(0xFFFEF3C7);
+  static Color get error => isDarkMode ? const Color(0xFFF87171) : const Color(0xFFEF4444);
+  static Color get errorLight => isDarkMode ? const Color(0xFF7F1D1D) : const Color(0xFFFEE2E2);
+  static Color get info => isDarkMode ? const Color(0xFF818CF8) : const Color(0xFF6366F1);
+  static Color get infoLight => isDarkMode ? const Color(0xFF312E81) : const Color(0xFFE0E7FF);
 
-  static const Color textPrimary = Color(0xFF0F172A);
-  static const Color textSecondary = Color(0xFF475569);
-  static const Color textTertiary = Color(0xFF94A3B8);
-  static const Color textOnPrimary = Color(0xFFFFFFFF);
+  static Color get background => isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+  static Color get surface => isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFFFFFFF);
+  static Color get surfaceAlt => isDarkMode ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
+  static Color get border => isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+  static Color get borderLight => isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
 
-  static const Color sidebarBg = Color(0xFF0F172A);
-  static const Color sidebarText = Color(0xFFCBD5E1);
-  static const Color sidebarActive = Color(0xFF1a56db);
-  static const Color sidebarHover = Color(0xFF1E293B);
+  static Color get textPrimary => isDarkMode ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A);
+  static Color get textSecondary => isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+  static Color get textTertiary => isDarkMode ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+  static Color get textOnPrimary => const Color(0xFFFFFFFF);
+
+  static Color get sidebarBg => const Color(0xFF0F172A);
+  static Color get sidebarText => const Color(0xFFCBD5E1);
+  static Color get sidebarActive => const Color(0xFF1a56db);
+  static Color get sidebarHover => const Color(0xFF1E293B);
 }
 
 // ─── Gradients ────────────────────────────────────────────────────

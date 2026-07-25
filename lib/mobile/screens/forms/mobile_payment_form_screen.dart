@@ -66,11 +66,11 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
   Future<void> _save() async {
     if (widget.isReadOnly) return;
     if (_selectedContactId == null || _selectedContactId!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un contact'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un contact'), backgroundColor: AppColors.error));
       return;
     }
     if (_amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Le montant doit être supérieur à 0'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Le montant doit être supérieur à 0'), backgroundColor: AppColors.error));
       return;
     }
 

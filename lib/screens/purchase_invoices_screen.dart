@@ -64,10 +64,20 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       children: [
         // Header with title and button
         Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
+          padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
             children: [
-              Text('Gerer vos factures', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Factures d\'achat',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
+                  SizedBox(height: 4),
+                  Text('Gerer vos factures', style: TextStyle(color: AppColors.textSecondary)),
+                ],
+              ),
               const Spacer(),
               AppButton(
                 label: 'Nouvelle facture',
@@ -125,7 +135,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         (_statusFilter != null ? 1 : 0);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -145,29 +155,54 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               child: BlocBuilder<SuppliersBloc, SuppliersState>(
                 builder: (context, state) {
                   final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
-                  return Container(
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedClientId,
-                        hint: const Text('Selectionner un fournisseur...', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
-                        isExpanded: true,
-                        icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
-                        style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                        items: [
-                          const DropdownMenuItem<String>(value: null, child: Text('Tous les fournisseurs', style: TextStyle(fontSize: 13))),
-                          ...suppliers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))),
+                  String selectedSupplierName = 'Tous les fournisseurs';
+                  if (_selectedClientId != null && _selectedClientId != 'all') {
+                    final found = suppliers.firstWhere(
+                      (s) => s.id == _selectedClientId,
+                      orElse: () => Supplier(id: '', code: '', name: 'Inconnu', country: ''),
+                    );
+                    selectedSupplierName = found.companyName?.isNotEmpty == true
+                        ? found.companyName!
+                        : (found.responsibleName?.isNotEmpty == true ? found.responsibleName! : found.name);
+                  }
+
+                  return InkWell(
+                    onTap: () async {
+                      final selected = await _showSupplierSearchDialog(context, suppliers, _selectedClientId);
+                      if (selected != null) {
+                        setState(() {
+                          _selectedClientId = selected.id == 'all' ? null : selected.id;
+                        });
+                        _applyFilters();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    child: Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _selectedClientId == null || _selectedClientId == 'all'
+                                  ? 'Tous les fournisseurs'
+                                  : selectedSupplierName,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: _selectedClientId != null && _selectedClientId != 'all'
+                                    ? AppColors.textPrimary
+                                    : AppColors.textSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
                         ],
-                        onChanged: (v) {
-                          setState(() => _selectedClientId = v);
-                          _applyFilters();
-                        },
                       ),
                     ),
                   );
@@ -213,29 +248,112 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
             width: 150,
             child: _buildFilterField(
               label: 'Statut',
-              child: Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
+              child: PopupMenuButton<InvoiceStatus?>(
+                tooltip: 'Filtrer par statut',
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: AppColors.border),
+                  side: BorderSide(color: AppColors.border),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<InvoiceStatus?>(
-                    value: _statusFilter,
-                    hint: const Text('Tous', style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
-                    isExpanded: true,
-                    icon: const Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
-                    style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    items: [
-                      const DropdownMenuItem<InvoiceStatus?>(value: null, child: Text('Tous', style: TextStyle(fontSize: 13))),
-                      ...InvoiceStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.label, style: const TextStyle(fontSize: 13)))),
+                color: AppColors.surface,
+                elevation: 6,
+                offset: const Offset(0, 44),
+                initialValue: _statusFilter,
+                onSelected: (v) {
+                  setState(() => _statusFilter = v);
+                  _applyFilters();
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem<InvoiceStatus?>(
+                    value: null,
+                    height: 38,
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.textTertiary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: Text(
+                            'Tous',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                          ),
+                        ),
+                        Spacer(),
+                        if (_statusFilter == null)
+                          Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(height: 1),
+                  ...InvoiceStatus.values.map(
+                    (s) => PopupMenuItem<InvoiceStatus?>(
+                      value: s,
+                      height: 38,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: s.color.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                            child: Text(
+                              s.label,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: s.color,
+                              ),
+                            ),
+                          ),
+                          Spacer(),
+                          if (_statusFilter == s)
+                            Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(
+                      color: _statusFilter != null ? AppColors.primary : AppColors.border,
+                    ),
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _statusFilter == null
+                            ? Text(
+                                'Tous',
+                                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            : Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: _statusFilter!.color.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                ),
+                                child: Text(
+                                  _statusFilter!.label,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: _statusFilter!.color,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
                     ],
-                    onChanged: (v) {
-                      setState(() => _statusFilter = v);
-                      _applyFilters();
-                    },
                   ),
                 ),
               ),
@@ -245,18 +363,18 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       ),
       if (activeFilterCount > 0)
         Padding(
-          padding: const EdgeInsets.only(top: 16),
+          padding: EdgeInsets.only(top: 16),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   '$totalItems résultat${totalItems > 1 ? 's' : ''}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                 ),
               ),
               const Spacer(),
@@ -271,8 +389,8 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                   });
                   context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
                 },
-                icon: const Icon(Icons.refresh_rounded, size: 16),
-                label: const Text('Réinitialiser les filtres'),
+                icon: Icon(Icons.refresh_rounded, size: 16),
+                label: Text('Réinitialiser les filtres'),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.textSecondary,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -290,7 +408,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
         const SizedBox(height: 6),
         child,
       ],
@@ -318,11 +436,11 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           controller: TextEditingController(text: value != null ? formatDateLong(value) : ''),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 13),
-            prefixIcon: const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+            hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+            prefixIcon: Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
             filled: true,
-            fillColor: AppColors.surface,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            fillColor: AppColors.surfaceAlt,
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
           ),
@@ -332,11 +450,178 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     );
   }
 
+  Future<Supplier?> _showSupplierSearchDialog(
+    BuildContext context,
+    List<Supplier> suppliers,
+    String? selectedSupplierId,
+  ) async {
+    return showDialog<Supplier?>(
+      context: context,
+      builder: (context) {
+        String search = '';
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final query = search.trim().toLowerCase();
+            final filtered = suppliers.where((s) {
+              if (query.isEmpty) return true;
+              final nameMatch = s.name.toLowerCase().contains(query);
+              final companyMatch = s.companyName?.toLowerCase().contains(query) ?? false;
+              final respMatch = s.responsibleName?.toLowerCase().contains(query) ?? false;
+              final codeMatch = s.code.toLowerCase().contains(query);
+              final phoneMatch = s.phone?.toLowerCase().contains(query) ?? false;
+              return nameMatch || companyMatch || respMatch || codeMatch || phoneMatch;
+            }).toList();
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+              backgroundColor: AppColors.surface,
+              child: Container(
+                width: 440,
+                constraints: const BoxConstraints(maxHeight: 520),
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Title & Close Button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Sélectionner un fournisseur',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
+                          onPressed: () => Navigator.of(context).pop(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    // Live Search Bar
+                    SizedBox(
+                      height: 38,
+                      child: TextField(
+                        autofocus: true,
+                        onChanged: (val) => setDialogState(() => search = val),
+                        style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                        decoration: InputDecoration(
+                          hintText: 'Rechercher un fournisseur...',
+                          hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                          prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    Divider(height: 1, color: AppColors.border),
+                    SizedBox(height: 4),
+
+                    // "Tous les fournisseurs" Option
+                    ListTile(
+                      dense: true,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      selected: selectedSupplierId == null || selectedSupplierId == 'all',
+                      selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
+                      title: Text(
+                        'Tous les fournisseurs',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+                      ),
+                      trailing: (selectedSupplierId == null || selectedSupplierId == 'all')
+                          ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        Navigator.of(context).pop(Supplier(id: 'all', code: '', name: 'Tous les fournisseurs', country: ''));
+                      },
+                    ),
+
+                    // Scrollable Supplier List
+                    Flexible(
+                      child: filtered.isEmpty
+                          ? Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: Center(
+                                child: Text(
+                                  'Aucun fournisseur trouvé',
+                                  style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final supplier = filtered[index];
+                                final isSelected = supplier.id == selectedSupplierId;
+                                final displayName = supplier.companyName?.isNotEmpty == true
+                                    ? supplier.companyName!
+                                    : (supplier.responsibleName?.isNotEmpty == true
+                                        ? supplier.responsibleName!
+                                        : supplier.name);
+
+                                return ListTile(
+                                  dense: true,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                  selected: isSelected,
+                                  selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
+                                  title: Text(
+                                    displayName,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  subtitle: (supplier.code.isNotEmpty || (supplier.phone?.isNotEmpty ?? false))
+                                      ? Text(
+                                          [
+                                            if (supplier.code.isNotEmpty) supplier.code,
+                                            if (supplier.phone?.isNotEmpty ?? false) supplier.phone!,
+                                          ].join(' • '),
+                                          style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                                        )
+                                      : null,
+                                  trailing: isSelected
+                                      ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
+                                      : null,
+                                  onTap: () {
+                                    Navigator.of(context).pop(supplier);
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   InputDecoration _filterInputDecoration() {
     return InputDecoration(
       filled: true,
-      fillColor: AppColors.surface,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      fillColor: AppColors.surfaceAlt,
+      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
@@ -374,8 +659,8 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.receipt_long_rounded, size: 48, color: AppColors.textTertiary),
-                              const SizedBox(height: 12),
-                              const Text('Aucune facture trouvee', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                              SizedBox(height: 12),
+                              Text('Aucune facture trouvee', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
                             ],
                           ),
                         )
@@ -383,9 +668,9 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                           child: SizedBox(
                             width: double.infinity,
                             child: DataTable(
-                              headingRowColor: WidgetStateProperty.resolveWith((_) => const Color(0xFFF8FAFC)),
-                              headingTextStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary),
-                              dataTextStyle: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                              headingRowColor: WidgetStateProperty.resolveWith((_) => AppColors.background),
+                              headingTextStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary),
+                              dataTextStyle: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                               dividerThickness: 0.5,
                               columnSpacing: 24,
                               horizontalMargin: 16,
@@ -400,7 +685,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                                     ],
                                   ),
                                 ),
-                                const DataColumn(label: Text('Client')),
+                                const DataColumn(label: Text('Fournisseur')),
                                 const DataColumn(label: Text('Statut')),
                                 const DataColumn(label: Text('Montant')),
                                 const DataColumn(label: Text('Actions')),
@@ -434,20 +719,20 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                 child: Checkbox(
                   value: false,
                   onChanged: (_) {},
-                  side: const BorderSide(color: AppColors.border),
+                  side: BorderSide(color: AppColors.border),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(inv.number, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary)),
-                  const SizedBox(height: 2),
+                  Text(inv.number, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary)),
+                  SizedBox(height: 2),
                   Text(
                     formatDateTimeLong(inv.createdAt),
-                    style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                    style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
                   ),
                 ],
               ),
@@ -466,7 +751,6 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(inv.supplierName ?? '—', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13), overflow: TextOverflow.ellipsis),
-                    Text(inv.supplierName ?? '', style: const TextStyle(fontSize: 11, color: AppColors.textTertiary), overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
@@ -482,47 +766,45 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: inv.status == InvoiceStatus.unpaid || inv.status == InvoiceStatus.overdue
-                  ? AppColors.warning
-                  : AppColors.textPrimary,
+              color: AppColors.textPrimary,
             ),
           ),
         ),
         // Actions (three dots menu)
         DataCell(
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textSecondary),
+            icon: Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textSecondary),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-            offset: const Offset(0, 30),
+            offset: Offset(0, 30),
             onSelected: (val) => _handleAction(context, val, inv),
             itemBuilder: (_) => [
               _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
-              const PopupMenuDivider(height: 1),
+              PopupMenuDivider(height: 1),
               _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-              const PopupMenuDivider(height: 1),
+              PopupMenuDivider(height: 1),
               _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-              const PopupMenuDivider(height: 1),
+              PopupMenuDivider(height: 1),
               _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-              const PopupMenuDivider(height: 1),
+              PopupMenuDivider(height: 1),
               if (inv.status != InvoiceStatus.paid) ...[
                 _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
-                const PopupMenuDivider(height: 1),
+                PopupMenuDivider(height: 1),
               ],
               if (inv.creditNoteId != null && inv.creditNoteId!.isNotEmpty)
                 _buildMenuItem('view_credit_note', Icons.receipt_long_outlined, AppColors.primary, 'Voir l\'avoir')
               else
                 _buildMenuItem('to_credit_note', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Avoir'),
-              const PopupMenuDivider(height: 1),
+              PopupMenuDivider(height: 1),
               _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
-              const PopupMenuDivider(height: 1),
+              PopupMenuDivider(height: 1),
               _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-              const PopupMenuDivider(height: 1),
+              PopupMenuDivider(height: 1),
               _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-              const PopupMenuDivider(height: 1),
+              PopupMenuDivider(height: 1),
               _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-//               const PopupMenuDivider(height: 1),
+//               PopupMenuDivider(height: 1),
 //               _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-//               const PopupMenuDivider(height: 1),
+//               PopupMenuDivider(height: 1),
 //               _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
             ],
           ),
@@ -536,27 +818,27 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     final endRow = ((_currentPage + 1) * _rowsPerPage).clamp(0, totalRows);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         children: [
           // Rows per page
-          const Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          const SizedBox(width: 8),
+          Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          SizedBox(width: 8),
           Container(
             height: 32,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
               border: Border.all(color: AppColors.border),
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             child: DropdownButton<int>(
               value: _rowsPerPage,
-              underline: const SizedBox(),
+              underline: SizedBox(),
               isDense: true,
-              style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
               items: [10, 20, 50, 100].map((v) => DropdownMenuItem(value: v, child: Text('$v'))).toList(),
               onChanged: (v) => setState(() {
                 _rowsPerPage = v ?? 20;
@@ -564,14 +846,14 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               }),
             ),
           ),
-          const SizedBox(width: 24),
+          SizedBox(width: 24),
           // Page info
-          Text('Page ${_currentPage + 1} sur $totalPages', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-          const SizedBox(width: 24),
+          Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+          SizedBox(width: 24),
           // Display info
           Text(
             'Affichage de $startRow a $endRow sur $totalRows resultats',
-            style: const TextStyle(fontSize: 12, color: AppColors.textTertiary),
+            style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
           ),
           const Spacer(),
           // Navigation buttons
@@ -615,7 +897,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: AppColors.warning),
             SizedBox(width: 8),
@@ -628,7 +910,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
           children: [
             const Text('Voulez-vous transformer cette facture en avoir ?'),
             const SizedBox(height: 16),
-            Text('Facture: ${inv.number}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text('Facture: ${inv.number}', style: TextStyle(fontWeight: FontWeight.bold)),
             Text('Client: ${inv.supplierName}'),
             Text('Montant: ${formatCurrencyDT(inv.totalTTC + inv.timbreFiscal)}'),
           ],
@@ -636,7 +918,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -696,9 +978,9 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF64748B)),
-          const SizedBox(width: 12),
-          Text(text, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          Icon(icon, size: 18, color: Color(0xFF64748B)),
+          SizedBox(width: 12),
+          Text(text, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -797,7 +1079,10 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                 children: [
                   const Text('Nouveau statut:'),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<InvoiceStatus>(
+                  DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: selectedStatus,
                     decoration: const InputDecoration(border: OutlineInputBorder()),
                     items: InvoiceStatus.values.map((s) => DropdownMenuItem(

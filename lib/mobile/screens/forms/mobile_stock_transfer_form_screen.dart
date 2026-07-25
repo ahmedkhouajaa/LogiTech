@@ -76,21 +76,21 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
   Future<void> _save() async {
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (_sourceWarehouseId == null || _destWarehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez sélectionner les entrepôts'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Veuillez sélectionner les entrepôts'), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (_sourceWarehouseId == _destWarehouseId) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('L\'entrepôt source et destination doivent être différents'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('L\'entrepôt source et destination doivent être différents'), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -235,10 +235,10 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
               children: [
                 if (_items.isEmpty)
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    padding: EdgeInsets.symmetric(vertical: 32),
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(AppRadius.md)),
-                    child: const Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
+                    decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
+                    child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
                   )
                 else
                   ..._items.asMap().entries.map((e) {
@@ -246,36 +246,36 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                     final item = e.value;
                     return Card(
                       elevation: 0,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
-                      color: Colors.white,
+                      margin: EdgeInsets.only(bottom: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                      color: AppColors.surface,
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: EdgeInsets.all(12),
                         child: Row(
                           children: [
                             Container(
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                              child: const Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
+                              child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(item.productName ?? 'Article', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                  Text(item.productName ?? 'Article', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                                   if (item.productSku != null && item.productSku!.isNotEmpty) ...[
-                                    const SizedBox(height: 2),
-                                    Text(item.productSku!, style: const TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                    SizedBox(height: 2),
+                                    Text(item.productSku!, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
                                   ],
-                                  const SizedBox(height: 4),
-                                  Text('Qté à transférer: ${item.quantityToTransfer}', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  SizedBox(height: 4),
+                                  Text('Qté à transférer: ${item.quantityToTransfer}', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
                                 ],
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                              icon: Icon(Icons.delete_outline, color: AppColors.error),
                               onPressed: () => setState(() => _items.removeAt(index)),
                             ),
                           ],
@@ -283,14 +283,14 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                       ),
                     );
                   }),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: _showAddArticleDialog,
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Ajouter un article'),
+                  icon: Icon(Icons.add_rounded),
+                  label: Text('Ajouter un article'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.primary),
+                    side: BorderSide(color: AppColors.primary),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                   ),
@@ -320,8 +320,8 @@ class _AddTransferArticleSheetState extends State<_AddTransferArticleSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: EdgeInsets.only(

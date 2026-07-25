@@ -61,18 +61,18 @@ class MobileGenericListScreen extends StatelessWidget {
             
           if (itemCount != null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     '$itemCount résultat${itemCount! > 1 ? 's' : ''}',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
                   ),
                 ),
               ),
@@ -101,8 +101,8 @@ class MobileGenericListScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: onFabPressed,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: Text(fabText, style: const TextStyle(color: Colors.white)),
+        icon: Icon(Icons.add, color: Colors.white),
+        label: Text(fabText, style: TextStyle(color: Colors.white)),
         backgroundColor: AppColors.primary,
       ),
     );

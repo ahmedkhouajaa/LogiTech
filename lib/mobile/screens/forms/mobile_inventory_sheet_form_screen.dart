@@ -73,14 +73,14 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
   void _save() async {
     if (_selectedWarehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez sélectionner un entrepôt'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Veuillez sélectionner un entrepôt'), backgroundColor: AppColors.error),
       );
       return;
     }
 
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -88,7 +88,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
     for (var item in _items) {
       if (item.productId.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Un ou plusieurs articles n\'ont pas été sélectionnés'), backgroundColor: AppColors.error),
+          SnackBar(content: Text('Un ou plusieurs articles n\'ont pas été sélectionnés'), backgroundColor: AppColors.error),
         );
         return;
       }
@@ -159,8 +159,8 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
       builder: (context) {
         return Container(
           height: MediaQuery.of(context).size.height * 0.7,
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
@@ -280,16 +280,16 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                     alignment: Alignment.centerRight,
                     child: TextButton.icon(
                       onPressed: _addItem,
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Ajouter un article'),
+                      icon: Icon(Icons.add_rounded, size: 18),
+                      label: Text('Ajouter un article'),
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.primary,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
               if (_items.isEmpty)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 20),
                   child: Center(
                     child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textSecondary)),
@@ -307,8 +307,8 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                   }
 
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(12),
+                    margin: EdgeInsets.only(bottom: 12),
+                    padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppColors.background,
                       borderRadius: BorderRadius.circular(12),
@@ -322,16 +322,16 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                               child: InkWell(
                                 onTap: () => _showProductPicker(index),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: AppColors.surface,
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(color: AppColors.border),
                                   ),
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.textSecondary),
-                                      const SizedBox(width: 8),
+                                      Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.textSecondary),
+                                      SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
                                           productName,
@@ -341,14 +341,14 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                                           ),
                                         ),
                                       ),
-                                      const Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondary),
+                                      Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondary),
                                     ],
                                   ),
                                 ),
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                              icon: Icon(Icons.delete_outline, color: AppColors.error),
                               onPressed: () {
                                 setState(() {
                                   _items.removeAt(index);
@@ -366,10 +366,10 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Qté théorique', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                    const SizedBox(height: 4),
+                                    Text('Qté théorique', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                    SizedBox(height: 4),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                       width: double.infinity,
                                       decoration: BoxDecoration(
                                         color: AppColors.surfaceAlt,
@@ -377,18 +377,18 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                                       ),
                                       child: Text(
                                         item.theoreticalQty.toString(),
-                                        style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                                        style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Qté physique', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                    Text('Qté physique', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                                     const SizedBox(height: 4),
                                     TextFormField(
                                       initialValue: item.actualQty.toString(),

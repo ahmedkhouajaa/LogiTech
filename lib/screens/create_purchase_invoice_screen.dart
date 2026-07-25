@@ -169,12 +169,12 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
         border: Border(bottom: BorderSide(color: AppColors.border)),
         boxShadow: AppShadows.md,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
           Text(
             _isEditing ? 'Modifier la facture' : 'Ajouter une facture',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
           ),
           const SizedBox(width: 12),
           // Status badge
@@ -195,8 +195,8 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
               height: 36,
               child: ElevatedButton.icon(
                 onPressed: _save,
-                icon: const Icon(Icons.check_rounded, size: 16),
-                label: const Text('Valider', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                icon: Icon(Icons.check_rounded, size: 16),
+                label: Text('Valider', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -218,7 +218,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       child: OutlinedButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, size: 14),
-        label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+        label: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.textPrimary,
           side: BorderSide(color: AppColors.border),
@@ -232,7 +232,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   // ─── Form Card (Date, Client, Project, Pricing Mode) ─────────────
   Widget _buildFormCard() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -243,7 +243,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Date d'emission
-          const Text("Date d'emission", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          Text("Date d'emission", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
           const SizedBox(height: 6),
           GestureDetector(
             onTap: () async {
@@ -259,9 +259,9 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                 controller: TextEditingController(text: formatDateLong(_date)),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                  suffixIcon: const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+                  fillColor: AppColors.surfaceAlt,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  suffixIcon: Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                 ),
@@ -278,7 +278,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text('Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                     const SizedBox(height: 6),
                     Row(
                       children: [
@@ -286,7 +286,10 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                           child: BlocBuilder<SuppliersBloc, SuppliersState>(
                             builder: (context, state) {
                               final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
-                              return DropdownButtonFormField<String>(
+                              return DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                 value: _selectedSupplier?.id,
                                 isExpanded: true,
                                 hint: const Text('Rechercher des fournisseurs...', style: TextStyle(fontSize: 13, color: Colors.black87)),
@@ -323,7 +326,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                                   backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                                   foregroundColor: AppColors.primary,
                                   elevation: 0,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  padding: EdgeInsets.symmetric(horizontal: 16),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                   side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
                                 ),
@@ -337,17 +340,20 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Projet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    Text('Projet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                     const SizedBox(height: 6),
                     BlocBuilder<ProjectsBloc, ProjectsState>(
                       builder: (context, state) {
                         final projects = state is ProjectsLoaded ? state.projects : <Project>[];
-                        return DropdownButtonFormField<String>(
+                        return DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                           value: _selectedProjectId,
                           isExpanded: true,
                           hint: const Text('Projet par defaut', style: TextStyle(fontSize: 13, color: Colors.black87)),
@@ -367,10 +373,10 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           // Pricing mode radio
-          const Text('Les prix des articles sont en', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
-          const SizedBox(height: 8),
+          Text('Les prix des articles sont en', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+          SizedBox(height: 8),
           Row(
             children: [
               Radio<bool>(
@@ -379,8 +385,8 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                 onChanged: (v) => setState(() => _pricingModeHT = v!),
                 activeColor: AppColors.primary,
               ),
-              const Text('Hors taxes', style: TextStyle(fontSize: 13)),
-              const SizedBox(width: 24),
+              Text('Hors taxes', style: TextStyle(fontSize: 13)),
+              SizedBox(width: 24),
               Radio<bool>(
                 value: false,
                 groupValue: _pricingModeHT,
@@ -398,7 +404,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   InputDecoration _formInputDecoration() {
     return InputDecoration(
       filled: true,
-      fillColor: Colors.white,
+      fillColor: AppColors.surfaceAlt,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
@@ -420,14 +426,14 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
         children: [
           // Section title
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-            child: const Text('Articles', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            padding: EdgeInsets.fromLTRB(24, 16, 24, 8),
+            child: Text('Articles', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
           // Table header
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: Color(0xFFF1F5F9),
               border: Border(
                 top: BorderSide(color: AppColors.border),
                 bottom: BorderSide(color: AppColors.border),
@@ -440,16 +446,16 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                 SizedBox(width: 130, child: Text('P.U', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 100, child: Text('TVA', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 140, child: Text('Total HT', style: _tableHeaderStyle(), textAlign: TextAlign.right)),
-                const SizedBox(width: 60),
+                SizedBox(width: 60),
               ],
             ),
           ),
           // Items or empty state
           if (_items.isEmpty)
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 32),
+              padding: EdgeInsets.symmetric(vertical: 32),
               width: double.infinity,
-              child: const Text('Aucun article', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
+              child: Text('Aucun article', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.textTertiary)),
             )
           else
             ..._items.asMap().entries.map((e) => _buildItemRow(e.key, e.value)),
@@ -459,12 +465,12 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   }
 
   TextStyle _tableHeaderStyle() {
-    return const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary);
+    return TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary);
   }
 
   Widget _buildItemRow(int index, PurchaseInvoiceItem item) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
       ),
@@ -514,8 +520,8 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                                 itemBuilder: (context, i) {
                                   final option = options.elementAt(i);
                                   return ListTile(
-                                    title: Text(option.name, style: const TextStyle(fontSize: 13)),
-                                    subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
+                                    title: Text(option.name, style: TextStyle(fontSize: 13)),
+                                    subtitle: option.reference != null ? Text(option.reference!, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
                                     trailing: Text('${option.purchasePrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                     onTap: () => onSelected(option),
                                     dense: true,
@@ -557,7 +563,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                       child: Container(
                         width: 28, height: 28,
                         decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
-                        child: const Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
+                        child: Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -586,7 +592,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                       child: Container(
                         width: 28, height: 28,
                         decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
-                        child: const Icon(Icons.add, size: 14, color: AppColors.textSecondary),
+                        child: Icon(Icons.add, size: 14, color: AppColors.textSecondary),
                       ),
                     ),
                   ],
@@ -608,10 +614,10 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                         onChanged: (v) => setState(() => _items[index] = item.copyWith(unitPrice: double.tryParse(v) ?? 0)),
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: 4),
                     Text(
                       _pricingModeHT ? 'DT HT' : 'DT TTC',
-                      style: const TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                      style: TextStyle(fontSize: 10, color: AppColors.textTertiary),
                     ),
                   ],
                 ),
@@ -620,7 +626,10 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
               // TVA dropdown
               SizedBox(
                 width: 100,
-                child: DropdownButtonFormField<double>(
+                child: DropdownButtonFormField(
+                                  dropdownColor: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                   value: item.tvaRate,
                   items: TvaRates.all.map((r) => DropdownMenuItem(value: r, child: Text('${r.toInt()}%', style: const TextStyle(fontSize: 13)))).toList(),
                   onChanged: (v) => setState(() => _items[index] = item.copyWith(tvaRate: v)),
@@ -637,25 +646,25 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                   controller: TextEditingController(text: formatCurrencyDT(item.computedTotalHT)),
                   decoration: InputDecoration(
                     filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
+                    fillColor: AppColors.background,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                   ),
-                  style: const TextStyle(fontSize: 13),
+                  style: TextStyle(fontSize: 13),
                   textAlign: TextAlign.right,
                 ),
               ),
-              const SizedBox(width: 4),
+              SizedBox(width: 4),
               // Delete button
               IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
+                icon: Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
                 onPressed: () => setState(() => _items.removeAt(index)),
                 splashRadius: 16,
                 tooltip: 'Supprimer',
               ),
               // Drag handle
-              const Icon(Icons.drag_indicator_rounded, size: 16, color: AppColors.textTertiary),
+              Icon(Icons.drag_indicator_rounded, size: 16, color: AppColors.textTertiary),
             ],
           ),
           const SizedBox(height: 6),
@@ -677,7 +686,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                         side: BorderSide(color: AppColors.border),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Text('Afficher la description', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                   ],
                 ),
@@ -698,7 +707,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                         side: BorderSide(color: AppColors.border),
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Text('Appliquer remise', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                   ],
                 ),
@@ -744,9 +753,9 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   InputDecoration _itemInputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 12),
+      hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 12),
       filled: true,
-      fillColor: Colors.white,
+      fillColor: AppColors.surfaceAlt,
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
@@ -791,9 +800,9 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                             focusNode: focusNode,
                             decoration: InputDecoration(
                               hintText: 'Rechercher un article...',
-                              hintStyle: const TextStyle(fontSize: 13, color: Colors.black87),
+                              hintStyle: TextStyle(fontSize: 13, color: Colors.black87),
                               filled: true,
-                              fillColor: AppColors.surface,
+                              fillColor: AppColors.surfaceAlt,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
@@ -817,8 +826,8 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                                   itemBuilder: (context, i) {
                                     final option = options.elementAt(i);
                                     return ListTile(
-                                      title: Text(option.name, style: const TextStyle(fontSize: 13)),
-                                      subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
+                                      title: Text(option.name, style: TextStyle(fontSize: 13)),
+                                      subtitle: option.reference != null ? Text(option.reference!, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
                                       trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                       onTap: () => onSelected(option),
                                       dense: true,
@@ -838,9 +847,9 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+                    icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
                     tooltip: 'Créer un nouvel article',
                     onPressed: () {
                       Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
@@ -852,7 +861,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
             },
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         // Add empty line button
         SizedBox(
           height: 44,
@@ -874,9 +883,9 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   // ─── Global Discount Section ─────────────────────────────────────
   Widget _buildGlobalDiscountSection() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppColors.background,
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.border),
       ),
@@ -896,8 +905,8 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                             activeColor: AppColors.primary,
                   ),
                 ),
-                const SizedBox(width: 8),
-                const Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                SizedBox(width: 8),
+                Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
               ],
             ),
           ),
@@ -911,12 +920,12 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                     initialValue: _globalDiscountPercent > 0 ? _globalDiscountPercent.toString() : '',
                     decoration: _itemInputDecoration('Remise %'),
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13),
                     onChanged: (v) => setState(() => _globalDiscountPercent = double.tryParse(v) ?? 0),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text('= ${formatCurrencyDT(_globalDiscountAmount)}', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                SizedBox(width: 12),
+                Text('= ${formatCurrencyDT(_globalDiscountAmount)}', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
               ],
             ),
           ],
@@ -962,11 +971,11 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                             activeColor: AppColors.primary,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        const Text('Timbre fiscal:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                        SizedBox(width: 8),
+                        Text('Timbre fiscal:', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                       ],
                     ),
-                    Text(formatCurrencyDT(_timbreFiscal), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                    Text(formatCurrencyDT(_timbreFiscal), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                   ],
                 ),
               ),
@@ -976,13 +985,13 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
               _buildTotalLine('Remise:', '- ${formatCurrencyDT(_globalDiscountAmount)}'),
               const SizedBox(height: 6),
             ],
-            const Divider(),
-            const SizedBox(height: 4),
+            Divider(),
+            SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Total TTC:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                Text(formatCurrencyDT(_totalTTC), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text('Total TTC:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(formatCurrencyDT(_totalTTC), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),
           ],
@@ -995,8 +1004,8 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+        Text(label, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
       ],
     );
   }
@@ -1010,41 +1019,41 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Notes', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              const SizedBox(height: 8),
+              Text('Notes', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              SizedBox(height: 8),
               TextFormField(
                 controller: _notesCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
                   hintText: 'Visible sur le document final',
-                  hintStyle: const TextStyle(fontSize: 13, color: Colors.black87),
+                  hintStyle: TextStyle(fontSize: 13, color: Colors.black87),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: AppColors.surfaceAlt,
                   contentPadding: const EdgeInsets.all(14),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
                 ),
-                style: const TextStyle(fontSize: 13),
+                style: TextStyle(fontSize: 13),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 24),
+        SizedBox(width: 24),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Conditions Generales', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              const SizedBox(height: 8),
+              Text('Conditions Generales', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+              SizedBox(height: 8),
               TextFormField(
                 controller: _conditionsCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
                   hintText: 'Conditions generales pour ce document',
-                  hintStyle: const TextStyle(fontSize: 13, color: Colors.black87),
+                  hintStyle: TextStyle(fontSize: 13, color: Colors.black87),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: AppColors.surfaceAlt,
                   contentPadding: const EdgeInsets.all(14),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
@@ -1092,7 +1101,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   void _save() {
     if (_selectedSupplier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez selectionner un client'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Veuillez selectionner un client'), backgroundColor: AppColors.error),
       );
       return;
     }

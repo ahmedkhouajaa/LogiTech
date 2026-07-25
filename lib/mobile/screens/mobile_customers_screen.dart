@@ -104,12 +104,12 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
             final avatarInitial = customer.name.isNotEmpty ? customer.name[0].toUpperCase() : '?';
             
             return Card(
-              margin: const EdgeInsets.only(bottom: 12),
+              margin: EdgeInsets.only(bottom: 12),
               elevation: 0,
-              color: Colors.white,
+              color: AppColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.border),
               ),
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
@@ -117,7 +117,7 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
                   // Detail screen if needed
                 },
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Row(
                     children: [
                       // Avatar
@@ -148,7 +148,7 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
                                 Flexible(
                                   child: Text(
                                     customer.name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -179,27 +179,27 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.tag, size: 14, color: AppColors.textSecondary),
-                                    const SizedBox(width: 4),
-                                    Text(customer.code, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                    Icon(Icons.tag, size: 14, color: AppColors.textSecondary),
+                                    SizedBox(width: 4),
+                                    Text(customer.code, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                                   ],
                                 ),
                                 if (customer.email != null && customer.email!.isNotEmpty)
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.email_outlined, size: 14, color: AppColors.textSecondary),
-                                      const SizedBox(width: 4),
-                                      Text(customer.email!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                      Icon(Icons.email_outlined, size: 14, color: AppColors.textSecondary),
+                                      SizedBox(width: 4),
+                                      Text(customer.email!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                                     ],
                                   ),
                                 if (customer.phone != null && customer.phone!.isNotEmpty)
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.phone_outlined, size: 14, color: AppColors.textSecondary),
-                                      const SizedBox(width: 4),
-                                      Text(customer.phone!, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                      Icon(Icons.phone_outlined, size: 14, color: AppColors.textSecondary),
+                                      SizedBox(width: 4),
+                                      Text(customer.phone!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                                     ],
                                   ),
                               ],
@@ -207,15 +207,15 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       // Balance & Actions
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          const Text('Solde Actuel', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                          const SizedBox(height: 4),
+                          Text('Solde Actuel', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                          SizedBox(height: 4),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
                               color: customer.balance >= 0 ? AppColors.success.withOpacity(0.1) : AppColors.error.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
@@ -232,7 +232,7 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
                         ],
                       ),
                       PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+                        icon: Icon(Icons.more_vert, color: AppColors.textSecondary),
                         onSelected: (val) {
                           if (val == 'edit') {
                             Navigator.push(
@@ -246,9 +246,9 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
                           }
                         },
                         itemBuilder: (_) => [
-                          const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 20, color: AppColors.primary), SizedBox(width: 8), Text('Modifier')])),
-                          const PopupMenuDivider(),
-                          const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline, size: 20, color: AppColors.error), SizedBox(width: 8), Text('Supprimer')])),
+                          PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 20, color: AppColors.primary), SizedBox(width: 8), Text('Modifier')])),
+                          PopupMenuDivider(),
+                          PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline, size: 20, color: AppColors.error), SizedBox(width: 8), Text('Supprimer')])),
                         ],
                       ),
                     ],

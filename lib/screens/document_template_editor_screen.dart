@@ -72,7 +72,7 @@ class _DocumentTemplateEditorScreenState
     setState(() => _hasChanges = false);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Modèle enregistré avec succès'),
+        content: Text('Modèle enregistré avec succès'),
         backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -143,15 +143,15 @@ class _DocumentTemplateEditorScreenState
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       if (_hasChanges)
                         Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.symmetric(
+                          margin: EdgeInsets.only(left: 8),
+                          padding: EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: AppColors.warningLight,
                             borderRadius:
                                 BorderRadius.circular(AppRadius.full),
                           ),
-                          child: const Text('Non enregistré',
+                          child: Text('Non enregistré',
                               style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
@@ -162,7 +162,7 @@ class _DocumentTemplateEditorScreenState
                 ),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppRadius.full),
@@ -172,7 +172,7 @@ class _DocumentTemplateEditorScreenState
                     children: [
                       Icon(Icons.description_rounded,
                           size: 14, color: AppColors.primary),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       Text(_name,
                           style: TextStyle(
                               fontSize: 12,
@@ -301,11 +301,11 @@ class _DocumentTemplateEditorScreenState
                   : null,
             );
           }),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           OutlinedButton.icon(
             onPressed: _addCustomColumn,
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Ajouter une colonne personnalisée'),
+            icon: Icon(Icons.add, size: 18),
+            label: Text('Ajouter une colonne personnalisée'),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.primary,
               side: BorderSide(color: AppColors.primary),
@@ -354,8 +354,8 @@ class _DocumentTemplateEditorScreenState
 
   Widget _buildFieldToggle(String label, bool enabled, ValueChanged<bool>? onChanged, {VoidCallback? onDelete}) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -365,16 +365,16 @@ class _DocumentTemplateEditorScreenState
         children: [
           Icon(Icons.drag_indicator_rounded, size: 16, color: AppColors.textTertiary),
           const SizedBox(width: 12),
-          Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-          const Spacer(),
+          Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+          Spacer(),
           if (onDelete != null) ...[
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+              icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
               onPressed: onDelete,
-              constraints: const BoxConstraints(),
+              constraints: BoxConstraints(),
               padding: EdgeInsets.zero,
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
           ],
           Switch(
             value: enabled,
@@ -419,7 +419,7 @@ class _DocumentTemplateEditorScreenState
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
               Checkbox(
@@ -427,10 +427,10 @@ class _DocumentTemplateEditorScreenState
                 onChanged: (v) => _updateNestedConfig('table', 'showOutline', v ?? true),
                 activeColor: AppColors.primary,
               ),
-              const Text('Afficher le contour du tableau', style: TextStyle(fontSize: 14)),
+              Text('Afficher le contour du tableau', style: TextStyle(fontSize: 14)),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Row(
             children: [
               Checkbox(
@@ -600,11 +600,11 @@ class _DocumentTemplateEditorScreenState
             config: _getSubConfig('totalTTC'),
             onChanged: (c) => _updateConfig('totalTTC', c),
             extraWidgets: [
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF5EE),
+                  color: Color(0xFFFFF5EE),
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
                 ),
@@ -703,7 +703,7 @@ class _DocumentTemplateEditorScreenState
               onWidthChanged: (v) => _updateNestedConfig('qrCode', 'width', v),
               onHeightChanged: (v) => _updateNestedConfig('qrCode', 'height', v),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 Checkbox(
@@ -766,9 +766,9 @@ class _DocumentTemplateEditorScreenState
               label: 'Graisse',
               value: _getSubConfig('ttnReference')['fontWeight'] as String? ?? 'Gras',
               onChanged: (v) => _updateNestedConfig('ttnReference', 'fontWeight', v),
-              options: const ['Normal', 'Gras', 'Graisse'],
+              options: ['Normal', 'Gras', 'Graisse'],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 Checkbox(
@@ -823,7 +823,7 @@ class _DocumentTemplateEditorScreenState
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 Checkbox(
@@ -871,9 +871,9 @@ class _DocumentTemplateEditorScreenState
               unit: 'pt',
               onChanged: (v) => _updateNestedConfig('statusBadge', 'fontSize', v),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             // Status badge preview
-            const Text('Aperçu',
+            Text('Aperçu',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
             const SizedBox(height: 8),
             Wrap(
@@ -895,7 +895,7 @@ class _DocumentTemplateEditorScreenState
 
   Widget _buildBottomBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.border)),
@@ -903,7 +903,7 @@ class _DocumentTemplateEditorScreenState
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
-            offset: const Offset(0, -2),
+            offset: Offset(0, -2),
           ),
         ],
       ),
@@ -911,8 +911,8 @@ class _DocumentTemplateEditorScreenState
         children: [
           OutlinedButton.icon(
             onPressed: _resetToDefaults,
-            icon: const Icon(Icons.restore_rounded, size: 16),
-            label: const Text('Réinitialiser aux valeurs par défaut'),
+            icon: Icon(Icons.restore_rounded, size: 16),
+            label: Text('Réinitialiser aux valeurs par défaut'),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textSecondary,
               side: BorderSide(color: AppColors.border),
@@ -940,9 +940,9 @@ class _DocumentTemplateEditorScreenState
 
   Widget _infoBox(String text) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF9E6),
+        color: Color(0xFFFFF9E6),
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
       ),
@@ -950,10 +950,10 @@ class _DocumentTemplateEditorScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(Icons.info_outline_rounded, size: 16, color: AppColors.warning),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Expanded(
             child: Text(text,
-                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4)),
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4)),
           ),
         ],
       ),
@@ -965,8 +965,8 @@ class _DocumentTemplateEditorScreenState
     return Column(
       children: options.map((opt) {
         return RadioListTile<String>(
-          title: Text(opt.$2, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-          subtitle: Text(opt.$3, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          title: Text(opt.$2, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+          subtitle: Text(opt.$3, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           value: opt.$1,
           groupValue: currentStyle,
           onChanged: (v) => _updateConfig('tableStyle', v),
@@ -993,16 +993,16 @@ class _DocumentTemplateEditorScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        const SizedBox(height: 6),
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        SizedBox(height: 6),
         TextFormField(
           initialValue: value,
           onChanged: onChanged,
-          style: const TextStyle(fontSize: 14),
+          style: TextStyle(fontSize: 14),
           decoration: InputDecoration(
             filled: true,
             fillColor: AppColors.surfaceAlt,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 2)),

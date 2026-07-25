@@ -101,7 +101,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
   void _handleSave() {
     if (_productName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez sélectionner un article'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Veuillez sélectionner un article'), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -127,8 +127,8 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
       constraints: BoxConstraints(
         maxHeight: screenHeight * 0.9,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -139,7 +139,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
         children: [
           // Handle bar
           Container(
-            margin: const EdgeInsets.symmetric(vertical: 12),
+            margin: EdgeInsets.symmetric(vertical: 12),
             width: 48,
             height: 4,
             decoration: BoxDecoration(
@@ -150,22 +150,22 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
           
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   widget.initialData == null ? 'Ajouter un article' : 'Modifier l\'article',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                  icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1, color: AppColors.border),
+          Divider(height: 1, color: AppColors.border),
           
           // Form content
           Flexible(
@@ -175,7 +175,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Designation
-                  const Text('Désignation', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  Text('Désignation', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -199,14 +199,14 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                                   focusNode: focusNode,
                                   decoration: InputDecoration(
                                     hintText: 'Rechercher un article...',
-                                    hintStyle: const TextStyle(color: AppColors.textTertiary, fontSize: 16),
+                                    hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 16),
                                     filled: true,
-                                    fillColor: const Color(0xFFF8FAFC),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.border)),
-                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
-                                    suffixIcon: const Icon(Icons.search_rounded, color: AppColors.textTertiary),
+                                    fillColor: AppColors.background,
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+                                    suffixIcon: Icon(Icons.search_rounded, color: AppColors.textTertiary),
                                   ),
                                   style: const TextStyle(fontSize: 16),
                                   onChanged: (v) {
@@ -232,11 +232,11 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                                         itemBuilder: (context, i) {
                                           final option = options.elementAt(i);
                                           return ListTile(
-                                            title: Text(option.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                                            subtitle: option.reference != null ? Text(option.reference!, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)) : null,
+                                            title: Text(option.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                            subtitle: option.reference != null ? Text(option.reference!, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)) : null,
                                             trailing: Text(
                                               '${(widget.isPurchase ? option.purchasePrice : option.sellingPrice).toStringAsFixed(2)} DT', 
-                                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)
+                                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)
                                             ),
                                             onTap: () => onSelected(option),
                                             dense: true,
@@ -358,8 +358,8 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
           
           // Sticky Bottom Bar
           Container(
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
               color: AppColors.surface,
               border: Border(top: BorderSide(color: AppColors.border)),
               boxShadow: [BoxShadow(color: Colors.black12, offset: Offset(0, -2), blurRadius: 8)],
@@ -371,11 +371,11 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Total HT', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                      const SizedBox(height: 4),
+                      Text('Total HT', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                      SizedBox(height: 4),
                       Text(
                         formatCurrencyDT(_computedTotalHT),
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
                       ),
                     ],
                   ),

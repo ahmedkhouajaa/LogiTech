@@ -21,22 +21,22 @@ class TemplatePreviewWidget extends StatelessWidget {
         color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Éditeur de modèle',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Expanded(
             child: Center(
               child: AspectRatio(
                 aspectRatio: 210 / 297, // A4 proportions
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(color: AppColors.border),
                     boxShadow: AppShadows.md,
@@ -310,7 +310,7 @@ class TemplatePreviewWidget extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 3.5 * scale,
                     fontWeight: FontWeight.bold,
-                    color: template.totalTTCConfig['showColoredBg'] == true ? Colors.white : AppColors.textPrimary,
+                    color: template.totalTTCConfig['showColoredBg'] == true ? AppColors.surface : AppColors.textPrimary,
                   ),
                 ),
                 Text(
@@ -318,7 +318,7 @@ class TemplatePreviewWidget extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 3.5 * scale,
                     fontWeight: FontWeight.bold,
-                    color: template.totalTTCConfig['showColoredBg'] == true ? Colors.white : AppColors.textPrimary,
+                    color: template.totalTTCConfig['showColoredBg'] == true ? AppColors.surface : AppColors.textPrimary,
                   ),
                 ),
               ],

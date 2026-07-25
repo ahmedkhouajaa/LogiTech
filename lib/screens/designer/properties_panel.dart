@@ -28,8 +28,8 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
 
         final child = Theme(
           data: ThemeData.dark().copyWith(
-            scaffoldBackgroundColor: const Color(0xFF1E1E2E),
-            colorScheme: const ColorScheme.dark(
+            scaffoldBackgroundColor: Color(0xFF1E1E2E),
+            colorScheme: ColorScheme.dark(
               primary: AppColors.primaryLight,
               surface: Color(0xFF2A2A3C),
             ),
@@ -137,8 +137,8 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
         onTap: () => state.selectElement(el.id),
         borderRadius: BorderRadius.circular(6),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          margin: const EdgeInsets.only(bottom: 2),
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          margin: EdgeInsets.only(bottom: 2),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(6),
             color: state.selectedElementId == el.id
@@ -655,16 +655,16 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
     return Container(
       height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: Color(0xFF3A3A4C))),
       ),
       alignment: Alignment.centerLeft,
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: Colors.white,
+          color: AppColors.surface,
         ),
       ),
     );
@@ -755,16 +755,16 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('$label: ${(value * 100).round()}%',
-            style: const TextStyle(fontSize: 11, color: Color(0xFF8B8BA7))),
-        const SizedBox(height: 4),
+            style: TextStyle(fontSize: 11, color: Color(0xFF8B8BA7))),
+        SizedBox(height: 4),
         SizedBox(
           height: 32,
           child: SliderTheme(
             data: SliderThemeData(
               trackHeight: 3,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
               activeTrackColor: AppColors.primaryLight,
-              inactiveTrackColor: const Color(0xFF3A3A4C),
+              inactiveTrackColor: Color(0xFF3A3A4C),
               thumbColor: AppColors.primaryLight,
               overlayShape: SliderComponentShape.noOverlay,
             ),
@@ -865,10 +865,10 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
         decoration: BoxDecoration(
           color: active
               ? AppColors.primary.withValues(alpha: 0.2)
-              : const Color(0xFF1E1E2E),
+              : Color(0xFF1E1E2E),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: active ? AppColors.primaryLight : const Color(0xFF3A3A4C),
+            color: active ? AppColors.primaryLight : Color(0xFF3A3A4C),
           ),
         ),
         child: Text(
@@ -891,7 +891,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
       child: Container(
         width: 28,
         height: 28,
-        margin: const EdgeInsets.only(left: 2),
+        margin: EdgeInsets.only(left: 2),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: active ? AppColors.primary.withValues(alpha: 0.2) : Colors.transparent,
@@ -915,14 +915,14 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
             decoration: BoxDecoration(
               color: value
                   ? AppColors.primary.withValues(alpha: 0.2)
-                  : const Color(0xFF1E1E2E),
+                  : Color(0xFF1E1E2E),
               borderRadius: BorderRadius.circular(4),
               border: Border.all(
-                color: value ? AppColors.primaryLight : const Color(0xFF3A3A4C),
+                color: value ? AppColors.primaryLight : Color(0xFF3A3A4C),
               ),
             ),
             child: value
-                ? const Icon(Icons.check, size: 12, color: AppColors.primaryLight)
+                ? Icon(Icons.check, size: 12, color: AppColors.primaryLight)
                 : null,
           ),
           const SizedBox(width: 6),
