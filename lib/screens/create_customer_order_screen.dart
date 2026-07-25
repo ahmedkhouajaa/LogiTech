@@ -15,6 +15,7 @@ import 'customers_screen.dart';
 import 'create_article_screen.dart';
 import '../database/database_helper.dart';
 import '../widgets/dashboard_card.dart';
+import '../widgets/searchable_dropdown_field.dart';
 
 class CreateCustomerOrderScreen extends StatefulWidget {
   final CustomerOrder? existing;
@@ -196,22 +197,22 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
             child: Form(
               key: _formKey,
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: EdgeInsets.all(AppSpacing.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildFormCard(),
-                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(height: AppSpacing.lg),
                     _buildArticlesSection(),
-                    const SizedBox(height: AppSpacing.md),
+                    SizedBox(height: AppSpacing.md),
                     _buildArticleActions(),
-                    const SizedBox(height: AppSpacing.md),
+                    SizedBox(height: AppSpacing.md),
                     _buildGlobalDiscountSection(),
-                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(height: AppSpacing.lg),
                     _buildTotalsSection(),
-                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(height: AppSpacing.lg),
                     _buildNotesSection(),
-                    const SizedBox(height: AppSpacing.xl),
+                    SizedBox(height: AppSpacing.xl),
                   ],
                 ),
               ),
@@ -241,20 +242,20 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           StatusBadge(label: _status.label, color: _status.color),
           const Spacer(),
           _buildHeaderButton(
               Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _buildHeaderButton(Icons.description_rounded, 'Brouillon', () {
             setState(() => _status = CustomerOrderStatus.draft);
           }),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _buildHeaderButton(Icons.visibility_rounded, 'Apercu', () {}),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _buildHeaderButton(Icons.settings_rounded, 'Parametres', () {}),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           SizedBox(
             height: 36,
             child: ElevatedButton.icon(
@@ -269,7 +270,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md)),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: 16),
               ),
             ),
           ),
@@ -293,7 +294,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
           side: BorderSide(color: AppColors.border),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadius.md)),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12),
         ),
       ),
     );
@@ -318,7 +319,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textSecondary)),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           GestureDetector(
             onTap: () async {
               final picked = await showDatePicker(
@@ -350,11 +351,11 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                       borderSide:
                           BorderSide(color: AppColors.border)),
                 ),
-                style: const TextStyle(fontSize: 14),
+                style: TextStyle(fontSize: 14),
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // Client & Projet
           Row(
@@ -369,29 +370,56 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textSecondary)),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     Row(
                       children: [
                         Expanded(
                           child: BlocBuilder<CustomersBloc, CustomersState>(
                             builder: (context, state) {
                               final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                              return DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                value: _selectedCustomerId,
-                                isExpanded: true,
-                                hint: const Text('Rechercher des clients...', style: TextStyle(fontSize: 13, color: Colors.black87)),
-                                items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.companyName ?? c.name, style: const TextStyle(fontSize: 13, color: Colors.black87)))).toList(),
-                                onChanged: (v) => setState(() => _selectedCustomerId = v),
-                                validator: (v) => v == null ? 'Requis' : null,
-                                decoration: _formInputDecoration(),
+                              final selectedCustomer = customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null);
+                              final displayName = selectedCustomer != null
+                                  ? (selectedCustomer.companyName?.isNotEmpty == true
+                                      ? selectedCustomer.companyName!
+                                      : (selectedCustomer.responsibleName?.isNotEmpty == true
+                                          ? selectedCustomer.responsibleName!
+                                          : selectedCustomer.name))
+                                  : null;
+
+                              return FormField<String>(
+                                initialValue: _selectedCustomerId,
+                                validator: (v) => _selectedCustomerId == null ? 'Requis' : null,
+                                builder: (field) {
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      SearchableSelectorField(
+                                        hint: 'Rechercher des clients...',
+                                        selectedText: displayName,
+                                        hasError: field.hasError,
+                                        onTap: () async {
+                                          final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
+                                          if (res != null) {
+                                            setState(() => _selectedCustomerId = res);
+                                            field.didChange(res);
+                                          }
+                                        },
+                                      ),
+                                      if (field.hasError) ...[
+                                        SizedBox(height: 4),
+                                        Padding(
+                                          padding: EdgeInsets.only(left: 4),
+                                          child: Text(field.errorText!, style: TextStyle(color: AppColors.error, fontSize: 11)),
+                                        ),
+                                      ],
+                                    ],
+                                  );
+                                },
                               );
                             },
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         SizedBox(
                           height: 48,
                           child: Tooltip(
@@ -415,7 +443,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                 side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
                               ),
-                              child: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                              child: Icon(Icons.person_add_alt_1_rounded, size: 20),
                             ),
                           ),
                         ),
@@ -434,36 +462,23 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textSecondary)),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     BlocBuilder<ProjectsBloc, ProjectsState>(
                       builder: (context, state) {
                         final projects = state is ProjectsLoaded
                             ? state.projects
                             : <Project>[];
-                        return DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                          value: _selectedProjectId,
-                          isExpanded: true,
-                          hint: Text('Projet par defaut',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textTertiary)),
-                          items: [
-                            const DropdownMenuItem<String>(
-                                value: null,
-                                child: Text('Projet par defaut',
-                                    style: TextStyle(fontSize: 13))),
-                            ...projects.map((p) => DropdownMenuItem(
-                                value: p.id,
-                                child: Text(p.name,
-                                    style:
-                                        const TextStyle(fontSize: 13)))),
-                          ],
-                          onChanged: (v) =>
-                              setState(() => _selectedProjectId = v),
-                          decoration: _formInputDecoration(),
+                        final selectedProject = projects.cast<Project?>().firstWhere((p) => p?.id == _selectedProjectId, orElse: () => null);
+
+                        return SearchableSelectorField(
+                          hint: 'Projet par defaut',
+                          selectedText: selectedProject?.name ?? 'Projet par defaut',
+                          onTap: () async {
+                            final res = await showProjectSelectDialog(context, projects, selectedProjectId: _selectedProjectId);
+                            if (res != null) {
+                              setState(() => _selectedProjectId = (res == '__default__' ? null : res));
+                            }
+                          },
                         );
                       },
                     ),
@@ -497,7 +512,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                 onChanged: (v) => setState(() => _pricingModeHT = v!),
                 activeColor: AppColors.primary,
               ),
-              const Text('Taxe incluse', style: TextStyle(fontSize: 13)),
+              Text('Taxe incluse', style: TextStyle(fontSize: 13)),
             ],
           ),
         ],
@@ -509,7 +524,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
     return InputDecoration(
       hintText: hint,
       hintStyle:
-          TextStyle(color: Colors.black87, fontSize: 13),
+          TextStyle(color: AppColors.textPrimary, fontSize: 13),
       filled: true,
       fillColor: AppColors.surfaceAlt,
       contentPadding:
@@ -552,7 +567,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
             padding:
                 EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: Color(0xFFF1F5F9),
+              color: AppColors.surfaceAlt,
               border: Border(
                 top: BorderSide(color: AppColors.border),
                 bottom: BorderSide(color: AppColors.border),
@@ -584,19 +599,19 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                     child: Text('Total HT',
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.right)),
-                const SizedBox(width: 60),
+                SizedBox(width: 60),
               ],
             ),
           ),
           // Items
           if (_items.isEmpty)
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 32),
+              padding: EdgeInsets.symmetric(vertical: 32),
               width: double.infinity,
-              child: const Text('Aucun article',
+              child: Text('Aucun article',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontSize: 13, color: Colors.black87)),
+                      fontSize: 13, color: AppColors.textPrimary)),
             )
           else
             ..._items.asMap().entries.map((e) => _buildItemRow(e.key, e.value)),
@@ -609,7 +624,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
     return TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: AppColors.textSecondary);
+        color: AppColors.textPrimary);
   }
 
   Widget _buildItemRow(int index, CustomerOrderItem item) {
@@ -645,7 +660,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                           controller: textEditingController,
                           focusNode: focusNode,
                           decoration: _itemInputDecoration('Rechercher un article...'),
-                          style: const TextStyle(fontSize: 13),
+                          style: TextStyle(fontSize: 13),
                           onChanged: (v) => setState(() =>
                               _items[index] = item.copyWith(description: v)),
                         );
@@ -667,7 +682,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                                   return ListTile(
                                     title: Text(option.name, style: TextStyle(fontSize: 13)),
                                     subtitle: option.reference != null ? Text(option.reference!, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
-                                    trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                     onTap: () => onSelected(option),
                                     dense: true,
                                   );
@@ -691,7 +706,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // Quantite with - / + buttons
               SizedBox(
                 width: 140,
@@ -712,7 +727,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                         child: Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: 4),
                     Expanded(
                       child: TextFormField(
                         key: ValueKey(
@@ -720,7 +735,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                         initialValue: formatQuantity(item.quantity),
                         decoration: _itemInputDecoration(''),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 13),
+                        style: TextStyle(fontSize: 13),
                         keyboardType: TextInputType.number,
                         onChanged: (v) => setState(() =>
                             _items[index] = item.copyWith(
@@ -728,7 +743,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                                     double.tryParse(v) ?? 1)),
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: 4),
                     InkWell(
                       onTap: () => setState(() => _items[index] =
                           item.copyWith(quantity: item.quantity + 1)),
@@ -747,7 +762,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // P.U
               SizedBox(
                 width: 130,
@@ -760,7 +775,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                             ? item.unitPrice.toStringAsFixed(0)
                             : '',
                         decoration: _itemInputDecoration(''),
-                        style: const TextStyle(fontSize: 13),
+                        style: TextStyle(fontSize: 13),
                         keyboardType: TextInputType.number,
                         onChanged: (v) => setState(() =>
                             _items[index] = item.copyWith(
@@ -778,7 +793,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // TVA
               SizedBox(
                 width: 100,
@@ -792,7 +807,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                           value: r,
                           child: Text('${r.toInt()}%',
                               style:
-                                  const TextStyle(fontSize: 13))))
+                                  TextStyle(fontSize: 13))))
                       .toList(),
                   onChanged: (v) => setState(() =>
                       _items[index] = item.copyWith(tvaRate: v)),
@@ -800,7 +815,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                   isDense: true,
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // Total HT (read-only)
               SizedBox(
                 width: 140,
@@ -841,7 +856,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                   size: 16, color: AppColors.textTertiary),
             ],
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Row(
             children: [
               InkWell(
@@ -873,7 +888,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 24),
+              SizedBox(width: 24),
               InkWell(
                 onTap: () => setState(() => _items[index] =
                     item.copyWith(showDiscount: !item.showDiscount)),
@@ -906,12 +921,12 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
           ),
           if (item.showDescription)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: EdgeInsets.only(top: 8),
               child: TextFormField(
                 initialValue: item.description ?? '',
                 decoration:
                     _itemInputDecoration('Description du produit'),
-                style: const TextStyle(fontSize: 12),
+                style: TextStyle(fontSize: 12),
                 maxLines: 2,
                 onChanged: (v) => setState(
                     () => _items[index] = item.copyWith(description: v)),
@@ -919,7 +934,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
             ),
           if (item.showDiscount)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: EdgeInsets.only(top: 8),
               child: Row(
                 children: [
                   SizedBox(
@@ -929,7 +944,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                           ? item.discountPercent.toString()
                           : '',
                       decoration: _itemInputDecoration('Remise %'),
-                      style: const TextStyle(fontSize: 12),
+                      style: TextStyle(fontSize: 12),
                       keyboardType: TextInputType.number,
                       onChanged: (v) => setState(() =>
                           _items[index] = item.copyWith(
@@ -949,7 +964,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
     return InputDecoration(
       hintText: hint,
       hintStyle: TextStyle(
-          color: Colors.black87, fontSize: 12),
+          color: AppColors.textPrimary, fontSize: 12),
       filled: true,
       fillColor: AppColors.surfaceAlt,
       contentPadding:
@@ -968,41 +983,20 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
   }
 
   // ── Article Actions ───────────────────────────────────────────────
-  Widget _buildArticleActions() {
+    Widget _buildArticleActions() {
     return Row(
       children: [
         Expanded(
           child: BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
-              final products =
-                  state is ProductsLoaded ? state.products : <Product>[];
-              return Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                  hint: Text('Selectionner un article...',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textTertiary)),
-                  isExpanded: true,
-                  items: products
-                      .map((p) => DropdownMenuItem(
-                          value: p.id,
-                          child: Text(p.name,
-                              style:
-                                  const TextStyle(fontSize: 13))))
-                      .toList(),
-                  onChanged: (v) {
-                    if (v == null) return;
-                    final product =
-                        products.firstWhere((p) => p.id == v);
+              final products = state is ProductsLoaded ? state.products : <Product>[];
+              return SearchableSelectorField(
+                hint: 'Sélectionner un article...',
+                selectedText: null,
+                onTap: () async {
+                  final res = await showProductSelectDialog(context, products);
+                  if (res != null) {
+                    final product = products.firstWhere((p) => p.id == res);
                     setState(() {
                       _items.add(CustomerOrderItem(
                         id: _uuid.v4(),
@@ -1014,20 +1008,8 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                         tvaRate: product.tvaRate,
                       ));
                     });
-                  },
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.surfaceAlt,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        borderSide: BorderSide.none),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        borderSide: BorderSide.none),
-                  ),
-                ),
+                  }
+                },
               );
             },
           ),
@@ -1041,7 +1023,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
           },
           splashRadius: 24,
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         SizedBox(
           height: 44,
           child: OutlinedButton(
@@ -1059,15 +1041,11 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
               });
             },
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.textPrimary,
-              side: BorderSide(color: AppColors.border),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md)),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              foregroundColor: AppColors.primary,
+              side: BorderSide(color: AppColors.primary),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
             ),
-            child: const Text('Ajouter une Ligne Vide',
-                style: TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w500)),
+            child: Text('Ajouter une Ligne Vide', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           ),
         ),
       ],
@@ -1112,7 +1090,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
             ),
           ),
           if (_withGlobalDiscount) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 SizedBox(
@@ -1123,7 +1101,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                         : '',
                     decoration: _itemInputDecoration('Remise %'),
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13),
                     onChanged: (v) => setState(() =>
                         _globalDiscountPercent =
                             double.tryParse(v) ?? 0),
@@ -1152,18 +1130,18 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             _buildTotalLine('Sous-total HT:', formatCurrencyDT(_totalHTAfterDiscount)),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             // TVA breakdown
             ..._tvaBreakdown.entries.map((entry) =>
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: EdgeInsets.only(bottom: 6),
                 child: _buildTotalLine('TVA ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
               ),
             ),
             InkWell(
               onTap: () => setState(() => _withTimbreFiscal = !_withTimbreFiscal),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
+                padding: EdgeInsets.symmetric(vertical: 2),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1188,10 +1166,10 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             if (_withGlobalDiscount && _globalDiscountAmount > 0) ...[
               _buildTotalLine('Remise:', '- ${formatCurrencyDT(_globalDiscountAmount)}'),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
             ],
             Divider(),
             SizedBox(height: 4),
@@ -1238,14 +1216,14 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary)),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               TextFormField(
                 controller: _notesCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
                   hintText: 'Visible sur le document final',
                   hintStyle: TextStyle(
-                      color: Colors.black87, fontSize: 13),
+                      color: AppColors.textPrimary, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.surfaceAlt,
                   contentPadding: EdgeInsets.all(14),
@@ -1262,7 +1240,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                       borderSide: BorderSide(
                           color: AppColors.primary, width: 1.5)),
                 ),
-                style: const TextStyle(fontSize: 13),
+                style: TextStyle(fontSize: 13),
               ),
             ],
           ),
@@ -1277,14 +1255,14 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textPrimary)),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               TextFormField(
                 controller: _conditionsCtrl,
                 maxLines: 5,
                 decoration: InputDecoration(
                   hintText: 'Conditions generales pour ce document',
                   hintStyle: TextStyle(
-                      color: Colors.black87, fontSize: 13),
+                      color: AppColors.textPrimary, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.surfaceAlt,
                   contentPadding: EdgeInsets.all(14),
@@ -1301,7 +1279,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                       borderSide: BorderSide(
                           color: AppColors.primary, width: 1.5)),
                 ),
-                style: const TextStyle(fontSize: 13),
+                style: TextStyle(fontSize: 13),
               ),
             ],
           ),

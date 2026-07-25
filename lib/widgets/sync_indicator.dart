@@ -72,7 +72,7 @@ class _SyncIndicatorState extends State<SyncIndicator> with SingleTickerProvider
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppRadius.full),
@@ -87,7 +87,7 @@ class _SyncIndicatorState extends State<SyncIndicator> with SingleTickerProvider
                   child: Icon(Icons.sync_rounded, color: color, size: 14),
                 )
               : Icon(icon, color: color, size: 14),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
         ],
       ),

@@ -180,18 +180,18 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
             label: Text('Valider', style: TextStyle(color: Colors.white)),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: 16),
         ],
       ),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.all(AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildInformationsSection(),
-              const SizedBox(height: AppSpacing.lg),
+              SizedBox(height: AppSpacing.lg),
               _buildArticlesSection(),
             ],
           ),
@@ -222,7 +222,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Date', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       InkWell(
                         onTap: () async {
                           final date = await showDatePicker(
@@ -266,7 +266,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: AppColors.surfaceAlt,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
                         ),
                         items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
@@ -295,7 +295,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: AppColors.surfaceAlt,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
                         ),
                         items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
@@ -326,7 +326,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                           hintText: 'Raison de l\'opération...',
                           filled: true,
                           fillColor: AppColors.surfaceAlt,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
                         ),
                         maxLines: 2,
@@ -347,7 +347,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                           hintText: 'Notes additionnelles...',
                           filled: true,
                           fillColor: AppColors.surfaceAlt,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
                         ),
                         maxLines: 2,
@@ -402,10 +402,10 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                 Expanded(flex: 1, child: Text('Qté en stock dest.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
                 SizedBox(width: 8),
                 Expanded(flex: 1, child: Text('Qté finale dest.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                const SizedBox(width: 40),
+                SizedBox(width: 40),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             
             // Items List
             ..._items.asMap().entries.map((entry) {
@@ -446,7 +446,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
               final isDuplicate = item.productId.isNotEmpty && _items.where((i) => i.productId == item.productId).length > 1;
               
               return Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
+                padding: EdgeInsets.only(bottom: 8.0),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -484,9 +484,9 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                               decoration: InputDecoration(
                                 hintText: 'Sélectionner un article',
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide.none),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                               ),
-                              style: const TextStyle(fontSize: 13),
+                              style: TextStyle(fontSize: 13),
                             );
                           },
                           optionsViewBuilder: (context, onSelected, options) {
@@ -505,7 +505,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                                       final option = options.elementAt(i);
                                       return ListTile(
                                         leading: Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textSecondary),
-                                        title: Text(option.name, style: const TextStyle(fontSize: 13)),
+                                        title: Text(option.name, style: TextStyle(fontSize: 13)),
                                         onTap: () => onSelected(option),
                                         dense: true,
                                       );
@@ -555,7 +555,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     
                     // Qty to Transfer
                     Expanded(
@@ -638,7 +638,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
               );
             }),
             
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

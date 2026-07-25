@@ -90,7 +90,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: CircularProgressIndicator());
     }
 
     return SingleChildScrollView(
@@ -129,7 +129,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                         hint: 'Nom de votre société',
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.lg),
+                    SizedBox(width: AppSpacing.lg),
                     Expanded(
                       child: AppTextField(
                         label: 'Téléphone',
@@ -139,7 +139,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.lg),
+                SizedBox(height: AppSpacing.lg),
                 Row(
                   children: [
                     Expanded(
@@ -149,7 +149,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                         hint: 'contact@masociete.com',
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.lg),
+                    SizedBox(width: AppSpacing.lg),
                     Expanded(
                       child: AppTextField(
                         label: 'Site Web',
@@ -159,7 +159,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.lg),
+                SizedBox(height: AppSpacing.lg),
                 Row(
                   children: [
                     Expanded(
@@ -169,7 +169,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                         hint: 'MF1234567/A/B/C/000',
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.lg),
+                    SizedBox(width: AppSpacing.lg),
                     Expanded(
                       child: AppTextField(
                         label: 'Registre de Commerce',
@@ -179,13 +179,13 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.lg),
+                SizedBox(height: AppSpacing.lg),
                 AppTextField(
                   label: 'Adresse de votre société',
                   controller: _addressController,
                   hint: '123 Rue Exemple, Ville, Pays',
                 ),
-                const SizedBox(height: AppSpacing.lg),
+                SizedBox(height: AppSpacing.lg),
                 AppTextField(
                   label: 'Coordonnées bancaires (RIB)',
                   controller: _ribController,

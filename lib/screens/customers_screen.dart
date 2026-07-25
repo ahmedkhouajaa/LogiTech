@@ -33,8 +33,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
       children: [
         // Modern Action Bar
         Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: const BoxDecoration(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
             color: Colors.transparent,
             border: Border(bottom: BorderSide(color: Colors.transparent)),
           ),
@@ -53,14 +53,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 width: 300,
                 child: AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
               ),
-              const SizedBox(width: AppSpacing.md),
+              SizedBox(width: AppSpacing.md),
               ElevatedButton.icon(
                 onPressed: () => _showDialog(context, null),
                 icon: Icon(Icons.person_add_alt_1_rounded, size: 20, color: Colors.white),
                 label: Text('Nouveau Client', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 ),
@@ -72,7 +72,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
         Expanded(
           child: BlocBuilder<CustomersBloc, CustomersState>(
             builder: (context, state) {
-              if (state is CustomersLoading) return const Center(child: CircularProgressIndicator());
+              if (state is CustomersLoading) return Center(child: CircularProgressIndicator());
               if (state is CustomersError) return Center(child: Text('Erreur: ${state.message}'));
               if (state is CustomersLoaded) {
                 final filtered = _search.isEmpty
@@ -93,9 +93,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                   itemCount: filtered.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  separatorBuilder: (context, index) => SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final c = filtered[index];
                     final isEntreprise = c.customerType == 'entreprise';
@@ -137,7 +137,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 
                                 // Info
                                 Expanded(
@@ -243,7 +243,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   },
                 );
               }
-              return const SizedBox();
+              return SizedBox();
             },
           ),
         ),
@@ -442,28 +442,28 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                   // AI Scan Button (BETA) - Temporarily hidden per user request
                   /*
                   Container(
-                    margin: const EdgeInsets.only(right: 12),
+                    margin: EdgeInsets.only(right: 12),
                     child: OutlinedButton.icon(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Scanner avec l\'IA bientot disponible !')),
                         );
                       },
-                      icon: const Icon(Icons.auto_awesome_rounded, size: 16, color: Colors.purple),
+                      icon: Icon(Icons.auto_awesome_rounded, size: 16, color: Colors.purple),
                       label: Row(
                         children: [
-                          const Text(
+                          Text(
                             'Scanner avec l\'IA',
                             style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold, fontSize: 13),
                           ),
-                          const SizedBox(width: 6),
+                          SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.purple.shade100,
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Text(
+                            child: Text(
                               'BETA',
                               style: TextStyle(color: Colors.purple, fontSize: 9, fontWeight: FontWeight.w900),
                             ),
@@ -471,7 +471,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                         ],
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.purple, width: 1.5),
+                        side: BorderSide(color: Colors.purple, width: 1.5),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
@@ -486,10 +486,10 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: AppColors.border),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   // Creer / Enregistrer Button
                   ElevatedButton.icon(
                     onPressed: _save,
@@ -518,8 +518,8 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                 unselectedLabelColor: AppColors.textTertiary,
                 indicatorColor: AppColors.primary,
                 indicatorWeight: 3,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
                 tabs: const [
                   Tab(text: 'Informations', icon: Icon(Icons.info_outline_rounded, size: 20)),
                   Tab(text: 'Adresses', icon: Icon(Icons.location_on_outlined, size: 20)),
@@ -537,7 +537,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                   children: [
                     // TAB 1: Informations
                     SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -546,7 +546,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                             "Type d'Entreprise",
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           Row(
                             children: [
                               Expanded(
@@ -557,7 +557,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                   onTap: () => setState(() => _customerType = 'entreprise'),
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              SizedBox(width: 16),
                               Expanded(
                                 child: _buildTypeButton(
                                   label: 'Particulier',
@@ -568,7 +568,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                               ),
                             ],
                           ),
-                          const SizedBox(height: 24),
+                          SizedBox(height: 24),
 
                           // Section 2: Conditional Fields (Company vs Individual)
                           if (_customerType == 'entreprise') ...[
@@ -582,7 +582,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                     validator: (v) => v!.trim().isEmpty ? 'Le nom de l\'entreprise est requis' : null,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 Expanded(
                                   child: AppTextField(
                                     label: 'Nom du responsable',
@@ -592,7 +592,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
@@ -604,7 +604,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                     validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 Expanded(
                                   child: AppTextField(
                                     label: 'Reference',
@@ -614,7 +614,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
@@ -624,7 +624,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                     controller: _taxCtrl,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 const Spacer(),
                               ],
                             ),
@@ -639,7 +639,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                     validator: (v) => v!.trim().isEmpty ? 'Le nom du responsable est requis' : null,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 Expanded(
                                   child: AppTextField(
                                     label: 'Email Personnel *',
@@ -651,7 +651,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
@@ -661,7 +661,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                     controller: _referenceCtrl,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 Expanded(
                                   child: AppTextField(
                                     label: 'Numero CIN',
@@ -678,7 +678,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
@@ -691,12 +691,12 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                     onTap: _selectBirthDate,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 const Spacer(),
                               ],
                             ),
                           ],
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
 
                           // Numero de Telephone (with flag & +216 prefix)
                           Column(
@@ -717,7 +717,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                       borderRadius: BorderRadius.circular(AppRadius.md),
                                       border: Border.all(color: AppColors.border),
                                     ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    padding: EdgeInsets.symmetric(horizontal: 12),
                                     child: Row(
                                       children: [
                                         Text('🇹🇳', style: TextStyle(fontSize: 18)),
@@ -765,13 +765,13 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                     
                     // TAB 2: Adresses
                     SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // Section 3: Shared Fields (Billing Address)
                           _buildBillingAddressSection(),
-                          const SizedBox(height: 20),
+                          SizedBox(height: 20),
 
                           // Delivery Address Section (Collapsible)
                           _buildDeliveryAddressSection(),
@@ -781,7 +781,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                     
                     // TAB 3: Financier
                     SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -806,7 +806,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                               ),
                             ],
                           ),
-                          const SizedBox(height: 24),
+                          SizedBox(height: 24),
 
                           // Price List Dropdown + Create Price List
                           Column(
@@ -827,7 +827,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                         borderRadius: BorderRadius.circular(AppRadius.md),
                                         border: Border.all(color: AppColors.border),
                                       ),
-                                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                                      padding: EdgeInsets.symmetric(horizontal: 14),
                                       child: DropdownButtonHideUnderline(
                                         child: DropdownButton<String>(
                                           value: _selectedPriceList,
@@ -846,7 +846,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
+                                  SizedBox(width: 12),
                                   // "+" Button
                                   SizedBox(
                                     height: 44,
@@ -863,7 +863,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                                           side: BorderSide(color: AppColors.border),
                                         ),
                                       ),
-                                      child: const Icon(Icons.add_rounded, size: 20),
+                                      child: Icon(Icons.add_rounded, size: 20),
                                     ),
                                   ),
                                 ],
@@ -875,7 +875,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                               ),
                             ],
                           ),
-                          const SizedBox(height: 24),
+                          SizedBox(height: 24),
 
                           // Private Note (3-4 lines height)
                           AppTextField(
@@ -915,11 +915,11 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                               label: Text('Précédent', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                               style: OutlinedButton.styleFrom(
                                 side: BorderSide(color: AppColors.border),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                               ),
                             )
-                          : const SizedBox(width: 100),
+                          : SizedBox(width: 100),
                       _tabController.index < _tabController.length - 1
                           ? ElevatedButton(
                               onPressed: () {
@@ -929,11 +929,11 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                 elevation: 0,
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text('Suivant', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
@@ -948,7 +948,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                               label: Text('Terminer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.success,
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                 elevation: 0,
                               ),
@@ -1022,13 +1022,13 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
             'Adresse de Facturation',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           AppTextField(
             label: 'Adresse de la rue',
             hint: 'Saisissez l\'adresse de la rue',
             controller: _billingStreetCtrl,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -1038,7 +1038,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                   controller: _billingCityCtrl,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: AppTextField(
                   label: 'Code postal',
@@ -1150,14 +1150,14 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   AppTextField(
                     label: 'Adresse de la rue',
                     hint: 'Saisissez l\'adresse de la rue',
                     controller: _deliveryStreetCtrl,
                     readOnly: _deliverySameAsBilling,
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -1168,7 +1168,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                           readOnly: _deliverySameAsBilling,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                         child: AppTextField(
                           label: 'Code postal',
@@ -1252,7 +1252,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
           if (_bankExpanded) ...[
             Divider(height: 1, color: AppColors.border),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: AppTextField(
                 label: 'Numero de compte / IBAN',
                 hint: 'Saisissez le compte bancaire',
@@ -1331,7 +1331,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                   'Creer une liste de prix personnalisee',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AppTextField(
                   label: 'Nom de la liste de prix *',
                   hint: 'Ex: Prix Grossiste',
@@ -1342,25 +1342,25 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                   'Definir les tarifs des articles :',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Flexible(
                   child: SingleChildScrollView(
                     child: Column(
                       children: products.map((prod) {
                         return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          padding: EdgeInsets.symmetric(vertical: 6),
                           child: Row(
                             children: [
                               Expanded(
                                 flex: 3,
                                 child: Text(
                                   prod.name,
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12),
                               Expanded(
                                 flex: 2,
                                 child: SizedBox(
@@ -1388,15 +1388,15 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Annuler'),
+                      child: Text('Annuler'),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     ElevatedButton(
                       onPressed: () {
                         final listName = nameController.text.trim();
@@ -1422,7 +1422,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                       ),
-                      child: const Text('Valider'),
+                      child: Text('Valider'),
                     ),
                   ],
                 ),

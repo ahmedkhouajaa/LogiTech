@@ -64,13 +64,13 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                 backgroundColor: AppColors.error,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.all(16),
+                margin: EdgeInsets.all(16),
               ),
             );
           }
         },
         child: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0F172A)],
               begin: Alignment.topCenter,
@@ -91,15 +91,15 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                   child: SlideTransition(
                     position: _slideUp,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 28),
+                      padding: EdgeInsets.symmetric(horizontal: 28),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const SizedBox(height: 60),
+                          SizedBox(height: 60),
                           // Logo
                           _buildLogo(),
-                          const SizedBox(height: 16),
-                          const Text(
+                          SizedBox(height: 16),
+                          Text(
                             'LogiTech Pro',
                             style: TextStyle(
                               color: Colors.white,
@@ -108,7 +108,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                               letterSpacing: -0.5,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          SizedBox(height: 6),
                           Text(
                             'ERP · CRM · Facturation · Stock',
                             style: TextStyle(
@@ -117,10 +117,10 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                               letterSpacing: 0.5,
                             ),
                           ),
-                          const SizedBox(height: 48),
+                          SizedBox(height: 48),
                           // Login card
                           _buildLoginCard(),
-                          const SizedBox(height: 24),
+                          SizedBox(height: 24),
                           // Offline mode
                           BlocBuilder<AuthBloc, AuthState>(
                             builder: (context, state) {
@@ -142,10 +142,10 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                               );
                             },
                           ),
-                          const SizedBox(height: 40),
+                          SizedBox(height: 40),
                           // Feature row
                           _buildFeatures(),
-                          const SizedBox(height: 40),
+                          SizedBox(height: 40),
                         ],
                       ),
                     ),
@@ -174,13 +174,13 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
           ),
         ],
       ),
-      child: const Icon(Icons.business_center_rounded, color: Colors.white, size: 34),
+      child: Icon(Icons.business_center_rounded, color: Colors.white, size: 34),
     );
   }
 
   Widget _buildLoginCard() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(20),
@@ -191,7 +191,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Connexion',
               style: TextStyle(
                 color: Colors.white,
@@ -199,7 +199,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             Text(
               'Connectez-vous a votre espace',
               style: TextStyle(
@@ -207,7 +207,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                 fontSize: 13,
               ),
             ),
-            const SizedBox(height: 28),
+            SizedBox(height: 28),
             // Email
             _buildField(
               label: 'Adresse email',
@@ -217,7 +217,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
               icon: Icons.email_outlined,
               validator: (v) => v == null || v.isEmpty ? 'Email requis' : null,
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             // Password
             _buildField(
               label: 'Mot de passe',
@@ -235,7 +235,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
               ),
               validator: (v) => v == null || v.isEmpty ? 'Mot de passe requis' : null,
             ),
-            const SizedBox(height: 28),
+            SizedBox(height: 28),
             // Login button
             BlocBuilder<AuthBloc, AuthState>(
               builder: (context, state) {
@@ -263,7 +263,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                               color: AppColors.surface,
                             ),
                           )
-                        : const Text(
+                        : Text(
                             'Se connecter',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
@@ -317,7 +317,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.06),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
@@ -364,7 +364,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
           ),
           child: Icon(icon, color: AppColors.primaryLight, size: 20),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         Text(
           label,
           style: TextStyle(

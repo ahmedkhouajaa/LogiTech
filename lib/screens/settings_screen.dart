@@ -12,12 +12,12 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Parametres', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const SizedBox(height: AppSpacing.lg),
+          Text('Parametres', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          SizedBox(height: AppSpacing.lg),
           _buildSettingsGroup(
             'General',
             [
@@ -41,7 +41,7 @@ class SettingsScreen extends StatelessWidget {
               _buildSettingItem(Icons.language_rounded, 'Langue et region', 'Francais (Algerie), devise par defaut'),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
           _buildSettingsGroup(
             'Documents',
             [
@@ -56,7 +56,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
           _buildSettingsGroup(
             'Synchronisation',
             [
@@ -64,7 +64,7 @@ class SettingsScreen extends StatelessWidget {
               _buildSettingItem(Icons.wifi_rounded, 'Mode hors ligne', 'Fonctionnement complet sans internet'),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
           _buildSettingsGroup(
             'Comptabilite',
             [
@@ -97,7 +97,7 @@ class SettingsScreen extends StatelessWidget {
               return Column(
                 children: [
                   e.value,
-                  if (!isLast) const Divider(height: 1),
+                  if (!isLast) Divider(height: 1),
                 ],
               );
             }).toList(),

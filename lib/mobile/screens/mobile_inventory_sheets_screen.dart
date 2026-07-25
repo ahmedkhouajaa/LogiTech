@@ -92,7 +92,7 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
 
           listItems = filteredItems.map((item) {
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.only(bottom: 12),
               child: _InventorySheetCard(
                 sheet: item,
                 onTap: () {
@@ -141,7 +141,7 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
           activeModule: widget.activeModule,
           onModuleSelected: (m) {},
           child: ListView(
-            padding: const EdgeInsets.only(bottom: 80),
+            padding: EdgeInsets.only(bottom: 80),
             children: listItems,
           ),
         );
@@ -182,7 +182,7 @@ class _InventorySheetCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -205,7 +205,7 @@ class _InventorySheetCard extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: statusColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -222,7 +222,7 @@ class _InventorySheetCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
@@ -233,7 +233,7 @@ class _InventorySheetCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(

@@ -77,16 +77,16 @@ class _InvoiceDesignerScreenState extends State<InvoiceDesignerScreen> {
                 child: Row(
                   children: [
                     // ─── Left: Toolbox ────────────────
-                    const SizedBox(
+                    SizedBox(
                       width: 240,
                       child: ToolboxPanel(),
                     ),
                     // ─── Center: Canvas Workspace ─────
-                    const Expanded(
+                    Expanded(
                       child: CanvasWorkspace(),
                     ),
                     // ─── Right: Properties Panel ──────
-                    const SizedBox(
+                    SizedBox(
                       width: 300,
                       child: PropertiesPanel(),
                     ),
@@ -134,11 +134,11 @@ class _InvoiceDesignerScreenState extends State<InvoiceDesignerScreen> {
 
         final child = Container(
           height: 52,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Color(0xFF2A2A3C),
             border: Border(bottom: BorderSide(color: Color(0xFF3A3A4C))),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12),
           child: Row(
             children: [
               // Back button
@@ -147,10 +147,10 @@ class _InvoiceDesignerScreenState extends State<InvoiceDesignerScreen> {
                 'Retour',
                 () => Navigator.pop(context),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // Document name
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: const Color(0xFF3A3A4C),
                   borderRadius: BorderRadius.circular(6),
@@ -158,11 +158,11 @@ class _InvoiceDesignerScreenState extends State<InvoiceDesignerScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.description_rounded, size: 14, color: Color(0xFF8B8BA7)),
-                    const SizedBox(width: 6),
+                    Icon(Icons.description_rounded, size: 14, color: Color(0xFF8B8BA7)),
+                    SizedBox(width: 6),
                     Text(
                       state.document.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -170,10 +170,10 @@ class _InvoiceDesignerScreenState extends State<InvoiceDesignerScreen> {
                     ),
                     if (state.isDirty)
                       Container(
-                        margin: const EdgeInsets.only(left: 6),
+                        margin: EdgeInsets.only(left: 6),
                         width: 6,
                         height: 6,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: Color(0xFFF59E0B),
                           shape: BoxShape.circle,
                         ),
@@ -181,7 +181,7 @@ class _InvoiceDesignerScreenState extends State<InvoiceDesignerScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               // Undo / Redo
               _topBarIconButton(
                 Icons.undo_rounded,
@@ -193,9 +193,9 @@ class _InvoiceDesignerScreenState extends State<InvoiceDesignerScreen> {
                 'Rétablir (Ctrl+Shift+Z)',
                 state.canRedo ? () => state.redo() : null,
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Container(width: 1, height: 24, color: const Color(0xFF3A3A4C)),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // Grid toggle
               _topBarToggle(
                 Icons.grid_4x4_rounded,
@@ -217,14 +217,14 @@ class _InvoiceDesignerScreenState extends State<InvoiceDesignerScreen> {
                 () => state.zoomOut(),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFF3A3A4C),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   '${(state.zoom * 100).round()}%',
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
               ),
               _topBarIconButton(
@@ -237,7 +237,7 @@ class _InvoiceDesignerScreenState extends State<InvoiceDesignerScreen> {
                 'Réinitialiser zoom',
                 () => state.resetZoom(),
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               // Save button
               _saveButton(state),
             ],
@@ -345,7 +345,7 @@ class _InvoiceDesignerScreenState extends State<InvoiceDesignerScreen> {
             );
           },
           borderRadius: BorderRadius.circular(8),
-          child: const Padding(
+          child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
@@ -370,18 +370,18 @@ class _InvoiceDesignerScreenState extends State<InvoiceDesignerScreen> {
         final sel = state.selectedElement;
         final child = Container(
           height: 32,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Color(0xFF2A2A3C),
             border: Border(top: BorderSide(color: Color(0xFF3A3A4C))),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12),
           child: Row(
             children: [
               _statusItem(Icons.layers_rounded, '${state.elements.length} éléments'),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               if (sel != null) ...[
                 _statusItem(Icons.open_with_rounded, 'X: ${sel.x.toStringAsFixed(1)} Y: ${sel.y.toStringAsFixed(1)}'),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 _statusItem(Icons.aspect_ratio_rounded, '${sel.width.toStringAsFixed(1)} × ${sel.height.toStringAsFixed(1)} mm'),
               ],
               const Spacer(),
@@ -401,8 +401,8 @@ class _InvoiceDesignerScreenState extends State<InvoiceDesignerScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 12, color: const Color(0xFF8B8BA7)),
-        const SizedBox(width: 4),
-        Text(text, style: const TextStyle(color: Color(0xFF8B8BA7), fontSize: 11)),
+        SizedBox(width: 4),
+        Text(text, style: TextStyle(color: Color(0xFF8B8BA7), fontSize: 11)),
       ],
     );
   }

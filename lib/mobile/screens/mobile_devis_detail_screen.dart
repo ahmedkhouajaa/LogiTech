@@ -127,16 +127,16 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surface,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Réf: ${currentQuote.number}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Réf: ${currentQuote.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: currentQuote.status.color.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
@@ -148,11 +148,11 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                           ),
                         ],
                       ),
-                      const Divider(height: 24),
+                      Divider(height: 24),
                       _buildInfoRow('Client', currentQuote.customerName ?? 'Inconnu'),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Date', formatDateTimeLong(currentQuote.date)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Date de validité', formatDateTimeLong(currentQuote.validityDate)),
                     ],
                   ),
@@ -203,17 +203,17 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surfaceAlt,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     children: [
                       _buildInfoRow('Total HT', formatCurrencyDT(currentQuote.totalHT)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Total TVA', formatCurrencyDT(currentQuote.totalTva)),
                       if ((currentQuote.totalTTC - currentQuote.totalHT - currentQuote.totalTva) > 0.01) ...[
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
                         _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentQuote.totalTTC - currentQuote.totalHT - currentQuote.totalTva)),
                       ],
-                      const Divider(height: 24),
+                      Divider(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -239,7 +239,7 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                   ),
                 ),
               ],
-              const SizedBox(height: 32),
+              SizedBox(height: 32),
             ],
           ),
         ),
@@ -292,10 +292,10 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
         showDialog(
           context: context,
           builder: (dialogCtx) => AlertDialog(
-            title: const Text('Confirmer la suppression'),
-            content: const Text('Voulez-vous vraiment supprimer ce devis ?'),
+            title: Text('Confirmer la suppression'),
+            content: Text('Voulez-vous vraiment supprimer ce devis ?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogCtx); // close dialog
@@ -304,7 +304,7 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                   // The BlocListener will automatically pop it when the quote is no longer found in the loaded state.
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -360,21 +360,21 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
       builder: (dialogCtx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Changer le statut'),
+            title: Text('Changer le statut'),
             content: SizedBox(
               width: double.maxFinite,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Nouveau statut:'),
-                  const SizedBox(height: 8),
+                  Text('Nouveau statut:'),
+                  SizedBox(height: 8),
                   DropdownButtonFormField(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: selectedStatus,
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    decoration: InputDecoration(border: OutlineInputBorder()),
                     isExpanded: true,
                     items: DocumentStatus.values.map((s) => DropdownMenuItem(
                       value: s,
@@ -384,17 +384,17 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                       if (v != null) setDialogState(() => selectedStatus = v);
                     },
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   TextField(
                     controller: notesController,
                     maxLines: 2,
-                    decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
+                    decoration: InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
                   ),
                 ],
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   final userId = AuthService.instance.currentUserUid ?? 'System';
@@ -403,7 +403,7 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                   ));
                   Navigator.pop(dialogCtx);
                 },
-                child: const Text('Enregistrer'),
+                child: Text('Enregistrer'),
               ),
             ],
           );
@@ -422,21 +422,21 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Voulez-vous transformer ce devis en $targetName ?'),
-            const SizedBox(height: 16),
-            Text('Devis: ${quote.number}', style: const TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 16),
+            Text('Devis: ${quote.number}', style: TextStyle(fontWeight: FontWeight.w600)),
             Text('Client: ${quote.customerName ?? '—'}'),
-            Text('Montant: ${formatCurrencyDT(quote.totalTTC)}', style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text('Montant: ${formatCurrencyDT(quote.totalTTC)}', style: TextStyle(fontWeight: FontWeight.w600)),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(dialogCtx);
               onConfirm(context, quote);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-            child: const Text('Confirmer'),
+            child: Text('Confirmer'),
           ),
         ],
       ),

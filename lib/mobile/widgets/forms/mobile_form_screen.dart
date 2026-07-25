@@ -29,7 +29,7 @@ class MobileFormScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF1F5F9), // Light background for contrast with white sections
+      backgroundColor: AppColors.surfaceAlt, // Light background for contrast with white sections
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
@@ -113,7 +113,7 @@ class MobileFormScreen extends StatelessWidget {
                       onPressed: (isLoading || !isSaveEnabled) ? null : onSave,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
@@ -130,7 +130,7 @@ class MobileFormScreen extends StatelessWidget {
                             )
                           : Text(
                               saveLabel,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,

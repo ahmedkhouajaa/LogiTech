@@ -42,7 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Expanded(
               flex: 2,
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
                     begin: Alignment.topLeft,
@@ -59,15 +59,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         gradient: AppGradients.primary,
                         borderRadius: BorderRadius.circular(AppRadius.xl),
                       ),
-                      child: const Icon(Icons.business_center_rounded, color: Colors.white, size: 40),
+                      child: Icon(Icons.business_center_rounded, color: Colors.white, size: 40),
                     ),
-                    const SizedBox(height: 24),
-                    const Text('LogiTech Pro', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 24),
+                    Text('LogiTech Pro', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
                     Text('ERP · CRM · Facturation · Stock', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14)),
-                    const SizedBox(height: 48),
+                    SizedBox(height: 48),
                     _buildFeatureRow(Icons.offline_bolt_rounded, 'Offline-First', 'Fonctionne sans connexion'),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     _buildFeatureRow(Icons.sync_rounded, 'Synchronisation', 'Sync automatique avec le cloud'),
                     SizedBox(height: 16),
                     _buildFeatureRow(Icons.picture_as_pdf_rounded, 'PDF professionnel', 'Factures et devis imprimables'),
@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 color: AppColors.background,
                 child: Center(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(48),
+                    padding: EdgeInsets.all(48),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: 400),
                       child: Column(
@@ -91,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Text('Bienvenue !', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                           SizedBox(height: 8),
                           Text('Connectez-vous a votre espace', style: TextStyle(fontSize: 15, color: AppColors.textSecondary)),
-                          const SizedBox(height: 40),
+                          SizedBox(height: 40),
                           Form(
                             key: _formKey,
                             child: Column(
@@ -105,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   prefix: Icon(Icons.email_outlined, size: 18, color: AppColors.textTertiary),
                                   validator: (v) => v == null || v.isEmpty ? 'Email requis' : null,
                                 ),
-                                const SizedBox(height: 20),
+                                SizedBox(height: 20),
                                 AppTextField(
                                   label: 'Mot de passe',
                                   hint: '••••••••',
@@ -118,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   validator: (v) => v == null || v.isEmpty ? 'Mot de passe requis' : null,
                                 ),
-                                const SizedBox(height: 32),
+                                SizedBox(height: 32),
                                 BlocBuilder<AuthBloc, AuthState>(
                                   builder: (context, state) {
                                     final loading = state is AuthLoading;
@@ -134,11 +134,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                             ),
                                             child: loading
-                                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                                : const Text('Se connecter', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                                                ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                                : Text('Se connecter', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
                                           ),
                                         ),
-                                        const SizedBox(height: 12),
+                                        SizedBox(height: 12),
                                         TextButton.icon(
                                           onPressed: loading ? null : _handleOfflineMode,
                                           icon: Icon(Icons.offline_bolt_rounded, size: 16),
@@ -152,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 32),
+                          SizedBox(height: 32),
                         ],
                       ),
                     ),
@@ -177,11 +177,11 @@ class _LoginScreenState extends State<LoginScreen> {
             decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
             child: Icon(icon, color: AppColors.primary, size: 18),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              Text(title, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
               Text(subtitle, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11)),
             ],
           ),

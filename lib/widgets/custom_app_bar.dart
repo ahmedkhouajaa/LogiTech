@@ -27,7 +27,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         border: Border(bottom: BorderSide(color: AppColors.border)),
         boxShadow: AppShadows.sm,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
           if (leading != null) ...[leading!, SizedBox(width: 12)],
@@ -171,7 +171,7 @@ class AppButton extends StatelessWidget {
             : Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (icon != null) ...[Icon(icon, size: isSmall ? 14 : 16), const SizedBox(width: 6)],
+                  if (icon != null) ...[Icon(icon, size: isSmall ? 14 : 16), SizedBox(width: 6)],
                   Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: isSmall ? 12 : 14)),
                 ],
               ),
@@ -209,7 +209,7 @@ class EmptyState extends StatelessWidget {
             SizedBox(height: 8),
             Text(subtitle!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
           ],
-          if (action != null) ...[const SizedBox(height: 24), action!],
+          if (action != null) ...[SizedBox(height: 24), action!],
         ],
       ),
     );

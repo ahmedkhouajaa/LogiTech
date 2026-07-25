@@ -35,7 +35,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
             ),
           ),
           child: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Color(0xFF2A2A3C),
               border: Border(left: BorderSide(color: Color(0xFF3A3A4C))),
             ),
@@ -55,47 +55,47 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
         _panelHeader('Propriétés du document'),
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(14),
+            padding: EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _sectionTitle('Document'),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 _propTextField(
                   'Nom du modèle',
                   state.document.name,
                   (v) => state.setDocumentName(v),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 _sectionTitle('Marges (mm)'),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(child: _propNumberField('Haut', state.document.marginTop,
                         (v) => state.setMargins(top: v))),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(child: _propNumberField('Bas', state.document.marginBottom,
                         (v) => state.setMargins(bottom: v))),
                   ],
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(child: _propNumberField('Gauche', state.document.marginLeft,
                         (v) => state.setMargins(left: v))),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(child: _propNumberField('Droite', state.document.marginRight,
                         (v) => state.setMargins(right: v))),
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _sectionTitle('Grille'),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 _propNumberField('Taille grille (mm)', state.document.gridSize,
                     (v) => state.setGridSize(v)),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 _sectionTitle('Éléments'),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 ...state.elements.map((el) => _elementListTile(state, el)),
               ],
             ),
@@ -148,17 +148,17 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
           child: Row(
             children: [
               Icon(icon, size: 14, color: const Color(0xFF8B8BA7)),
-              const SizedBox(width: 6),
+              SizedBox(width: 6),
               Expanded(
                 child: Text(label,
-                    style: const TextStyle(fontSize: 11, color: Color(0xFFCBD5E1)),
+                    style: TextStyle(fontSize: 11, color: Color(0xFFCBD5E1)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
               ),
               if (el.isLocked)
-                const Icon(Icons.lock_rounded, size: 12, color: Color(0xFFF59E0B)),
+                Icon(Icons.lock_rounded, size: 12, color: Color(0xFFF59E0B)),
               if (!el.isVisible)
-                const Icon(Icons.visibility_off_rounded, size: 12, color: Color(0xFF6B6B7F)),
+                Icon(Icons.visibility_off_rounded, size: 12, color: Color(0xFF6B6B7F)),
             ],
           ),
         ),
@@ -172,58 +172,58 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
         _panelHeader(_getElementTitle(el)),
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(14),
+            padding: EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ─── Common Properties ─────────────────
                 _sectionTitle('Position & Taille'),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(child: _propNumberField('X (mm)', el.x, (v) {
                       el.x = v;
                       state.updateElementWithHistory(el.id, el);
                     })),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(child: _propNumberField('Y (mm)', el.y, (v) {
                       el.y = v;
                       state.updateElementWithHistory(el.id, el);
                     })),
                   ],
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(child: _propNumberField('Largeur', el.width, (v) {
                       el.width = v;
                       state.updateElementWithHistory(el.id, el);
                     })),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(child: _propNumberField('Hauteur', el.height, (v) {
                       el.height = v;
                       state.updateElementWithHistory(el.id, el);
                     })),
                   ],
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(child: _propNumberField('Rotation (°)', el.rotation, (v) {
                       el.rotation = v;
                       state.updateElementWithHistory(el.id, el);
                     })),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(child: _propSlider('Opacité', el.opacity, 0, 1, (v) {
                       el.opacity = v;
                       state.updateElement(el.id, el);
                     })),
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 // ─── Actions Row ───────────────────────
                 _buildActionsRow(context, state, el),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 // ─── Type-Specific Properties ──────────
                 if (el is TextElement) _buildTextProps(state, el),
                 if (el is ShapeElement) _buildShapeProps(context, state, el),
@@ -312,7 +312,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionTitle('Texte'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
             color: const Color(0xFF1E1E2E),
@@ -322,8 +322,8 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
           child: SmartTextField(
             value: el.text,
             maxLines: 4,
-            style: const TextStyle(color: Colors.white, fontSize: 12),
-            decoration: const InputDecoration(
+            style: TextStyle(color: Colors.white, fontSize: 12),
+            decoration: InputDecoration(
               border: InputBorder.none,
               filled: true,
               fillColor: Colors.transparent,
@@ -338,23 +338,23 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
             },
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _sectionTitle('Style'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Row(
           children: [
             Expanded(child: _propNumberField('Taille', el.fontSize, (v) {
               el.fontSize = v;
               state.updateElement(el.id, el);
             })),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Expanded(child: _propNumberField('Interligne', el.lineHeight, (v) {
               el.lineHeight = v;
               state.updateElement(el.id, el);
             })),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         // Bold, Italic, Underline toggles
         Row(
           children: [
@@ -362,12 +362,12 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
               el.isBold = v;
               state.updateElement(el.id, el);
             }, fontWeight: FontWeight.bold),
-            const SizedBox(width: 4),
+            SizedBox(width: 4),
             _styleToggle('I', el.isItalic, (v) {
               el.isItalic = v;
               state.updateElement(el.id, el);
             }, fontStyle: FontStyle.italic),
-            const SizedBox(width: 4),
+            SizedBox(width: 4),
             _styleToggle('U', el.isUnderline, (v) {
               el.isUnderline = v;
               state.updateElement(el.id, el);
@@ -384,7 +384,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
                 })),
           ],
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _colorProperty('Couleur du texte', Color(el.color), (c) {
           el.color = c.toARGB32();
           state.updateElementWithHistory(el.id, el);
@@ -400,7 +400,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionTitle('Forme'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _propDropdown<ShapeKind>(
           'Type',
           el.shapeKind,
@@ -411,24 +411,24 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
             state.updateElementWithHistory(el.id, el);
           },
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _colorProperty('Remplissage', Color(el.fillColor), (c) {
           el.fillColor = c.toARGB32();
           state.updateElementWithHistory(el.id, el);
         }),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _colorProperty('Bordure', Color(el.borderColor), (c) {
           el.borderColor = c.toARGB32();
           state.updateElementWithHistory(el.id, el);
         }),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Row(
           children: [
             Expanded(child: _propNumberField('Épaisseur', el.borderWidth, (v) {
               el.borderWidth = v;
               state.updateElement(el.id, el);
             })),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             if (el.shapeKind == ShapeKind.roundedRect)
               Expanded(child: _propNumberField('Arrondi', el.borderRadius, (v) {
                 el.borderRadius = v;
@@ -448,7 +448,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionTitle('Champ dynamique'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _propDropdown<DynamicFieldType>(
           'Type de champ',
           el.fieldType,
@@ -483,26 +483,26 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
             state.updateElementWithHistory(el.id, el);
           },
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _propTextField('Étiquette', el.label, (v) {
           el.label = v;
           state.updateElement(el.id, el);
         }),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Row(
           children: [
             Expanded(child: _propNumberField('Taille police', el.fontSize, (v) {
               el.fontSize = v;
               state.updateElement(el.id, el);
             })),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             _styleToggle('B', el.isBold, (v) {
               el.isBold = v;
               state.updateElement(el.id, el);
             }, fontWeight: FontWeight.bold),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Row(
           children: [
             _checkboxProp('Afficher étiquette', el.showLabel, (v) {
@@ -511,7 +511,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
             }),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _colorProperty('Couleur', Color(el.color), (c) {
           el.color = c.toARGB32();
           state.updateElementWithHistory(el.id, el);
@@ -528,65 +528,65 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionTitle('Tableau'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Row(
           children: [
             Expanded(child: _propNumberField('Colonnes', el.columnCount.toDouble(), (v) {
               el.columnCount = v.round();
               state.updateElementWithHistory(el.id, el);
             })),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Expanded(child: _propNumberField('Lignes', el.rowCount.toDouble(), (v) {
               el.rowCount = v.round();
               state.updateElementWithHistory(el.id, el);
             })),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Row(
           children: [
             Expanded(child: _propNumberField('Taille en-tête', el.headerFontSize, (v) {
               el.headerFontSize = v;
               state.updateElement(el.id, el);
             })),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Expanded(child: _propNumberField('Taille cellule', el.cellFontSize, (v) {
               el.cellFontSize = v;
               state.updateElement(el.id, el);
             })),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _propNumberField('Espacement', el.cellPadding, (v) {
           el.cellPadding = v;
           state.updateElement(el.id, el);
         }),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _colorProperty('Fond en-tête', Color(el.headerBgColor), (c) {
           el.headerBgColor = c.toARGB32();
           state.updateElementWithHistory(el.id, el);
         }),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _colorProperty('Texte en-tête', Color(el.headerTextColor), (c) {
           el.headerTextColor = c.toARGB32();
           state.updateElementWithHistory(el.id, el);
         }),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _colorProperty('Couleur bordure', Color(el.borderColor), (c) {
           el.borderColor = c.toARGB32();
           state.updateElementWithHistory(el.id, el);
         }),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _propNumberField('Épaisseur bordure', el.borderWidth, (v) {
           el.borderWidth = v;
           state.updateElement(el.id, el);
         }),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _sectionTitle('En-têtes de colonnes'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         ...el.headers.asMap().entries.map((entry) {
           return Padding(
-            padding: const EdgeInsets.only(bottom: 6),
+            padding: EdgeInsets.only(bottom: 6),
             child: _propTextField(
               'Col ${entry.key + 1}',
               entry.value,
@@ -609,17 +609,17 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionTitle('Séparateur'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _propNumberField('Épaisseur', el.thickness, (v) {
           el.thickness = v;
           state.updateElement(el.id, el);
         }),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _colorProperty('Couleur', Color(el.color), (c) {
           el.color = c.toARGB32();
           state.updateElementWithHistory(el.id, el);
         }),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _checkboxProp('Vertical', el.isVertical, (v) {
           el.isVertical = v;
           state.updateElement(el.id, el);
@@ -635,12 +635,12 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionTitle('Image'),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _propTextField('Titre placeholder', el.placeholder, (v) {
           el.placeholder = v;
           state.updateElement(el.id, el);
         }),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _propNumberField('Épaisseur bordure', el.borderWidth, (v) {
           el.borderWidth = v;
           state.updateElement(el.id, el);
@@ -654,7 +654,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
   Widget _panelHeader(String title) {
     return Container(
       height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: Color(0xFF3A3A4C))),
       ),
@@ -673,7 +673,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
   Widget _sectionTitle(String text) {
     return Text(
       text.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 10,
         fontWeight: FontWeight.w700,
         color: Color(0xFF6B6B7F),
@@ -686,8 +686,8 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF8B8BA7))),
-        const SizedBox(height: 4),
+        Text(label, style: TextStyle(fontSize: 11, color: Color(0xFF8B8BA7))),
+        SizedBox(height: 4),
         Container(
           height: 32,
           decoration: BoxDecoration(
@@ -697,8 +697,8 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
           ),
           child: SmartTextField(
             value: value,
-            style: const TextStyle(color: Colors.white, fontSize: 12),
-            decoration: const InputDecoration(
+            style: TextStyle(color: Colors.white, fontSize: 12),
+            decoration: InputDecoration(
               border: InputBorder.none,
               filled: true,
               fillColor: Colors.transparent,
@@ -719,8 +719,8 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF8B8BA7))),
-        const SizedBox(height: 4),
+        Text(label, style: TextStyle(fontSize: 11, color: Color(0xFF8B8BA7))),
+        SizedBox(height: 4),
         Container(
           height: 32,
           decoration: BoxDecoration(
@@ -731,8 +731,8 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
           child: SmartTextField(
             value: strValue,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(color: Colors.white, fontSize: 12),
-            decoration: const InputDecoration(
+            style: TextStyle(color: Colors.white, fontSize: 12),
+            decoration: InputDecoration(
               border: InputBorder.none,
               filled: true,
               fillColor: Colors.transparent,
@@ -780,8 +780,8 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
       builder: (context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF8B8BA7))),
-          const SizedBox(height: 4),
+          Text(label, style: TextStyle(fontSize: 11, color: Color(0xFF8B8BA7))),
+          SizedBox(height: 4),
           GestureDetector(
             onTap: () => _showColorPicker(context, label, color, onChanged),
             child: Container(
@@ -791,7 +791,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: const Color(0xFF3A3A4C)),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 children: [
                   Container(
@@ -803,10 +803,10 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
                       border: Border.all(color: const Color(0xFF3A3A4C)),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Text(
                     '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
-                    style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 11, fontFamily: 'monospace'),
+                    style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 11, fontFamily: 'monospace'),
                   ),
                 ],
               ),
@@ -824,7 +824,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF2A2A3C),
-        title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+        title: Text(label, style: TextStyle(color: Colors.white, fontSize: 14)),
         content: SingleChildScrollView(
           child: ColorPicker(
             pickerColor: current,
@@ -836,7 +836,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
+            child: Text('Annuler'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -847,7 +847,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Valider'),
+            child: Text('Valider'),
           ),
         ],
       ),
@@ -925,8 +925,8 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
                 ? Icon(Icons.check, size: 12, color: AppColors.primaryLight)
                 : null,
           ),
-          const SizedBox(width: 6),
-          Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFFCBD5E1))),
+          SizedBox(width: 6),
+          Text(label, style: TextStyle(fontSize: 12, color: Color(0xFFCBD5E1))),
         ],
       ),
     );
@@ -937,11 +937,11 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF8B8BA7))),
-        const SizedBox(height: 4),
+        Text(label, style: TextStyle(fontSize: 11, color: Color(0xFF8B8BA7))),
+        SizedBox(height: 4),
         Container(
           height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             color: const Color(0xFF1E1E2E),
             borderRadius: BorderRadius.circular(6),
@@ -950,9 +950,9 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
           child: DropdownButton<T>(
             value: value,
             isExpanded: true,
-            underline: const SizedBox.shrink(),
+            underline: SizedBox.shrink(),
             dropdownColor: const Color(0xFF2A2A3C),
-            style: const TextStyle(color: Colors.white, fontSize: 12),
+            style: TextStyle(color: Colors.white, fontSize: 12),
             iconEnabledColor: const Color(0xFF8B8BA7),
             items: items.map((i) => DropdownMenuItem(value: i, child: Text(toLabel(i)))).toList(),
             onChanged: (v) {

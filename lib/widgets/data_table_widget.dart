@@ -171,7 +171,7 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
             child: DropdownButton<int>(
               value: _rowsPerPage,
               style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
-              icon: const Icon(Icons.arrow_drop_down, size: 16),
+              icon: Icon(Icons.arrow_drop_down, size: 16),
               items: [10, 15, 20, 50, 100].map((int value) {
                 return DropdownMenuItem<int>(
                   value: value,
@@ -192,14 +192,14 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
           Text('Affichage de $startItem a $endItem sur ${widget.rows.length} resultats', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           Spacer(),
           Text('Page ${_page + 1} sur $_totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          const SizedBox(width: 16),
+          SizedBox(width: 16),
           IconButton(
-            icon: const Icon(Icons.chevron_left_rounded),
+            icon: Icon(Icons.chevron_left_rounded),
             onPressed: _page > 0 ? () => setState(() => _page--) : null,
             iconSize: 20,
           ),
           IconButton(
-            icon: const Icon(Icons.chevron_right_rounded),
+            icon: Icon(Icons.chevron_right_rounded),
             onPressed: _page < _totalPages - 1 ? () => setState(() => _page++) : null,
             iconSize: 20,
           ),
@@ -212,14 +212,14 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: const Text('Voulez-vous vraiment supprimer cet enregistrement ?'),
+        title: Text('Confirmer la suppression'),
+        content: Text('Voulez-vous vraiment supprimer cet enregistrement ?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler')),
           ElevatedButton(
             onPressed: () { Navigator.pop(context); widget.onDelete!(row); },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+            child: Text('Supprimer', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -243,7 +243,7 @@ class _ActionButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
         child: Padding(
-          padding: const EdgeInsets.all(4),
+          padding: EdgeInsets.all(4),
           child: Icon(icon, size: 16, color: color),
         ),
       ),

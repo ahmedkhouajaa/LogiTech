@@ -167,7 +167,7 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
           title: 'Informations Générales',
           icon: Icons.account_balance_wallet_outlined,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -193,7 +193,7 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 if (_contactType == 'customer')
                   BlocBuilder<CustomersBloc, CustomersState>(
                     builder: (context, state) {
@@ -231,7 +231,7 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
                     },
                   ),
                 if (_selectedContactId == null) ...[
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   AbsorbPointer(
                     absorbing: widget.isReadOnly,
                     child: SmartTextInput(
@@ -250,7 +250,7 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
           title: 'Détails financiers',
           icon: Icons.money_outlined,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -263,7 +263,7 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
                     onChanged: (v) => _amount = double.tryParse(v) ?? 0,
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartTextInput(
@@ -272,7 +272,7 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
                     onChanged: (v) => _documentNumber = v,
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartTextInput(
@@ -290,7 +290,7 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
           title: 'Dates & Statut',
           icon: Icons.calendar_month_outlined,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -302,7 +302,7 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
                     onChanged: (v) => setState(() => _issueDate = v),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartDatePicker(
@@ -311,7 +311,7 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
                     onChanged: (v) => setState(() => _maturityDate = v),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartDropdown<String>(
@@ -328,7 +328,7 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartTextInput(

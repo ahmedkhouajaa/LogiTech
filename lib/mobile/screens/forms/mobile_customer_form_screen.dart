@@ -130,7 +130,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                 title: 'Informations Générales',
                 icon: Icons.person_outline_rounded,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -144,14 +144,14 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                           onChanged: (v) => setState(() => _customerType = v),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       if (_customerType == 'entreprise') ...[
                         SmartTextInput(
                           label: 'Raison Sociale *',
                           initialValue: _companyName,
                           onChanged: (v) { if (!widget.isReadOnly) _companyName = v; },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                       ],
                       SmartTextInput(
                         label: 'Nom Complet / Responsable',
@@ -167,7 +167,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                 title: 'Contact',
                 icon: Icons.contact_phone_outlined,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -177,7 +177,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                         keyboardType: TextInputType.phone,
                         onChanged: (v) { if (!widget.isReadOnly) _phone = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Email',
                         initialValue: _email,
@@ -193,7 +193,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                 title: 'Fiscalité & Finance',
                 icon: Icons.account_balance_wallet_outlined,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -202,20 +202,20 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                         initialValue: _taxId,
                         onChanged: (v) { if (!widget.isReadOnly) _taxId = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Registre de Commerce (RC)',
                         initialValue: _rc,
                         onChanged: (v) { if (!widget.isReadOnly) _rc = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Plafond de Crédit',
                         initialValue: _creditLimit > 0 ? _creditLimit.toString() : '',
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         onChanged: (v) { if (!widget.isReadOnly) _creditLimit = double.tryParse(v) ?? 0; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartCheckbox(
                         label: 'Exonéré de TVA (Suspension)',
                         value: _tvaSuspension,
@@ -231,7 +231,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                 icon: Icons.location_on_outlined,
                 isInitiallyExpanded: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -241,7 +241,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                         maxLines: 2,
                         onChanged: (v) { if (!widget.isReadOnly) _address = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       Row(
                         children: [
                           Expanded(
@@ -251,7 +251,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                               onChanged: (v) { if (!widget.isReadOnly) _city = v; },
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          SizedBox(width: 16),
                           Expanded(
                             child: SmartTextInput(
                               label: 'Pays',
@@ -271,7 +271,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                 icon: Icons.notes_outlined,
                 isInitiallyExpanded: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: SmartTextInput(
                     label: 'Remarques',
                     initialValue: _notes,

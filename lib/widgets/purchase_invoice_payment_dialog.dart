@@ -12,6 +12,7 @@ import '../models/treasury_account.dart';
 import '../models/treasury_transaction.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../widgets/searchable_dropdown_field.dart';
 
 class PurchaseInvoicePaymentDialog extends StatefulWidget {
   final PurchaseInvoice purchaseInvoice;
@@ -472,19 +473,19 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                                       Expanded(
                                         child: _buildFormField('Compte de trésorerie *', BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
                                           builder: (context, state) {
-                                            List<TreasuryAccount> accounts = [];
-                                            if (state is TreasuryAccountsLoaded) {
-                                              accounts = state.accounts;
+                                            final accounts = state is TreasuryAccountsLoaded ? state.accounts : <TreasuryAccount>[];
+                                            String? displayName;
+                                            if (_selectedAccountId != null) {
+                                              final acc = accounts.cast<TreasuryAccount?>().firstWhere((a) => a?.id == _selectedAccountId, orElse: () => null);
+                                              if (acc != null) displayName = '${acc.name} (${formatCurrencyDT(acc.balance)})';
                                             }
-                                            return DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                              value: _selectedAccountId,
-                                              hint: const Text('Sélectionner un compte'),
-                                              decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
-                                              items: accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))).toList(),
-                                              onChanged: (v) => setState(() => _selectedAccountId = v),
+                                            return SearchableSelectorField(
+                                              hint: 'Sélectionner un compte',
+                                              selectedText: displayName,
+                                              onTap: () async {
+                                                final res = await showTreasuryAccountSelectDialog(context, accounts, selectedAccountId: _selectedAccountId);
+                                                if (res != null) setState(() => _selectedAccountId = res);
+                                              },
                                             );
                                           },
                                         )),

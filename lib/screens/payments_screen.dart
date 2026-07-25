@@ -125,8 +125,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         value: 'print',
                         child: Row(children: [
                           Icon(Icons.print_rounded, size: 16, color: AppColors.textSecondary),
-                          const SizedBox(width: 10),
-                          const Text('Imprimer'),
+                          SizedBox(width: 10),
+                          Text('Imprimer'),
                         ]),
                       ),
                     ],
@@ -136,7 +136,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                       );
                     },
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  SizedBox(width: AppSpacing.md),
                   // New payment button
                   ElevatedButton.icon(
                     onPressed: () => _showCreateDialog(context),
@@ -146,7 +146,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     ),
                   ),
@@ -162,7 +162,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   borderRadius: BorderRadius.circular(AppRadius.lg),
                   border: Border.all(color: AppColors.border),
                 ),
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -179,7 +179,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                               Text('Référence',
                                   style: TextStyle(
                                       fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                              const SizedBox(height: 8),
+                              SizedBox(height: 8),
                               SizedBox(
                                 height: 40,
                                 child: _SearchField(
@@ -195,7 +195,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.md),
+                        SizedBox(width: AppSpacing.md),
                         // Contact search
                         Expanded(
                           flex: 3,
@@ -206,7 +206,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                               Text('Contact',
                                   style: TextStyle(
                                       fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                              const SizedBox(height: 8),
+                              SizedBox(height: 8),
                               SizedBox(
                                 height: 40,
                                 child: _SearchField(
@@ -222,7 +222,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.md),
+                        SizedBox(width: AppSpacing.md),
                         // Method filter
                         Expanded(
                           flex: 2,
@@ -242,7 +242,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                             }),
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.md),
+                        SizedBox(width: AppSpacing.md),
                         // Status filter
                         Expanded(
                           flex: 2,
@@ -294,7 +294,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                               label: Text('Réinitialiser les filtres'),
                               style: TextButton.styleFrom(
                                 foregroundColor: AppColors.textSecondary,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                               ),
                             ),
                           ],
@@ -304,16 +304,16 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
+            SizedBox(height: AppSpacing.lg),
 
             // ─── Table ─────────────────────────────────────────────
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+                padding: EdgeInsets.fromLTRB(24, 0, 24, 0),
                 child: AppCard(
                   padding: EdgeInsets.zero,
                   child: state is PaymentsLoading
-                      ? const Center(
+                      ? Center(
                           child: CircularProgressIndicator())
                       : filtered.isEmpty
                           ? _buildEmpty()
@@ -337,7 +337,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
           ],
         );
       },
@@ -478,7 +478,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       color: Colors.transparent,
       child: Row(
         children: [
@@ -518,10 +518,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         color: AppColors.primary),
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text(p.contactName ?? '—',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 13, fontWeight: FontWeight.w500),
                       overflow: TextOverflow.ellipsis),
                 ),
@@ -654,13 +654,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           Text('Affichage de $start a $end sur $total resultats',
               style: TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
-          const SizedBox(width: 16),
+          SizedBox(width: 16),
           _PaginationButton(
             icon: Icons.chevron_left_rounded,
             enabled: _page > 0,
             onTap: () => setState(() => _page--),
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           _PaginationButton(
             icon: Icons.chevron_right_rounded,
             enabled: _page < totalPages - 1,
@@ -675,13 +675,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Supprimer le paiement'),
+        title: Text('Supprimer le paiement'),
         content: Text(
             'Etes-vous sur de vouloir supprimer le paiement ${p.paymentNumber} ?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler')),
+              child: Text('Annuler')),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
@@ -689,7 +689,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             },
             style:
                 ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Supprimer',
+            child: Text('Supprimer',
                 style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -876,7 +876,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
             // Form
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(24),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -884,28 +884,28 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                     children: [
                       // Direction toggle
                       _buildDirectionSection(),
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20),
                       // Contact field
                       _buildContactField(),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       // Amount + Method row
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Amount
                           Expanded(child: _buildAmountField()),
-                          const SizedBox(width: 16),
+                          SizedBox(width: 16),
                           // Method
                           Expanded(child: _buildMethodField()),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       // Status
                       _buildStatusField(),
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20),
                       // Payment details (expandable)
                       _buildDetailsSection(),
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20),
                       // Notes
                       _buildNotesField(),
                     ],
@@ -939,7 +939,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
               gradient: AppGradients.primary,
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: const Icon(Icons.payment_rounded,
+            child: Icon(Icons.payment_rounded,
                 color: Colors.white, size: 18),
           ),
           SizedBox(width: 12),
@@ -970,10 +970,10 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md)),
               padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           ElevatedButton.icon(
             onPressed: _save,
             icon: Icon(Icons.save_rounded,
@@ -987,7 +987,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md)),
               padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
           ),
         ],
@@ -1143,7 +1143,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                     });
                   },
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                         horizontal: 14, vertical: 10),
                     child: Row(
                       children: [
@@ -1166,7 +1166,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                                 : AppColors.warning,
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1212,7 +1212,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary)),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         TextFormField(
           controller: _amountCtrl,
           keyboardType:
@@ -1369,7 +1369,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
           if (_detailsExpanded) ...[
             Divider(height: 1, color: AppColors.border),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -1392,7 +1392,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                           border: Border.all(color: AppColors.border),
                         ),
                         padding:
-                            const EdgeInsets.symmetric(horizontal: 12),
+                            EdgeInsets.symmetric(horizontal: 12),
                         child: BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
                           builder: (context, state) {
                             List<TreasuryAccount> tAccounts = [];
@@ -1425,8 +1425,8 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                                           size: 14,
                                           color: AppColors.primary,
                                         ),
-                                        const SizedBox(width: 8),
-                                        Text('\${a.name} (Solde: \${formatCurrencyDT(a.balance)})'),
+                                        SizedBox(width: 8),
+                                        Text('${a.name} (Solde: ${formatCurrencyDT(a.balance)})'),
                                       ],
                                     ),
                                   );
@@ -1440,7 +1440,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   // Reference externe
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1450,7 +1450,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppColors.textSecondary)),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       TextFormField(
                         controller: _referenceCtrl,
                         style: TextStyle(fontSize: 14),
@@ -1466,7 +1466,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   // Date
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1476,7 +1476,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppColors.textSecondary)),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       InkWell(
                         onTap: () async {
                           final picked = await showDatePicker(
@@ -1667,7 +1667,7 @@ class _TableAction extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
         child: Padding(
-          padding: const EdgeInsets.all(6),
+          padding: EdgeInsets.all(6),
           child: Icon(icon, size: 16, color: color),
         ),
       ),
@@ -1759,7 +1759,7 @@ class _DirectionButton extends StatelessWidget {
                   size: 18,
                   color: isSelected ? color : AppColors.textSecondary),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

@@ -145,7 +145,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: EdgeInsets.all(AppSpacing.lg),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -175,7 +175,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                     ),
                   ),
                 ],
@@ -184,21 +184,21 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
             
             // Filter Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: BlocBuilder<ExitVouchersBloc, ExitVouchersState>(
                 builder: (context, state) {
                   return _buildFilterBar(state);
                 },
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
+            SizedBox(height: AppSpacing.lg),
             
             // Cards List
             Expanded(
               child: BlocBuilder<ExitVouchersBloc, ExitVouchersState>(
                 builder: (context, state) {
                   if (state is ExitVouchersLoading) {
-                    return const Center(child: CircularProgressIndicator());
+                    return Center(child: CircularProgressIndicator());
                   }
                   if (state is ExitVouchersError) {
                     return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
@@ -218,14 +218,14 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                       );
                     }
                     return ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 80),
+                      padding: EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 80),
                       itemCount: entries.length,
                       itemBuilder: (context, index) {
                         return _buildMobileCard(context, entries[index]);
                       },
                     );
                   }
-                  return const SizedBox();
+                  return SizedBox();
                 },
               ),
             ),
@@ -263,7 +263,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
               child: Container(
                 width: 440,
                 constraints: const BoxConstraints(maxHeight: 520),
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -408,7 +408,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
       children: [
         // Header
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.all(AppSpacing.lg),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -438,7 +438,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 ),
               ),
             ],
@@ -447,23 +447,23 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
         
         // Filter Bar
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: BlocBuilder<ExitVouchersBloc, ExitVouchersState>(
             builder: (context, state) {
               return _buildFilterBar(state);
             },
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        SizedBox(height: AppSpacing.lg),
 
         // Table
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: _buildTable(),
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        SizedBox(height: AppSpacing.lg),
       ],
     );
   }
@@ -541,7 +541,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(color: AppColors.border),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: EdgeInsets.symmetric(horizontal: 12),
                       child: Row(
                         children: [
                           Expanded(
@@ -567,7 +567,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
               ),
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           Expanded(
             flex: 2,
             child: _filterSection(
@@ -582,7 +582,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
               ),
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           Expanded(
             flex: 2,
             child: _filterSection(
@@ -597,7 +597,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
               ),
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          SizedBox(width: AppSpacing.md),
           Expanded(
             flex: 2,
             child: _filterSection(
@@ -647,7 +647,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: s.color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -689,7 +689,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                                 overflow: TextOverflow.ellipsis,
                               )
                             : Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: _statusFilter!.color.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -746,7 +746,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                   label: Text('Réinitialiser les filtres'),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.textSecondary,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
                 ),
               ],
@@ -764,7 +764,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
         Text(label,
             style: TextStyle(
                 fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         SizedBox(height: 40, child: child),
       ],
     );
@@ -846,7 +846,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
     return BlocBuilder<ExitVouchersBloc, ExitVouchersState>(
       builder: (context, state) {
         if (state is ExitVouchersLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         }
         if (state is ExitVouchersError) {
           return Center(
@@ -887,7 +887,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                           ),
                           child: Row(
                             children: [
-                              const SizedBox(width: 32),
+                              SizedBox(width: 32),
                               Expanded(
                                   flex: 2,
                                   child: Text('Reference',
@@ -1016,7 +1016,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                                     fontSize: 13,
                                     color: AppColors.textSecondary),
                               ),
-                              const SizedBox(width: 16),
+                              SizedBox(width: 16),
                               Row(
                                 children: [
                                   _pageButton(
@@ -1025,7 +1025,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                                     onTap: () =>
                                         setState(() => _currentPage = page - 1),
                                   ),
-                                  const SizedBox(width: 8),
+                                  SizedBox(width: 8),
                                   _pageButton(
                                     icon: Icons.chevron_right,
                                     enabled: page < totalPages - 1,
@@ -1045,7 +1045,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
             ],
           );
         }
-        return const SizedBox();
+        return SizedBox();
       },
     );
   }
@@ -1119,7 +1119,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
               alignment: Alignment.centerLeft,
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusEnum.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(4),
@@ -1301,7 +1301,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: statusEnum.color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(4),
@@ -1433,7 +1433,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
                 foregroundColor: Colors.white),
-            child: const Text('Supprimer'),
+            child: Text('Supprimer'),
           ),
         ],
       ),
@@ -1452,21 +1452,21 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
       builder: (dialogCtx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Changer le statut'),
+            title: Text('Changer le statut'),
             content: SizedBox(
               width: 400,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Nouveau statut:'),
-                  const SizedBox(height: 8),
+                  Text('Nouveau statut:'),
+                  SizedBox(height: 8),
                   DropdownButtonFormField(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: selectedStatus,
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    decoration: InputDecoration(border: OutlineInputBorder()),
                     items: ExitVoucherStatus.values.map((s) => DropdownMenuItem(
                       value: s,
                       child: Text(s.label, style: TextStyle(color: s.color, fontWeight: FontWeight.bold)),
@@ -1475,17 +1475,17 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                       if (v != null) setDialogState(() => selectedStatus = v);
                     },
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   TextField(
                     controller: notesController,
                     maxLines: 2,
-                    decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
+                    decoration: InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
                   ),
                 ],
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   final updatedNote = note.copyWith(
@@ -1496,7 +1496,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                   Navigator.pop(dialogCtx);
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                child: const Text('Confirmer'),
+                child: Text('Confirmer'),
               ),
             ],
           );

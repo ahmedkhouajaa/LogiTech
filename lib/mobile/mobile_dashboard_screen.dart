@@ -23,11 +23,11 @@ class MobileDashboardScreen extends StatelessWidget {
                 Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
                 SizedBox(height: 12),
                 Text('Erreur: ${state.message}', style: TextStyle(color: AppColors.textSecondary)),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () => context.read<DashboardBloc>().add(DashboardRefreshRequested()),
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  label: const Text('Reessayer'),
+                  icon: Icon(Icons.refresh_rounded, size: 18),
+                  label: Text('Reessayer'),
                 ),
               ],
             ),
@@ -36,7 +36,7 @@ class MobileDashboardScreen extends StatelessWidget {
         if (state is DashboardLoaded) {
           return _buildDashboard(context, state);
         }
-        return const SizedBox();
+        return SizedBox();
       },
     );
   }
@@ -49,20 +49,20 @@ class MobileDashboardScreen extends StatelessWidget {
         await Future.delayed(const Duration(seconds: 1));
       },
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           // Welcome card
           // _buildWelcomeCard(),
-          // const SizedBox(height: 16),
+          // SizedBox(height: 16),
           // KPI grid (2 per row)
           _buildKpiGrid(state),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           // Quick Actions
           _buildQuickActions(context),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           // Recent invoices
           _buildRecentInvoices(state.recentInvoices),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           // Low stock alerts
           // if (state.lowStockProducts.isNotEmpty)
           //   _buildLowStockAlerts(state),
@@ -90,7 +90,7 @@ class MobileDashboardScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -113,7 +113,7 @@ class MobileDashboardScreen extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.bar_chart_rounded, color: Colors.white, size: 22),
+                child: Icon(Icons.bar_chart_rounded, color: Colors.white, size: 22),
               ),
             ],
           ),
@@ -247,7 +247,7 @@ class MobileDashboardScreen extends StatelessWidget {
   Widget _quickAction(IconData icon, String label, Color color) {
     return Container(
       width: 100,
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      padding: EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
@@ -256,7 +256,7 @@ class MobileDashboardScreen extends StatelessWidget {
       child: Column(
         children: [
           Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             label,
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
@@ -301,7 +301,7 @@ class MobileDashboardScreen extends StatelessWidget {
             )
           else
             ...invoices.take(5).map((inv) => _invoiceRow(inv)),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
         ],
       ),
     );
@@ -310,7 +310,7 @@ class MobileDashboardScreen extends StatelessWidget {
   Widget _invoiceRow(Invoice inv) {
     final statusColor = _getStatusColor(inv.status);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           Container(
@@ -348,9 +348,9 @@ class MobileDashboardScreen extends StatelessWidget {
                 formatCurrency(inv.totalTTC),
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: 2),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
@@ -431,7 +431,7 @@ class MobileDashboardScreen extends StatelessWidget {
                   ],
                 ),
               )),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
         ],
       ),
     );

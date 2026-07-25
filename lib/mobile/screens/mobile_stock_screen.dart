@@ -42,7 +42,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
       body: BlocBuilder<StockBloc, StockState>(
         builder: (context, state) {
           if (state is StockLoading || state is StockInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator());
           }
           if (state is StockError) {
             return Center(child: Text('Erreur: ${state.message}'));
@@ -56,7 +56,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                 context.read<ProductsBloc>().add(LoadProducts());
               },
               child: ListView(
-                padding: const EdgeInsets.only(bottom: 100),
+                padding: EdgeInsets.only(bottom: 100),
                 children: [
                   // ── Title ──
                   Padding(
@@ -70,20 +70,20 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
 
                   // ── 4 KPI Summary Cards (2x2 grid) ──
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: EdgeInsets.symmetric(horizontal: 16),
                     child: _buildKpiGrid(state),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
                   // ── Low Stock Alerts ──
                   BlocBuilder<ProductsBloc, ProductsState>(
                     builder: (context, pState) {
                       if (pState is! ProductsLoaded || pState.lowStockProducts.isEmpty) {
-                        return const SizedBox();
+                        return SizedBox();
                       }
                       return _buildLowStockSection(pState.lowStockProducts);
                     },
@@ -92,7 +92,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                   // ── Stock Levels ──
                   BlocBuilder<ProductsBloc, ProductsState>(
                     builder: (context, pState) {
-                      if (pState is! ProductsLoaded) return const SizedBox();
+                      if (pState is! ProductsLoaded) return SizedBox();
                       return _buildStockLevelsSection(
                         state.movements,
                         state.warehouses,
@@ -104,7 +104,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
               ),
             );
           }
-          return const SizedBox();
+          return SizedBox();
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -145,7 +145,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                     gradientColors: const [Color(0xFF1a56db), Color(0xFF3B82F6)],
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: _KpiCard(
                     title: 'Entrepôts',
@@ -156,7 +156,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -167,7 +167,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                     gradientColors: const [Color(0xFF059669), Color(0xFF10B981)],
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: _KpiCard(
                     title: 'Alertes stock bas',
@@ -217,9 +217,9 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         ...lowStockProducts.map((p) => _LowStockCard(product: p)),
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
       ],
     );
   }
@@ -294,7 +294,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
               Expanded(
@@ -391,10 +391,10 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         // ── Filter Toggle Button ──
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
               GestureDetector(
@@ -422,7 +422,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                           decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
                           child: Text(
                             '${[_filterWarehouseId != null, _filterDestination != 'tous', _filterReference.isNotEmpty, _filterStatus != 'tous'].where((v) => v).length}',
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                           ),
                         ),
                       ],
@@ -431,7 +431,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                 ),
               ),
               if (hasActiveFilters) ...[
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 GestureDetector(
                   onTap: () => setState(() {
                     _filterWarehouseId = null;
@@ -488,7 +488,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Entrepôt', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           SizedBox(
                             height: 40,
                             child: DropdownButtonFormField(
@@ -507,7 +507,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                               style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                               items: [
                                 const DropdownMenuItem<String?>(value: null, child: Text('Tous', style: TextStyle(fontSize: 12))),
-                                ...warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
+                                ...warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
                               ],
                               onChanged: (v) => setState(() => _filterWarehouseId = v),
                             ),
@@ -521,7 +521,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Destination', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           SizedBox(
                             height: 40,
                             child: DropdownButtonFormField(
@@ -551,7 +551,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 // Row 2: Reference + Status
                 Row(
                   children: [
@@ -560,7 +560,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Référence', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           SizedBox(
                             height: 40,
                             child: TextField(
@@ -576,7 +576,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                                 filled: true,
                                 fillColor: const Color(0xFFFAFAFB),
                               ),
-                              style: const TextStyle(fontSize: 12),
+                              style: TextStyle(fontSize: 12),
                             ),
                           ),
                         ],
@@ -588,7 +588,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Statut', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           SizedBox(
                             height: 40,
                             child: DropdownButtonFormField(
@@ -746,7 +746,7 @@ class _LowStockCard extends StatelessWidget {
               ),
               child: Icon(Icons.warning_rounded, size: 20, color: AppColors.error),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             // Product info
             Expanded(
               child: Column(
@@ -770,7 +770,7 @@ class _LowStockCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             // Stock info
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -847,9 +847,9 @@ class _StockLevelCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -866,7 +866,7 @@ class _StockLevelCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             // Row 2: Details
             Row(
               children: [
@@ -874,7 +874,7 @@ class _StockLevelCard extends StatelessWidget {
                   icon: Icons.qr_code_rounded,
                   label: item.product.reference ?? item.product.code,
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 _DetailChip(
                   icon: Icons.warehouse_outlined,
                   label: item.warehouse.name,

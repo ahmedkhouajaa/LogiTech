@@ -31,8 +31,8 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       children: [
         // Modern Action Bar
         Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: const BoxDecoration(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
             color: Colors.transparent,
             border: Border(bottom: BorderSide(color: Colors.transparent)),
           ),
@@ -51,14 +51,14 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                 width: 300,
                 child: AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
               ),
-              const SizedBox(width: AppSpacing.md),
+              SizedBox(width: AppSpacing.md),
               ElevatedButton.icon(
                 onPressed: () => _showDialog(context, null),
                 icon: Icon(Icons.factory_rounded, size: 20, color: Colors.white),
                 label: Text('Nouveau Fournisseur', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 ),
@@ -70,7 +70,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         Expanded(
           child: BlocBuilder<SuppliersBloc, SuppliersState>(
             builder: (context, state) {
-              if (state is SuppliersLoading) return const Center(child: CircularProgressIndicator());
+              if (state is SuppliersLoading) return Center(child: CircularProgressIndicator());
               if (state is SuppliersError) return Center(child: Text('Erreur: ${state.message}'));
               if (state is SuppliersLoaded) {
                 final filtered = _search.isEmpty ? state.suppliers
@@ -90,9 +90,9 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                   itemCount: filtered.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  separatorBuilder: (context, index) => SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final s = filtered[index];
                     return Container(
@@ -133,7 +133,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 
                                 // Info
                                 Expanded(
@@ -239,7 +239,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                   },
                 );
               }
-              return const SizedBox();
+              return SizedBox();
             },
           ),
         ),
@@ -376,10 +376,10 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: AppColors.border),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   ElevatedButton.icon(
                     onPressed: _save,
                     icon: Icon(Icons.save_rounded, size: 16, color: Colors.white),
@@ -406,8 +406,8 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                 unselectedLabelColor: AppColors.textTertiary,
                 indicatorColor: AppColors.primary,
                 indicatorWeight: 3,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
                 tabs: const [
                   Tab(text: 'Informations', icon: Icon(Icons.info_outline_rounded, size: 20)),
                   Tab(text: 'Adresses', icon: Icon(Icons.location_on_outlined, size: 20)),
@@ -425,7 +425,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                   children: [
                     // TAB 1: Informations Generales
                     SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -434,7 +434,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                             "Type d'Entreprise",
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           Row(
                             children: [
                               Expanded(
@@ -445,7 +445,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                   onTap: () => setState(() => _supplierType = 'entreprise'),
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              SizedBox(width: 16),
                               Expanded(
                                 child: _buildTypeButton(
                                   label: 'Particulier',
@@ -456,7 +456,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                               ),
                             ],
                           ),
-                          const SizedBox(height: 24),
+                          SizedBox(height: 24),
 
                           // Section 2: Conditional Fields (Company vs Individual)
                           if (_supplierType == 'entreprise') ...[
@@ -470,7 +470,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                     validator: (v) => v!.trim().isEmpty ? 'Le nom de l\'entreprise est requis' : null,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 Expanded(
                                   child: AppTextField(
                                     label: 'Nom du responsable',
@@ -480,7 +480,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
@@ -492,7 +492,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                     validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 Expanded(
                                   child: AppTextField(
                                     label: 'Reference',
@@ -502,7 +502,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
@@ -512,7 +512,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                     controller: _taxCtrl,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 const Spacer(),
                               ],
                             ),
@@ -527,7 +527,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                     validator: (v) => v!.trim().isEmpty ? 'Le nom du responsable est requis' : null,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 Expanded(
                                   child: AppTextField(
                                     label: 'Email Personnel *',
@@ -539,7 +539,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
@@ -549,7 +549,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                     controller: _referenceCtrl,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 Expanded(
                                   child: AppTextField(
                                     label: 'Numero CIN',
@@ -566,7 +566,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
@@ -579,12 +579,12 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                     onTap: _selectBirthDate,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 const Spacer(),
                               ],
                             ),
                           ],
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
 
                           // Numero de Telephone (with flag & +216 prefix)
                           Column(
@@ -604,7 +604,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                       borderRadius: BorderRadius.circular(AppRadius.md),
                                       border: Border.all(color: AppColors.border),
                                     ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    padding: EdgeInsets.symmetric(horizontal: 12),
                                     child: Row(
                                       children: [
                                         Text('🇹🇳', style: TextStyle(fontSize: 18)),
@@ -652,12 +652,12 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                     
                     // TAB 2: Adresses
                     SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _buildBillingAddressSection(),
-                          const SizedBox(height: 20),
+                          SizedBox(height: 20),
                           _buildDeliveryAddressSection(),
                         ],
                       ),
@@ -665,18 +665,18 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                     
                     // TAB 3: Informations Fiscales & Notes
                     SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _buildBankAccountSection(),
-                          const SizedBox(height: 24),
+                          SizedBox(height: 24),
                           Row(children: [
                             Expanded(child: AppTextField(label: 'NIF (Numero d\'Identification Fiscale)', controller: _taxCtrl)),
-                            const SizedBox(width: 16),
+                            SizedBox(width: 16),
                             Expanded(child: AppTextField(label: 'RC (Registre de Commerce)', controller: _rcCtrl)),
                           ]),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
                           AppTextField(label: 'Notes privees', controller: _notesCtrl, maxLines: 5, hint: 'Ajouter une note sur ce fournisseur...'),
                         ],
                       ),
@@ -709,11 +709,11 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                               label: Text('Précédent', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                               style: OutlinedButton.styleFrom(
                                 side: BorderSide(color: AppColors.border),
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                               ),
                             )
-                          : const SizedBox(width: 100),
+                          : SizedBox(width: 100),
                       _tabController.index < _tabController.length - 1
                           ? ElevatedButton(
                               onPressed: () {
@@ -723,11 +723,11 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                 elevation: 0,
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text('Suivant', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
@@ -742,7 +742,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                               label: Text('Terminer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.success,
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                 elevation: 0,
                               ),
@@ -773,13 +773,13 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
             'Adresse de Facturation',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           AppTextField(
             label: 'Adresse de la rue',
             hint: 'Saisissez l\'adresse de la rue',
             controller: _addressCtrl,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -789,7 +789,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                   controller: _cityCtrl,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: AppTextField(
                   label: 'Code postal',
@@ -897,14 +897,14 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   AppTextField(
                     label: 'Adresse de la rue',
                     hint: 'Saisissez l\'adresse de la rue',
                     controller: _deliveryStreetCtrl,
                     readOnly: _deliverySameAsBilling,
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -915,7 +915,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                           readOnly: _deliverySameAsBilling,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                         child: AppTextField(
                           label: 'Code postal',
@@ -997,7 +997,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
           if (_bankExpanded) ...[
             Divider(height: 1, color: AppColors.border),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: AppTextField(
                 label: 'Numero de compte / IBAN',
                 hint: 'Saisissez le compte bancaire',

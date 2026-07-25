@@ -1,4 +1,6 @@
+import 'create_article_screen.dart';
 import 'package:flutter/material.dart';
+import '../widgets/searchable_dropdown_field.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
@@ -206,22 +208,22 @@ class _CreateSupplierCreditNoteScreenState
             child: Form(
               key: _formKey,
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: EdgeInsets.all(AppSpacing.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildFormCard(),
-                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(height: AppSpacing.lg),
                     _buildArticlesSection(),
-                    const SizedBox(height: AppSpacing.md),
+                    SizedBox(height: AppSpacing.md),
                     _buildArticleActions(),
-                    const SizedBox(height: AppSpacing.md),
+                    SizedBox(height: AppSpacing.md),
                     _buildGlobalDiscountSection(),
-                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(height: AppSpacing.lg),
                     _buildTotalsSection(),
-                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(height: AppSpacing.lg),
                     _buildNotesSection(),
-                    const SizedBox(height: AppSpacing.xl),
+                    SizedBox(height: AppSpacing.xl),
                   ],
                 ),
               ),
@@ -250,20 +252,20 @@ class _CreateSupplierCreditNoteScreenState
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           StatusBadge(label: _status.label, color: _status.color),
           const Spacer(),
           _buildHeaderButton(
               Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _buildHeaderButton(Icons.description_rounded, 'Brouillon', () {
             setState(() => _status = SupplierCreditNoteStatus.draft);
           }),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _buildHeaderButton(Icons.visibility_rounded, 'Apercu', () {}),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _buildHeaderButton(Icons.settings_rounded, 'Parametres', () {}),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           SizedBox(
             height: 36,
             child: ElevatedButton.icon(
@@ -278,7 +280,7 @@ class _CreateSupplierCreditNoteScreenState
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md)),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: 16),
               ),
             ),
           ),
@@ -302,7 +304,7 @@ class _CreateSupplierCreditNoteScreenState
           side: BorderSide(color: AppColors.border),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadius.md)),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12),
         ),
       ),
     );
@@ -327,7 +329,7 @@ class _CreateSupplierCreditNoteScreenState
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textSecondary)),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           GestureDetector(
             onTap: () async {
               final picked = await showDatePicker(
@@ -359,11 +361,11 @@ class _CreateSupplierCreditNoteScreenState
                       borderSide:
                           BorderSide(color: AppColors.border)),
                 ),
-                style: const TextStyle(fontSize: 14),
+                style: TextStyle(fontSize: 14),
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // Fournisseur & Projet
           Row(
@@ -378,33 +380,50 @@ class _CreateSupplierCreditNoteScreenState
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textSecondary)),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     BlocBuilder<SuppliersBloc, SuppliersState>(
                       builder: (context, state) {
-                        final Suppliers = state is SuppliersLoaded
+                        final suppliers = state is SuppliersLoaded
                             ? state.suppliers
                             : <Supplier>[];
-                        return DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                          value: _selectedsupplierId,
-                          isExpanded: true,
-                          hint: Text('Rechercher des Fournisseurs...',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textTertiary)),
-                          items: Suppliers
-                              .map((c) => DropdownMenuItem(
-                                  value: c.id,
-                                  child: Text(
-                                      c.name ?? c.name,
-                                      style: const TextStyle(fontSize: 13))))
-                              .toList(),
-                          onChanged: (v) =>
-                              setState(() => _selectedsupplierId = v),
-                          validator: (v) => v == null ? 'Requis' : null,
-                          decoration: _formInputDecoration(),
+                        final selectedSupplier = suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedsupplierId, orElse: () => null);
+                        final displayName = selectedSupplier != null
+                            ? (selectedSupplier.companyName?.isNotEmpty == true
+                                ? selectedSupplier.companyName!
+                                : (selectedSupplier.responsibleName?.isNotEmpty == true
+                                    ? selectedSupplier.responsibleName!
+                                    : selectedSupplier.name))
+                            : null;
+
+                        return FormField<String>(
+                          initialValue: _selectedsupplierId,
+                          validator: (v) => _selectedsupplierId == null ? 'Requis' : null,
+                          builder: (field) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SearchableSelectorField(
+                                  hint: 'Rechercher un fournisseur...',
+                                  selectedText: displayName,
+                                  hasError: field.hasError,
+                                  onTap: () async {
+                                    final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedsupplierId);
+                                    if (res != null) {
+                                      setState(() => _selectedsupplierId = res);
+                                      field.didChange(res);
+                                    }
+                                  },
+                                ),
+                                if (field.hasError) ...[
+                                  SizedBox(height: 4),
+                                  Padding(
+                                    padding: EdgeInsets.only(left: 4),
+                                    child: Text(field.errorText!, style: TextStyle(color: AppColors.error, fontSize: 11)),
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
                         );
                       },
                     ),
@@ -421,36 +440,23 @@ class _CreateSupplierCreditNoteScreenState
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textSecondary)),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     BlocBuilder<ProjectsBloc, ProjectsState>(
                       builder: (context, state) {
                         final projects = state is ProjectsLoaded
                             ? state.projects
                             : <Project>[];
-                        return DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                          value: _selectedProjectId,
-                          isExpanded: true,
-                          hint: Text('Projet par defaut',
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.textTertiary)),
-                          items: [
-                            const DropdownMenuItem<String>(
-                                value: null,
-                                child: Text('Projet par defaut',
-                                    style: TextStyle(fontSize: 13))),
-                            ...projects.map((p) => DropdownMenuItem(
-                                value: p.id,
-                                child: Text(p.name,
-                                    style:
-                                        const TextStyle(fontSize: 13)))),
-                          ],
-                          onChanged: (v) =>
-                              setState(() => _selectedProjectId = v),
-                          decoration: _formInputDecoration(),
+                        final selectedProject = projects.cast<Project?>().firstWhere((p) => p?.id == _selectedProjectId, orElse: () => null);
+
+                        return SearchableSelectorField(
+                          hint: 'Projet par defaut',
+                          selectedText: selectedProject?.name ?? 'Projet par defaut',
+                          onTap: () async {
+                            final res = await showProjectSelectDialog(context, projects, selectedProjectId: _selectedProjectId);
+                            if (res != null) {
+                              setState(() => _selectedProjectId = (res == '__default__' ? null : res));
+                            }
+                          },
                         );
                       },
                     ),
@@ -482,7 +488,7 @@ class _CreateSupplierCreditNoteScreenState
                     'Informations supplementaires specifiques ÃƒÂ  ce document',
                     style: TextStyle(
                         fontSize: 11, color: AppColors.textSecondary)),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
@@ -494,17 +500,17 @@ class _CreateSupplierCreditNoteScreenState
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.textSecondary)),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           TextFormField(
                             controller: _vehicleCtrl,
                             decoration:
                                 _formInputDecoration(hint: 'Entrer la valeur'),
-                            style: const TextStyle(fontSize: 13),
+                            style: TextStyle(fontSize: 13),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -514,12 +520,12 @@ class _CreateSupplierCreditNoteScreenState
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: AppColors.textSecondary)),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           TextFormField(
                             controller: _driverCtrl,
                             decoration:
                                 _formInputDecoration(hint: 'Entrer la valeur'),
-                            style: const TextStyle(fontSize: 13),
+                            style: TextStyle(fontSize: 13),
                           ),
                         ],
                       ),
@@ -554,7 +560,7 @@ class _CreateSupplierCreditNoteScreenState
                 onChanged: (v) => setState(() => _pricingModeHT = v!),
                 activeColor: AppColors.primary,
               ),
-              const Text('Taxe incluse', style: TextStyle(fontSize: 13)),
+              Text('Taxe incluse', style: TextStyle(fontSize: 13)),
             ],
           ),
         ],
@@ -609,7 +615,7 @@ class _CreateSupplierCreditNoteScreenState
             padding:
                 EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: Color(0xFFF1F5F9),
+              color: AppColors.surfaceAlt,
               border: Border(
                 top: BorderSide(color: AppColors.border),
                 bottom: BorderSide(color: AppColors.border),
@@ -641,7 +647,7 @@ class _CreateSupplierCreditNoteScreenState
                     child: Text('Total HT',
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.right)),
-                const SizedBox(width: 60),
+                SizedBox(width: 60),
               ],
             ),
           ),
@@ -666,7 +672,7 @@ class _CreateSupplierCreditNoteScreenState
     return TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: AppColors.textSecondary);
+        color: AppColors.textPrimary);
   }
 
   Widget _buildItemRow(int index, SupplierCreditNoteItem item) {
@@ -687,12 +693,12 @@ class _CreateSupplierCreditNoteScreenState
                 child: TextFormField(
                   initialValue: item.designation ?? '',
                   decoration: _itemInputDecoration(''),
-                  style: const TextStyle(fontSize: 13),
+                  style: TextStyle(fontSize: 13),
                   onChanged: (v) => setState(() =>
                       _items[index] = item.copyWith(designation: v)),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // Quantite with + button
               SizedBox(
                 width: 120,
@@ -713,7 +719,7 @@ class _CreateSupplierCreditNoteScreenState
                             size: 14, color: AppColors.textSecondary),
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: 4),
                     Expanded(
                       child: TextFormField(
                         key: ValueKey(
@@ -721,7 +727,7 @@ class _CreateSupplierCreditNoteScreenState
                         initialValue: formatQuantity(item.quantity),
                         decoration: _itemInputDecoration(''),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 13),
+                        style: TextStyle(fontSize: 13),
                         keyboardType: TextInputType.number,
                         onChanged: (v) => setState(() =>
                             _items[index] = item.copyWith(
@@ -732,7 +738,7 @@ class _CreateSupplierCreditNoteScreenState
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // P.U
               SizedBox(
                 width: 130,
@@ -745,7 +751,7 @@ class _CreateSupplierCreditNoteScreenState
                             ? item.unitPrice.toStringAsFixed(0)
                             : '',
                         decoration: _itemInputDecoration(''),
-                        style: const TextStyle(fontSize: 13),
+                        style: TextStyle(fontSize: 13),
                         keyboardType: TextInputType.number,
                         onChanged: (v) => setState(() =>
                             _items[index] = item.copyWith(
@@ -763,7 +769,7 @@ class _CreateSupplierCreditNoteScreenState
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // TVA
               SizedBox(
                 width: 100,
@@ -777,7 +783,7 @@ class _CreateSupplierCreditNoteScreenState
                           value: r,
                           child: Text('${r.toInt()}%',
                               style:
-                                  const TextStyle(fontSize: 13))))
+                                  TextStyle(fontSize: 13))))
                       .toList(),
                   onChanged: (v) => setState(() =>
                       _items[index] = item.copyWith(tvaRate: v)),
@@ -785,7 +791,7 @@ class _CreateSupplierCreditNoteScreenState
                   isDense: true,
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // Total HT (read-only)
               SizedBox(
                 width: 140,
@@ -854,41 +860,20 @@ class _CreateSupplierCreditNoteScreenState
   }
 
   // aâ€â‚¬aâ€â‚¬ Article Actions aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
-  Widget _buildArticleActions() {
+    Widget _buildArticleActions() {
     return Row(
       children: [
         Expanded(
           child: BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
-              final products =
-                  state is ProductsLoaded ? state.products : <Product>[];
-              return Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                  hint: Text('Selectionner un article...',
-                      style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textTertiary)),
-                  isExpanded: true,
-                  items: products
-                      .map((p) => DropdownMenuItem(
-                          value: p.id,
-                          child: Text(p.name,
-                              style:
-                                  const TextStyle(fontSize: 13))))
-                      .toList(),
-                  onChanged: (v) {
-                    if (v == null) return;
-                    final product =
-                        products.firstWhere((p) => p.id == v);
+              final products = state is ProductsLoaded ? state.products : <Product>[];
+              return SearchableSelectorField(
+                hint: 'Sélectionner un article...',
+                selectedText: null,
+                onTap: () async {
+                  final res = await showProductSelectDialog(context, products);
+                  if (res != null) {
+                    final product = products.firstWhere((p) => p.id == res);
                     setState(() {
                       _items.add(SupplierCreditNoteItem(
                         id: _uuid.v4(),
@@ -901,25 +886,22 @@ class _CreateSupplierCreditNoteScreenState
                         totalHT: -1 * product.sellingPrice,
                       ));
                     });
-                  },
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.surfaceAlt,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        borderSide: BorderSide.none),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        borderSide: BorderSide.none),
-                  ),
-                ),
+                  }
+                },
               );
             },
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 8),
+        IconButton(
+          icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+          tooltip: 'Créer un nouvel article',
+          onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          },
+          splashRadius: 24,
+        ),
+        SizedBox(width: 12),
         SizedBox(
           height: 44,
           child: OutlinedButton(
@@ -940,13 +922,10 @@ class _CreateSupplierCreditNoteScreenState
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textPrimary,
               side: BorderSide(color: AppColors.border),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md)),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              padding: EdgeInsets.symmetric(horizontal: 20),
             ),
-            child: const Text('Ajouter une Ligne Vide',
-                style: TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w500)),
+            child: Text('Ajouter une Ligne Vide', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
           ),
         ),
       ],
@@ -991,7 +970,7 @@ class _CreateSupplierCreditNoteScreenState
             ),
           ),
           if (_withGlobalDiscount) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 SizedBox(
@@ -1002,7 +981,7 @@ class _CreateSupplierCreditNoteScreenState
                         : '',
                     decoration: _itemInputDecoration('Remise %'),
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13),
                     onChanged: (v) => setState(() =>
                         _globalDiscountPercent =
                             double.tryParse(v) ?? 0),
@@ -1032,21 +1011,21 @@ class _CreateSupplierCreditNoteScreenState
           children: [
             _buildTotalLine('Sous-total HT:',
                 formatCurrencyDT(_totalHTAfterDiscount)),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             ..._tvaBreakdown.entries.map((entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
+                  padding: EdgeInsets.only(bottom: 6),
                   child: _buildTotalLine('TVA ${entry.key.toInt()}%:',
                       formatCurrencyDT(entry.value)),
                 )),
             if (_withTimbreFiscal) ...[
               _buildTotalLine(
                   'Timbre fiscal:', formatCurrencyDT(_timbreFiscal)),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
             ],
             if (_withGlobalDiscount && _globalDiscountAmount > 0) ...[
               _buildTotalLine('Remise:',
                   '- ${formatCurrencyDT(_globalDiscountAmount)}'),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
             ],
             Divider(),
             SizedBox(height: 4),
@@ -1065,7 +1044,7 @@ class _CreateSupplierCreditNoteScreenState
                         color: AppColors.textPrimary)),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             // Timbre fiscal toggle
             InkWell(
               onTap: () =>
@@ -1153,7 +1132,7 @@ class _CreateSupplierCreditNoteScreenState
                       borderSide: BorderSide(
                           color: AppColors.primary, width: 1.5)),
                 ),
-                style: const TextStyle(fontSize: 13),
+                style: TextStyle(fontSize: 13),
               ),
             ],
           ),
@@ -1192,7 +1171,7 @@ class _CreateSupplierCreditNoteScreenState
                       borderSide: BorderSide(
                           color: AppColors.primary, width: 1.5)),
                 ),
-                style: const TextStyle(fontSize: 13),
+                style: TextStyle(fontSize: 13),
               ),
             ],
           ),

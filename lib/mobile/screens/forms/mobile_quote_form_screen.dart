@@ -220,7 +220,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
           title: 'Informations',
           icon: Icons.info_outline_rounded,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               children: [
                 SmartDatePicker(
@@ -228,13 +228,13 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                   value: _date,
                   onChanged: (v) => setState(() => _date = v),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 SmartDatePicker(
                   label: 'Date de validité',
                   value: _validityDate,
                   onChanged: (v) => setState(() => _validityDate = v),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -245,17 +245,17 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                           return SmartDropdown<String>(
                             label: 'Client',
                             value: _selectedCustomerId,
-                            items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.companyName ?? c.name, style: const TextStyle(fontSize: 16)))).toList(),
+                            items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.companyName ?? c.name, style: TextStyle(fontSize: 16)))).toList(),
                             onChanged: (v) => setState(() => _selectedCustomerId = v),
                             hint: 'Rechercher des clients...',
                           );
                         },
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Container(
                       height: 56,
-                      margin: const EdgeInsets.only(bottom: 2),
+                      margin: EdgeInsets.only(bottom: 2),
                       child: ElevatedButton(
                         onPressed: () {
                           showDialog(
@@ -277,7 +277,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                           ),
                           side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
                         ),
-                        child: const Icon(Icons.person_add_alt_1_rounded),
+                        child: Icon(Icons.person_add_alt_1_rounded),
                       ),
                     ),
                   ],
@@ -291,7 +291,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
           title: 'Articles',
           icon: Icons.inventory_2_outlined,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -314,7 +314,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                     onEdit: () => _showArticleForm(e.key),
                     onDelete: () => setState(() => _items.removeAt(e.key)),
                   )),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
@@ -364,7 +364,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
           icon: Icons.notes_rounded,
           isInitiallyExpanded: false,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: SmartTextInput(
               label: 'Notes internes, instructions de livraison...',
               initialValue: _notes,

@@ -95,16 +95,16 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surface,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Réf: ${currentCreditNote.number}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Réf: ${currentCreditNote.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: _getStatusColor(currentCreditNote.status).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
@@ -113,9 +113,9 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       _buildInfoRow('Date', formatDateTimeLong(currentCreditNote.date)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Client', currentCreditNote.customerName ?? 'Non spécifié'),
                       if (currentCreditNote.invoiceId.isNotEmpty) ...[
                         SizedBox(height: 8),
@@ -155,7 +155,7 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
                           decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
                           child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,13 +182,13 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surfaceAlt,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     children: [
                       _buildInfoRow('Total HT', formatCurrencyDT(currentCreditNote.totalHT)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Total TVA', formatCurrencyDT(currentCreditNote.totalTva)),
-                      const Divider(height: 24),
+                      Divider(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -214,7 +214,7 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
                   ),
                 ),
               ],
-              const SizedBox(height: 32),
+              SizedBox(height: 32),
             ],
           ),
         ),
@@ -277,17 +277,17 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
         showDialog(
           context: context,
           builder: (dialogCtx) => AlertDialog(
-            title: const Text('Confirmer la suppression'),
-            content: const Text('Voulez-vous vraiment supprimer cet avoir client ?'),
+            title: Text('Confirmer la suppression'),
+            content: Text('Voulez-vous vraiment supprimer cet avoir client ?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogCtx);
                   context.read<CreditNotesBloc>().add(DeleteCreditNote(creditNote.id));
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),

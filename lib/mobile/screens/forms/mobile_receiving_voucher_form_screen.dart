@@ -118,7 +118,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Ajouter un article'),
+              title: Text('Ajouter un article'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -130,30 +130,30 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         value: selectedProductId,
-                        decoration: const InputDecoration(labelText: 'Article'),
+                        decoration: InputDecoration(labelText: 'Article'),
                         items: products.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))).toList(),
                         onChanged: (v) => setDialogState(() => selectedProductId = v),
                       );
                     },
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   TextFormField(
                     initialValue: '1',
-                    decoration: const InputDecoration(labelText: 'Quantité attendue'),
+                    decoration: InputDecoration(labelText: 'Quantité attendue'),
                     keyboardType: TextInputType.number,
                     onChanged: (v) => expected = double.tryParse(v) ?? 0,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   TextFormField(
                     initialValue: '1',
-                    decoration: const InputDecoration(labelText: 'Quantité reçue'),
+                    decoration: InputDecoration(labelText: 'Quantité reçue'),
                     keyboardType: TextInputType.number,
                     onChanged: (v) => received = double.tryParse(v) ?? 0,
                   ),
                 ],
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+                TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler')),
                 ElevatedButton(
                   onPressed: () {
                     if (selectedProductId != null) {
@@ -168,7 +168,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                       Navigator.pop(context);
                     }
                   },
-                  child: const Text('Ajouter'),
+                  child: Text('Ajouter'),
                 ),
               ],
             );
@@ -195,7 +195,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
           title: 'Informations',
           icon: Icons.info_outline_rounded,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -204,7 +204,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                   value: _date,
                   onChanged: (v) { if (!widget.isReadOnly) setState(() => _date = v); },
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -215,7 +215,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                           return SmartDropdown<String>(
                             label: 'Fournisseur',
                             value: _selectedSupplierId,
-                            items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: const TextStyle(fontSize: 16)))).toList(),
+                            items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: TextStyle(fontSize: 16)))).toList(),
                             onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedSupplierId = v); },
                             hint: 'Rechercher des fournisseurs...',
                           );
@@ -223,10 +223,10 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                       ),
                     ),
                     if (!widget.isReadOnly) ...[
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Container(
                         height: 56,
-                        margin: const EdgeInsets.only(bottom: 2),
+                        margin: EdgeInsets.only(bottom: 2),
                         child: ElevatedButton(
                           onPressed: () {
                             showDialog(
@@ -248,7 +248,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                             ),
                             side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
                           ),
-                          child: const Icon(Icons.person_add_alt_1_rounded),
+                          child: Icon(Icons.person_add_alt_1_rounded),
                         ),
                       ),
                     ]
@@ -263,7 +263,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
           title: 'Articles',
           icon: Icons.inventory_2_outlined,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -277,7 +277,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                 else
                   ..._items.asMap().entries.map((e) => _buildArticleItem(e.key, e.value)),
                 if (!widget.isReadOnly) ...[
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(

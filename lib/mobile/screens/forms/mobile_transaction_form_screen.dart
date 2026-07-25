@@ -145,7 +145,7 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
           title: 'Détails de l\'opération',
           icon: Icons.sync_alt_rounded,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -163,7 +163,7 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
                   builder: (context, state) {
                     final accounts = state is TreasuryAccountsLoaded ? state.accounts : <TreasuryAccount>[];
@@ -179,7 +179,7 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
                     );
                   },
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartTextInput(
@@ -194,7 +194,7 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartDatePicker(
@@ -212,7 +212,7 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
           title: 'Informations complémentaires',
           icon: Icons.info_outline_rounded,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -234,7 +234,7 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 BlocBuilder<ProjectsBloc, ProjectsState>(
                   builder: (context, state) {
                     final projects = state is ProjectsLoaded ? state.projects : <Project>[];
@@ -252,7 +252,7 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
                     );
                   },
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartTextInput(
@@ -272,7 +272,7 @@ class _MobileTransactionFormScreenState extends State<MobileTransactionFormScree
           icon: Icons.percent_rounded,
           isInitiallyExpanded: false,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

@@ -155,12 +155,12 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
         actions: [
           if (!widget.isViewOnly)
             Padding(
-              padding: const EdgeInsets.only(right: 16.0),
+              padding: EdgeInsets.only(right: 16.0),
               child: Row(
                 children: [
                   OutlinedButton(
                     onPressed: () => _save(true),
-                    child: const Text('Brouillon'),
+                    child: Text('Brouillon'),
                   ),
                   SizedBox(width: 8),
                   ElevatedButton.icon(
@@ -186,12 +186,12 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
           }
         },
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeaderSection(),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               _buildItemsSection(),
             ],
           ),
@@ -210,7 +210,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
   Widget _buildHeaderSection() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -223,15 +223,15 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Date', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       TextFormField(
                         initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(_date),
                         readOnly: true,
                         enabled: !widget.isViewOnly,
                         decoration: InputDecoration(
-                          suffixIcon: const Icon(Icons.calendar_today, size: 16),
+                          suffixIcon: Icon(Icons.calendar_today, size: 16),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                       ),
                     ],
@@ -243,7 +243,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Entrepôt', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                         DropdownButtonFormField<String>(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -255,7 +255,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                         },
                         decoration: InputDecoration(
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                       ),
                     ],
@@ -271,7 +271,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Date d\'inventaire', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       InkWell(
                         onTap: widget.isViewOnly ? null : () async {
                           final picked = await showDatePicker(
@@ -286,9 +286,9 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                         },
                         child: InputDecorator(
                           decoration: InputDecoration(
-                            suffixIcon: const Icon(Icons.calendar_today, size: 16),
+                            suffixIcon: Icon(Icons.calendar_today, size: 16),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           ),
                           child: Text(DateFormat('dd MMMM yyyy', 'fr_FR').format(_inventoryDate)),
                         ),
@@ -302,13 +302,13 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Date de saisie', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       TextFormField(
                         initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(widget.sheet?.createdAt ?? DateTime.now()),
                         readOnly: true,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                       ),
                     ],
@@ -320,14 +320,14 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Compté par', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       TextFormField(
                         controller: _countedByController,
                         readOnly: widget.isViewOnly,
                         decoration: InputDecoration(
                           hintText: 'Nom du responsable',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                       ),
                     ],
@@ -343,7 +343,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Raison (optionnel)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       TextFormField(
                         controller: _reasonController,
                         readOnly: widget.isViewOnly,
@@ -351,7 +351,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                         decoration: InputDecoration(
                           hintText: 'Raison de l\'opération...',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                       ),
                     ],
@@ -363,7 +363,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Notes (optionnel)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       TextFormField(
                         controller: _notesController,
                         readOnly: widget.isViewOnly,
@@ -371,7 +371,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                         decoration: InputDecoration(
                           hintText: 'Notes additionnelles...',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                       ),
                     ],
@@ -388,7 +388,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
   Widget _buildItemsSection() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -407,10 +407,10 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                 Expanded(flex: 1, child: Text('Surplus', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
                 SizedBox(width: 8),
                 Expanded(flex: 1, child: Text('Manquant', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                if (!widget.isViewOnly) const SizedBox(width: 40),
+                if (!widget.isViewOnly) SizedBox(width: 40),
               ],
             ),
-            const Divider(),
+            Divider(),
             
             // Items
             BlocBuilder<ProductsBloc, ProductsState>(
@@ -464,7 +464,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                         }
 
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
+                          padding: EdgeInsets.only(bottom: 8.0),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -474,7 +474,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                   decoration: BoxDecoration(color: widget.isViewOnly ? AppColors.surfaceAlt : Colors.transparent, borderRadius: BorderRadius.circular(AppRadius.sm)),
                                   child: widget.isViewOnly 
                                   ? Padding(
-                                      padding: const EdgeInsets.all(12.0),
+                                      padding: EdgeInsets.all(12.0),
                                       child: Text(item.productName ?? ''),
                                     )
                                   : Column(
@@ -502,7 +502,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                         decoration: InputDecoration(
                                           hintText: 'Sélectionner un article',
                                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                         ),
                                         onChanged: (v) {
                                           if (item.productName != v) {
@@ -527,7 +527,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                                 final option = options.elementAt(i);
                                                 return ListTile(
                                                   leading: Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textSecondary),
-                                                  title: Text(option.name, style: const TextStyle(fontSize: 13)),
+                                                  title: Text(option.name, style: TextStyle(fontSize: 13)),
                                                   onTap: () => onSelected(option),
                                                   dense: true,
                                                 );
@@ -567,7 +567,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                   child: Text(formatAmount(theoreticalStock, symbol: ''), textAlign: TextAlign.right),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 8),
                               Expanded(
                                 flex: 1,
                                 child: TextFormField(
@@ -576,7 +576,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                   textAlign: TextAlign.right,
                                   decoration: InputDecoration(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
                                   ),
                                   onChanged: (val) {
@@ -623,7 +623,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
             ),
             
             if (!widget.isViewOnly) ...[
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

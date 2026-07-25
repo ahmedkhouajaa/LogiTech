@@ -251,7 +251,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
           title: 'Informations',
           icon: Icons.info_outline_rounded,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -260,7 +260,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                   value: _date,
                   onChanged: (v) { if (!widget.isReadOnly) setState(() => _date = v); },
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -271,7 +271,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                           return SmartDropdown<String>(
                             label: 'Fournisseur',
                             value: _selectedSupplierId,
-                            items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: const TextStyle(fontSize: 16)))).toList(),
+                            items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: TextStyle(fontSize: 16)))).toList(),
                             onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedSupplierId = v); },
                             hint: 'Rechercher des fournisseurs...',
                           );
@@ -279,10 +279,10 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                       ),
                     ),
                     if (!widget.isReadOnly) ...[
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Container(
                         height: 56,
-                        margin: const EdgeInsets.only(bottom: 2),
+                        margin: EdgeInsets.only(bottom: 2),
                         child: ElevatedButton(
                           onPressed: () {
                             showDialog(
@@ -304,13 +304,13 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                             ),
                             side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
                           ),
-                          child: const Icon(Icons.person_add_alt_1_rounded),
+                          child: Icon(Icons.person_add_alt_1_rounded),
                         ),
                       ),
                     ]
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 BlocBuilder<ProjectsBloc, ProjectsState>(
                   builder: (context, state) {
                     final projects = state is ProjectsLoaded ? state.projects : <Project>[];
@@ -319,14 +319,14 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                       value: _selectedProjectId,
                       items: [
                         const DropdownMenuItem<String>(value: null, child: Text('Projet par défaut', style: TextStyle(fontSize: 16))),
-                        ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: const TextStyle(fontSize: 16)))),
+                        ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: TextStyle(fontSize: 16)))),
                       ],
                       onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedProjectId = v); },
                       hint: 'Projet par défaut',
                     );
                   },
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartToggleChips<bool>(
@@ -346,7 +346,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
           title: 'Articles',
           icon: Icons.inventory_2_outlined,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -370,7 +370,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                     onDelete: () { if (!widget.isReadOnly) setState(() => _items.removeAt(e.key)); },
                   )),
                 if (!widget.isReadOnly) ...[
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
@@ -396,14 +396,14 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   SmartCheckbox(
                     label: 'Ajouter une remise globale',
                     value: _withGlobalDiscount,
                     onChanged: (v) => setState(() => _withGlobalDiscount = v ?? false),
                   ),
                   if (_withGlobalDiscount) ...[
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     SmartTextInput(
                       label: 'Remise globale (%)',
                       initialValue: _globalDiscountPercent > 0 ? _globalDiscountPercent.toStringAsFixed(0) : '',
@@ -436,7 +436,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
           icon: Icons.notes_rounded,
           isInitiallyExpanded: false,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               children: [
                 AbsorbPointer(
@@ -447,14 +447,14 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                     onChanged: (v) {},
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 SmartTextInput(
                   label: 'Notes',
                   initialValue: _notes,
                   maxLines: 3,
                   onChanged: widget.isReadOnly ? null : (v) => setState(() => _notes = v),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 SmartTextInput(
                   label: 'Conditions Générales',
                   initialValue: _conditions,

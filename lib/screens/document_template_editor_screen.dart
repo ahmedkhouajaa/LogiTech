@@ -84,14 +84,14 @@ class _DocumentTemplateEditorScreenState
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Réinitialiser ?',
+        title: Text('Réinitialiser ?',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text(
+        content: Text(
             'Toutes les modifications seront remplacées par les valeurs par défaut. Continuer ?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuler')),
+              child: Text('Annuler')),
           ElevatedButton(
             onPressed: () {
               setState(() {
@@ -103,7 +103,7 @@ class _DocumentTemplateEditorScreenState
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.warning,
                 foregroundColor: Colors.white),
-            child: const Text('Réinitialiser'),
+            child: Text('Réinitialiser'),
           ),
         ],
       ),
@@ -127,18 +127,18 @@ class _DocumentTemplateEditorScreenState
               border: Border(bottom: BorderSide(color: AppColors.border)),
               boxShadow: AppShadows.sm,
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded, size: 20),
+                  icon: Icon(Icons.arrow_back_rounded, size: 20),
                   onPressed: () => Navigator.pop(context),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Expanded(
                   child: Row(
                     children: [
-                      const Text('Éditeur de modèle',
+                      Text('Éditeur de modèle',
                           style: TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       if (_hasChanges)
@@ -225,7 +225,7 @@ class _DocumentTemplateEditorScreenState
                             labelColor: AppColors.primary,
                             unselectedLabelColor: AppColors.textSecondary,
                             indicatorColor: AppColors.primary,
-                            labelStyle: const TextStyle(
+                            labelStyle: TextStyle(
                                 fontSize: 13, fontWeight: FontWeight.w600),
                             tabs: const [
                               Tab(text: 'Champs'),
@@ -269,14 +269,14 @@ class _DocumentTemplateEditorScreenState
     final columns = List<Map<String, dynamic>>.from(_config['tableColumns'] ?? DocumentTemplate.defaultConfig()['tableColumns']);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _infoBox(
             'Configurez les colonnes visibles dans le tableau de votre document : désignation, quantité, prix unitaire, TVA, etc.',
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           ...columns.asMap().entries.map((entry) {
             final index = entry.key;
             final col = entry.value;
@@ -321,13 +321,13 @@ class _DocumentTemplateEditorScreenState
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Nouvelle colonne'),
+        title: Text('Nouvelle colonne'),
         content: TextField(
           controller: textController,
-          decoration: const InputDecoration(labelText: 'Nom de la colonne', border: OutlineInputBorder()),
+          decoration: InputDecoration(labelText: 'Nom de la colonne', border: OutlineInputBorder()),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Annuler')),
           ElevatedButton(
             onPressed: () {
               if (textController.text.trim().isNotEmpty) {
@@ -345,7 +345,7 @@ class _DocumentTemplateEditorScreenState
                 Navigator.pop(ctx);
               }
             },
-            child: const Text('Ajouter'),
+            child: Text('Ajouter'),
           ),
         ],
       ),
@@ -364,7 +364,7 @@ class _DocumentTemplateEditorScreenState
       child: Row(
         children: [
           Icon(Icons.drag_indicator_rounded, size: 16, color: AppColors.textTertiary),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
           Spacer(),
           if (onDelete != null) ...[
@@ -388,17 +388,17 @@ class _DocumentTemplateEditorScreenState
 
   Widget _buildDecorationsTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _infoBox(
             'Configurez les éléments décoratifs de votre document : bordures, filigrane, en-tête et pied de page personnalisés.',
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           // Table border settings
           TemplateSectionHeader(title: 'Bordures du tableau'),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -408,7 +408,7 @@ class _DocumentTemplateEditorScreenState
                   onChanged: (c) => _updateNestedConfig('table', 'borderColor', c.toARGB32()),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: TemplateMeasurementInput(
                   label: 'Épaisseur bordure',
@@ -438,7 +438,7 @@ class _DocumentTemplateEditorScreenState
                 onChanged: (v) => _updateNestedConfig('table', 'fixedHeight', v ?? false),
                 activeColor: AppColors.primary,
               ),
-              const Expanded(
+              Expanded(
                 child: Text(
                   'Hauteur fixe du tableau (remplir avec des lignes vides sur la première page)',
                   style: TextStyle(fontSize: 14),
@@ -453,23 +453,23 @@ class _DocumentTemplateEditorScreenState
 
   Widget _buildStylesTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _infoBox(
             'Personnalisez l\'apparence globale de votre document : style du tableau, couleurs d\'en-tête, taille de police et hauteur des lignes.',
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           // Table style radio buttons
           TemplateSectionHeader(title: 'Style du tableau'),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           _buildRadioGroup([
             ('classique', 'Classique', 'Bordures complètes'),
             ('alterne', 'Alterné', 'Lignes alternées colorées'),
             ('minimaliste', 'Minimaliste', 'Bordures minimales'),
           ]),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           // Header colors
           Row(
             children: [
@@ -480,7 +480,7 @@ class _DocumentTemplateEditorScreenState
                   onChanged: (c) => _updateConfig('headerBgColor', c.toARGB32()),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: TemplateColorPicker(
                   label: 'Texte en-tête',
@@ -490,7 +490,7 @@ class _DocumentTemplateEditorScreenState
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -501,7 +501,7 @@ class _DocumentTemplateEditorScreenState
                   onChanged: (v) => _updateConfig('fontSize', v),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: TemplateMeasurementInput(
                   label: 'Hauteur ligne',
@@ -518,17 +518,17 @@ class _DocumentTemplateEditorScreenState
 
   Widget _buildTotalsTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _infoBox(
             'Configurez l\'apparence de la section des totaux : Total Brut, Remises, Total HT, Taxes et Total TTC.',
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           // Position section
           TemplateSectionHeader(title: 'Position des totaux'),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -538,7 +538,7 @@ class _DocumentTemplateEditorScreenState
                   onChanged: (v) => _updateNestedConfig('totals', 'positionX', v),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: TemplateMeasurementInput(
                   label: 'Largeur',
@@ -548,7 +548,7 @@ class _DocumentTemplateEditorScreenState
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -558,7 +558,7 @@ class _DocumentTemplateEditorScreenState
                   onChanged: (v) => _updateNestedConfig('totals', 'lineSpacing', v),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: TemplateMeasurementInput(
                   label: 'Largeur étiquettes',
@@ -568,7 +568,7 @@ class _DocumentTemplateEditorScreenState
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           // Total Brut
           TotalFieldEditor(
             title: 'Total Brut',
@@ -622,12 +622,12 @@ class _DocumentTemplateEditorScreenState
                           },
                           activeColor: AppColors.primary,
                         ),
-                        const Text('Afficher le fond coloré',
+                        Text('Afficher le fond coloré',
                             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                       ],
                     ),
                     if (_getSubConfig('totalTTC')['showColoredBg'] == true) ...[
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Row(
                         children: [
                           Expanded(
@@ -641,7 +641,7 @@ class _DocumentTemplateEditorScreenState
                               },
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          SizedBox(width: 12),
                           Expanded(
                             child: TemplateMeasurementInput(
                               label: 'Padding',
@@ -674,14 +674,14 @@ class _DocumentTemplateEditorScreenState
 
   Widget _buildEFactureTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _infoBox(
             'Configurez l\'affichage des éléments E-Facture (El-Fatoora) sur vos factures : QR Code, référence TTN, date de soumission et badge de statut.',
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
 
           // ─── QR Code ────────────────────────────────────
           TemplateEnableHeader(
@@ -696,7 +696,7 @@ class _DocumentTemplateEditorScreenState
               onXChanged: (v) => _updateNestedConfig('qrCode', 'positionX', v),
               onYChanged: (v) => _updateNestedConfig('qrCode', 'positionY', v),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TemplateDimensionFields(
               width: _getSubDbl('qrCode', 'width', 25),
               height: _getSubDbl('qrCode', 'height', 25),
@@ -711,12 +711,12 @@ class _DocumentTemplateEditorScreenState
                   onChanged: (v) => _updateNestedConfig('qrCode', 'showLabel', v ?? true),
                   activeColor: AppColors.primary,
                 ),
-                const Text('Afficher étiquette', style: TextStyle(fontSize: 14)),
+                Text('Afficher étiquette', style: TextStyle(fontSize: 14)),
               ],
             ),
             if (_getSubConfig('qrCode')['showLabel'] == true)
               Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: EdgeInsets.only(top: 8),
                 child: _buildTextInput(
                   'Texte étiquette',
                   _getSubConfig('qrCode')['labelText'] as String? ?? 'E-Facture',
@@ -725,7 +725,7 @@ class _DocumentTemplateEditorScreenState
               ),
           ],
 
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
 
           // ─── Référence TTN ──────────────────────────────
           TemplateEnableHeader(
@@ -740,7 +740,7 @@ class _DocumentTemplateEditorScreenState
               onXChanged: (v) => _updateNestedConfig('ttnReference', 'positionX', v),
               onYChanged: (v) => _updateNestedConfig('ttnReference', 'positionY', v),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -751,7 +751,7 @@ class _DocumentTemplateEditorScreenState
                     onChanged: (v) => _updateNestedConfig('ttnReference', 'fontSize', v),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: TemplateColorPicker(
                     label: 'Couleur',
@@ -761,7 +761,7 @@ class _DocumentTemplateEditorScreenState
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TemplateFontStyleSelector(
               label: 'Graisse',
               value: _getSubConfig('ttnReference')['fontWeight'] as String? ?? 'Gras',
@@ -776,7 +776,7 @@ class _DocumentTemplateEditorScreenState
                   onChanged: (v) => _updateNestedConfig('ttnReference', 'showLabel', v ?? true),
                   activeColor: AppColors.primary,
                 ),
-                const Text('Afficher étiquette', style: TextStyle(fontSize: 14)),
+                Text('Afficher étiquette', style: TextStyle(fontSize: 14)),
               ],
             ),
             if (_getSubConfig('ttnReference')['showLabel'] == true)
@@ -787,7 +787,7 @@ class _DocumentTemplateEditorScreenState
               ),
           ],
 
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
 
           // ─── Date de soumission ─────────────────────────
           TemplateEnableHeader(
@@ -802,7 +802,7 @@ class _DocumentTemplateEditorScreenState
               onXChanged: (v) => _updateNestedConfig('submissionDate', 'positionX', v),
               onYChanged: (v) => _updateNestedConfig('submissionDate', 'positionY', v),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -813,7 +813,7 @@ class _DocumentTemplateEditorScreenState
                     onChanged: (v) => _updateNestedConfig('submissionDate', 'fontSize', v),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: TemplateColorPicker(
                     label: 'Couleur',
@@ -831,7 +831,7 @@ class _DocumentTemplateEditorScreenState
                   onChanged: (v) => _updateNestedConfig('submissionDate', 'showLabel', v ?? true),
                   activeColor: AppColors.primary,
                 ),
-                const Text('Afficher étiquette', style: TextStyle(fontSize: 14)),
+                Text('Afficher étiquette', style: TextStyle(fontSize: 14)),
               ],
             ),
             if (_getSubConfig('submissionDate')['showLabel'] == true)
@@ -842,7 +842,7 @@ class _DocumentTemplateEditorScreenState
               ),
           ],
 
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
 
           // ─── Badge de statut ────────────────────────────
           TemplateEnableHeader(
@@ -857,14 +857,14 @@ class _DocumentTemplateEditorScreenState
               onXChanged: (v) => _updateNestedConfig('statusBadge', 'positionX', v),
               onYChanged: (v) => _updateNestedConfig('statusBadge', 'positionY', v),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TemplateDimensionFields(
               width: _getSubDbl('statusBadge', 'width', 40),
               height: _getSubDbl('statusBadge', 'height', 6),
               onWidthChanged: (v) => _updateNestedConfig('statusBadge', 'width', v),
               onHeightChanged: (v) => _updateNestedConfig('statusBadge', 'height', v),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TemplateMeasurementInput(
               label: 'Taille',
               value: _getSubDbl('statusBadge', 'fontSize', 8),
@@ -875,7 +875,7 @@ class _DocumentTemplateEditorScreenState
             // Status badge preview
             Text('Aperçu',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: [
@@ -918,7 +918,7 @@ class _DocumentTemplateEditorScreenState
               side: BorderSide(color: AppColors.border),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
           const Spacer(),
@@ -927,7 +927,7 @@ class _DocumentTemplateEditorScreenState
             isPrimary: false,
             onPressed: () => Navigator.pop(context),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           AppButton(
             label: 'Enregistrer le modèle',
             icon: Icons.save_rounded,
@@ -980,12 +980,12 @@ class _DocumentTemplateEditorScreenState
 
   Widget _statusBadge(String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
     );
   }
 

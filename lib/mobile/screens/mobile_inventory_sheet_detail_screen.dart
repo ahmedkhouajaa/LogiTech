@@ -48,12 +48,12 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Confirmer la suppression'),
-          content: const Text('Êtes-vous sûr de vouloir supprimer cette fiche ?'),
+          title: Text('Confirmer la suppression'),
+          content: Text('Êtes-vous sûr de vouloir supprimer cette fiche ?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuler'),
+              child: Text('Annuler'),
             ),
             TextButton(
               onPressed: () {
@@ -117,16 +117,16 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surface,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Réf: ${currentSheet.number}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Réf: ${currentSheet.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: _getStatusColor(currentSheet.status).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
@@ -135,7 +135,7 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       _buildDetailRow('Date', formatDate(currentSheet.date)),
                       _buildDetailRow('Statut', translateStatus(currentSheet.status)),
                       if (currentSheet.reason != null && currentSheet.reason!.isNotEmpty)
@@ -176,7 +176,7 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                           decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
                           child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,7 +208,7 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
       value: value,
       child: Row(children: [
         Icon(icon, size: 16, color: const Color(0xFF64748B)),
-        const SizedBox(width: 8),
+        SizedBox(width: 8),
         Text(text, style: TextStyle(color: const Color(0xFF64748B))),
       ]),
     );

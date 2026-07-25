@@ -90,7 +90,7 @@ class _MobileFormSectionState extends State<MobileFormSection> with SingleTicker
                     ),
                     child: Icon(widget.icon, color: AppColors.primary, size: 20),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

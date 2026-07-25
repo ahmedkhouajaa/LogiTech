@@ -115,25 +115,25 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         // Filter bar
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: BlocBuilder<ReceivingVouchersBloc, ReceivingVouchersState>(
             builder: (context, state) {
               return _buildFilterBar(state);
             },
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        SizedBox(height: AppSpacing.lg),
         // Table
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: _buildTable(),
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        SizedBox(height: AppSpacing.lg),
       ],
     );
   }
@@ -168,7 +168,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -183,7 +183,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 SizedBox(
                   height: 40,
                   child: BlocBuilder<SuppliersBloc, SuppliersState>(
@@ -218,7 +218,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                             borderRadius: BorderRadius.circular(AppRadius.md),
                             border: Border.all(color: AppColors.border),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.symmetric(horizontal: 12),
                           child: Row(
                             children: [
                               Expanded(
@@ -255,7 +255,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Date de début', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -304,7 +304,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Date de fin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -401,7 +401,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                           child: Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: s.color.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -443,7 +443,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   )
                                 : Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: _statusFilter!.color.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -503,7 +503,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 label: Text('Réinitialiser les filtres'),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.textSecondary,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
               ),
             ],
@@ -542,7 +542,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               child: Container(
                 width: 440,
                 constraints: const BoxConstraints(maxHeight: 520),
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -685,7 +685,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     return BlocBuilder<ReceivingVouchersBloc, ReceivingVouchersState>(
       builder: (context, state) {
         if (state is ReceivingVouchersLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         }
         if (state is ReceivingVouchersError) {
           return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
@@ -812,7 +812,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                             child: Container(
                                               alignment: Alignment.centerLeft,
                                               child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                 decoration: BoxDecoration(
                                                   color: statusEnum.color.withOpacity(0.1),
                                                   borderRadius: BorderRadius.circular(4),
@@ -959,7 +959,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                       totalItems == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de ${startIndex + 1} à $endIndex sur $totalItems résultats',
                       style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16),
                     Row(
                       children: [
                         InkWell(
@@ -974,7 +974,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                             child: Icon(Icons.chevron_left, size: 20, color: _currentPage > 0 ? AppColors.textPrimary : AppColors.textTertiary),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         InkWell(
                           onTap: _currentPage < totalPages - 1 ? () => setState(() => _currentPage++) : null,
                           child: Container(
@@ -995,7 +995,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
             ],
           );
         }
-        return const SizedBox();
+        return SizedBox();
       },
     );
   }
@@ -1051,7 +1051,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
-              child: const Text('Confirmer', style: TextStyle(color: Colors.white)),
+              child: Text('Confirmer', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -1141,7 +1141,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 const SnackBar(content: Text('Bon de réception supprimé')),
               );
             },
-            child: const Text('Supprimer'),
+            child: Text('Supprimer'),
           ),
         ],
       ),
@@ -1199,7 +1199,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
-              child: const Text('Confirmer', style: TextStyle(color: Colors.white)),
+              child: Text('Confirmer', style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -1268,17 +1268,17 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
       child: Container(
         alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
-          border: showBorder ? const Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)) : null,
+          border: showBorder ? Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)) : null,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
             Icon(icon, size: 18, color: const Color(0xFF64748B)),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Text(
                 label, 
-                style: const TextStyle(color: Color(0xFF334155), fontSize: 13, fontWeight: FontWeight.w500),
+                style: TextStyle(color: Color(0xFF334155), fontSize: 13, fontWeight: FontWeight.w500),
                 overflow: TextOverflow.ellipsis,
               ),
             ),

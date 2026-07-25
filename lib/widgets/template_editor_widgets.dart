@@ -42,7 +42,7 @@ class TemplateColorPicker extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        title: Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         content: SingleChildScrollView(
           child: ColorPicker(
             pickerColor: color,
@@ -52,14 +52,14 @@ class TemplateColorPicker extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Annuler')),
           ElevatedButton(
             onPressed: () {
               onChanged(tempColor);
               Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-            child: const Text('Valider'),
+            child: Text('Valider'),
           ),
         ],
       ),
@@ -141,13 +141,13 @@ class TemplateFontStyleSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         DropdownButtonFormField(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           value: options.contains(value) ? value : options.first,
-          items: options.map((o) => DropdownMenuItem(value: o, child: Text(o, style: const TextStyle(fontSize: 14)))).toList(),
+          items: options.map((o) => DropdownMenuItem(value: o, child: Text(o, style: TextStyle(fontSize: 14)))).toList(),
           onChanged: (v) { if (v != null) onChanged(v); },
           decoration: InputDecoration(
             filled: true,
@@ -234,7 +234,7 @@ class TemplatePositionFields extends StatelessWidget {
     return Row(
       children: [
         Expanded(child: TemplateMeasurementInput(label: 'Position X', value: positionX, onChanged: onXChanged)),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(child: TemplateMeasurementInput(label: 'Position Y', value: positionY, onChanged: onYChanged)),
       ],
     );
@@ -265,7 +265,7 @@ class TemplateDimensionFields extends StatelessWidget {
     return Row(
       children: [
         Expanded(child: TemplateMeasurementInput(label: widthLabel, value: width, onChanged: onWidthChanged)),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(child: TemplateMeasurementInput(label: heightLabel, value: height, onChanged: onHeightChanged)),
       ],
     );
@@ -318,7 +318,7 @@ class TotalFieldEditor extends StatelessWidget {
                   onChanged: (v) => _update('fontSize', v),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: TemplateColorPicker(
                   label: 'Couleur',
@@ -326,7 +326,7 @@ class TotalFieldEditor extends StatelessWidget {
                   onChanged: (c) => _update('color', c.toARGB32()),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: TemplateFontStyleSelector(
                   value: config['style'] as String? ?? 'Normal',
@@ -337,7 +337,7 @@ class TotalFieldEditor extends StatelessWidget {
           ),
           if (extraWidgets != null) ...extraWidgets!,
         ],
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
       ],
     );
   }

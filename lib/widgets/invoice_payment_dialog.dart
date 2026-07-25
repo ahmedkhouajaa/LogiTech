@@ -12,6 +12,7 @@ import '../models/treasury_account.dart';
 import '../models/treasury_transaction.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../widgets/searchable_dropdown_field.dart';
 
 class InvoicePaymentDialog extends StatefulWidget {
   final Invoice invoice;
@@ -205,17 +206,17 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(20),
               child: Row(
                 children: [
-                  const Text('Paiement', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.play_circle_filled, color: Colors.red, size: 24),
+                  Text('Paiement', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  SizedBox(width: 8),
+                  Icon(Icons.play_circle_filled, color: Colors.red, size: 24),
                   const Spacer(),
                   OutlinedButton.icon(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, size: 16),
-                    label: const Text('Annuler'),
+                    icon: Icon(Icons.close, size: 16),
+                    label: Text('Annuler'),
                   ),
                   SizedBox(width: 12),
                   ElevatedButton.icon(
@@ -227,7 +228,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
                 ],
               ),
             ),
-            const Divider(height: 1),
+            Divider(height: 1),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.all(24),
@@ -246,26 +247,26 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
                         children: [
                           Row(
                             children: [
-                              Expanded(child: Text('Réf: ${widget.invoice.number}', style: const TextStyle(fontWeight: FontWeight.w500))),
+                              Expanded(child: Text('Réf: ${widget.invoice.number}', style: TextStyle(fontWeight: FontWeight.w500))),
                               Expanded(child: Text('Date: ${formatDateTime(widget.invoice.date)}')),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12),
                           Row(
                             children: [
                               Expanded(child: Text('Contact: ${widget.invoice.customerName ?? '—'}')),
                               Expanded(child: Text('Statut: ${widget.invoice.status.label}')),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12),
                           Row(
                             children: [
-                              Expanded(child: Text('Montant total: ${formatCurrencyDT(widget.invoice.totalTTC + widget.invoice.timbreFiscal)}', style: const TextStyle(fontWeight: FontWeight.w600))),
+                              Expanded(child: Text('Montant total: ${formatCurrencyDT(widget.invoice.totalTTC + widget.invoice.timbreFiscal)}', style: TextStyle(fontWeight: FontWeight.w600))),
                               Expanded(
                                 child: Row(
                                   children: [
-                                    const Text('Montant restant: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                                    Text(formatCurrencyDT(remainingAmount), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange)),
+                                    Text('Montant restant: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                                    Text(formatCurrencyDT(remainingAmount), style: TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange)),
                                   ],
                                 ),
                               ),
@@ -274,15 +275,15 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
                     
                     // Tabs
                     Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
-                      padding: const EdgeInsets.all(4),
+                      padding: EdgeInsets.all(4),
                       child: Row(
                         children: [
                           _buildTab(0, 'Nouveau paiement'),
@@ -291,7 +292,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
 
                     // Nouveau paiement content
                     if (_selectedTab == 0) ...[
@@ -316,7 +317,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
                       ),
                       
                       if (_applyWithholdingTax) ...[
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         Row(
                           children: [
                             Expanded(
@@ -324,26 +325,26 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text('Taux et type de retenue', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                  const SizedBox(height: 6),
+                                  SizedBox(height: 6),
                                   DropdownButtonFormField(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                     value: _withholdingTaxRate,
                                     isExpanded: true,
-                                    decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                                    decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                                     items: _taxRates.map((t) {
                                       return DropdownMenuItem<double>(
                                         value: t['rate'],
                                         child: Row(
                                           children: [
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                               decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                                              child: Text('${t['rate']}%', style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                                              child: Text('${t['rate']}%', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
                                             ),
-                                            const SizedBox(width: 8),
-                                            Expanded(child: Text(t['label'], overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
+                                            SizedBox(width: 8),
+                                            Expanded(child: Text(t['label'], overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13))),
                                           ],
                                         ),
                                       );
@@ -366,7 +367,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text('Date de la création de la retenue', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                  const SizedBox(height: 6),
+                                  SizedBox(height: 6),
                                   InkWell(
                                     onTap: () async {
                                       final d = await showDatePicker(context: context, initialDate: _withholdingTaxDate, firstDate: DateTime(2020), lastDate: DateTime(2030));
@@ -415,7 +416,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
                         child: Column(
                           children: [
                             Padding(
-                              padding: const EdgeInsets.all(12),
+                              padding: EdgeInsets.all(12),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -434,9 +435,9 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
                                 ],
                               ),
                             ),
-                            const Divider(height: 1),
+                            Divider(height: 1),
                             Padding(
-                              padding: const EdgeInsets.all(20),
+                              padding: EdgeInsets.all(20),
                               child: Column(
                                 children: [
                                   Row(
@@ -447,7 +448,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                           value: _paymentMethod,
-                                          decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
+                                          decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
                                           items: const [
                                             DropdownMenuItem(value: 'especes', child: Text('Espèces')),
                                             DropdownMenuItem(value: 'cheque', child: Text('Chèque')),
@@ -457,46 +458,46 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
                                           onChanged: (v) => setState(() => _paymentMethod = v!),
                                         )),
                                       ),
-                                      const SizedBox(width: 16),
+                                      SizedBox(width: 16),
                                       Expanded(
                                         child: _buildFormField('Montant', TextField(
                                           controller: _amountCtrl,
-                                          decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12), suffixText: 'DT'),
+                                          decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12), suffixText: 'DT'),
                                         )),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 16),
+                                  SizedBox(height: 16),
                                   Row(
                                     children: [
                                       Expanded(
                                         child: _buildFormField('Compte de trésorerie *', BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
                                           builder: (context, state) {
-                                            List<TreasuryAccount> accounts = [];
-                                            if (state is TreasuryAccountsLoaded) {
-                                              accounts = state.accounts;
+                                            final accounts = state is TreasuryAccountsLoaded ? state.accounts : <TreasuryAccount>[];
+                                            String? displayName;
+                                            if (_selectedAccountId != null) {
+                                              final acc = accounts.cast<TreasuryAccount?>().firstWhere((a) => a?.id == _selectedAccountId, orElse: () => null);
+                                              if (acc != null) displayName = '${acc.name} (${formatCurrencyDT(acc.balance)})';
                                             }
-                                            return DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                              value: _selectedAccountId,
-                                              hint: const Text('Sélectionner un compte'),
-                                              decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
-                                              items: accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))).toList(),
-                                              onChanged: (v) => setState(() => _selectedAccountId = v),
+                                            return SearchableSelectorField(
+                                              hint: 'Sélectionner un compte',
+                                              selectedText: displayName,
+                                              onTap: () async {
+                                                final res = await showTreasuryAccountSelectDialog(context, accounts, selectedAccountId: _selectedAccountId);
+                                                if (res != null) setState(() => _selectedAccountId = res);
+                                              },
                                             );
                                           },
                                         )),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 16),
+                                  SizedBox(height: 16),
                                   _buildFormField('Référence externe', TextField(
                                     controller: _referenceCtrl,
-                                    decoration: const InputDecoration(hintText: 'Saisir la référence', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
+                                    decoration: InputDecoration(hintText: 'Saisir la référence', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
                                   )),
-                                  const SizedBox(height: 16),
+                                  SizedBox(height: 16),
                                   _buildFormField('Date de paiement', InkWell(
                                     onTap: () async {
                                       final d = await showDatePicker(context: context, initialDate: _paymentDate, firstDate: DateTime(2020), lastDate: DateTime(2030));
@@ -514,11 +515,11 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
                                       ),
                                     ),
                                   )),
-                                  const SizedBox(height: 16),
+                                  SizedBox(height: 16),
                                   _buildFormField('Notes', TextField(
                                     controller: _notesCtrl,
                                     maxLines: 3,
-                                    decoration: const InputDecoration(hintText: 'Saisir les notes du paiement', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
+                                    decoration: InputDecoration(hintText: 'Saisir les notes du paiement', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
                                   )),
                                 ],
                               ),
@@ -559,7 +560,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                  child: const Text('1', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  child: Text('1', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                 ),
               ]
             ],
@@ -604,7 +605,7 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         child,
       ],
     );

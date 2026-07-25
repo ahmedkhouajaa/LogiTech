@@ -135,19 +135,19 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surface,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Réf: ${currentDeliveryNote.number}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Réf: ${currentDeliveryNote.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           Builder(
                             builder: (context) {
                               final statusEnum = DeliveryNoteStatus.values.firstWhere((s) => s.name == currentDeliveryNote.status, orElse: () => DeliveryNoteStatus.draft);
                               return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: statusEnum.color.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
@@ -161,9 +161,9 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                           ),
                         ],
                       ),
-                      const Divider(height: 24),
+                      Divider(height: 24),
                       _buildInfoRow('Client', currentDeliveryNote.customerName ?? 'Inconnu'),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Date', formatDateTimeLong(currentDeliveryNote.date)),
                     ],
                   ),
@@ -208,17 +208,17 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surfaceAlt,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     children: [
                       _buildInfoRow('Total HT', formatCurrencyDT(currentDeliveryNote.totalHTAfterDiscount)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Total TVA', formatCurrencyDT(currentDeliveryNote.totalTVA)),
                       if ((currentDeliveryNote.totalTTC - currentDeliveryNote.totalHTAfterDiscount - currentDeliveryNote.totalTVA) > 0.01) ...[
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
                         _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentDeliveryNote.totalTTC - currentDeliveryNote.totalHTAfterDiscount - currentDeliveryNote.totalTVA)),
                       ],
-                      const Divider(height: 24),
+                      Divider(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -244,7 +244,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                   ),
                 ),
               ],
-              const SizedBox(height: 32),
+              SizedBox(height: 32),
             ],
           ),
         ),
@@ -297,17 +297,17 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
         showDialog(
           context: context,
           builder: (dialogCtx) => AlertDialog(
-            title: const Text('Confirmer la suppression'),
-            content: const Text('Voulez-vous vraiment supprimer ce bon de livraison ?'),
+            title: Text('Confirmer la suppression'),
+            content: Text('Voulez-vous vraiment supprimer ce bon de livraison ?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogCtx);
                   context.read<DeliveryNotesBloc>().add(DeleteDeliveryNote(deliveryNote.id));
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -363,21 +363,21 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
       builder: (dialogCtx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Changer le statut'),
+            title: Text('Changer le statut'),
             content: SizedBox(
               width: double.maxFinite,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Nouveau statut:'),
-                  const SizedBox(height: 8),
+                  Text('Nouveau statut:'),
+                  SizedBox(height: 8),
                   DropdownButtonFormField(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: selectedStatus,
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    decoration: InputDecoration(border: OutlineInputBorder()),
                     isExpanded: true,
                     items: DeliveryNoteStatus.values.map((s) => DropdownMenuItem(
                       value: s,
@@ -387,17 +387,17 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                       if (v != null) setDialogState(() => selectedStatus = v);
                     },
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   TextField(
                     controller: notesController,
                     maxLines: 2,
-                    decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
+                    decoration: InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
                   ),
                 ],
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   final updatedNote = deliveryNote.copyWith(
@@ -407,7 +407,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                   context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedNote));
                   Navigator.pop(dialogCtx);
                 },
-                child: const Text('Enregistrer'),
+                child: Text('Enregistrer'),
               ),
             ],
           );
@@ -455,8 +455,8 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Voulez-vous transformer ce bon de livraison en facture ?'),
-            const SizedBox(height: 16),
+            Text('Voulez-vous transformer ce bon de livraison en facture ?'),
+            SizedBox(height: 16),
             Text('BL: ${note.number}', style: TextStyle(fontWeight: FontWeight.w600)),
             Text('Client: ${note.customerName ?? note.customerCompany ?? "Inconnu"}'),
             Text('Montant: ${formatCurrencyDT(note.totalTTC)}'),
@@ -473,7 +473,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
               Navigator.pop(ctx);
               _convertDeliveryToInvoice(context, note);
             },
-            child: const Text('Confirmer'),
+            child: Text('Confirmer'),
           ),
         ],
       ),
@@ -554,8 +554,8 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Voulez-vous transformer ce bon de livraison en bon de retour ?'),
-            const SizedBox(height: 16),
+            Text('Voulez-vous transformer ce bon de livraison en bon de retour ?'),
+            SizedBox(height: 16),
             Text('BL: ${note.number}', style: TextStyle(fontWeight: FontWeight.w600)),
             Text('Client: ${note.customerName ?? note.customerCompany ?? "Inconnu"}'),
             Text('Montant: ${formatCurrencyDT(note.totalTTC)}'),
@@ -572,7 +572,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
               Navigator.pop(ctx);
               _convertDeliveryToReturn(context, note);
             },
-            child: const Text('Confirmer'),
+            child: Text('Confirmer'),
           ),
         ],
       ),

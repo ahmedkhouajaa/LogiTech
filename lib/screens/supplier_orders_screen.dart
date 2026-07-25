@@ -70,7 +70,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
       children: [
         // Header
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.all(AppSpacing.lg),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -106,25 +106,25 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         // Filter bar
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: BlocBuilder<SupplierOrdersBloc, SupplierOrdersState>(
             builder: (context, state) {
               return _buildFilterBar(state);
             },
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        SizedBox(height: AppSpacing.lg),
         // Table
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: _buildTable(),
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        SizedBox(height: AppSpacing.lg),
       ],
     );
   }
@@ -159,7 +159,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -174,7 +174,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 SizedBox(
                   height: 40,
                   child: BlocBuilder<SuppliersBloc, SuppliersState>(
@@ -212,7 +212,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                             borderRadius: BorderRadius.circular(AppRadius.md),
                             border: Border.all(color: AppColors.border),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.symmetric(horizontal: 12),
                           child: Row(
                             children: [
                               Expanded(
@@ -249,7 +249,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Date de debut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -298,7 +298,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Date de fin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -395,7 +395,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                           child: Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: s.color.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -437,7 +437,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   )
                                 : Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: _statusFilter!.color.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -496,7 +496,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                 label: Text('Réinitialiser les filtres'),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.textSecondary,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
               ),
             ],
@@ -535,7 +535,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               child: Container(
                 width: 440,
                 constraints: const BoxConstraints(maxHeight: 520),
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -678,7 +678,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     return BlocBuilder<SupplierOrdersBloc, SupplierOrdersState>(
       builder: (context, state) {
         if (state is SupplierOrdersLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         }
         if (state is SupplierOrdersError) {
           return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
@@ -798,7 +798,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                             child: Container(
                                               alignment: Alignment.centerLeft,
                                               child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                 decoration: BoxDecoration(
                                                   color: statusEnum.color.withOpacity(0.1),
                                                   borderRadius: BorderRadius.circular(4),
@@ -942,7 +942,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                 totalItems == 0 ? 'Affichage de 0 a 0 sur 0 resultats' : 'Affichage de ${startIndex + 1} a $endIndex sur $totalItems resultats',
                                 style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                               ),
-                              const SizedBox(width: 16),
+                              SizedBox(width: 16),
                               Row(
                                 children: [
                                   InkWell(
@@ -957,7 +957,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                       child: Icon(Icons.chevron_left, size: 20, color: _currentPage > 0 ? AppColors.textPrimary : AppColors.textTertiary),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  SizedBox(width: 8),
                                   InkWell(
                                     onTap: _currentPage < totalPages - 1 ? () => setState(() => _currentPage++) : null,
                                     child: Container(
@@ -983,7 +983,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
             ],
           );
         }
-        return const SizedBox();
+        return SizedBox();
       },
     );
   }
@@ -1005,7 +1005,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
               context.read<SupplierOrdersBloc>().add(DeleteSupplierOrder(order.id));
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: const Text('Supprimer'),
+            child: Text('Supprimer'),
           ),
         ],
       ),
@@ -1020,17 +1020,17 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
       child: Container(
         alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
-          border: showBorder ? const Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)) : null,
+          border: showBorder ? Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)) : null,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
             Icon(icon, size: 18, color: const Color(0xFF64748B)),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(
               child: Text(
                 label, 
-                style: const TextStyle(color: Color(0xFF334155), fontSize: 13, fontWeight: FontWeight.w500),
+                style: TextStyle(color: Color(0xFF334155), fontSize: 13, fontWeight: FontWeight.w500),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -1079,7 +1079,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Annuler'),
+            child: Text('Annuler'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1090,7 +1090,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                 _convertToReceipt(context, order);
               }
             },
-            child: const Text('Confirmer'),
+            child: Text('Confirmer'),
           ),
         ],
       ),

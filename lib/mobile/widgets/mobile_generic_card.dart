@@ -39,7 +39,7 @@ class MobileGenericCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -56,7 +56,7 @@ class MobileGenericCard extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: MobileStatusColors.getColorForStatus(status).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -147,7 +147,7 @@ class MobileGenericCard extends StatelessWidget {
         key: Key(reference),
         direction: DismissDirection.endToStart,
         background: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
             color: Colors.grey.shade200,
             borderRadius: BorderRadius.circular(12),
@@ -164,12 +164,12 @@ class MobileGenericCard extends StatelessWidget {
                 ),
               if (onPdf != null)
                 IconButton(
-                  icon: const Icon(Icons.picture_as_pdf, color: Colors.redAccent),
+                  icon: Icon(Icons.picture_as_pdf, color: Colors.redAccent),
                   onPressed: onPdf,
                 ),
               if (onDelete != null)
                 IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
+                  icon: Icon(Icons.delete, color: Colors.red),
                   onPressed: onDelete,
                 ),
             ],

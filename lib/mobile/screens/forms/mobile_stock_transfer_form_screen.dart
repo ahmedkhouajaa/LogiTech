@@ -182,7 +182,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
           title: 'Informations',
           icon: Icons.info_outline_rounded,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -191,7 +191,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                   value: _date,
                   onChanged: (v) => setState(() => _date = v),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 SmartDropdown<String>(
                   label: 'Entrepôt Source',
                   value: _sourceWarehouseId,
@@ -199,7 +199,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                   onChanged: (v) => setState(() => _sourceWarehouseId = v),
                   hint: 'Sélectionner l\'entrepôt source...',
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 SmartDropdown<String>(
                   label: 'Entrepôt Destination',
                   value: _destWarehouseId,
@@ -207,13 +207,13 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                   onChanged: (v) => setState(() => _destWarehouseId = v),
                   hint: 'Sélectionner l\'entrepôt destination...',
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 SmartTextInput(
                   label: 'Raison',
                   initialValue: _reason,
                   onChanged: (v) => setState(() => _reason = v),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 SmartTextInput(
                   label: 'Notes',
                   initialValue: _notes,
@@ -229,7 +229,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
           title: 'Articles',
           icon: Icons.inventory_2_outlined,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -259,7 +259,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                               decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
                               child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                             ),
-                            const SizedBox(width: 12),
+                            SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,7 +291,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     side: BorderSide(color: AppColors.primary),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                   ),
                 ),
@@ -337,14 +337,14 @@ class _AddTransferArticleSheetState extends State<_AddTransferArticleSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Ajouter un article', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('Ajouter un article', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               IconButton(
-                icon: const Icon(Icons.close),
+                icon: Icon(Icons.close),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
               List<Product> products = [];
@@ -369,7 +369,7 @@ class _AddTransferArticleSheetState extends State<_AddTransferArticleSheet> {
                     decoration: InputDecoration(
                       labelText: 'Rechercher un produit',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      prefixIcon: const Icon(Icons.search),
+                      prefixIcon: Icon(Icons.search),
                     ),
                   );
                 },
@@ -377,14 +377,14 @@ class _AddTransferArticleSheetState extends State<_AddTransferArticleSheet> {
               );
             },
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           SmartTextInput(
             label: 'Quantité à transférer',
             initialValue: '1',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: (v) => setState(() => _quantity = double.tryParse(v) ?? 1.0),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
               if (_selectedProduct == null) {
@@ -408,10 +408,10 @@ class _AddTransferArticleSheetState extends State<_AddTransferArticleSheet> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
             ),
-            child: const Text('Ajouter', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            child: Text('Ajouter', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

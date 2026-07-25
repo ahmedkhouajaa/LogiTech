@@ -65,7 +65,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Supprimer'),
+            child: Text('Supprimer'),
           ),
         ],
       ),
@@ -109,10 +109,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         Expanded(
           child: BlocBuilder<ProjectsBloc, ProjectsState>(
             builder: (context, state) {
-              if (state is ProjectsLoading) return const Center(child: CircularProgressIndicator());
+              if (state is ProjectsLoading) return Center(child: CircularProgressIndicator());
               if (state is ProjectsLoaded) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: AppCard(
                     padding: EdgeInsets.zero,
                     child: DataTableWidget<Project>(
@@ -131,7 +131,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                 ),
                                 child: Icon(Icons.folder_special_rounded, color: AppColors.primary, size: 20),
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -201,7 +201,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   ),
                 );
               }
-              return const SizedBox();
+              return SizedBox();
             },
           ),
         ),

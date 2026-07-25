@@ -199,7 +199,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
           title: 'Informations Générales',
           icon: Icons.info_outline_rounded,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -211,14 +211,14 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
                       child: SmartDropdown<String>(
                         label: 'Client *',
                         value: _selectedCustomerId,
-                        items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: const TextStyle(fontSize: 16)))).toList(),
+                        items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: TextStyle(fontSize: 16)))).toList(),
                         onChanged: (v) => setState(() => _selectedCustomerId = v),
                         hint: 'Sélectionner un client',
                       ),
                     );
                   },
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 BlocBuilder<InvoicesBloc, InvoicesState>(
                   builder: (context, state) {
                     final invoices = state is InvoicesLoaded ? state.invoices : <Invoice>[];
@@ -234,7 +234,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
                         value: _selectedInvoiceId,
                         items: [
                           const DropdownMenuItem<String>(value: null, child: Text('Aucune', style: TextStyle(fontSize: 16))),
-                          ...filteredInvoices.map((inv) => DropdownMenuItem(value: inv.id, child: Text(inv.number, style: const TextStyle(fontSize: 16)))),
+                          ...filteredInvoices.map((inv) => DropdownMenuItem(value: inv.id, child: Text(inv.number, style: TextStyle(fontSize: 16)))),
                         ],
                         onChanged: (v) => setState(() => _selectedInvoiceId = v),
                         hint: 'Sélectionner une facture',
@@ -242,7 +242,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
                     );
                   },
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartDatePicker(
@@ -272,7 +272,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: _items.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  separatorBuilder: (context, index) => Divider(height: 1),
                   itemBuilder: (context, index) {
                     final item = _items[index];
                     return MobileArticleCard(
@@ -290,7 +290,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
                 ),
               if (!widget.isReadOnly)
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Row(
    children: [
      Expanded(
@@ -335,7 +335,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
           icon: Icons.notes_outlined,
           isInitiallyExpanded: false,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -345,19 +345,19 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
                     label: 'Statut',
                     value: _status,
                     items: CreditNoteStatus.values.map((s) {
-                      return DropdownMenuItem(value: s, child: Text(s.label, style: const TextStyle(fontSize: 16)));
+                      return DropdownMenuItem(value: s, child: Text(s.label, style: TextStyle(fontSize: 16)));
                     }).toList(),
                     onChanged: (v) { if (v != null) setState(() => _status = v); },
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 SmartTextInput(
                   label: 'Motif de l\'avoir',
                   initialValue: _reason,
                   maxLines: 2,
                   onChanged: (v) { if (!widget.isReadOnly) _reason = v; },
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 SmartTextInput(
                   label: 'Notes internes',
                   initialValue: _notes,

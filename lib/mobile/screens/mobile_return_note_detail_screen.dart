@@ -109,7 +109,7 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surface,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -127,9 +127,9 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       _buildInfoRow('Date', formatDateTimeLong(currentReturnNote.dateEmission)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Client', currentReturnNote.customerName ?? currentReturnNote.customerCompany ?? 'Non spécifié'),
                       if (currentReturnNote.deliveryNoteId != null) ...[
                         SizedBox(height: 8),
@@ -169,7 +169,7 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                           decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
                           child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,13 +200,13 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surfaceAlt,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     children: [
                       _buildInfoRow('Total HT', formatCurrencyDT(currentReturnNote.subtotalHT)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Total TVA', formatCurrencyDT(currentReturnNote.totalTTC - currentReturnNote.subtotalHT)),
-                      const Divider(height: 24),
+                      Divider(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -232,7 +232,7 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                   ),
                 ),
               ],
-              const SizedBox(height: 32),
+              SizedBox(height: 32),
             ],
           ),
         ),
@@ -285,17 +285,17 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
         showDialog(
           context: context,
           builder: (dialogCtx) => AlertDialog(
-            title: const Text('Confirmer la suppression'),
-            content: const Text('Voulez-vous vraiment supprimer ce bon de retour ?'),
+            title: Text('Confirmer la suppression'),
+            content: Text('Voulez-vous vraiment supprimer ce bon de retour ?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogCtx);
                   context.read<ReturnNotesBloc>().add(DeleteReturnNote(returnNote.id));
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -332,25 +332,25 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
       builder: (dialogCtx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Changer le statut'),
+            title: Text('Changer le statut'),
             content: SizedBox(
               width: double.maxFinite,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Nouveau statut:'),
-                  const SizedBox(height: 8),
+                  Text('Nouveau statut:'),
+                  SizedBox(height: 8),
                   DropdownButtonFormField(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: selectedStatus,
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    decoration: InputDecoration(border: OutlineInputBorder()),
                     isExpanded: true,
                     items: ['draft', 'validated', 'cancelled'].map((s) => DropdownMenuItem(
                       value: s,
-                      child: Text(translateStatus(s), style: const TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text(translateStatus(s), style: TextStyle(fontWeight: FontWeight.bold)),
                     )).toList(),
                     onChanged: (v) {
                       if (v != null) setDialogState(() => selectedStatus = v);
@@ -360,14 +360,14 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   final updatedNote = returnNote.copyWith(status: selectedStatus);
                   context.read<ReturnNotesBloc>().add(UpdateReturnNote(updatedNote));
                   Navigator.pop(dialogCtx);
                 },
-                child: const Text('Enregistrer'),
+                child: Text('Enregistrer'),
               ),
             ],
           );

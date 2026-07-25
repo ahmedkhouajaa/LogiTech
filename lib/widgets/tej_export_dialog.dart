@@ -110,7 +110,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
             ),
             SizedBox(height: AppSpacing.md),
             Divider(height: 1, color: AppColors.border),
-            const SizedBox(height: AppSpacing.md),
+            SizedBox(height: AppSpacing.md),
 
             // Filters Section inside mini-interface
             Row(
@@ -129,7 +129,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                           color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       Row(
                         children: [
                           // Month Popup Menu
@@ -168,7 +168,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                           size: 16,
                                           color: isSelected ? AppColors.primary : AppColors.textTertiary,
                                         ),
-                                        const SizedBox(width: 10),
+                                        SizedBox(width: 10),
                                         Text(
                                           months[index],
                                           style: TextStyle(
@@ -193,7 +193,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                 child: Row(
                                   children: [
                                     Icon(Icons.calendar_month_rounded, size: 16, color: AppColors.primary),
-                                    const SizedBox(width: 6),
+                                    SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
                                         DateFormat('MMMM', 'fr').format(_selectedDate),
@@ -211,7 +211,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
 
                           // Year Popup Menu
                           Expanded(
@@ -286,7 +286,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                     ],
                   ),
                 ),
-                const SizedBox(width: AppSpacing.md),
+                SizedBox(width: AppSpacing.md),
 
                 // Search Field (Facture / Ref)
                 Expanded(
@@ -302,7 +302,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                           color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      SizedBox(height: 6),
                       SizedBox(
                         height: 40,
                         child: TextField(
@@ -528,7 +528,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                       ),
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
+            SizedBox(height: AppSpacing.lg),
 
             // Bottom Buttons Bar
             Row(
@@ -557,7 +557,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                         style: TextStyle(color: AppColors.textSecondary),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     ElevatedButton.icon(
                       onPressed: _isExporting ||
                               _selectedPaymentIds
@@ -601,14 +601,14 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                         content: Row(
                                           children: [
                                             Container(
-                                              padding: const EdgeInsets.all(8),
+                                              padding: EdgeInsets.all(8),
                                               decoration: BoxDecoration(
                                                 color: Colors.green.withValues(alpha: 0.2),
                                                 shape: BoxShape.circle,
                                               ),
-                                              child: const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 20),
+                                              child: Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 20),
                                             ),
-                                            const SizedBox(width: 12),
+                                            SizedBox(width: 12),
                                             Expanded(
                                               child: Column(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,7 +622,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                                       color: AppColors.surface,
                                                     ),
                                                   ),
-                                                  const SizedBox(height: 2),
+                                                  SizedBox(height: 2),
                                                   Text(
                                                     path,
                                                     maxLines: 1,
@@ -635,7 +635,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                                 ],
                                               ),
                                             ),
-                                            const SizedBox(width: 12),
+                                            SizedBox(width: 12),
                                             ElevatedButton.icon(
                                               onPressed: () async {
                                                 try {
@@ -648,7 +648,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                                   print('Error opening file location: $e');
                                                 }
                                               },
-                                              icon: const Icon(Icons.folder_open_rounded, size: 16, color: Colors.white),
+                                              icon: Icon(Icons.folder_open_rounded, size: 16, color: Colors.white),
                                               label: Text(
                                                 'Voir',
                                                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
@@ -656,7 +656,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: AppColors.primary,
                                                 elevation: 0,
-                                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                                 ),
@@ -670,11 +670,11 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         behavior: SnackBarBehavior.floating,
-                                        margin: const EdgeInsets.all(AppSpacing.lg),
+                                        margin: EdgeInsets.all(AppSpacing.lg),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(AppRadius.md),
                                         ),
-                                        content: const Text('Erreur lors de la génération du fichier XML'),
+                                        content: Text('Erreur lors de la génération du fichier XML'),
                                         backgroundColor: Colors.red,
                                       ),
                                     );
@@ -688,7 +688,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       behavior: SnackBarBehavior.floating,
-                                      margin: const EdgeInsets.all(AppSpacing.lg),
+                                      margin: EdgeInsets.all(AppSpacing.lg),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(AppRadius.md),
                                       ),
@@ -706,7 +706,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: AppColors.surface),
                             )
-                          : const Icon(Icons.file_download_outlined,
+                          : Icon(Icons.file_download_outlined,
                               size: 18, color: Colors.white),
                       label: Text(
                         'Exporter XML',
@@ -715,7 +715,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(
+                        padding: EdgeInsets.symmetric(
                             horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppRadius.md)),

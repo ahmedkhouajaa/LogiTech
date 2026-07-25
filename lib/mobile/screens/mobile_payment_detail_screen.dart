@@ -38,12 +38,12 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Confirmer la suppression'),
-          content: const Text('Voulez-vous vraiment supprimer ce paiement ?'),
+          title: Text('Confirmer la suppression'),
+          content: Text('Voulez-vous vraiment supprimer ce paiement ?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuler'),
+              child: Text('Annuler'),
             ),
             TextButton(
               onPressed: () {
@@ -51,7 +51,7 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
                 Navigator.pop(ctx);
                 Navigator.pop(context);
               },
-              child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+              child: Text('Supprimer', style: TextStyle(color: Colors.red)),
             ),
           ],
         ),
@@ -65,7 +65,7 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
       child: Row(
         children: [
           Icon(icon, color: const Color(0xFF64748B), size: 20),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Text(text, style: TextStyle(color: const Color(0xFF64748B))),
         ],
       ),
@@ -117,7 +117,7 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surface,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                      crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -126,10 +126,10 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
                         children: [
                           Text(
                             currentPayment.paymentNumber,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: _getStatusColor(currentPayment.status).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
@@ -145,22 +145,22 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       _buildDetailRow('Date et heure', DateFormat('dd MMM yyyy - HH:mm').format(currentPayment.paymentDate)),
-                      const Divider(height: 24),
+                      Divider(height: 24),
                       _buildDetailRow('Contact', currentPayment.contactName ?? currentPayment.contactId),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       _buildDetailRow('Montant', formatCurrency(currentPayment.amount)),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       _buildDetailRow('Méthode', _translatePaymentMethod(currentPayment.method)),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       _buildDetailRow('Direction', currentPayment.direction == 'encaissement' ? 'Encaissement' : 'Décaissement'),
                       if (currentPayment.accountName != null) ...[
-                         const SizedBox(height: 12),
+                         SizedBox(height: 12),
                          _buildDetailRow('Compte', currentPayment.accountName!),
                       ],
                       if (currentPayment.reference != null && currentPayment.reference!.isNotEmpty) ...[
-                         const SizedBox(height: 12),
+                         SizedBox(height: 12),
                          _buildDetailRow('Référence (Chèque/Traite)', currentPayment.reference!),
                       ],
                     ],
@@ -179,8 +179,8 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
                        crossAxisAlignment: CrossAxisAlignment.start,
                        children: [
                          Text('Notes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textSecondary)),
-                         const SizedBox(height: 8),
-                         Text(currentPayment.notes!, style: const TextStyle(fontSize: 16)),
+                         SizedBox(height: 8),
+                         Text(currentPayment.notes!, style: TextStyle(fontSize: 16)),
                        ],
                      ),
                    ),
@@ -208,7 +208,7 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
           flex: 3,
           child: Text(
             value,
-            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
             textAlign: TextAlign.right,
           ),
         ),

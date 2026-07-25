@@ -38,12 +38,12 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Confirmer la suppression'),
-          content: const Text('Voulez-vous vraiment supprimer cette transaction ?'),
+          title: Text('Confirmer la suppression'),
+          content: Text('Voulez-vous vraiment supprimer cette transaction ?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Annuler'),
+              child: Text('Annuler'),
             ),
             TextButton(
               onPressed: () {
@@ -51,7 +51,7 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
                 Navigator.pop(ctx);
                 Navigator.pop(context);
               },
-              child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+              child: Text('Supprimer', style: TextStyle(color: Colors.red)),
             ),
           ],
         ),
@@ -65,7 +65,7 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
       child: Row(
         children: [
           Icon(icon, color: const Color(0xFF64748B), size: 20),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Text(text, style: TextStyle(color: const Color(0xFF64748B))),
         ],
       ),
@@ -117,7 +117,7 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surface,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                      crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -145,22 +145,22 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       _buildDetailRow('Date et heure', DateFormat('dd MMM yyyy - HH:mm').format(currentTransaction.dateTransaction)),
-                      const Divider(height: 24),
+                      Divider(height: 24),
                       _buildDetailRow('Compte', currentTransaction.accountName ?? currentTransaction.accountId),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       _buildDetailRow('Montant', formatCurrency(currentTransaction.amount)),
                       if (currentTransaction.category != null) ...[
-                         const SizedBox(height: 12),
+                         SizedBox(height: 12),
                          _buildDetailRow('Catégorie', currentTransaction.category!),
                       ],
                       if (currentTransaction.projectName != null) ...[
-                         const SizedBox(height: 12),
+                         SizedBox(height: 12),
                          _buildDetailRow('Projet', currentTransaction.projectName!),
                       ],
                       if (currentTransaction.withholdingTax > 0) ...[
-                         const SizedBox(height: 12),
+                         SizedBox(height: 12),
                          _buildDetailRow('Retenue à la source', '${formatCurrency(currentTransaction.withholdingTax)} (${currentTransaction.withholdingTaxRate}%)'),
                       ],
                     ],
@@ -179,8 +179,8 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
                        crossAxisAlignment: CrossAxisAlignment.start,
                        children: [
                          Text('Motif / Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textSecondary)),
-                         const SizedBox(height: 8),
-                         Text(currentTransaction.description!, style: const TextStyle(fontSize: 16)),
+                         SizedBox(height: 8),
+                         Text(currentTransaction.description!, style: TextStyle(fontSize: 16)),
                        ],
                      ),
                    ),
@@ -208,7 +208,7 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
           flex: 3,
           child: Text(
             value,
-            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
             textAlign: TextAlign.right,
           ),
         ),

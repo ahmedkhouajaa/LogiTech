@@ -137,12 +137,12 @@ class _SidebarMenuState extends State<SidebarMenu> {
                   _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
                   _buildItem(AppModule.companyInfo, Icons.business_rounded, 'Informations de la societe'),
                   _buildItem(AppModule.documentTemplates, Icons.description_rounded, 'Modeles de documents'),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   
                   // TEMP SYNC BUTTON
                   if (!widget.isCollapsed)
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
@@ -159,8 +159,8 @@ class _SidebarMenuState extends State<SidebarMenu> {
                             const SnackBar(content: Text('Force Sync Complete! Check Mobile now.')),
                           );
                         },
-                        icon: const Icon(Icons.sync_problem),
-                        label: const Text('FORCE SYNC FIX'),
+                        icon: Icon(Icons.sync_problem),
+                        label: Text('FORCE SYNC FIX'),
                       ),
                     ),
                     
@@ -190,10 +190,10 @@ class _SidebarMenuState extends State<SidebarMenu> {
               gradient: AppGradients.primary,
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: const Icon(Icons.business_center_rounded, color: Colors.white, size: 20),
+            child: Icon(Icons.business_center_rounded, color: Colors.white, size: 20),
           ),
           if (!widget.isCollapsed) ...[
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

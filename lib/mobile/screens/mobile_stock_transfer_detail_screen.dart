@@ -74,16 +74,16 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surface,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Réf: ${currentTransfer.number}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Réf: ${currentTransfer.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: _getStatusColor(currentTransfer.status).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
@@ -92,9 +92,9 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       _buildInfoRow('Date', formatDateTimeLong(currentTransfer.date)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       // Since we don't have direct warehouse names in StockTransfer model without joining, we show ID if names aren't available. 
                       // For a real app we might fetch the warehouse names via DatabaseHelper.
                       _buildInfoRow('Source', 'Entrepôt sélectionné'),
@@ -134,7 +134,7 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
                           decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
                           child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,7 +181,7 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
                   ),
                 ),
               ],
-              const SizedBox(height: 32),
+              SizedBox(height: 32),
             ],
           ),
         ),
@@ -243,17 +243,17 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
         showDialog(
           context: context,
           builder: (dialogCtx) => AlertDialog(
-            title: const Text('Confirmer la suppression'),
-            content: const Text('Voulez-vous vraiment supprimer ce bon de transfert ?'),
+            title: Text('Confirmer la suppression'),
+            content: Text('Voulez-vous vraiment supprimer ce bon de transfert ?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogCtx);
                   context.read<StockTransfersBloc>().add(DeleteStockTransfer(transfer.id));
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),

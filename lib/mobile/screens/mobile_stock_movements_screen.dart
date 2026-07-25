@@ -42,7 +42,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
       body: BlocBuilder<StockBloc, StockState>(
         builder: (context, state) {
           if (state is StockLoading || state is StockInitial) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator());
           }
           if (state is StockError) {
             return Center(child: Text('Erreur: ${state.message}'));
@@ -88,7 +88,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                 context.read<ProductsBloc>().add(LoadProducts());
               },
               child: ListView(
-                padding: const EdgeInsets.only(bottom: 100),
+                padding: EdgeInsets.only(bottom: 100),
                 children: [
                   // Title
                   Padding(
@@ -102,7 +102,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   
                   // Search bar
                   Padding(
@@ -131,11 +131,11 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
 
                   // Filter Toggle Button
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
                         GestureDetector(
@@ -163,7 +163,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                     decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(8)),
                                     child: Text(
                                       '${[_filterWarehouseId != null, _filterType != null, _filterReference.isNotEmpty, _filterDateRange != null].where((v) => v).length}',
-                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                                     ),
                                   ),
                                 ],
@@ -239,7 +239,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('Entrepôt', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                                    const SizedBox(height: 4),
+                                    SizedBox(height: 4),
                                     SizedBox(
                                       height: 40,
                                       child: DropdownButtonFormField(
@@ -258,7 +258,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                         style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                                         items: [
                                           const DropdownMenuItem<String?>(value: null, child: Text('Tous', style: TextStyle(fontSize: 12))),
-                                          ...state.warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
+                                          ...state.warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
                                         ],
                                         onChanged: (v) => setState(() => _filterWarehouseId = v),
                                       ),
@@ -272,7 +272,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('Type', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                                    const SizedBox(height: 4),
+                                    SizedBox(height: 4),
                                     SizedBox(
                                       height: 40,
                                       child: DropdownButtonFormField(
@@ -290,8 +290,8 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                         ),
                                         style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                                         items: [
-                                          const DropdownMenuItem(value: null, child: Text('Tous', style: TextStyle(fontSize: 12))),
-                                          ...[MovementType.entry, MovementType.exit, MovementType.transfer, MovementType.adjustment].map((t) => DropdownMenuItem(value: t, child: Text(t.label, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
+                                          DropdownMenuItem(value: null, child: Text('Tous', style: TextStyle(fontSize: 12))),
+                                          ...[MovementType.entry, MovementType.exit, MovementType.transfer, MovementType.adjustment].map((t) => DropdownMenuItem(value: t, child: Text(t.label, style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
                                         ],
                                         onChanged: (v) => setState(() => _filterType = v),
                                       ),
@@ -301,7 +301,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
+                          SizedBox(height: 10),
                           // Row 2: Reference + Date
                           Row(
                             children: [
@@ -310,7 +310,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('Référence', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                                    const SizedBox(height: 4),
+                                    SizedBox(height: 4),
                                     SizedBox(
                                       height: 40,
                                       child: TextField(
@@ -326,7 +326,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                           filled: true,
                                           fillColor: const Color(0xFFFAFAFB),
                                         ),
-                                        style: const TextStyle(fontSize: 12),
+                                        style: TextStyle(fontSize: 12),
                                       ),
                                     ),
                                   ],
@@ -338,7 +338,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('Période', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                                    const SizedBox(height: 4),
+                                    SizedBox(height: 4),
                                     SizedBox(
                                       height: 40,
                                       child: OutlinedButton(
@@ -359,7 +359,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                         child: Row(
                                           children: [
                                             Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textTertiary),
-                                            const SizedBox(width: 6),
+                                            SizedBox(width: 6),
                                             Expanded(
                                               child: Text(
                                                 _filterDateRange == null 
@@ -408,7 +408,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                             '${filteredItems.length} mouvements',
                             style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           ...filteredItems.map((item) => _MobileStockMovementCard(movement: item, warehouses: state.warehouses)),
                         ],
                       ),
@@ -417,7 +417,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
               ),
             );
           }
-          return const SizedBox();
+          return SizedBox();
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -497,7 +497,7 @@ class _MobileStockMovementCard extends StatelessWidget {
       ),
       color: AppColors.surface,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -513,9 +513,9 @@ class _MobileStockMovementCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -572,9 +572,9 @@ class _MobileStockMovementCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: qtyCol.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -586,7 +586,7 @@ class _MobileStockMovementCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             // Row 3: Reference & Notes (if any)
             if ((movement.referenceId != null && movement.referenceId!.isNotEmpty) || (movement.notes != null && movement.notes!.isNotEmpty)) ...[
               Divider(height: 1),

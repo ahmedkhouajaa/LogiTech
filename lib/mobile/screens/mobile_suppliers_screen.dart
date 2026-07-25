@@ -44,19 +44,19 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: const Text('Voulez-vous vraiment supprimer cet élément ?'),
+        title: Text('Confirmer la suppression'),
+        content: Text('Voulez-vous vraiment supprimer cet élément ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
+            child: Text('Annuler'),
           ),
           TextButton(
             onPressed: () {
               context.read<SuppliersBloc>().add(DeleteSupplier(id));
               Navigator.pop(ctx);
             },
-            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -133,7 +133,7 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: 16),
                       // Info
                       Expanded(
                         child: Column(
@@ -149,9 +149,9 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: isEntreprise ? Colors.blue.withOpacity(0.15) : Colors.purple.withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(6),
@@ -167,7 +167,7 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 6),
+                            SizedBox(height: 6),
                             Wrap(
                               spacing: 12,
                               runSpacing: 4,
@@ -279,7 +279,7 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
             });
           },
           child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12).copyWith(bottom: 80),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12).copyWith(bottom: 80),
             children: cards,
           ),
         );

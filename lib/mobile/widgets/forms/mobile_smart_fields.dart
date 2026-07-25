@@ -25,7 +25,7 @@ class SmartDatePicker extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         InkWell(
           onTap: () async {
             final picked = await showDatePicker(
@@ -74,17 +74,17 @@ class SmartDatePicker extends StatelessWidget {
           ),
         ),
         if (showPresets) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
                 _buildPreset('Aujourd\'hui', DateTime.now()),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _buildPreset('Demain', DateTime.now().add(const Duration(days: 1))),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _buildPreset('+1 Semaine', DateTime.now().add(const Duration(days: 7))),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 _buildPreset('+1 Mois', DateTime.now().add(const Duration(days: 30))),
               ],
             ),
@@ -212,13 +212,13 @@ class SmartNumberInput extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Row(
           children: [
             _buildButton(Icons.remove, () {
               if (value - step >= min) onChanged(value - step);
             }),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Expanded(
               child: TextFormField(
                 key: ValueKey(value.toString()),
@@ -248,7 +248,7 @@ class SmartNumberInput extends StatelessWidget {
                 },
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             _buildButton(Icons.add, () {
               if (value + step <= max) onChanged(value + step);
             }),
@@ -302,11 +302,11 @@ class SmartToggleChips<T> extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.all(4),
+          padding: EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
+            color: AppColors.surfaceAlt,
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           child: Row(
@@ -380,7 +380,7 @@ class SmartTextInput extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextFormField(
           controller: controller,
           initialValue: initialValue,

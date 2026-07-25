@@ -258,7 +258,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
           title: 'Informations',
           icon: Icons.info_outline_rounded,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -267,7 +267,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                   value: _date,
                   onChanged: (v) => setState(() => _date = v),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -278,17 +278,17 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                           return SmartDropdown<String>(
                             label: 'Client',
                             value: _selectedCustomerId,
-                            items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.companyName ?? c.name, style: const TextStyle(fontSize: 16)))).toList(),
+                            items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.companyName ?? c.name, style: TextStyle(fontSize: 16)))).toList(),
                             onChanged: (v) => setState(() => _selectedCustomerId = v),
                             hint: 'Rechercher des clients...',
                           );
                         },
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Container(
                       height: 56,
-                      margin: const EdgeInsets.only(bottom: 2),
+                      margin: EdgeInsets.only(bottom: 2),
                       child: ElevatedButton(
                         onPressed: () {
                           showDialog(
@@ -310,12 +310,12 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                           ),
                           side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
                         ),
-                        child: const Icon(Icons.person_add_alt_1_rounded),
+                        child: Icon(Icons.person_add_alt_1_rounded),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 BlocBuilder<ProjectsBloc, ProjectsState>(
                   builder: (context, state) {
                     final projects = state is ProjectsLoaded ? state.projects : <Project>[];
@@ -324,7 +324,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                       value: _selectedProjectId,
                       items: [
                         const DropdownMenuItem<String>(value: null, child: Text('Projet par défaut', style: TextStyle(fontSize: 16))),
-                        ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: const TextStyle(fontSize: 16)))),
+                        ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: TextStyle(fontSize: 16)))),
                       ],
                       onChanged: (v) => setState(() => _selectedProjectId = v),
                       hint: 'Projet par défaut',
@@ -345,13 +345,13 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                       Text('Champs Personnalisés', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                       SizedBox(height: 4),
                       Text('Informations supplémentaires', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Matricule du véhicule',
                         initialValue: _vehicleRegistration,
                         onChanged: (v) => setState(() => _vehicleRegistration = v),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Nom du chauffeur',
                         initialValue: _driverName,
@@ -360,7 +360,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 SmartToggleChips<bool>(
                   label: 'Les prix des articles sont en:',
                   value: _pricingModeHT,
@@ -377,7 +377,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
           title: 'Articles',
           icon: Icons.inventory_2_outlined,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -400,7 +400,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                     onEdit: () => _showArticleForm(e.key),
                     onDelete: () => setState(() => _items.removeAt(e.key)),
                   )),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
@@ -426,14 +426,14 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 SmartCheckbox(
                   label: 'Ajouter une remise globale',
                   value: _withGlobalDiscount,
                   onChanged: (v) => setState(() => _withGlobalDiscount = v ?? false),
                 ),
                 if (_withGlobalDiscount) ...[
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   SmartTextInput(
                     label: 'Remise globale (%)',
                     initialValue: _globalDiscountPercent > 0 ? _globalDiscountPercent.toStringAsFixed(0) : '',
@@ -465,7 +465,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
           icon: Icons.notes_rounded,
           isInitiallyExpanded: false,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               children: [
                 SmartCheckbox(
@@ -473,14 +473,14 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                   value: true,
                   onChanged: (v) {},
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 SmartTextInput(
                   label: 'Notes',
                   initialValue: _notes,
                   maxLines: 3,
                   onChanged: (v) => setState(() => _notes = v),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 SmartTextInput(
                   label: 'Conditions Générales',
                   initialValue: _conditions,

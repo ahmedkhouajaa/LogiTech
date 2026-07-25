@@ -50,7 +50,7 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
                 behavior: HitTestBehavior.opaque,
                 child: InteractiveViewer(
                   transformationController: _transformCtrl,
-                  boundaryMargin: const EdgeInsets.all(400),
+                  boundaryMargin: EdgeInsets.all(400),
                   minScale: 0.25,
                   maxScale: 4.0,
                   constrained: false,
@@ -202,7 +202,7 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
                           color: const Color(0xFFF59E0B),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Icon(Icons.lock, size: 10, color: Colors.white),
+                        child: Icon(Icons.lock, size: 10, color: Colors.white),
                       ),
                     ),
                 ],
@@ -221,7 +221,7 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
     if (el is DividerElement) return _renderDivider(el, scale);
     if (el is DynamicFieldElement) return _renderDynamicField(el, scale);
     if (el is CanvasTableElement) return _renderTable(el, scale);
-    return const SizedBox.shrink();
+    return SizedBox.shrink();
   }
 
   Widget _renderText(TextElement el, double scale) {
@@ -291,7 +291,7 @@ class _CanvasWorkspaceState extends State<CanvasWorkspace> {
     // TODO: Render actual image from file
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: AppColors.surfaceAlt,
         border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
         borderRadius: BorderRadius.circular(4),
       ),

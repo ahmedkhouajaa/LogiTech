@@ -122,7 +122,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                 title: 'Informations',
                 icon: Icons.info_outline_rounded,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -131,14 +131,14 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                         initialValue: _name,
                         onChanged: (v) { if (!widget.isReadOnly) _name = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Description',
                         initialValue: _description,
                         maxLines: 2,
                         onChanged: (v) { if (!widget.isReadOnly) _description = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       BlocBuilder<CustomersBloc, CustomersState>(
                         builder: (context, state) {
                           final customers = state is CustomersLoaded ? state.customers : <Customer>[];
@@ -147,7 +147,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                             value: _selectedCustomerId,
                             items: [
                               const DropdownMenuItem<String>(value: null, child: Text('Aucun client', style: TextStyle(fontSize: 16))),
-                              ...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: const TextStyle(fontSize: 16)))),
+                              ...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: TextStyle(fontSize: 16)))),
                             ],
                             onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedCustomerId = v); },
                             hint: 'Aucun client',
@@ -163,7 +163,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                 title: 'Planification & Budget',
                 icon: Icons.calendar_month_outlined,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -176,7 +176,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                               onChanged: (v) { if (!widget.isReadOnly) setState(() => _startDate = v); },
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          SizedBox(width: 16),
                           Expanded(
                             child: SmartDatePicker(
                               label: 'Date de Fin (Opt)',
@@ -186,7 +186,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Budget Estimé',
                         initialValue: _budget > 0 ? _budget.toString() : '',
@@ -202,7 +202,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                 title: 'Suivi & Avancement',
                 icon: Icons.track_changes_outlined,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -220,13 +220,13 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                               case ProjectStatus.completed: label = 'Terminé'; break;
                               case ProjectStatus.cancelled: label = 'Annulé'; break;
                             }
-                            return DropdownMenuItem(value: s, child: Text(label, style: const TextStyle(fontSize: 16)));
+                            return DropdownMenuItem(value: s, child: Text(label, style: TextStyle(fontSize: 16)));
                           }).toList(),
                           onChanged: (v) { if (!widget.isReadOnly && v != null) setState(() => _status = v); },
                           hint: 'Statut',
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24),
                       Text('Avancement: ${_progress.toInt()}%', style: TextStyle(fontWeight: FontWeight.w500)),
                       SizedBox(height: 8),
                       Slider(
@@ -248,7 +248,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                 icon: Icons.notes_outlined,
                 isInitiallyExpanded: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: SmartTextInput(
                     label: 'Remarques / Notes',
                     initialValue: _notes,

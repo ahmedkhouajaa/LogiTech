@@ -37,7 +37,7 @@ class MobileTotalsCard extends StatelessWidget {
         children: [
           _buildRow('Sous-total HT', formatCurrencyDT(subTotalHT)),
           if (tvaBreakdown.isNotEmpty) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             ...tvaBreakdown.entries.map((e) => Padding(
               padding: EdgeInsets.only(bottom: 12),
               child: _buildRow('TVA ${e.key.toInt()}%', formatCurrencyDT(e.value)),

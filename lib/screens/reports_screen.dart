@@ -61,15 +61,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   Icon(Icons.error_outline, color: AppColors.error, size: 48),
                   SizedBox(height: 16),
                   Text('Erreur: ${state.message}', style: TextStyle(color: AppColors.error)),
-                  const SizedBox(height: 16),
-                  ElevatedButton(onPressed: _applyFilters, child: const Text('Réessayer'))
+                  SizedBox(height: 16),
+                  ElevatedButton(onPressed: _applyFilters, child: Text('Réessayer'))
                 ],
               ),
             );
           } else if (state is ReportsLoaded) {
             return _buildContent(state);
           }
-          return const SizedBox.shrink();
+          return SizedBox.shrink();
         },
       ),
     );
@@ -77,34 +77,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _buildContent(ReportsLoaded state) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildFilterBar(),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
           _buildKPIsRow(state),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: _buildMonthlySalesChart(state.monthlySales)),
-              const SizedBox(width: AppSpacing.lg),
+              SizedBox(width: AppSpacing.lg),
               Expanded(child: _buildWarehouseStockChart(state.warehouseStock)),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: _buildCategoryPieChart(state.categorySales)),
-              const SizedBox(width: AppSpacing.lg),
+              SizedBox(width: AppSpacing.lg),
               Expanded(child: _buildTopClientsTable(state.topClients)),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
           _buildSupplierPerformanceChart(state.supplierPerformance),
-          const SizedBox(height: AppSpacing.xl),
+          SizedBox(height: AppSpacing.xl),
           _buildExportSection(),
         ],
       ),
@@ -114,7 +114,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _buildFilterBar() {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: EdgeInsets.all(AppSpacing.md),
         child: Row(
           children: [
             Expanded(
@@ -125,7 +125,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 icon: Icons.calendar_today_rounded,
               ),
             ),
-            const SizedBox(width: AppSpacing.md),
+            SizedBox(width: AppSpacing.md),
             Expanded(
               child: _buildDropdown(
                 value: _selectedWarehouse,
@@ -134,7 +134,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 icon: Icons.warehouse_rounded,
               ),
             ),
-            const SizedBox(width: AppSpacing.md),
+            SizedBox(width: AppSpacing.md),
             Expanded(
               child: _buildDropdown(
                 value: _selectedCategory,
@@ -143,11 +143,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 icon: Icons.category_rounded,
               ),
             ),
-            const SizedBox(width: AppSpacing.md),
+            SizedBox(width: AppSpacing.md),
             ElevatedButton.icon(
               onPressed: _applyFilters,
-              icon: const Icon(Icons.filter_list_rounded, size: 18),
-              label: const Text('Appliquer'),
+              icon: Icon(Icons.filter_list_rounded, size: 18),
+              label: Text('Appliquer'),
             ),
           ],
         ),
@@ -176,7 +176,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           items: items.map((e) => DropdownMenuItem(value: e, child: Row(
             children: [
               Icon(icon, size: 16, color: AppColors.textSecondary),
-              const SizedBox(width: AppSpacing.sm),
+              SizedBox(width: AppSpacing.sm),
               Expanded(child: Text(e, overflow: TextOverflow.ellipsis)),
             ],
           ))).toList(),
@@ -208,7 +208,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         side: BorderSide(color: AppColors.border, width: 1),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -241,7 +241,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Évolution des ventes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.xl),
+            SizedBox(height: AppSpacing.xl),
             SizedBox(
               height: 300,
               child: LineChart(
@@ -260,7 +260,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               child: Text(data[value.toInt()].month, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                             );
                           }
-                          return const Text('');
+                          return Text('');
                         },
                       ),
                     ),
@@ -297,7 +297,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Stock par entrepôt', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.xl),
+            SizedBox(height: AppSpacing.xl),
             SizedBox(
               height: 300,
               child: BarChart(
@@ -317,7 +317,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               child: Text(data[value.toInt()].warehouseName, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                             );
                           }
-                          return const Text('');
+                          return Text('');
                         },
                       ),
                     ),
@@ -361,7 +361,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Ventes par catégorie', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.xl),
+            SizedBox(height: AppSpacing.xl),
             SizedBox(
               height: 300,
               child: Row(
@@ -377,7 +377,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             value: e.value.percentage,
                             title: '${e.value.percentage}%',
                             radius: 60,
-                            titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                            titleStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                           );
                         }).toList(),
                       ),
@@ -431,7 +431,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ],
                   rows: clients.map((c) {
                     return DataRow(cells: [
-                      DataCell(Text(c.name, style: const TextStyle(fontWeight: FontWeight.w500))),
+                      DataCell(Text(c.name, style: TextStyle(fontWeight: FontWeight.w500))),
                       DataCell(Text(c.revenue.toStringAsFixed(0))),
                       DataCell(Text(c.orders.toString())),
                     ]);
@@ -453,7 +453,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Performance Fournisseurs - Délais de livraison (Jours)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.xl),
+            SizedBox(height: AppSpacing.xl),
             SizedBox(
               height: 300,
               child: BarChart(
@@ -473,7 +473,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               child: Text(data[value.toInt()].name, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                             );
                           }
-                          return const Text('');
+                          return Text('');
                         },
                       ),
                     ),
@@ -509,17 +509,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
         child: Row(
           children: [
             Text('Rapports :', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(width: AppSpacing.md),
-            TextButton(onPressed: () {}, child: const Text('Ventes')),
-            TextButton(onPressed: () {}, child: const Text('Stock')),
-            TextButton(onPressed: () {}, child: const Text('Clients')),
-            TextButton(onPressed: () {}, child: const Text('Fournisseurs')),
+            SizedBox(width: AppSpacing.md),
+            TextButton(onPressed: () {}, child: Text('Ventes')),
+            TextButton(onPressed: () {}, child: Text('Stock')),
+            TextButton(onPressed: () {}, child: Text('Clients')),
+            TextButton(onPressed: () {}, child: Text('Fournisseurs')),
             Spacer(),
             ElevatedButton.icon(onPressed: () => _exportReport('PDF'), icon: Icon(Icons.picture_as_pdf_rounded, size: 18), label: Text('PDF'), style: ElevatedButton.styleFrom(backgroundColor: AppColors.error)),
             SizedBox(width: AppSpacing.sm),
             ElevatedButton.icon(onPressed: () => _exportReport('Excel'), icon: Icon(Icons.table_chart_rounded, size: 18), label: Text('Excel'), style: ElevatedButton.styleFrom(backgroundColor: AppColors.success)),
-            const SizedBox(width: AppSpacing.sm),
-            OutlinedButton.icon(onPressed: () => _exportReport('Email'), icon: const Icon(Icons.email_rounded, size: 18), label: const Text('Email')),
+            SizedBox(width: AppSpacing.sm),
+            OutlinedButton.icon(onPressed: () => _exportReport('Email'), icon: Icon(Icons.email_rounded, size: 18), label: Text('Email')),
           ],
         ),
       ),

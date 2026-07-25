@@ -27,7 +27,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.all(AppSpacing.lg),
           child: Row(
             children: [
               AppSearchBar(onChanged: (v) {}),
@@ -39,10 +39,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         Expanded(
           child: BlocBuilder<TransactionsBloc, TransactionsState>(
             builder: (context, state) {
-              if (state is TransactionsLoading) return const Center(child: CircularProgressIndicator());
+              if (state is TransactionsLoading) return Center(child: CircularProgressIndicator());
               if (state is TransactionsLoaded) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: AppCard(
                     padding: EdgeInsets.zero,
                     child: DataTableWidget<TransactionModel>(
@@ -62,7 +62,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   ),
                 );
               }
-              return const SizedBox();
+              return SizedBox();
             },
           ),
         ),

@@ -110,7 +110,7 @@ class _CustomDateRangePickerState extends State<CustomDateRangePicker> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             
             // Quick selects
             Wrap(
@@ -127,7 +127,7 @@ class _CustomDateRangePickerState extends State<CustomDateRangePicker> {
             
             // Custom Range
             Text('Ou plage personnalisée', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -150,7 +150,7 @@ class _CustomDateRangePickerState extends State<CustomDateRangePicker> {
                 ),
               ],
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: 32),
             
             // Actions
             Row(
@@ -172,7 +172,7 @@ class _CustomDateRangePickerState extends State<CustomDateRangePicker> {
                     child: Text('Toutes les dates', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
@@ -186,11 +186,11 @@ class _CustomDateRangePickerState extends State<CustomDateRangePicker> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       elevation: 0,
                     ),
-                    child: const Text('Appliquer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    child: Text('Appliquer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                   ),
                 ),
               ],

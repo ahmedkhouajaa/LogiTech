@@ -145,7 +145,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                 title: 'Informations Générales',
                 icon: Icons.info_outline_rounded,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -154,13 +154,13 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                         initialValue: _name,
                         onChanged: (v) { if (!widget.isReadOnly) _name = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Référence',
                         initialValue: _reference,
                         onChanged: (v) { if (!widget.isReadOnly) _reference = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       AbsorbPointer(
                         absorbing: widget.isReadOnly,
                         child: SmartToggleChips<String>(
@@ -171,7 +171,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                           onChanged: (v) => setState(() => _productType = v),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Description',
                         initialValue: _description,
@@ -187,7 +187,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                 title: 'Tarification',
                 icon: Icons.attach_money_rounded,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -201,7 +201,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                               onChanged: (v) { if (!widget.isReadOnly) _purchasePrice = double.tryParse(v) ?? 0; },
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          SizedBox(width: 16),
                           Expanded(
                             child: SmartTextInput(
                               label: 'Prix de Vente (HT)',
@@ -212,7 +212,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       AbsorbPointer(
                         absorbing: widget.isReadOnly,
                         child: SmartToggleChips<double>(
@@ -233,7 +233,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                 icon: Icons.category_outlined,
                 isInitiallyExpanded: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -242,13 +242,13 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                         initialValue: _category ?? '',
                         onChanged: (v) { if (!widget.isReadOnly) _category = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Marque',
                         initialValue: _brandId ?? '',
                         onChanged: (v) { if (!widget.isReadOnly) _brandId = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       AbsorbPointer(
                         absorbing: widget.isReadOnly,
                         child: SmartToggleChips<String>(
@@ -269,7 +269,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                 icon: Icons.inventory_2_outlined,
                 isInitiallyExpanded: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -278,13 +278,13 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                         value: _allowNegativeStock,
                         onChanged: widget.isReadOnly ? null : (v) => setState(() => _allowNegativeStock = v ?? false),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       SmartCheckbox(
                         label: 'Alerte Rupture de Stock',
                         value: _lowStockAlert,
                         onChanged: widget.isReadOnly ? null : (v) => setState(() => _lowStockAlert = v ?? false),
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       SmartCheckbox(
                         label: 'Alerte Surstockage',
                         value: _highStockAlert,
@@ -300,7 +300,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                 icon: Icons.qr_code_scanner_rounded,
                 isInitiallyExpanded: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -309,7 +309,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
                         initialValue: _barcode,
                         onChanged: (v) { if (!widget.isReadOnly) _barcode = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Notes Privées',
                         initialValue: _privateNotes,

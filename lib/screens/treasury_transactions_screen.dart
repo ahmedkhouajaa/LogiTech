@@ -5,10 +5,12 @@ import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../models/treasury_transaction.dart';
 import '../models/treasury_account.dart';
+import '../models/transaction_category.dart';
 import '../services/transaction_export_service.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/data_table_widget.dart';
+import '../widgets/searchable_dropdown_field.dart';
 
 class TreasuryTransactionsScreen extends StatefulWidget {
   const TreasuryTransactionsScreen({super.key});
@@ -175,28 +177,22 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                               const SizedBox(height: 8),
                               BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
                                 builder: (context, accountState) {
-                                  List<DropdownMenuItem<String>> items = [
-                                    const DropdownMenuItem(value: 'all', child: Text('Tous les Comptes')),
-                                  ];
-                                  if (accountState is TreasuryAccountsLoaded) {
-                                    items.addAll(accountState.accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))));
+                                  final accounts = accountState is TreasuryAccountsLoaded ? accountState.accounts : <TreasuryAccount>[];
+                                  String? displayName = 'Tous les Comptes';
+                                  if (_selectedAccountId != 'all') {
+                                    final acc = accounts.cast<TreasuryAccount?>().firstWhere((a) => a?.id == _selectedAccountId, orElse: () => null);
+                                    if (acc != null) displayName = acc.name;
                                   }
                                   return SizedBox(
                                     height: 40,
-                                    child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                      value: _selectedAccountId,
-                                      decoration: InputDecoration(
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                      ),
-                                      isExpanded: true,
-                                      items: items,
-                                      onChanged: (val) {
-                                        if (val != null) setState(() => _selectedAccountId = val);
+                                    child: SearchableSelectorField(
+                                      hint: 'Tous les Comptes',
+                                      selectedText: displayName,
+                                      onTap: () async {
+                                        final res = await showTreasuryAccountSelectDialog(context, accounts, selectedAccountId: _selectedAccountId, includeAll: true);
+                                        if (res != null && res != _selectedAccountId) {
+                                          setState(() => _selectedAccountId = res);
+                                        }
                                       },
                                     ),
                                   );
@@ -215,24 +211,24 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                               const SizedBox(height: 8),
                               SizedBox(
                                 height: 40,
-                                child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                  value: _selectedCategoryId,
-                                  decoration: InputDecoration(
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                  ),
-                                  isExpanded: true,
-                                  items: [
-                                    const DropdownMenuItem(value: 'all', child: Text('Toutes les Categories')),
-                                    if (state is TreasuryTransactionsLoaded)
-                                      ...state.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
-                                  ],
-                                  onChanged: (val) {
-                                    if (val != null) setState(() => _selectedCategoryId = val);
+                                child: Builder(
+                                  builder: (context) {
+                                    final categories = state is TreasuryTransactionsLoaded ? state.categories : <TransactionCategory>[];
+                                    String? displayName = 'Toutes les Categories';
+                                    if (_selectedCategoryId != 'all') {
+                                      final cat = categories.cast<TransactionCategory?>().firstWhere((c) => c?.id == _selectedCategoryId, orElse: () => null);
+                                      if (cat != null) displayName = cat.name;
+                                    }
+                                    return SearchableSelectorField(
+                                      hint: 'Toutes les Categories',
+                                      selectedText: displayName,
+                                      onTap: () async {
+                                        final res = await showCategorySelectDialog(context, categories, selectedCategoryId: _selectedCategoryId, includeAll: true);
+                                        if (res != null && res != _selectedCategoryId) {
+                                          setState(() => _selectedCategoryId = res);
+                                        }
+                                      },
+                                    );
                                   },
                                 ),
                               ),

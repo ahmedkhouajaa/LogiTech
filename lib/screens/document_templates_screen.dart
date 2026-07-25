@@ -71,7 +71,7 @@ class _DocumentTemplatesBody extends StatelessWidget {
                   );
                 },
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               AppButton(
                 label: 'Nouveau modèle',
                 icon: Icons.add_rounded,
@@ -94,7 +94,7 @@ class _DocumentTemplatesBody extends StatelessWidget {
                   ),
                 )
               : Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: EdgeInsets.symmetric(horizontal: 24),
                   child: GridView.builder(
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                       maxCrossAxisExtent: 380,
@@ -118,7 +118,7 @@ class _DocumentTemplatesBody extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Nouveau modèle', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Nouveau modèle', style: TextStyle(fontWeight: FontWeight.bold)),
         content: SizedBox(
           width: 400,
           child: AppTextField(
@@ -128,7 +128,7 @@ class _DocumentTemplatesBody extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Annuler')),
           ElevatedButton(
             onPressed: () {
               final name = nameController.text.trim();
@@ -142,7 +142,7 @@ class _DocumentTemplatesBody extends StatelessWidget {
               _openEditor(context, template);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-            child: const Text('Créer'),
+            child: Text('Créer'),
           ),
         ],
       ),
@@ -191,21 +191,21 @@ class _TemplateCardState extends State<_TemplateCard> {
           borderRadius: BorderRadius.circular(AppRadius.lg),
           onTap: () => _openEditor(context, t),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         gradient: AppGradients.primary,
                         borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
-                      child: const Icon(Icons.description_rounded, color: Colors.white, size: 20),
+                      child: Icon(Icons.description_rounded, color: Colors.white, size: 20),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,18 +239,18 @@ class _TemplateCardState extends State<_TemplateCard> {
                     _chip('${t.fontSize.toInt()} pt', AppColors.textSecondary),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 // Actions
                 Row(
                   children: [
                     _actionBtn(Icons.edit_rounded, 'Modifier (Config)', () => _openEditor(context, t)),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     _actionBtn(Icons.design_services_rounded, 'Designer visuel', () => _openVisualDesigner(context, t)),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     _actionBtn(Icons.copy_rounded, 'Dupliquer', () {
                       context.read<DocumentTemplatesBloc>().add(DuplicateDocumentTemplate(t));
                     }),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     if (!t.isDefault)
                       _actionBtn(Icons.star_outline_rounded, 'Par défaut', () {
                         context.read<DocumentTemplatesBloc>().add(SetDefaultDocumentTemplate(t.id, t.documentType));
@@ -270,7 +270,7 @@ class _TemplateCardState extends State<_TemplateCard> {
 
   Widget _chip(String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppRadius.full),
@@ -323,17 +323,17 @@ class _TemplateCardState extends State<_TemplateCard> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer le modèle ?', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Supprimer le modèle ?', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Text('Voulez-vous vraiment supprimer le modèle "${template.name}" ? Cette action est irréversible.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Annuler')),
           ElevatedButton(
             onPressed: () {
               context.read<DocumentTemplatesBloc>().add(DeleteDocumentTemplate(template.id));
               Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: const Text('Supprimer'),
+            child: Text('Supprimer'),
           ),
         ],
       ),

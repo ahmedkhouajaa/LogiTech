@@ -49,7 +49,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
       children: [
         // Action Bar
         Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
             color: Colors.transparent,
             border: Border(bottom: BorderSide(color: Colors.transparent)),
@@ -73,7 +73,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
               }
             },
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: EdgeInsets.all(AppSpacing.lg),
               physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +81,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                 BlocBuilder<ProductSettingsBloc, ProductSettingsState>(
                   builder: (context, state) {
                     if (state is ProductSettingsLoading) {
-                      return const Center(child: CircularProgressIndicator());
+                      return Center(child: CircularProgressIndicator());
                     }
                     if (state is ProductSettingsLoaded) {
                       final rootFamilies = state.rootFamilies;
@@ -95,7 +95,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                           }),
                           
                           // Add new family
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
                           Row(
                             children: [
                               Expanded(
@@ -107,11 +107,11 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                                     fillColor: AppColors.surfaceAlt,
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              SizedBox(width: 16),
                               ElevatedButton(
                                 onPressed: () {
                                   if (_familyCtrl.text.trim().isNotEmpty) {
@@ -125,16 +125,16 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                                 ),
-                                child: const Text('Ajouter une famille', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                child: Text('Ajouter une famille', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                               ),
                             ],
                           ),
                         ],
                       );
                     }
-                    return const SizedBox();
+                    return SizedBox();
                   },
                 ),
               ],
@@ -172,12 +172,12 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                   showDialog(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      title: const Text('Confirmer la suppression'),
+                      title: Text('Confirmer la suppression'),
                       content: Text('Voulez-vous vraiment supprimer la famille "${family.name}" ?'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Annuler'),
+                          child: Text('Annuler'),
                         ),
                         ElevatedButton(
                           onPressed: () {
@@ -185,7 +185,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                             Navigator.pop(ctx);
                           },
                           style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                          child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                          child: Text('Supprimer', style: TextStyle(color: Colors.white)),
                         ),
                       ],
                     ),
@@ -198,7 +198,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
           if (subFamilies.isNotEmpty) ...[
             SizedBox(height: 16),
             Text('Sous-familles', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             ...subFamilies.map((subFam) => Padding(
               padding: EdgeInsets.symmetric(vertical: 4),
               child: Row(
@@ -213,12 +213,12 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                       showDialog(
                         context: context,
                         builder: (ctx) => AlertDialog(
-                          title: const Text('Confirmer la suppression'),
+                          title: Text('Confirmer la suppression'),
                           content: Text('Voulez-vous vraiment supprimer la sous-famille "${subFam.name}" ?'),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(ctx),
-                              child: const Text('Annuler'),
+                              child: Text('Annuler'),
                             ),
                             ElevatedButton(
                               onPressed: () {
@@ -226,7 +226,7 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                                 Navigator.pop(ctx);
                               },
                               style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                              child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                              child: Text('Supprimer', style: TextStyle(color: Colors.white)),
                             ),
                           ],
                         ),
@@ -250,11 +250,11 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                     fillColor: AppColors.surfaceAlt,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               ElevatedButton(
                 onPressed: () {
                   final ctrl = _getSubFamilyCtrl(family.id);
@@ -272,9 +272,9 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                   backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                   foregroundColor: AppColors.primary,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
-                child: const Text('Ajouter la sous-famille', style: TextStyle(fontWeight: FontWeight.w600)),
+                child: Text('Ajouter la sous-famille', style: TextStyle(fontWeight: FontWeight.w600)),
               ),
             ],
           ),

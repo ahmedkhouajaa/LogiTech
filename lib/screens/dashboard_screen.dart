@@ -16,7 +16,7 @@ class DashboardScreen extends StatelessWidget {
     return BlocBuilder<DashboardBloc, DashboardState>(
       builder: (context, state) {
         if (state is DashboardLoading || state is DashboardInitial) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         }
         if (state is DashboardError) {
           return Center(child: Text('Erreur: ${state.message}'));
@@ -25,7 +25,7 @@ class DashboardScreen extends StatelessWidget {
           print('DashboardScreen: received DashboardLoaded!');
           return _buildDashboard(context, state);
         }
-        return const SizedBox();
+        return SizedBox();
       },
     );
   }
@@ -33,32 +33,32 @@ class DashboardScreen extends StatelessWidget {
   Widget _buildDashboard(BuildContext context, DashboardLoaded state) {
     final isMobile = MediaQuery.of(context).size.width < 800;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Welcome header
           // _buildWelcomeHeader(isMobile),
-          // const SizedBox(height: AppSpacing.lg),
+          // SizedBox(height: AppSpacing.lg),
           // KPI cards
           _buildKpiRow(state, isMobile),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
           // Charts + upcoming
           /*
           if (isMobile) ...[
             // _buildCashFlowChart(),
-            const SizedBox(height: AppSpacing.lg),
+            SizedBox(height: AppSpacing.lg),
             _buildUpcomingChecks(state.upcomingChecks),
           ] else
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Expanded(flex: 3, child: _buildCashFlowChart()),
-                const SizedBox(width: AppSpacing.lg),
+                SizedBox(width: AppSpacing.lg),
                 Expanded(flex: 2, child: _buildUpcomingChecks(state.upcomingChecks)),
               ],
             ),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
           */
           
           // Bottom row (Recent invoices only)
@@ -70,7 +70,7 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildWelcomeHeader(bool isMobile) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         gradient: AppGradients.primary,
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -79,21 +79,21 @@ class DashboardScreen extends StatelessWidget {
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Bienvenue !', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 4),
-                // const Text('Voici le resume de votre activite', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                const SizedBox(height: 16),
+                Text('Bienvenue !', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                SizedBox(height: 4),
+                // Text('Voici le resume de votre activite', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: () {},
-                  icon: const Icon(Icons.bar_chart_rounded, size: 16, color: Colors.white),
-                  label: const Text('Voir Rapports', style: TextStyle(color: Colors.white)),
+                  icon: Icon(Icons.bar_chart_rounded, size: 16, color: Colors.white),
+                  label: Text('Voir Rapports', style: TextStyle(color: Colors.white)),
                   style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.white.withValues(alpha: 0.5))),
                 ),
               ],
             )
           : Row(
               children: [
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Bienvenue !', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
@@ -104,8 +104,8 @@ class DashboardScreen extends StatelessWidget {
                 const Spacer(),
                 OutlinedButton.icon(
                   onPressed: () {},
-                  icon: const Icon(Icons.bar_chart_rounded, size: 16, color: Colors.white),
-                  label: const Text('Voir Rapports', style: TextStyle(color: Colors.white)),
+                  icon: Icon(Icons.bar_chart_rounded, size: 16, color: Colors.white),
+                  label: Text('Voir Rapports', style: TextStyle(color: Colors.white)),
                   style: OutlinedButton.styleFrom(side: BorderSide(color: Colors.white.withValues(alpha: 0.5))),
                 ),
               ],
@@ -152,18 +152,18 @@ class DashboardScreen extends StatelessWidget {
 
     if (isMobile) {
       return Column(
-        children: cards.map((c) => Padding(padding: const EdgeInsets.only(bottom: AppSpacing.md), child: c)).toList(),
+        children: cards.map((c) => Padding(padding: EdgeInsets.only(bottom: AppSpacing.md), child: c)).toList(),
       );
     }
 
     return Row(
       children: [
         Expanded(child: cards[0]),
-        const SizedBox(width: AppSpacing.md),
+        SizedBox(width: AppSpacing.md),
         Expanded(child: cards[1]),
-        const SizedBox(width: AppSpacing.md),
+        SizedBox(width: AppSpacing.md),
         Expanded(child: cards[2]),
-        const SizedBox(width: AppSpacing.md),
+        SizedBox(width: AppSpacing.md),
         Expanded(child: cards[3]),
       ],
     );
@@ -194,7 +194,7 @@ class DashboardScreen extends StatelessWidget {
                     getTitlesWidget: (v, _) {
                       const months = ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Jun'];
                       final idx = v.toInt();
-                      if (idx < 0 || idx >= months.length) return const SizedBox();
+                      if (idx < 0 || idx >= months.length) return SizedBox();
                       return Text(months[idx], style: TextStyle(fontSize: 10, color: AppColors.textTertiary));
                     },
                   )),
@@ -353,7 +353,7 @@ class DashboardScreen extends StatelessWidget {
           Expanded(flex: 3, child: Text(inv.customerName ?? '—', style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
           Expanded(flex: 2, child: Text(formatDate(inv.date), style: TextStyle(fontSize: 12, color: AppColors.textTertiary))),
           Expanded(flex: 2, child: Align(alignment: Alignment.centerLeft, child: StatusBadge(label: inv.status.label, color: inv.status.color))),
-          Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text(formatCurrencyDT(inv.totalTTC + inv.timbreFiscal), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)))),
+          Expanded(flex: 2, child: Align(alignment: Alignment.centerRight, child: Text(formatCurrencyDT(inv.totalTTC + inv.timbreFiscal), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)))),
         ],
       ),
     );
@@ -374,7 +374,7 @@ class DashboardScreen extends StatelessWidget {
                   ? Container(
                       padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(color: AppColors.error, borderRadius: BorderRadius.circular(12)),
-                      child: Text('${state.lowStockProducts.length}', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                      child: Text('${state.lowStockProducts.length}', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                     )
                   : null,
             ),

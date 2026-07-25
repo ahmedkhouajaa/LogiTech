@@ -68,7 +68,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
       body: BlocBuilder<ReportsBloc, ReportsState>(
         builder: (context, state) {
           if (state is ReportsLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator());
           } else if (state is ReportsError) {
             return Center(child: Text('Erreur: ${state.message}', style: TextStyle(color: AppColors.error)));
           } else if (state is ReportsLoaded) {
@@ -79,7 +79,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
               child: _buildContent(state),
             );
           }
-          return const SizedBox.shrink();
+          return SizedBox.shrink();
         },
       ),
     );
@@ -88,26 +88,26 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
   Widget _buildContent(ReportsLoaded state) {
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 80.0), // Padding for FAB
+      padding: EdgeInsets.only(bottom: 80.0), // Padding for FAB
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildCollapsibleFilters(),
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: EdgeInsets.all(AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildKPIsGrid(state),
-                const SizedBox(height: AppSpacing.lg),
+                SizedBox(height: AppSpacing.lg),
                 _buildMonthlySalesChart(state.monthlySales),
-                const SizedBox(height: AppSpacing.lg),
+                SizedBox(height: AppSpacing.lg),
                 _buildWarehouseStockChart(state.warehouseStock),
-                const SizedBox(height: AppSpacing.lg),
+                SizedBox(height: AppSpacing.lg),
                 _buildCategoryPieChart(state.categorySales),
-                const SizedBox(height: AppSpacing.lg),
+                SizedBox(height: AppSpacing.lg),
                 _buildTopClientsTable(state.topClients),
-                const SizedBox(height: AppSpacing.lg),
+                SizedBox(height: AppSpacing.lg),
                 _buildSupplierPerformanceChart(state.supplierPerformance),
               ],
             ),
@@ -133,7 +133,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
         subtitle: Text('$_selectedDateRange • ${_selectedWarehouse.split(' ').last}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
         children: [
           Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: EdgeInsets.all(AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -143,24 +143,24 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
                   onChanged: (val) => setState(() => _selectedDateRange = val!),
                   icon: Icons.calendar_today_rounded,
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                SizedBox(height: AppSpacing.sm),
                 _buildDropdown(
                   value: _selectedWarehouse,
                   items: ['Tous les entrepôts', 'Entrepôt A', 'Entrepôt B', 'Entrepôt C'],
                   onChanged: (val) => setState(() => _selectedWarehouse = val!),
                   icon: Icons.warehouse_rounded,
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                SizedBox(height: AppSpacing.sm),
                 _buildDropdown(
                   value: _selectedCategory,
                   items: ['Toutes les catégories', 'Électronique', 'Mobilier', 'Vêtements'],
                   onChanged: (val) => setState(() => _selectedCategory = val!),
                   icon: Icons.category_rounded,
                 ),
-                const SizedBox(height: AppSpacing.md),
+                SizedBox(height: AppSpacing.md),
                 ElevatedButton(
                   onPressed: _applyFilters,
-                  child: const Text('Appliquer les filtres'),
+                  child: Text('Appliquer les filtres'),
                 ),
               ],
             ),
@@ -191,7 +191,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
           items: items.map((e) => DropdownMenuItem(value: e, child: Row(
             children: [
               Icon(icon, size: 16, color: AppColors.textSecondary),
-              const SizedBox(width: AppSpacing.sm),
+              SizedBox(width: AppSpacing.sm),
               Expanded(child: Text(e, overflow: TextOverflow.ellipsis)),
             ],
           ))).toList(),
@@ -222,7 +222,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
@@ -254,7 +254,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Évolution des ventes', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.lg),
+            SizedBox(height: AppSpacing.lg),
             SizedBox(
               height: 200,
               child: LineChart(
@@ -274,7 +274,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
                               child: Text(data[value.toInt()].month, style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
                             );
                           }
-                          return const Text('');
+                          return Text('');
                         },
                       ),
                     ),
@@ -312,7 +312,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Stock par entrepôt', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.lg),
+            SizedBox(height: AppSpacing.lg),
             SizedBox(
               height: 200,
               child: BarChart(
@@ -332,7 +332,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
                               child: Text(data[value.toInt()].warehouseName.split(' ').last, style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
                             );
                           }
-                          return const Text('');
+                          return Text('');
                         },
                       ),
                     ),
@@ -371,7 +371,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Ventes par catégorie', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.lg),
+            SizedBox(height: AppSpacing.lg),
             SizedBox(
               height: 180,
               child: Row(
@@ -387,7 +387,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
                             value: e.value.percentage,
                             title: '${e.value.percentage.toInt()}%',
                             radius: 40,
-                            titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                            titleStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                           );
                         }).toList(),
                       ),
@@ -429,7 +429,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Top Clients', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.sm),
+            SizedBox(height: AppSpacing.sm),
             SizedBox(
               height: 250,
               child: SingleChildScrollView(
@@ -447,9 +447,9 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
                     ],
                     rows: clients.take(5).map((c) { // Take 5 on mobile to save space
                       return DataRow(cells: [
-                        DataCell(Text(c.name, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
-                        DataCell(Text(c.revenue.toStringAsFixed(0), style: const TextStyle(fontSize: 12))),
-                        DataCell(Text(c.orders.toString(), style: const TextStyle(fontSize: 12))),
+                        DataCell(Text(c.name, style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
+                        DataCell(Text(c.revenue.toStringAsFixed(0), style: TextStyle(fontSize: 12))),
+                        DataCell(Text(c.orders.toString(), style: TextStyle(fontSize: 12))),
                       ]);
                     }).toList(),
                   ),
@@ -471,7 +471,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Performance Fournisseurs (Délais)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.lg),
+            SizedBox(height: AppSpacing.lg),
             SizedBox(
               height: 200,
               child: BarChart(
@@ -491,7 +491,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
                               child: Text(data[value.toInt()].name.replaceAll('Fournisseur', 'F.'), style: TextStyle(color: AppColors.textSecondary, fontSize: 9)),
                             );
                           }
-                          return const Text('');
+                          return Text('');
                         },
                       ),
                     ),
@@ -531,7 +531,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
           SizedBox(height: AppSpacing.lg),
           ListTile(
             leading: Icon(Icons.picture_as_pdf_rounded, color: AppColors.error),
-            title: const Text('Export PDF'),
+            title: Text('Export PDF'),
             onTap: () {
               Navigator.pop(context);
               _exportReport('PDF');
@@ -539,7 +539,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
           ),
           ListTile(
             leading: Icon(Icons.table_chart_rounded, color: AppColors.success),
-            title: const Text('Export Excel'),
+            title: Text('Export Excel'),
             onTap: () {
               Navigator.pop(context);
               _exportReport('Excel');
@@ -547,7 +547,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
           ),
           ListTile(
             leading: Icon(Icons.email_rounded, color: AppColors.primary),
-            title: const Text('Envoyer par Email'),
+            title: Text('Envoyer par Email'),
             onTap: () {
               Navigator.pop(context);
               _exportReport('Email');

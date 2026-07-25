@@ -81,7 +81,7 @@ class MobileGenericListScreen extends StatelessWidget {
           // Content
           Expanded(
             child: isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator())
                 : RefreshIndicator(
                     onRefresh: () async {
                       await SyncService.instance.triggerSync();

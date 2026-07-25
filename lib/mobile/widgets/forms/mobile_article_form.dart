@@ -176,7 +176,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                 children: [
                   // Designation
                   Text('Désignation', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
@@ -208,7 +208,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                                     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
                                     suffixIcon: Icon(Icons.search_rounded, color: AppColors.textTertiary),
                                   ),
-                                  style: const TextStyle(fontSize: 16),
+                                  style: TextStyle(fontSize: 16),
                                   onChanged: (v) {
                                     setState(() {
                                       _productName = v;
@@ -263,7 +263,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   
                   // Options (Show Description / Apply Discount)
                   Row(
@@ -284,7 +284,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   
                   if (_showDescription) ...[
                     SmartTextInput(
@@ -293,7 +293,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                       maxLines: 3,
                       onChanged: (v) => setState(() => _description = v),
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
                   ],
 
                   // Quantity and P.U Row
@@ -309,7 +309,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                           step: 1,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: 16),
                       Expanded(
                         child: SmartTextInput(
                           label: 'P.U HT',
@@ -321,7 +321,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
                   // Discount and TVA Row
                   Row(
@@ -336,15 +336,15 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                               suffixText: '%',
                               onChanged: (v) => setState(() => _discountPercent = double.tryParse(v) ?? 0),
                             )
-                          : const SizedBox.shrink(),
+                          : SizedBox.shrink(),
                       ),
-                      if (_applyDiscount) const SizedBox(width: 16),
+                      if (_applyDiscount) SizedBox(width: 16),
                       Expanded(
                         child: SmartDropdown<double>(
                           label: 'TVA',
                           value: _tvaRate,
                           items: (TvaRates.all.contains(_tvaRate) ? TvaRates.all : [...TvaRates.all, _tvaRate])
-                              .map((r) => DropdownMenuItem(value: r, child: Text('${r.toInt()}%', style: const TextStyle(fontSize: 16))))
+                              .map((r) => DropdownMenuItem(value: r, child: Text('${r.toInt()}%', style: TextStyle(fontSize: 16))))
                               .toList(),
                           onChanged: (v) => setState(() => _tvaRate = v ?? 19),
                         ),
@@ -385,12 +385,12 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                     onPressed: _handleSave,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     ),
                     child: Text(
                       widget.initialData == null ? 'Ajouter' : 'Enregistrer',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ),
                 ),

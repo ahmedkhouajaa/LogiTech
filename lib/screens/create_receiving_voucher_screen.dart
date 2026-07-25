@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/searchable_dropdown_field.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
@@ -217,26 +218,26 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
             child: Form(
               key: _formKey,
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: EdgeInsets.all(AppSpacing.lg),
                 child: AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildFormCard(),
-                      const SizedBox(height: AppSpacing.lg),
+                      SizedBox(height: AppSpacing.lg),
                       _buildArticlesSection(),
                       if (!widget.isReadOnly) ...[
-                        const SizedBox(height: AppSpacing.md),
+                        SizedBox(height: AppSpacing.md),
                         _buildArticleActions(),
                       ],
-                      const SizedBox(height: AppSpacing.md),
+                      SizedBox(height: AppSpacing.md),
                       _buildGlobalDiscountSection(),
-                      const SizedBox(height: AppSpacing.lg),
+                      SizedBox(height: AppSpacing.lg),
                       _buildTotalsSection(),
-                      const SizedBox(height: AppSpacing.lg),
+                      SizedBox(height: AppSpacing.lg),
                       _buildNotesSection(),
-                      const SizedBox(height: AppSpacing.xl),
+                      SizedBox(height: AppSpacing.xl),
                     ],
                   ),
                 ),
@@ -257,7 +258,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
         border: Border(bottom: BorderSide(color: AppColors.border)),
         boxShadow: AppShadows.sm,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
           Text(
@@ -269,21 +270,21 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           StatusBadge(label: _status.label, color: _status.color),
           const Spacer(),
           _buildHeaderButton(
               Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
           if (!widget.isReadOnly) ...[
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             _buildHeaderButton(Icons.description_rounded, 'Brouillon', () {
               setState(() => _status = ReceivingVoucherStatus.draft);
             }),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             _buildHeaderButton(Icons.send_rounded, 'Envoyer', () {
               setState(() => _status = ReceivingVoucherStatus.validated);
             }, color: AppColors.info),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             _buildHeaderButton(Icons.check_circle_rounded, 'Valider', () {
               setState(() => _status = ReceivingVoucherStatus.validated);
             }, color: AppColors.success),
@@ -296,7 +297,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
@@ -316,7 +317,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
           style: TextStyle(color: color ?? AppColors.textSecondary)),
       style: OutlinedButton.styleFrom(
         side: BorderSide(color: AppColors.border),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md)),
       ),
@@ -338,7 +339,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
         children: [
           // Date d'emission
           Text("Date", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           GestureDetector(
             onTap: () async {
               if (widget.isReadOnly) return;
@@ -360,11 +361,11 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                 ),
-                style: const TextStyle(fontSize: 14),
+                style: TextStyle(fontSize: 14),
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           // Fournisseur & Project row
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,31 +375,57 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     Row(
                       children: [
                         Expanded(
                           child: BlocBuilder<SuppliersBloc, SuppliersState>(
                             builder: (context, state) {
                               final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
-                              return DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                value: _selectedSupplierId,
-                                isExpanded: true,
-                                hint: const Text('Rechercher des fournisseurs...', style: TextStyle(fontSize: 13, color: Colors.black87)),
-                                items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: const TextStyle(fontSize: 13)))).toList(),
-                                onChanged: (v) {
-                                  if (!widget.isReadOnly) setState(() => _selectedSupplierId = v);
+                              final selectedSupplier = suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null);
+                              final displayName = selectedSupplier != null
+                                  ? (selectedSupplier.companyName?.isNotEmpty == true
+                                      ? selectedSupplier.companyName!
+                                      : (selectedSupplier.responsibleName?.isNotEmpty == true
+                                          ? selectedSupplier.responsibleName!
+                                          : selectedSupplier.name))
+                                  : null;
+
+                              return FormField<String>(
+                                initialValue: _selectedSupplierId,
+                                validator: (v) => _selectedSupplierId == null ? 'Requis' : null,
+                                builder: (field) {
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      SearchableSelectorField(
+                                        hint: 'Rechercher un fournisseur...',
+                                        selectedText: displayName,
+                                        hasError: field.hasError,
+                                        onTap: () async {
+                                          final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedSupplierId);
+                                          if (res != null) {
+                                            setState(() => _selectedSupplierId = res);
+                                            field.didChange(res);
+                                          }
+                                        },
+                                      ),
+                                      if (field.hasError) ...[
+                                        SizedBox(height: 4),
+                                        Padding(
+                                          padding: EdgeInsets.only(left: 4),
+                                          child: Text(field.errorText!, style: TextStyle(color: AppColors.error, fontSize: 11)),
+                                        ),
+                                      ],
+                                    ],
+                                  );
                                 },
-                                decoration: _formInputDecoration(),
                               );
                             },
                           ),
                         ),
                         if (!widget.isReadOnly) ...[
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           SizedBox(
                             height: 48,
                             child: Tooltip(
@@ -422,7 +449,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                   side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
                                 ),
-                                child: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                                child: Icon(Icons.person_add_alt_1_rounded, size: 20),
                               ),
                             ),
                           ),
@@ -438,25 +465,21 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Projet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     BlocBuilder<ProjectsBloc, ProjectsState>(
                       builder: (context, state) {
                         final projects = state is ProjectsLoaded ? state.projects : <Project>[];
-                        return DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                          value: _selectedProjectId,
-                          isExpanded: true,
-                          hint: const Text('Projet par defaut', style: TextStyle(fontSize: 13, color: Colors.black87)),
-                          items: [
-                            const DropdownMenuItem<String>(value: null, child: Text('Projet par defaut', style: TextStyle(fontSize: 13))),
-                            ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: const TextStyle(fontSize: 13)))),
-                          ],
-                          onChanged: (v) {
-                            if (!widget.isReadOnly) setState(() => _selectedProjectId = v);
+                        final selectedProject = projects.cast<Project?>().firstWhere((p) => p?.id == _selectedProjectId, orElse: () => null);
+
+                        return SearchableSelectorField(
+                          hint: 'Projet par defaut',
+                          selectedText: selectedProject?.name ?? 'Projet par defaut',
+                          onTap: () async {
+                            final res = await showProjectSelectDialog(context, projects, selectedProjectId: _selectedProjectId);
+                            if (res != null) {
+                              setState(() => _selectedProjectId = (res == '__default__' ? null : res));
+                            }
                           },
-                          decoration: _formInputDecoration(),
                         );
                       },
                     ),
@@ -468,7 +491,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
           SizedBox(height: 20),
           // Pricing mode radio
           Text('Les prix des articles sont en', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Row(
             children: [
               Radio<bool>(
@@ -477,15 +500,15 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                 onChanged: (v) { if (!widget.isReadOnly) setState(() => _pricingModeHT = v!); },
                 activeColor: AppColors.primary,
               ),
-              const Text('Hors taxes', style: TextStyle(fontSize: 13)),
-              const SizedBox(width: 24),
+              Text('Hors taxes', style: TextStyle(fontSize: 13)),
+              SizedBox(width: 24),
               Radio<bool>(
                 value: false,
                 groupValue: _pricingModeHT,
                 onChanged: (v) { if (!widget.isReadOnly) setState(() => _pricingModeHT = v!); },
                 activeColor: AppColors.primary,
               ),
-              const Text('Taxe incluse', style: TextStyle(fontSize: 13)),
+              Text('Taxe incluse', style: TextStyle(fontSize: 13)),
             ],
           ),
         ],
@@ -497,7 +520,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
     return InputDecoration(
       filled: true,
       fillColor: AppColors.surfaceAlt,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
@@ -563,7 +586,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
     return TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: AppColors.textSecondary);
+        color: AppColors.textPrimary);
   }
 
   Widget _buildArticleRow(ReceivingVoucherItem item, int index) {
@@ -627,15 +650,15 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                             focusNode: focusNode,
                             decoration: InputDecoration(
                               hintText: 'Rechercher un article...',
-                              hintStyle: TextStyle(fontSize: 13, color: Colors.black87),
+                              hintStyle: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                               filled: true,
                               fillColor: AppColors.surfaceAlt,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                             ),
-                            style: const TextStyle(fontSize: 13),
+                            style: TextStyle(fontSize: 13),
                           );
                         },
                         optionsViewBuilder: (context, onSelected, options) {
@@ -655,7 +678,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                                     return ListTile(
                                       title: Text(option.name, style: TextStyle(fontSize: 13)),
                                       subtitle: option.reference != null ? Text(option.reference!, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
-                                      trailing: Text('${option.purchasePrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      trailing: Text('${option.purchasePrice.toStringAsFixed(2)} DT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                       onTap: () => onSelected(option),
                                       dense: true,
                                     );
@@ -689,14 +712,14 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                     child: Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
                   ),
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 Expanded(
                   child: TextFormField(
                     key: ValueKey('qtyRec_${item.id}_${item.quantityReceived}'),
                     initialValue: item.quantityReceived.toString(),
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 13),
                     decoration: _itemInputDecoration(''),
                     onChanged: (val) {
                       final v = double.tryParse(val) ?? 0;
@@ -704,7 +727,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                     },
                   ),
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 InkWell(
                   onTap: () {
                     final newQty = item.quantityReceived + 1;
@@ -720,7 +743,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           // Unit Price
           Expanded(
             child: TextFormField(
@@ -733,7 +756,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
               },
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           // TVA Rate
           Expanded(
             child: DropdownButtonFormField(
@@ -752,7 +775,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
               },
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           // Discount
           Expanded(
             child: TextFormField(
@@ -778,7 +801,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                 border: Border.all(color: AppColors.border),
               ),
               child: Text(formatCurrencyDT(item.computedTotalHT),
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
           SizedBox(width: 8),
@@ -807,33 +830,47 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
     );
   }
 
-  Widget _buildArticleActions() {
+    Widget _buildArticleActions() {
     return Row(
       children: [
-        ElevatedButton.icon(
+        Expanded(
+          child: BlocBuilder<ProductsBloc, ProductsState>(
+            builder: (context, state) {
+              final products = state is ProductsLoaded ? state.products : <Product>[];
+              return SearchableSelectorField(
+                hint: 'Sélectionner un article...',
+                selectedText: null,
+                onTap: () async {
+                  final res = await showProductSelectDialog(context, products);
+                  if (res != null) {
+                    final product = products.firstWhere((p) => p.id == res);
+                    setState(() {
+                      _items.add(ReceivingVoucherItem(
+                        voucherId: widget.existing?.id ?? '',
+                        productId: product.id,
+                      ));
+                    });
+                  }
+                },
+              );
+            },
+          ),
+        ),
+        SizedBox(width: 8),
+        OutlinedButton.icon(
           onPressed: () {
             setState(() {
               _items.add(ReceivingVoucherItem(
                   voucherId: widget.existing?.id ?? '', productId: ''));
             });
           },
-          icon: Icon(Icons.add_rounded, size: 18),
-          label: Text('Ajouter un article'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.surface,
+          icon: Icon(Icons.add_rounded, size: 16),
+          label: Text('Ajouter une ligne vide', style: TextStyle(fontWeight: FontWeight.w600)),
+          style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.primary,
-            elevation: 0,
             side: BorderSide(color: AppColors.primary),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
-        ),
-        SizedBox(width: 8),
-        IconButton(
-          icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-          tooltip: 'Créer un nouvel article',
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
-          },
-          splashRadius: 24,
         ),
       ],
     );
@@ -870,7 +907,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
             ),
           ),
           if (_withGlobalDiscount) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 SizedBox(
@@ -896,10 +933,10 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
   InputDecoration _itemInputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: Colors.black87, fontSize: 12),
+      hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 12),
       filled: true,
       fillColor: AppColors.surfaceAlt,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
@@ -915,18 +952,18 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             _buildTotalLine('Sous-total HT:', formatCurrencyDT(_totalHTAfterDiscount)),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             // TVA breakdown
             ..._tvaBreakdown.entries.map((entry) =>
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: EdgeInsets.only(bottom: 6),
                 child: _buildTotalLine('TVA ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
               ),
             ),
             InkWell(
               onTap: () { if (!widget.isReadOnly) setState(() => _withTimbreFiscal = !_withTimbreFiscal); },
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
+                padding: EdgeInsets.symmetric(vertical: 2),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -951,10 +988,10 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             if (_withGlobalDiscount && _globalDiscountAmount > 0) ...[
               _buildTotalLine('Remise:', '- ${formatCurrencyDT(_globalDiscountAmount)}'),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
             ],
             Divider(),
             SizedBox(height: 4),
@@ -990,7 +1027,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Notes (Visibles par le fournisseur)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               TextFormField(
                 controller: _notesCtrl,
                 maxLines: 4,
@@ -1007,13 +1044,13 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text("Conditions d'achat", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               TextFormField(
                 controller: _conditionsCtrl,
                 maxLines: 4,
                 readOnly: widget.isReadOnly,
                 decoration: _formInputDecoration().copyWith(hintText: 'Ajouter des conditions...'),
-                style: const TextStyle(fontSize: 13),
+                style: TextStyle(fontSize: 13),
               ),
             ],
           ),

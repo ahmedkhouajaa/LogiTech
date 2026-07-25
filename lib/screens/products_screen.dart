@@ -35,8 +35,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
       children: [
         // Modern Action Bar
         Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: const BoxDecoration(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
             color: Colors.transparent,
             border: Border(bottom: BorderSide(color: Colors.transparent)),
           ),
@@ -57,14 +57,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   onChanged: (v) => setState(() => _search = v.toLowerCase()),
                 ),
               ),
-              const SizedBox(width: AppSpacing.md),
+              SizedBox(width: AppSpacing.md),
               ElevatedButton.icon(
                 onPressed: () => _navigateToCreate(context, null),
                 icon: Icon(Icons.add_rounded, size: 20, color: Colors.white),
                 label: Text('Nouvel Article', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 ),
@@ -81,7 +81,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               
               return BlocBuilder<ProductsBloc, ProductsState>(
                 builder: (context, state) {
-                  if (state is ProductsLoading) return const Center(child: CircularProgressIndicator());
+                  if (state is ProductsLoading) return Center(child: CircularProgressIndicator());
                   if (state is ProductsError) return Center(child: Text('Erreur: ${state.message}'));
                   if (state is ProductsLoaded) {
                 final filtered = _search.isEmpty ? state.products
@@ -105,9 +105,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                   itemCount: filtered.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  separatorBuilder: (context, index) => SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final p = filtered[index];
                     
@@ -156,7 +156,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                     child: Icon(Icons.inventory_2_rounded, color: AppColors.textSecondary, size: 24),
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 
                                 // Info
                                 Expanded(
@@ -282,7 +282,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   },
                 );
               }
-              return const SizedBox();
+              return SizedBox();
             },
           );
         },

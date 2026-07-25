@@ -182,14 +182,14 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Informations Générales', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                      const SizedBox(height: AppSpacing.md),
+                      SizedBox(height: AppSpacing.md),
                       AppTextField(
                         label: 'Nom du Projet',
                         controller: _nameController,
                         hint: 'Saisissez le nom du projet',
                         validator: (v) => v == null || v.isEmpty ? 'Ce champ est requis' : null,
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      SizedBox(height: AppSpacing.md),
                       AppTextField(
                         label: 'Description',
                         controller: _descController,
@@ -199,7 +199,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                       
                       SizedBox(height: AppSpacing.xl),
                       Text('Planification', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                      const SizedBox(height: AppSpacing.md),
+                      SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
                           Expanded(
@@ -207,7 +207,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                               onTap: () => _selectDate(context, true),
                               borderRadius: BorderRadius.circular(AppRadius.md),
                               child: InputDecorator(
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   labelText: 'Date de Début Prévue',
                                   border: OutlineInputBorder(),
                                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -222,13 +222,13 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.md),
+                          SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: InkWell(
                               onTap: () => _selectDate(context, false),
                               borderRadius: BorderRadius.circular(AppRadius.md),
                               child: InputDecorator(
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   labelText: 'Date de Fin Prévue',
                                   border: OutlineInputBorder(),
                                   contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -248,7 +248,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                       
                       SizedBox(height: AppSpacing.xl),
                       Text('Détails Financiers', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                      const SizedBox(height: AppSpacing.md),
+                      SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
                           Expanded(
@@ -314,7 +314,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     ),

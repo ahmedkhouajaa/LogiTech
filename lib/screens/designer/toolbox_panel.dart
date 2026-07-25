@@ -27,7 +27,7 @@ class _ToolboxPanelState extends State<ToolboxPanel> {
         ),
       ),
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Color(0xFF2A2A3C),
           border: Border(right: BorderSide(color: Color(0xFF3A3A4C))),
         ),
@@ -35,7 +35,7 @@ class _ToolboxPanelState extends State<ToolboxPanel> {
           children: [
             // Search bar
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: EdgeInsets.all(10),
               child: Container(
                 height: 36,
                 decoration: BoxDecoration(
@@ -45,8 +45,8 @@ class _ToolboxPanelState extends State<ToolboxPanel> {
                 ),
                 child: TextField(
                   onChanged: (v) => setState(() => _searchQuery = v),
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Colors.white, fontSize: 12),
+                  decoration: InputDecoration(
                     hintText: 'Rechercher un composant...',
                     hintStyle: TextStyle(color: Color(0xFF6B6B7F), fontSize: 12),
                     prefixIcon: Icon(Icons.search_rounded, size: 16, color: Color(0xFF6B6B7F)),
@@ -60,11 +60,11 @@ class _ToolboxPanelState extends State<ToolboxPanel> {
             ),
             // Category tabs
             _buildCategoryTabs(),
-            const Divider(height: 1, color: Color(0xFF3A3A4C)),
+            Divider(height: 1, color: Color(0xFF3A3A4C)),
             // Items grid
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(10),
+                padding: EdgeInsets.all(10),
                 child: _buildCategoryContent(),
               ),
             ),
@@ -82,7 +82,7 @@ class _ToolboxPanelState extends State<ToolboxPanel> {
     ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
         children: categories.map((cat) {
           final isActive = _activeCategory == cat.$1;
@@ -132,7 +132,7 @@ class _ToolboxPanelState extends State<ToolboxPanel> {
       case 'shapes':
         return _buildShapeItems();
       default:
-        return const SizedBox.shrink();
+        return SizedBox.shrink();
     }
   }
 
@@ -299,16 +299,16 @@ class _ToolboxPanelState extends State<ToolboxPanel> {
       children: [
         _sectionLabel('Entreprise'),
         _buildItemGrid(companyFields),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _sectionLabel('Client'),
         _buildItemGrid(clientFields),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _sectionLabel('Facture'),
         _buildItemGrid(invoiceFields),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _sectionLabel('Totaux'),
         _buildItemGrid(totalFields),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _sectionLabel('Autres'),
         _buildItemGrid(otherFields),
       ],
@@ -354,10 +354,10 @@ class _ToolboxPanelState extends State<ToolboxPanel> {
 
   Widget _sectionLabel(String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6, left: 2),
+      padding: EdgeInsets.only(bottom: 6, left: 2),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w700,
           color: Color(0xFF6B6B7F),
@@ -391,7 +391,7 @@ class _ToolboxPanelState extends State<ToolboxPanel> {
           borderRadius: BorderRadius.circular(8),
           child: Container(
             width: 104,
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+            padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
             decoration: BoxDecoration(
               color: const Color(0xFF1E1E2E),
               borderRadius: BorderRadius.circular(8),
@@ -409,10 +409,10 @@ class _ToolboxPanelState extends State<ToolboxPanel> {
                   ),
                   child: Icon(item.icon, size: 16, color: item.color),
                 ),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Text(
                   item.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFFCBD5E1),

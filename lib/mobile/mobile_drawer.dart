@@ -37,10 +37,10 @@ class _MobileDrawerState extends State<MobileDrawer> {
         child: Column(
           children: [
             _buildHeader(),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: EdgeInsets.symmetric(horizontal: 12),
                 children: [
                   _buildItem(AppModule.dashboard, Icons.dashboard_rounded, 'Tableau de bord'),
                   _buildItem(AppModule.reports, Icons.bar_chart_rounded, 'Rapports'),
@@ -97,7 +97,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
             ),
             // Logout
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: SizedBox(
                 width: double.infinity,
                 height: 44,
@@ -126,7 +126,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 16, 12),
+      padding: EdgeInsets.fromLTRB(20, 20, 16, 12),
       child: Row(
         children: [
           Container(
@@ -136,9 +136,9 @@ class _MobileDrawerState extends State<MobileDrawer> {
               gradient: AppGradients.primary,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.business_center_rounded, color: Colors.white, size: 22),
+            child: Icon(Icons.business_center_rounded, color: Colors.white, size: 22),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,7 +168,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
   Widget _buildItem(AppModule module, IconData icon, String label) {
     final isActive = widget.activeModule == module;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: EdgeInsets.only(bottom: 2),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(10),
@@ -222,7 +222,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
 
   Widget _buildThemeToggleItem() {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: EdgeInsets.only(bottom: 2),
       child: BlocBuilder<ThemeCubit, ThemeMode>(
         builder: (context, themeMode) {
           final isDark = themeMode == ThemeMode.dark;
@@ -334,10 +334,10 @@ class _MobileDrawerState extends State<MobileDrawer> {
         ),
         AnimatedCrossFade(
           firstChild: Padding(
-            padding: const EdgeInsets.only(left: 12),
+            padding: EdgeInsets.only(left: 12),
             child: Column(children: children),
           ),
-          secondChild: const SizedBox.shrink(),
+          secondChild: SizedBox.shrink(),
           crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
           duration: const Duration(milliseconds: 200),
         ),
@@ -352,7 +352,7 @@ class _DrawerDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Divider(color: Colors.white.withValues(alpha: 0.06), height: 1),
     );
   }

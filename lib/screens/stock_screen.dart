@@ -11,6 +11,7 @@ import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
+import '../widgets/searchable_dropdown_field.dart';
 import '../services/stock_export_service.dart';
 
 class StockScreen extends StatefulWidget {
@@ -997,25 +998,32 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                             const SizedBox(height: 8),
                             SizedBox(
                               height: 36,
-                              child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  
-                                value: _filterWarehouseId,
-                                isExpanded: true,
-                                decoration: InputDecoration(
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                  filled: true,
-                                  fillColor: AppColors.surfaceAlt,
-                                ),
-                                
-                                items: [
-                                  const DropdownMenuItem<String?>(value: null, child: Text('Tous les Entrepôts', style: TextStyle(fontSize: 13))),
-                                  ...widget.warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 13)))),
-                                ],
-                                onChanged: (v) => setState(() { _filterWarehouseId = v; _currentPage = 0; }),
+                              child: Builder(
+                                builder: (context) {
+                                  String selectedLabel = 'Tous les Entrepôts';
+                                  if (_filterWarehouseId != null) {
+                                    final w = widget.warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _filterWarehouseId, orElse: () => null);
+                                    if (w != null) selectedLabel = w.name;
+                                  }
+                                  return SearchableSelectorField(
+                                    hint: 'Sélectionner entrepôt',
+                                    selectedText: selectedLabel,
+                                    onTap: () async {
+                                      final res = await showWarehouseSelectDialog(
+                                        context,
+                                        widget.warehouses,
+                                        selectedWarehouseId: _filterWarehouseId,
+                                        includeAll: true,
+                                      );
+                                      if (res != null) {
+                                        setState(() {
+                                          _filterWarehouseId = (res == '__all__' ? null : res);
+                                          _currentPage = 0;
+                                        });
+                                      }
+                                    },
+                                  );
+                                },
                               ),
                             ),
                           ],
@@ -1029,33 +1037,136 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                           children: [
                             Text('Destination', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 8),
-                            SizedBox(
-                              height: 36,
-                              child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  
-                                value: _filterDestination,
-                                isExpanded: true,
-                                decoration: InputDecoration(
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                  filled: true,
-                                  fillColor: AppColors.surfaceAlt,
+                            PopupMenuButton<String>(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                side: BorderSide(color: AppColors.border),
+                              ),
+                              color: AppColors.surface,
+                              elevation: 6,
+                              offset: const Offset(0, 40),
+                              initialValue: _filterDestination,
+                              onSelected: (v) {
+                                setState(() {
+                                  _filterDestination = v;
+                                  _currentPage = 0;
+                                });
+                              },
+                              itemBuilder: (context) => [
+                                PopupMenuItem<String>(
+                                  value: 'tous',
+                                  height: 38,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.textTertiary.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                                        ),
+                                        child: Text(
+                                          'Toutes',
+                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                                        ),
+                                      ),
+                                      Spacer(),
+                                      if (_filterDestination == 'tous')
+                                        Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
+                                    ],
+                                  ),
                                 ),
-                                
-                                items: const [
-                                  DropdownMenuItem(value: 'tous', child: Text('Toutes', style: TextStyle(fontSize: 13))),
-                                  DropdownMenuItem(value: 'vente', child: Text('Vente', style: TextStyle(fontSize: 13))),
-                                  DropdownMenuItem(value: 'achat', child: Text('Achat', style: TextStyle(fontSize: 13))),
-                                ],
-                                onChanged: (v) => setState(() { _filterDestination = v ?? 'tous'; _currentPage = 0; }),
+                                const PopupMenuDivider(height: 1),
+                                PopupMenuItem<String>(
+                                  value: 'vente',
+                                  height: 38,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                                        ),
+                                        child: Text(
+                                          'Vente',
+                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                                        ),
+                                      ),
+                                      Spacer(),
+                                      if (_filterDestination == 'vente')
+                                        Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem<String>(
+                                  value: 'achat',
+                                  height: 38,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.warning.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                                        ),
+                                        child: Text(
+                                          'Achat',
+                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.warning),
+                                        ),
+                                      ),
+                                      Spacer(),
+                                      if (_filterDestination == 'achat')
+                                        Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              child: Container(
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  border: Border.all(
+                                    color: _filterDestination != 'tous' ? AppColors.primary : AppColors.border,
+                                  ),
+                                ),
+                                padding: EdgeInsets.symmetric(horizontal: 12),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: _filterDestination == 'tous'
+                                          ? Text(
+                                              'Toutes',
+                                              style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                              overflow: TextOverflow.ellipsis,
+                                            )
+                                          : Container(
+                                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: (_filterDestination == 'vente' ? AppColors.primary : AppColors.warning).withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(AppRadius.sm),
+                                              ),
+                                              child: Text(
+                                                _filterDestination == 'vente' ? 'Vente' : 'Achat',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: _filterDestination == 'vente' ? AppColors.primary : AppColors.warning,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                    ),
+                                    SizedBox(width: 4),
+                                    Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
+
                       SizedBox(width: 12),
                       // Product filter
                       Expanded(
@@ -1122,28 +1233,130 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                           children: [
                             Text('Statut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                             const SizedBox(height: 8),
-                            SizedBox(
-                              height: 36,
-                              child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  
-                                value: _filterStatus,
-                                isExpanded: true,
-                                decoration: InputDecoration(
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                  filled: true,
-                                  fillColor: AppColors.surfaceAlt,
+                            PopupMenuButton<String>(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                side: BorderSide(color: AppColors.border),
+                              ),
+                              color: AppColors.surface,
+                              elevation: 6,
+                              offset: const Offset(0, 40),
+                              initialValue: _filterStatus,
+                              onSelected: (v) {
+                                setState(() {
+                                  _filterStatus = v;
+                                  _currentPage = 0;
+                                });
+                              },
+                              itemBuilder: (context) => [
+                                PopupMenuItem<String>(
+                                  value: 'tous',
+                                  height: 38,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.textTertiary.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                                        ),
+                                        child: Text(
+                                          'Tous',
+                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                                        ),
+                                      ),
+                                      Spacer(),
+                                      if (_filterStatus == 'tous')
+                                        Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
+                                    ],
+                                  ),
                                 ),
-                                
-                                items: [
-                                  DropdownMenuItem(value: 'tous', child: Text('Tous les Statuts', style: TextStyle(fontSize: 13))),
-                                  DropdownMenuItem(value: 'en_stock', child: Text('En Stock', style: TextStyle(fontSize: 13, color: AppColors.success))),
-                                  DropdownMenuItem(value: 'rupture', child: Text('En Rupture', style: TextStyle(fontSize: 13, color: AppColors.error))),
-                                ],
-                                onChanged: (v) => setState(() { _filterStatus = v ?? 'tous'; _currentPage = 0; }),
+                                const PopupMenuDivider(height: 1),
+                                PopupMenuItem<String>(
+                                  value: 'en_stock',
+                                  height: 38,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.success.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                                        ),
+                                        child: Text(
+                                          'En Stock',
+                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.success),
+                                        ),
+                                      ),
+                                      Spacer(),
+                                      if (_filterStatus == 'en_stock')
+                                        Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem<String>(
+                                  value: 'rupture',
+                                  height: 38,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.error.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                                        ),
+                                        child: Text(
+                                          'En Rupture',
+                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.error),
+                                        ),
+                                      ),
+                                      Spacer(),
+                                      if (_filterStatus == 'rupture')
+                                        Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              child: Container(
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  border: Border.all(
+                                    color: _filterStatus != 'tous' ? AppColors.primary : AppColors.border,
+                                  ),
+                                ),
+                                padding: EdgeInsets.symmetric(horizontal: 12),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: _filterStatus == 'tous'
+                                          ? Text(
+                                              'Tous',
+                                              style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                              overflow: TextOverflow.ellipsis,
+                                            )
+                                          : Container(
+                                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: (_filterStatus == 'en_stock' ? AppColors.success : AppColors.error).withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(AppRadius.sm),
+                                              ),
+                                              child: Text(
+                                                _filterStatus == 'en_stock' ? 'En Stock' : 'En Rupture',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: _filterStatus == 'en_stock' ? AppColors.success : AppColors.error,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                    ),
+                                    SizedBox(width: 4),
+                                    Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                                  ],
+                                ),
                               ),
                             ),
                           ],

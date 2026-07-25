@@ -196,7 +196,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
 
             // Filter toggle button
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
               child: Row(
                 children: [
                   OutlinedButton.icon(
@@ -206,7 +206,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
                       side: BorderSide(color: AppColors.border),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
@@ -238,10 +238,10 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                         filled: true,
                         fillColor: AppColors.surfaceAlt,
                       ),
-                      style: const TextStyle(fontSize: 13),
+                      style: TextStyle(fontSize: 13),
                       onChanged: (v) => setState(() => _searchQuery = v),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
@@ -261,7 +261,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                             style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                             items: [
                               const DropdownMenuItem<String?>(value: null, child: Text('Entrepôt', style: TextStyle(fontSize: 12))),
-                              ..._warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
+                              ..._warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
                             ],
                             onChanged: (v) => setState(() => _filterWarehouseId = v),
                           ),
@@ -279,13 +279,13 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                               filled: true,
                               fillColor: AppColors.surfaceAlt,
                             ),
-                            style: const TextStyle(fontSize: 12),
+                            style: TextStyle(fontSize: 12),
                             onChanged: (v) => setState(() => _filterReference = v),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     SizedBox(
                       height: 40,
                       child: OutlinedButton(
@@ -306,7 +306,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                         child: Row(
                           children: [
                             Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 _filterDateRange != null
@@ -374,7 +374,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
               child: Builder(
                 builder: (context) {
                   if (state is StockEntriesLoading) {
-                    return const Center(child: CircularProgressIndicator());
+                    return Center(child: CircularProgressIndicator());
                   }
                   if (state is StockEntriesError) {
                     return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
@@ -396,14 +396,14 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                     }
 
                     return ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 80),
+                      padding: EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 80),
                       itemCount: entries.length,
                       itemBuilder: (context, index) {
                         return _buildMobileCard(context, entries[index]);
                       },
                     );
                   }
-                  return const SizedBox();
+                  return SizedBox();
                 },
               ),
             ),
@@ -416,7 +416,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
           child: FloatingActionButton(
             onPressed: () => _navigate(context),
             backgroundColor: AppColors.primary,
-            child: const Icon(Icons.add, color: Colors.white),
+            child: Icon(Icons.add, color: Colors.white),
           ),
         ),
       ],
@@ -439,7 +439,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
           borderRadius: BorderRadius.circular(AppRadius.md),
           onTap: () => _navigate(context, entry),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -504,14 +504,14 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 // Info rows
                 Row(
                   children: [
                     _buildInfoItem(Icons.calendar_today_rounded, formatDateTimeLong(entry.date)),
                   ],
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
@@ -522,7 +522,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Row(
                   children: [
                     _buildInfoItem(Icons.person_rounded, 'Admin'),
@@ -567,7 +567,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: entryStatus.color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
@@ -590,10 +590,10 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
     return Tooltip(
       message: summaryText,
       preferBelow: false,
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: EdgeInsets.all(12),
+      margin: EdgeInsets.symmetric(horizontal: 20),
       showDuration: Duration(seconds: 3),
-      decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: AppColors.textPrimary, borderRadius: BorderRadius.circular(8)),
       textStyle: TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
       child: Text('${items.length} article${items.length > 1 ? 's' : ''}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
     );
@@ -606,7 +606,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
       children: [
         // Header
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.all(AppSpacing.lg),
           child: Row(
             children: [
               Column(
@@ -627,13 +627,13 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
               const Spacer(),
               ElevatedButton.icon(
                 onPressed: () => _navigate(context),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Créer'),
+                icon: Icon(Icons.add, size: 18),
+                label: Text('Créer'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue, // Matching the blue 'Créer' button
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                 ),
               ),
@@ -663,7 +663,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           SizedBox(
                             height: 36,
                             child: DropdownButtonFormField(
@@ -682,7 +682,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                               
                               items: [
                                 const DropdownMenuItem<String?>(value: null, child: Text('Tous les Entrepôts', style: TextStyle(fontSize: 13))),
-                                ..._warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))),
+                                ..._warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))),
                               ],
                               onChanged: (v) => setState(() => _filterWarehouseId = v),
                             ),
@@ -712,7 +712,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                                 filled: true,
                                 fillColor: AppColors.surfaceAlt,
                               ),
-                              style: const TextStyle(fontSize: 13),
+                              style: TextStyle(fontSize: 13),
                               onChanged: (v) => setState(() => _searchQuery = v),
                             ),
                           ),
@@ -741,7 +741,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                                 filled: true,
                                 fillColor: AppColors.surfaceAlt,
                               ),
-                              style: const TextStyle(fontSize: 13),
+                              style: TextStyle(fontSize: 13),
                               onChanged: (v) => setState(() => _filterReference = v),
                             ),
                           ),
@@ -756,7 +756,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Période', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           SizedBox(
                             height: 36,
                             child: OutlinedButton(
@@ -779,7 +779,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                               child: Row(
                                 children: [
                                   Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textSecondary),
-                                  const SizedBox(width: 8),
+                                  SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       _filterDateRange != null
@@ -835,7 +835,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                           label: Text('Réinitialiser les filtres'),
                           style: TextButton.styleFrom(
                             foregroundColor: AppColors.textSecondary,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           ),
                         ),
                       ],
@@ -860,7 +860,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
             child: Builder(
               builder: (context) {
                 if (state is StockEntriesLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(child: CircularProgressIndicator());
                 }
                 if (state is StockEntriesError) {
                   return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
@@ -926,9 +926,9 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                               ),
                               child: DropdownButton<int>(
                                 value: _rowsPerPage,
-                                underline: const SizedBox(),
-                                icon: const Icon(Icons.keyboard_arrow_down, size: 16),
-                                items: [10, 20, 50].map((v) => DropdownMenuItem(value: v, child: Text('$v', style: const TextStyle(fontSize: 13)))).toList(),
+                                underline: SizedBox(),
+                                icon: Icon(Icons.keyboard_arrow_down, size: 16),
+                                items: [10, 20, 50].map((v) => DropdownMenuItem(value: v, child: Text('$v', style: TextStyle(fontSize: 13)))).toList(),
                                 onChanged: (v) {
                                   if (v != null) {
                                     setState(() {
@@ -951,7 +951,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                                   enabled: _currentPage > 0,
                                   onTap: () => setState(() => _currentPage--),
                                 ),
-                                const SizedBox(width: 8),
+                                SizedBox(width: 8),
                                 _pageButton(
                                   icon: Icons.chevron_right,
                                   enabled: _currentPage < totalPages - 1,
@@ -965,7 +965,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                     ],
                   );
                 }
-                return const SizedBox();
+                return SizedBox();
               },
             ),
           ),
@@ -1083,7 +1083,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
               context.read<ProductsBloc>().add(LoadProducts());
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: const Text('Supprimer'),
+            child: Text('Supprimer'),
           ),
         ],
       ),

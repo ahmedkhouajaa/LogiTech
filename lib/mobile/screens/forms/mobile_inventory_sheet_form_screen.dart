@@ -166,12 +166,12 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(16.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Sélectionner un article', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                    Text('Sélectionner un article', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    IconButton(icon: Icon(Icons.close), onPressed: () => Navigator.pop(context)),
                   ],
                 ),
               ),
@@ -226,7 +226,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
             title: 'Général',
             icon: Icons.info_outline_rounded,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -235,7 +235,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                     value: _date,
                     onChanged: (d) => setState(() => _date = d),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   SmartDropdown<String>(
                     label: 'Entrepôt',
                     value: _selectedWarehouseId,
@@ -245,19 +245,19 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                     onChanged: (v) => setState(() => _selectedWarehouseId = v),
                     hint: 'Sélectionner l\'entrepôt...',
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   SmartTextInput(
                     label: 'Compté par',
                     initialValue: _countedByCtrl.text,
                     onChanged: (v) => _countedByCtrl.text = v,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   SmartTextInput(
                     label: 'Motif (Optionnel)',
                     initialValue: _reasonCtrl.text,
                     onChanged: (v) => _reasonCtrl.text = v,
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   SmartTextInput(
                     label: 'Notes (Optionnel)',
                     initialValue: _notesCtrl.text,
@@ -272,7 +272,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
             title: 'Articles',
             icon: Icons.inventory_2_outlined,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -359,7 +359,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                         ),
 
                         if (item.productId.isNotEmpty) ...[
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12),
                           Row(
                             children: [
                               Expanded(
@@ -389,13 +389,13 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('Qté physique', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                    const SizedBox(height: 4),
+                                    SizedBox(height: 4),
                                     TextFormField(
                                       initialValue: item.actualQty.toString(),
                                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                       decoration: InputDecoration(
                                         isDense: true,
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                       ),
                                       onChanged: (v) {

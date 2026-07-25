@@ -63,19 +63,19 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: const Text('Voulez-vous vraiment supprimer cet élément ?'),
+        title: Text('Confirmer la suppression'),
+        content: Text('Voulez-vous vraiment supprimer cet élément ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
+            child: Text('Annuler'),
           ),
           TextButton(
             onPressed: () {
               context.read<StockWithdrawalsBloc>().add(DeleteStockWithdrawal(id));
               Navigator.pop(ctx);
             },
-            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -186,7 +186,7 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
               });
             },
           child: ListView(
-            padding: const EdgeInsets.only(bottom: 80),
+            padding: EdgeInsets.only(bottom: 80),
             children: cards,
           ),
         );
@@ -227,7 +227,7 @@ class _MobileStockWithdrawalCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -243,9 +243,9 @@ class _MobileStockWithdrawalCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),

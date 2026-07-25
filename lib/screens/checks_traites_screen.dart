@@ -72,7 +72,7 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               // Search
               SizedBox(
                 width: 250,
@@ -81,7 +81,7 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                   onChanged: (v) => setState(() => _search = v.toLowerCase()),
                   decoration: InputDecoration(
                     hintText: 'Rechercher un n° ou nom...',
-                    prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                    prefixIcon: Icon(Icons.search_rounded, size: 18),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
@@ -94,7 +94,7 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
         Expanded(
           child: BlocBuilder<ChecksTraitesBloc, ChecksTraitesState>(
             builder: (context, state) {
-              if (state is ChecksTraitesLoading) return const Center(child: CircularProgressIndicator());
+              if (state is ChecksTraitesLoading) return Center(child: CircularProgressIndicator());
               if (state is ChecksTraitesError) return Center(child: Text('Erreur: ${state.message}'));
               if (state is ChecksTraitesLoaded) {
                 final filtered = state.documents.where((doc) {
@@ -120,8 +120,8 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                         return [
                           DataCell(Text(doc.documentNumber, style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary))),
                           DataCell(Text(_getTypeLabel(doc.type))),
-                          DataCell(Text(doc.partyName, style: const TextStyle(fontWeight: FontWeight.w500))),
-                          DataCell(Text(formatCurrencyDT(doc.amount), style: const TextStyle(fontWeight: FontWeight.bold))),
+                          DataCell(Text(doc.partyName, style: TextStyle(fontWeight: FontWeight.w500))),
+                          DataCell(Text(formatCurrencyDT(doc.amount), style: TextStyle(fontWeight: FontWeight.bold))),
                           DataCell(Text(DateFormat('dd/MM/yyyy').format(doc.maturityDate))),
                           DataCell(Text(doc.bankName ?? '—')),
                           DataCell(_buildStatusBadge(doc.status)),
@@ -150,11 +150,11 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                   ),
                 );
               }
-              return const SizedBox();
+              return SizedBox();
             },
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        SizedBox(height: AppSpacing.lg),
       ],
     );
   }
@@ -190,7 +190,7 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
         label = status;
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(4),

@@ -140,19 +140,19 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surface,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Réf: ${currentWithdrawal.number}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Réf: ${currentWithdrawal.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           Builder(
                             builder: (context) {
                               final statusEnum = StockWithdrawalStatus.values.firstWhere((s) => s.name == currentWithdrawal.status, orElse: () => StockWithdrawalStatus.draft);
                               return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: statusEnum.color.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
@@ -163,9 +163,9 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       _buildInfoRow('Date', formatDateTimeLong(currentWithdrawal.date)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Client', currentWithdrawal.customerName ?? currentWithdrawal.customerCompany ?? 'Non spécifié'),
                       if (currentWithdrawal.projectName != null) ...[
                         SizedBox(height: 8),
@@ -205,7 +205,7 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                           decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
                           child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,17 +234,17 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surfaceAlt,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     children: [
                       _buildInfoRow('Total HT', formatCurrencyDT(currentWithdrawal.totalHTAfterDiscount)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Total TVA', formatCurrencyDT(currentWithdrawal.totalTVA)),
                       if ((currentWithdrawal.totalTTC - currentWithdrawal.totalHTAfterDiscount - currentWithdrawal.totalTVA) > 0.01) ...[
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
                         _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentWithdrawal.totalTTC - currentWithdrawal.totalHTAfterDiscount - currentWithdrawal.totalTVA)),
                       ],
-                      const Divider(height: 24),
+                      Divider(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -270,7 +270,7 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                   ),
                 ),
               ],
-              const SizedBox(height: 32),
+              SizedBox(height: 32),
             ],
           ),
         ),
@@ -323,17 +323,17 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
         showDialog(
           context: context,
           builder: (dialogCtx) => AlertDialog(
-            title: const Text('Confirmer la suppression'),
-            content: const Text('Voulez-vous vraiment supprimer ce bon de sortie ?'),
+            title: Text('Confirmer la suppression'),
+            content: Text('Voulez-vous vraiment supprimer ce bon de sortie ?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogCtx);
                   context.read<StockWithdrawalsBloc>().add(DeleteStockWithdrawal(withdrawal.id));
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),

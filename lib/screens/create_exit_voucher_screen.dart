@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/searchable_dropdown_field.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/exit_vouchers/exit_vouchers_bloc.dart';
@@ -193,22 +194,22 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
             child: Form(
               key: _formKey,
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: EdgeInsets.all(AppSpacing.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildFormCard(),
-                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(height: AppSpacing.lg),
                     _buildArticlesSection(),
-                    const SizedBox(height: AppSpacing.md),
+                    SizedBox(height: AppSpacing.md),
                     _buildArticleActions(),
-                    const SizedBox(height: AppSpacing.md),
+                    SizedBox(height: AppSpacing.md),
                     _buildGlobalDiscountSection(),
-                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(height: AppSpacing.lg),
                     _buildTotalsSection(),
-                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(height: AppSpacing.lg),
                     _buildNotesSection(),
-                    const SizedBox(height: AppSpacing.xl),
+                    SizedBox(height: AppSpacing.xl),
                   ],
                 ),
               ),
@@ -238,16 +239,16 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           StatusBadge(label: _status.label, color: _status.color),
           const Spacer(),
           _buildHeaderButton(
               Icons.arrow_back_rounded, 'Retour', () => Navigator.pop(context)),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           _buildHeaderButton(Icons.description_rounded, 'Brouillon', () {
             setState(() => _status = DocumentStatus.draft);
           }),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           SizedBox(
             height: 36,
             child: ElevatedButton.icon(
@@ -262,7 +263,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md)),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: 16),
               ),
             ),
           ),
@@ -286,7 +287,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
           side: BorderSide(color: AppColors.border),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadius.md)),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: EdgeInsets.symmetric(horizontal: 12),
         ),
       ),
     );
@@ -316,7 +317,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textSecondary)),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     GestureDetector(
                       onTap: () async {
                         final picked = await showDatePicker(
@@ -381,7 +382,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Matricule du véhicule', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                          const SizedBox(height: 6),
+                          SizedBox(height: 6),
                           TextFormField(
                             controller: _vehicleRegistrationCtrl,
                             decoration: _formInputDecoration(hint: 'Entrer la valeur'),
@@ -395,7 +396,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Nom du chauffeur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                          const SizedBox(height: 6),
+                          SizedBox(height: 6),
                           TextFormField(
                             controller: _driverNameCtrl,
                             decoration: _formInputDecoration(hint: 'Entrer la valeur'),
@@ -408,7 +409,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // Client & Project
           Row(
@@ -419,29 +420,93 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Client', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     Row(
                       children: [
                         Expanded(
                           child: BlocBuilder<CustomersBloc, CustomersState>(
                             builder: (context, state) {
                               final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                              return DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                value: _selectedCustomerId,
-                                isExpanded: true,
-                                hint: const Text('Rechercher des clients...', style: TextStyle(fontSize: 13, color: Colors.black87)),
-                                items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.companyName ?? c.name, style: const TextStyle(fontSize: 13, color: Colors.black87)))).toList(),
-                                onChanged: (v) => setState(() => _selectedCustomerId = v),
-                                validator: (v) => v == null ? 'Requis' : null,
-                                decoration: _formInputDecoration(),
+                              final selectedCustomer = customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null);
+
+                              final displayName = selectedCustomer != null
+
+                                  ? (selectedCustomer.companyName?.isNotEmpty == true
+
+                                      ? selectedCustomer.companyName!
+
+                                      : (selectedCustomer.responsibleName?.isNotEmpty == true
+
+                                          ? selectedCustomer.responsibleName!
+
+                                          : selectedCustomer.name))
+
+                                  : null;
+
+
+                              return FormField<String>(
+
+                                initialValue: _selectedCustomerId,
+
+                                validator: (v) => _selectedCustomerId == null ? 'Requis' : null,
+
+                                builder: (field) {
+
+                                  return Column(
+
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+
+                                    children: [
+
+                                      SearchableSelectorField(
+
+                                        hint: 'Rechercher des clients...',
+
+                                        selectedText: displayName,
+
+                                        hasError: field.hasError,
+
+                                        onTap: () async {
+
+                                          final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
+
+                                          if (res != null) {
+
+                                            setState(() => _selectedCustomerId = res);
+
+                                            field.didChange(res);
+
+                                          }
+
+                                        },
+
+                                      ),
+
+                                      if (field.hasError) ...[
+
+                                        SizedBox(height: 4),
+
+                                        Padding(
+
+                                          padding: EdgeInsets.only(left: 4),
+
+                                          child: Text(field.errorText!, style: TextStyle(color: AppColors.error, fontSize: 11)),
+
+                                        ),
+
+                                      ],
+
+                                    ],
+
+                                  );
+
+                                },
+
                               );
                             },
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         SizedBox(
                           height: 48,
                           child: Tooltip(
@@ -465,7 +530,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                 side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
                               ),
-                              child: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                              child: Icon(Icons.person_add_alt_1_rounded, size: 20),
                             ),
                           ),
                         ),
@@ -480,23 +545,31 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Projet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     BlocBuilder<ProjectsBloc, ProjectsState>(
                       builder: (context, state) {
                         final projects = state is ProjectsLoaded ? state.projects : <Project>[];
-                        return DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                          value: _selectedProjectId,
-                          isExpanded: true,
-                          hint: const Text('Projet par defaut', style: TextStyle(fontSize: 13, color: Colors.black87)),
-                          items: [
-                            const DropdownMenuItem<String>(value: null, child: Text('Projet par defaut', style: TextStyle(fontSize: 13))),
-                            ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: const TextStyle(fontSize: 13)))),
-                          ],
-                          onChanged: (v) => setState(() => _selectedProjectId = v),
-                          decoration: _formInputDecoration(),
+                        final selectedProject = projects.cast<Project?>().firstWhere((p) => p?.id == _selectedProjectId, orElse: () => null);
+
+
+                        return SearchableSelectorField(
+
+                          hint: 'Projet par defaut',
+
+                          selectedText: selectedProject?.name ?? 'Projet par defaut',
+
+                          onTap: () async {
+
+                            final res = await showProjectSelectDialog(context, projects, selectedProjectId: _selectedProjectId);
+
+                            if (res != null) {
+
+                              setState(() => _selectedProjectId = (res == '__default__' ? null : res));
+
+                            }
+
+                          },
+
                         );
                       },
                     ),
@@ -525,7 +598,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                 onChanged: (v) => setState(() => _pricingModeHT = v!),
                 activeColor: AppColors.primary,
               ),
-              const Text('Taxe incluse', style: TextStyle(fontSize: 13)),
+              Text('Taxe incluse', style: TextStyle(fontSize: 13)),
             ],
           ),
         ],
@@ -580,7 +653,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
             padding:
                 EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: Color(0xFFF1F5F9),
+              color: AppColors.surfaceAlt,
               border: Border(
                 top: BorderSide(color: AppColors.border),
                 bottom: BorderSide(color: AppColors.border),
@@ -617,7 +690,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                     child: Text('Total HT',
                         style: _tableHeaderStyle(),
                         textAlign: TextAlign.right)),
-                const SizedBox(width: 60),
+                SizedBox(width: 60),
               ],
             ),
           ),
@@ -642,7 +715,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
     return TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: AppColors.textSecondary);
+        color: AppColors.textPrimary);
   }
 
   Widget _buildItemRow(int index, ExitVoucherItemUI item) {
@@ -681,7 +754,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                                 controller: textEditingController,
                                 focusNode: focusNode,
                                 decoration: _itemInputDecoration('Rechercher un article...'),
-                                style: const TextStyle(fontSize: 13),
+                                style: TextStyle(fontSize: 13),
                                 onChanged: (v) {
                                   // Update description manually if they just type
                                   setState(() => _items[index] = ExitVoucherItemUI(
@@ -714,7 +787,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                                         return ListTile(
                                           title: Text(option.name, style: TextStyle(fontSize: 13)),
                                           subtitle: option.reference != null ? Text(option.reference!, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
-                                          trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                          trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                           onTap: () => onSelected(option),
                                           dense: true,
                                         );
@@ -745,7 +818,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // Quantite with - / + buttons
               SizedBox(
                 width: 140,
@@ -771,7 +844,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                         child: Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: 4),
                     Expanded(
                       child: TextFormField(
                         key: ValueKey(
@@ -779,7 +852,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                         initialValue: formatQuantity(item.quantity),
                         decoration: _itemInputDecoration(''),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 13),
+                        style: TextStyle(fontSize: 13),
                         keyboardType: TextInputType.number,
                         onChanged: (v) => setState(() => _items[index] = ExitVoucherItemUI(
                           id: item.id, productId: item.productId,
@@ -789,7 +862,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                         )),
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    SizedBox(width: 4),
                     InkWell(
                       onTap: () => setState(() => _items[index] = ExitVoucherItemUI(
                         id: item.id, productId: item.productId,
@@ -812,7 +885,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // P.U
               SizedBox(
                 width: 130,
@@ -825,7 +898,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                             ? item.unitPrice.toStringAsFixed(0)
                             : '',
                         decoration: _itemInputDecoration(''),
-                        style: const TextStyle(fontSize: 13),
+                        style: TextStyle(fontSize: 13),
                         keyboardType: TextInputType.number,
                         onChanged: (v) => setState(() => _items[index] = ExitVoucherItemUI(
                           id: item.id, productId: item.productId,
@@ -845,7 +918,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // Remise
               SizedBox(
                 width: 100,
@@ -858,7 +931,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                             ? item.discountPercent.toStringAsFixed(0)
                             : '',
                         decoration: _itemInputDecoration(''),
-                        style: const TextStyle(fontSize: 13),
+                        style: TextStyle(fontSize: 13),
                         keyboardType: TextInputType.number,
                         onChanged: (v) => setState(() => _items[index] = ExitVoucherItemUI(
                           id: item.id, productId: item.productId,
@@ -878,7 +951,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // TVA
               SizedBox(
                 width: 100,
@@ -892,7 +965,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                           value: r,
                           child: Text('${r.toInt()}%',
                               style:
-                                  const TextStyle(fontSize: 13))))
+                                  TextStyle(fontSize: 13))))
                       .toList(),
                   onChanged: (v) => setState(() => _items[index] = ExitVoucherItemUI(
                     id: item.id, productId: item.productId,
@@ -904,7 +977,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                   isDense: true,
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               // Total HT (read-only)
               SizedBox(
                 width: 140,
@@ -971,9 +1044,38 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
     );
   }
 
-  Widget _buildArticleActions() {
+    Widget _buildArticleActions() {
     return Row(
       children: [
+        Expanded(
+          child: BlocBuilder<ProductsBloc, ProductsState>(
+            builder: (context, state) {
+              final products = state is ProductsLoaded ? state.products : <Product>[];
+              return SearchableSelectorField(
+                hint: 'Sélectionner un article...',
+                selectedText: null,
+                onTap: () async {
+                  final res = await showProductSelectDialog(context, products);
+                  if (res != null) {
+                    final product = products.firstWhere((p) => p.id == res);
+                    setState(() {
+                      _items.add(ExitVoucherItemUI(
+                        id: _uuid.v4(),
+                        productId: product.id,
+                        productName: product.name,
+                        quantity: 1,
+                        unitPrice: product.sellingPrice,
+                        tvaRate: product.tvaRate,
+                        discountPercent: 0,
+                      ));
+                    });
+                  }
+                },
+              );
+            },
+          ),
+        ),
+        SizedBox(width: 8),
         OutlinedButton.icon(
           onPressed: () {
             setState(() {
@@ -989,25 +1091,12 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
             });
           },
           icon: Icon(Icons.add_rounded, size: 16),
-          label: Text('Ajouter une ligne',
-              style: TextStyle(fontWeight: FontWeight.w600)),
+          label: Text('Ajouter une ligne vide', style: TextStyle(fontWeight: FontWeight.w600)),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.primary,
             side: BorderSide(color: AppColors.primary),
-            padding:
-                EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md)),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
-        ),
-        SizedBox(width: 8),
-        IconButton(
-          icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-          tooltip: 'Créer un nouvel article',
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
-          },
-          splashRadius: 24,
         ),
       ],
     );
@@ -1044,7 +1133,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
             ),
           ),
           if (_withGlobalDiscount) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Row(
               children: [
                 SizedBox(
@@ -1077,18 +1166,18 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             _buildTotalLine('Sous-total HT:', formatCurrencyDT(_totalHTAfterDiscount)),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             // TVA breakdown
             ..._tvaBreakdown.entries.map((entry) =>
               Padding(
-                padding: const EdgeInsets.only(bottom: 6),
+                padding: EdgeInsets.only(bottom: 6),
                 child: _buildTotalLine('TVA ${entry.key.toInt()}%:', formatCurrencyDT(entry.value)),
               ),
             ),
             InkWell(
               onTap: () => setState(() => _withTimbreFiscal = !_withTimbreFiscal),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
+                padding: EdgeInsets.symmetric(vertical: 2),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1113,10 +1202,10 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             if (_withGlobalDiscount && _globalDiscountAmount > 0) ...[
               _buildTotalLine('Remise:', '- ${formatCurrencyDT(_globalDiscountAmount)}'),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
             ],
             Divider(),
             SizedBox(height: 4),
@@ -1159,7 +1248,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                 maxLines: 5,
                 decoration: InputDecoration(
                   hintText: 'Visible sur le document final',
-                  hintStyle: TextStyle(color: Colors.black87, fontSize: 13),
+                  hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.surfaceAlt,
                   contentPadding: EdgeInsets.all(14),
@@ -1184,7 +1273,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                 maxLines: 5,
                 decoration: InputDecoration(
                   hintText: 'Conditions generales pour ce document',
-                  hintStyle: TextStyle(color: Colors.black87, fontSize: 13),
+                  hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                   filled: true,
                   fillColor: AppColors.surfaceAlt,
                   contentPadding: EdgeInsets.all(14),
@@ -1192,7 +1281,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
                 ),
-                style: const TextStyle(fontSize: 13),
+                style: TextStyle(fontSize: 13),
               ),
             ],
           ),

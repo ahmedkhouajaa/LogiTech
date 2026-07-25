@@ -50,7 +50,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
       children: [
         // Header
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.all(AppSpacing.lg),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -75,25 +75,25 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         // Filter bar
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: BlocBuilder<CreditNotesBloc, CreditNotesState>(
             builder: (context, state) {
               return _buildFilterBar(state);
             },
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        SizedBox(height: AppSpacing.lg),
         // Table
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: _buildTable(),
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        SizedBox(height: AppSpacing.lg),
       ],
     );
   }
@@ -128,7 +128,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -143,7 +143,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Client', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 SizedBox(
                   height: 40,
                   child: BlocBuilder<CustomersBloc, CustomersState>(
@@ -178,7 +178,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                             borderRadius: BorderRadius.circular(AppRadius.md),
                             border: Border.all(color: AppColors.border),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.symmetric(horizontal: 12),
                           child: Row(
                             children: [
                               Expanded(
@@ -215,7 +215,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Date de debut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -264,7 +264,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Date de fin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -361,7 +361,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                           child: Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: s.color.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -403,7 +403,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   )
                                 : Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: _statusFilter!.color.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -463,7 +463,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                 label: Text('Réinitialiser les filtres'),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.textSecondary,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
               ),
             ],
@@ -502,7 +502,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
               child: Container(
                 width: 440,
                 constraints: const BoxConstraints(maxHeight: 520),
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -645,7 +645,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
     return BlocBuilder<CreditNotesBloc, CreditNotesState>(
       builder: (context, state) {
         if (state is CreditNotesLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         }
         if (state is CreditNotesError) {
           return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
@@ -798,7 +798,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                                             child: Container(
                                               alignment: Alignment.centerLeft,
                                               child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                 decoration: BoxDecoration(
                                                   color: statusColor.withOpacity(0.1),
                                                   borderRadius: BorderRadius.circular(4),
@@ -908,7 +908,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                                 totalItems == 0 ? 'Affichage de 0 a 0 sur 0 resultats' : 'Affichage de ${startIndex + 1} a $endIndex sur $totalItems resultats',
                                 style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                               ),
-                              const SizedBox(width: 16),
+                              SizedBox(width: 16),
                               Row(
                                 children: [
                                   InkWell(
@@ -923,7 +923,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                                       child: Icon(Icons.chevron_left, size: 20, color: _currentPage > 0 ? AppColors.textPrimary : AppColors.textTertiary),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  SizedBox(width: 8),
                                   InkWell(
                                     onTap: _currentPage < totalPages - 1 ? () => setState(() => _currentPage++) : null,
                                     child: Container(
@@ -949,7 +949,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
             ],
           );
         }
-        return const SizedBox();
+        return SizedBox();
       },
     );
   }
@@ -986,7 +986,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
               context.read<CustomersBloc>().add(LoadCustomers());
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
-            child: const Text('Supprimer'),
+            child: Text('Supprimer'),
           ),
         ],
       ),

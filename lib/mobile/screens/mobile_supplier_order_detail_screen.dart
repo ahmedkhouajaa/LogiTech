@@ -87,7 +87,7 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
+              icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentOrder),
               itemBuilder: (_) => _buildActionMenu(context, currentOrder),
             ),
@@ -103,16 +103,16 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surface,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Réf: ${currentOrder.number}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Réf: ${currentOrder.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: _getStatusColor(currentOrder.status).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
@@ -121,13 +121,13 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       _buildInfoRow('Date', formatDateTimeLong(currentOrder.date)),
                       if (currentOrder.expectedDate != null) ...[
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
                         _buildInfoRow('Livraison', formatDateTimeLong(currentOrder.expectedDate!)),
                       ],
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Fournisseur', currentOrder.supplierName ?? 'Non spécifié'),
                       if (currentOrder.projectName != null && currentOrder.projectName!.isNotEmpty) ...[
                         SizedBox(height: 8),
@@ -167,7 +167,7 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
                           decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
                           child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,17 +198,17 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surfaceAlt,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     children: [
                       _buildInfoRow('Total HT', formatCurrencyDT(currentOrder.subTotalHT)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Total TVA', formatCurrencyDT(currentOrder.totalTVA)),
                       if (currentOrder.timbreFiscal > 0) ...[
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8),
                         _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentOrder.timbreFiscal)),
                       ],
-                      const Divider(height: 24),
+                      Divider(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -234,7 +234,7 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
                   ),
                 ),
               ],
-              const SizedBox(height: 32),
+              SizedBox(height: 32),
             ],
           ),
         ),
@@ -339,17 +339,17 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
         showDialog(
           context: context,
           builder: (dialogCtx) => AlertDialog(
-            title: const Text('Confirmer la suppression'),
-            content: const Text('Voulez-vous vraiment supprimer cette commande ?'),
+            title: Text('Confirmer la suppression'),
+            content: Text('Voulez-vous vraiment supprimer cette commande ?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogCtx);
                   context.read<SupplierOrdersBloc>().add(DeleteSupplierOrder(order.id));
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -403,25 +403,25 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
       builder: (dialogCtx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Changer le statut'),
+            title: Text('Changer le statut'),
             content: SizedBox(
               width: double.maxFinite,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Nouveau statut:'),
-                  const SizedBox(height: 8),
+                  Text('Nouveau statut:'),
+                  SizedBox(height: 8),
                   DropdownButtonFormField(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: selectedStatus,
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    decoration: InputDecoration(border: OutlineInputBorder()),
                     isExpanded: true,
                     items: ['draft', 'validated', 'cancelled'].map((s) => DropdownMenuItem(
                       value: s,
-                      child: Text(translateStatus(s), style: const TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text(translateStatus(s), style: TextStyle(fontWeight: FontWeight.bold)),
                     )).toList(),
                     onChanged: (v) {
                       if (v != null) setDialogState(() => selectedStatus = v);
@@ -431,14 +431,14 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   final updatedOrder = order.copyWith(status: selectedStatus);
                   context.read<SupplierOrdersBloc>().add(UpdateSupplierOrder(updatedOrder));
                   Navigator.pop(dialogCtx);
                 },
-                child: const Text('Enregistrer'),
+                child: Text('Enregistrer'),
               ),
             ],
           );
@@ -461,13 +461,13 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
           children: [
             TextField(
               controller: amountCtrl,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Montant (DT)',
                 border: OutlineInputBorder(),
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             ValueListenableBuilder<String>(
               valueListenable: methodNotifier,
               builder: (context, val, child) => DropdownButtonFormField(
@@ -475,7 +475,7 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                 value: val,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Méthode de paiement',
                   border: OutlineInputBorder(),
                 ),
@@ -539,7 +539,7 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
                 ));
               }
             },
-            child: const Text('Enregistrer'),
+            child: Text('Enregistrer'),
           ),
         ],
       ),
@@ -555,7 +555,7 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
-            child: const Text('Annuler'),
+            child: Text('Annuler'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -566,7 +566,7 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
                 _convertToReceipt(context, order);
               }
             },
-            child: const Text('Confirmer'),
+            child: Text('Confirmer'),
           ),
         ],
       ),
@@ -715,10 +715,10 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Confirmation'),
-        content: const Text('Voulez-vous transformer cette commande en avoir fournisseur ?'),
+        title: Text('Confirmation'),
+        content: Text('Voulez-vous transformer cette commande en avoir fournisseur ?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler')),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
@@ -756,7 +756,7 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
                 SnackBar(content: Text('Avoir $cnNumber créé avec succès'), backgroundColor: AppColors.success),
               );
             },
-            child: const Text('Confirmer'),
+            child: Text('Confirmer'),
           ),
         ],
       ),

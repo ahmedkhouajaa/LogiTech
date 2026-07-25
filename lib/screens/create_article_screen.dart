@@ -139,8 +139,8 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
               unselectedLabelColor: AppColors.textTertiary,
               indicatorColor: const Color(0xFF7C3AED),
               indicatorWeight: 3,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+              labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
               tabs: const [
                 Tab(text: 'General', icon: Icon(Icons.info_outline_rounded, size: 20)),
                 Tab(text: 'Prix & TVA', icon: Icon(Icons.attach_money_rounded, size: 20)),
@@ -157,10 +157,10 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  SingleChildScrollView(padding: const EdgeInsets.all(24), child: _buildMainSection()),
-                  SingleChildScrollView(padding: const EdgeInsets.all(24), child: _buildPricingSection()),
-                  SingleChildScrollView(padding: const EdgeInsets.all(24), child: _buildClassificationSection()),
-                  SingleChildScrollView(padding: const EdgeInsets.all(24), child: _buildStockSection()),
+                  SingleChildScrollView(padding: EdgeInsets.all(24), child: _buildMainSection()),
+                  SingleChildScrollView(padding: EdgeInsets.all(24), child: _buildPricingSection()),
+                  SingleChildScrollView(padding: EdgeInsets.all(24), child: _buildClassificationSection()),
+                  SingleChildScrollView(padding: EdgeInsets.all(24), child: _buildStockSection()),
                 ],
               ),
             ),
@@ -182,11 +182,11 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Destination', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Row(
             children: [
               Expanded(child: _buildSelectableButton('Vente', Icons.attach_money, _destination == 'Vente', () => setState(() => _destination = 'Vente'))),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(child: _buildSelectableButton('Achat', Icons.shopping_cart_outlined, _destination == 'Achat', () => setState(() => _destination = 'Achat'))),
               SizedBox(width: 12),
               Expanded(child: _buildSelectableButton('Vente et Achat', null, _destination == 'Vente et Achat', () => setState(() => _destination = 'Vente et Achat'))),
@@ -194,15 +194,15 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           ),
           SizedBox(height: 24),
           Text('Type d\'Article', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Row(
             children: [
               Expanded(child: _buildSelectableButton('Produit', Icons.inventory_2_outlined, _productType == 'produit', () => setState(() => _productType = 'produit'))),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(child: _buildSelectableButton('Service', Icons.settings_outlined, _productType == 'service', () => setState(() => _productType = 'service'))),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -211,9 +211,9 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                 child: Column(
                   children: [
                     AppTextField(label: 'Nom de l\'Article', controller: _nameCtrl, hint: 'Saisissez le nom de l\'article', validator: (v) => v!.isEmpty ? 'Requis' : null),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     AppTextField(label: 'Reference', controller: _refCtrl, hint: 'Saisissez la reference de l\'article'),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     AppTextField(label: 'Description', controller: _descCtrl, hint: 'Saisissez la description de l\'article', maxLines: 4),
                   ],
                 ),
@@ -250,15 +250,15 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           ),
           SizedBox(height: 24),
           Text('TVA', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Row(
             children: [
               _buildTvaButton(0),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               _buildTvaButton(7),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               _buildTvaButton(13),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               _buildTvaButton(19),
               SizedBox(width: 12),
               OutlinedButton.icon(
@@ -268,7 +268,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.textPrimary,
                   side: BorderSide(color: AppColors.border),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
             ],
@@ -292,10 +292,10 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           Row(
             children: [
               Text('Taxes Supplementaires', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: () {},
-                icon: const Icon(Icons.add, size: 16),
+                icon: Icon(Icons.add, size: 16),
                 label: Text('Ajouter Taxe', style: TextStyle(fontSize: 12)),
                 style: OutlinedButton.styleFrom(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -304,11 +304,11 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Row(
             children: [
-              Expanded(child: AppTextField(label: 'Prix de Vente', controller: _sellCtrl, suffix: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Text('DT')]), keyboardType: TextInputType.number)),
-              const SizedBox(width: 24),
+              Expanded(child: AppTextField(label: 'Prix de Vente', controller: _sellCtrl, suffix: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Text('DT')]), keyboardType: TextInputType.number)),
+              SizedBox(width: 24),
               Expanded(child: AppTextField(label: 'Prix d\'Achat', controller: _purchCtrl, suffix: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Text('DT')]), keyboardType: TextInputType.number)),
             ],
           ),
@@ -322,7 +322,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           ),
           SizedBox(height: 4),
           Text('Configurez des tarifs speciaux pour differents groupes de clients ou quantites d\'achat', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           DropdownButtonFormField<String>(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -334,7 +334,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
             decoration: InputDecoration(
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
         ],
@@ -354,7 +354,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Famille et Marque', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -372,13 +372,13 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Famille', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                          const SizedBox(height: 6),
+                          SizedBox(height: 6),
                           DropdownButtonFormField<String>(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                             value: _family,
-                            hint: const Text('Selectionner'),
+                            hint: Text('Selectionner'),
                             items: families.map((f) => DropdownMenuItem(value: f.id, child: Text(f.name))).toList(),
                             onChanged: (v) {
                               setState(() {
@@ -389,17 +389,17 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                             decoration: InputDecoration(
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             ),
                           ),
                         ],
                       );
                     }
-                    return const SizedBox();
+                    return SizedBox();
                   },
                 ),
               ),
-              const SizedBox(width: 24),
+              SizedBox(width: 24),
               Expanded(
                 child: BlocBuilder<ProductSettingsBloc, ProductSettingsState>(
                   builder: (context, state) {
@@ -419,7 +419,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Sous-famille', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                          const SizedBox(height: 6),
+                          SizedBox(height: 6),
                           DropdownButtonFormField<String>(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -431,13 +431,13 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                             decoration: InputDecoration(
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             ),
                           ),
                         ],
                       );
                     }
-                    return const SizedBox();
+                    return SizedBox();
                   },
                 ),
               ),
@@ -450,7 +450,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Categorie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   DropdownButtonFormField<String>(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -462,7 +462,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                     decoration: InputDecoration(
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
                   ),
                 ],
@@ -472,19 +472,19 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Marque', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   DropdownButtonFormField<String>(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: _brand,
-                    hint: const Text('Selectionner'),
+                    hint: Text('Selectionner'),
                     items: ['Samsung', 'Apple', 'Dell', 'HP'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                     onChanged: (v) => setState(() => _brand = v),
                     decoration: InputDecoration(
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
                   ),
                 ],
@@ -498,7 +498,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Unite', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   DropdownButtonFormField<String>(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -509,18 +509,18 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                     decoration: InputDecoration(
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
                   ),
                 ],
               )),
-              const SizedBox(width: 24),
+              SizedBox(width: 24),
               Expanded(child: Container()), // Empty space to align
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           AppTextField(label: 'Code-barres', controller: _barcodeCtrl, hint: 'Entrez le code-barres'),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           AppTextField(label: 'Notes Privees', controller: _privateNotesCtrl, maxLines: 3),
         ],
       ),
@@ -563,7 +563,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Text('Alerte rupture de stock', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
           SizedBox(height: 4),
           Text('Definissez des seuils d\'alerte pour etre notifie quand le stock est faible dans chaque entrepot', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
@@ -589,7 +589,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Text('Alertes de Stock Maximum (surstockage)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
           SizedBox(height: 4),
           Text('Definissez des seuils max pour etre alerte quand le stock depasse le maximum dans chaque entrepot', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
@@ -624,7 +624,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
             ),
             child: Row(
               children: [
-                const Text('% Remise Habituelle', style: TextStyle(fontSize: 14)),
+                Text('% Remise Habituelle', style: TextStyle(fontSize: 14)),
                 const Spacer(),
                 Switch(value: false, onChanged: (v) {}),
               ],

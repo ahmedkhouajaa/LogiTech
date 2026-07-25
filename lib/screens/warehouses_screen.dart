@@ -41,17 +41,17 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: const Text('Êtes-vous sûr de vouloir supprimer cet entrepôt ?'),
+        title: Text('Confirmer la suppression'),
+        content: Text('Êtes-vous sûr de vouloir supprimer cet entrepôt ?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler')),
           ElevatedButton(
             onPressed: () {
               context.read<WarehousesBloc>().add(DeleteWarehouse(id));
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Supprimer'),
+            child: Text('Supprimer'),
           ),
         ],
       ),
@@ -123,7 +123,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
     return BlocBuilder<WarehousesBloc, WarehousesState>(
       builder: (context, state) {
         if (state is WarehousesLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         } else if (state is WarehousesError) {
           return Center(child: Text('Erreur: ${state.message}', style: TextStyle(color: AppColors.error)));
         } else if (state is WarehousesLoaded) {
@@ -203,7 +203,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                             itemBuilder: (context) => [
                               PopupMenuItem(
                                 value: 'edit',
-                                child: const Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')]),
+                                child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')]),
                                 onTap: () {
                                   // Use Future.delayed because we can't open a dialog during popup menu dismissal
                                   Future.delayed(Duration.zero, () {
@@ -231,7 +231,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
             ),
           );
         }
-        return const SizedBox();
+        return SizedBox();
       },
     );
   }
@@ -329,18 +329,18 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(24),
               child: Text(
                 widget.warehouse == null ? 'Ajouter un Entrepôt' : 'Modifier l\'Entrepôt',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
-            const Divider(height: 1),
+            Divider(height: 1),
             
             // Form
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(24),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -352,14 +352,14 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
                         decoration: _inputDecoration('Saisissez le nom de l\'entrepôt'),
                         validator: (value) => value == null || value.isEmpty ? 'Ce champ est requis' : null,
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       
                       _buildLabel('Référence'),
                       TextFormField(
                         controller: _referenceController,
                         decoration: _inputDecoration('Saisissez la référence de l\'entrepôt'),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       
                       _buildLabel('Adresse'),
                       TextFormField(
@@ -367,7 +367,7 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
                         maxLines: 3,
                         decoration: _inputDecoration('Saisissez l\'adresse de l\'entrepôt'),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       
                       Row(
                         children: [
@@ -383,7 +383,7 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,7 +407,7 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
                           borderRadius: BorderRadius.circular(AppRadius.md),
                           border: Border.all(color: AppColors.border),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        padding: EdgeInsets.symmetric(horizontal: 12),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             value: _selectedCountry,
@@ -418,7 +418,7 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
                                 child: Row(
                                   children: [
                                     Icon(Icons.public, size: 18, color: c == 'Tunisia' ? AppColors.error : AppColors.textSecondary),
-                                    const SizedBox(width: 8),
+                                    SizedBox(width: 8),
                                     Text(c),
                                   ],
                                 ),
@@ -439,10 +439,10 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
                             onChanged: (val) => setState(() => _isActive = val ?? true),
                             activeColor: AppColors.primary,
                           ),
-                          const Text('Actif', style: TextStyle(fontWeight: FontWeight.w500)),
+                          Text('Actif', style: TextStyle(fontWeight: FontWeight.w500)),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -498,7 +498,7 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     ),
                     child: Text(widget.warehouse == null ? 'Créer' : 'Enregistrer'),

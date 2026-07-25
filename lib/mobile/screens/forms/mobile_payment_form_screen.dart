@@ -138,7 +138,7 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
           title: 'Informations Générales',
           icon: Icons.payments_outlined,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -163,7 +163,7 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartDropdown<String>(
@@ -183,7 +183,7 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 if (_contactType == 'customer')
                   BlocBuilder<CustomersBloc, CustomersState>(
                     builder: (context, state) {
@@ -216,7 +216,7 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                       );
                     },
                   ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartDatePicker(
@@ -234,7 +234,7 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
           title: 'Détails du montant',
           icon: Icons.account_balance_wallet_outlined,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -247,7 +247,7 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                     onChanged: (v) => _amount = double.tryParse(v) ?? 0,
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartDropdown<String>(
@@ -264,7 +264,7 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartTextInput(
@@ -283,7 +283,7 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
           icon: Icons.notes_outlined,
           isInitiallyExpanded: false,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -302,7 +302,7 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
                   child: SmartTextInput(

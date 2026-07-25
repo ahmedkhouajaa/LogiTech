@@ -73,7 +73,7 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
+              icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentNote),
               itemBuilder: (_) => _buildActionMenu(context, currentNote),
             ),
@@ -89,16 +89,16 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surface,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Réf: ${currentNote.number}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Réf: ${currentNote.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: _getStatusColor(currentNote.status).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
@@ -107,7 +107,7 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       _buildInfoRow('Date', formatDateTimeLong(currentNote.date)),
                       SizedBox(height: 8),
                       _buildInfoRow('Fournisseur', currentNote.supplierId ?? 'Non spécifié'),
@@ -145,7 +145,7 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
                           decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
                           child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,13 +172,13 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surfaceAlt,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: EdgeInsets.all(16.0),
                   child: Column(
                     children: [
                       _buildInfoRow('Total HT', formatCurrencyDT(currentNote.totalHT)),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       _buildInfoRow('Total TVA', formatCurrencyDT(currentNote.totalTVA)),
-                      const Divider(height: 24),
+                      Divider(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -190,7 +190,7 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              SizedBox(height: 32),
             ],
           ),
         ),
@@ -279,17 +279,17 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
         showDialog(
           context: context,
           builder: (dialogCtx) => AlertDialog(
-            title: const Text('Confirmer la suppression'),
-            content: const Text('Voulez-vous vraiment supprimer cet avoir ?'),
+            title: Text('Confirmer la suppression'),
+            content: Text('Voulez-vous vraiment supprimer cet avoir ?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogCtx);
                   context.read<SupplierCreditNotesBloc>().add(DeleteSupplierCreditNote(note.id));
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -326,25 +326,25 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
       builder: (dialogCtx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Changer le statut'),
+            title: Text('Changer le statut'),
             content: SizedBox(
               width: double.maxFinite,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Nouveau statut:'),
-                  const SizedBox(height: 8),
+                  Text('Nouveau statut:'),
+                  SizedBox(height: 8),
                   DropdownButtonFormField(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: selectedStatus,
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    decoration: InputDecoration(border: OutlineInputBorder()),
                     isExpanded: true,
                     items: ['draft', 'validated', 'refunded', 'cancelled'].map((s) => DropdownMenuItem(
                       value: s,
-                      child: Text(translateStatus(s), style: const TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text(translateStatus(s), style: TextStyle(fontWeight: FontWeight.bold)),
                     )).toList(),
                     onChanged: (v) {
                       if (v != null) setDialogState(() => selectedStatus = v);
@@ -354,14 +354,14 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   final updatedNote = note.copyWith(status: selectedStatus);
                   context.read<SupplierCreditNotesBloc>().add(UpdateSupplierCreditNote(updatedNote));
                   Navigator.pop(dialogCtx);
                 },
-                child: const Text('Enregistrer'),
+                child: Text('Enregistrer'),
               ),
             ],
           );

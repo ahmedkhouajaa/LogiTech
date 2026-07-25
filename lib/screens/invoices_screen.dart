@@ -99,25 +99,25 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         // Filter bar
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: BlocBuilder<InvoicesBloc, InvoicesState>(
             builder: (context, state) {
               return _buildFilterBar(state);
             },
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: AppSpacing.md),
         // Data table
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: _buildInvoiceTable(),
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        SizedBox(height: AppSpacing.sm),
       ],
     );
   }
@@ -196,7 +196,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(color: AppColors.border),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: EdgeInsets.symmetric(horizontal: 12),
                       child: Row(
                         children: [
                           Expanded(
@@ -222,7 +222,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           // Date de debut
           Expanded(
             flex: 2,
@@ -238,7 +238,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           // Date de fin
           Expanded(
             flex: 2,
@@ -254,7 +254,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           // Status filter
           SizedBox(
             width: 150,
@@ -305,7 +305,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: s.color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -347,7 +347,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                                 overflow: TextOverflow.ellipsis,
                               )
                             : Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: _statusFilter!.color.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -405,7 +405,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 label: Text('Réinitialiser les filtres'),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.textSecondary,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
               ),
             ],
@@ -444,7 +444,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               child: Container(
                 width: 440,
                 constraints: const BoxConstraints(maxHeight: 520),
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -588,7 +588,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         child,
       ],
     );
@@ -623,7 +623,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
           ),
-          style: const TextStyle(fontSize: 13),
+          style: TextStyle(fontSize: 13),
         ),
       ),
     );
@@ -643,7 +643,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   Widget _buildInvoiceTable() {
     return BlocBuilder<InvoicesBloc, InvoicesState>(
       builder: (context, state) {
-        if (state is InvoicesLoading) return const Center(child: CircularProgressIndicator());
+        if (state is InvoicesLoading) return Center(child: CircularProgressIndicator());
         if (state is InvoicesError) return Center(child: Text('Erreur: ${state.message}'));
         if (state is InvoicesLoaded) {
           final invoices = state.filteredInvoices;
@@ -691,9 +691,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                                   label: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const SizedBox(width: 24), // Spacer for Checkbox
-                                      const SizedBox(width: 12),
-                                      const Text('Reference'),
+                                      SizedBox(width: 24), // Spacer for Checkbox
+                                      SizedBox(width: 12),
+                                      Text('Reference'),
                                     ],
                                   ),
                                 ),
@@ -713,7 +713,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             ),
           );
         }
-        return const SizedBox();
+        return SizedBox();
       },
     );
   }
@@ -756,13 +756,13 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           Row(
             children: [
               Icon(Icons.person_outline_rounded, size: 16, color: AppColors.textTertiary),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(inv.customerName ?? '—', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13), overflow: TextOverflow.ellipsis),
+                    Text(inv.customerName ?? '—', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13), overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
@@ -870,12 +870,12 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           const Spacer(),
           // Navigation buttons
           IconButton(
-            icon: const Icon(Icons.chevron_left_rounded, size: 20),
+            icon: Icon(Icons.chevron_left_rounded, size: 20),
             onPressed: _currentPage > 0 ? () => setState(() => _currentPage--) : null,
             splashRadius: 18,
           ),
           IconButton(
-            icon: const Icon(Icons.chevron_right_rounded, size: 20),
+            icon: Icon(Icons.chevron_right_rounded, size: 20),
             onPressed: _currentPage < totalPages - 1 ? () => setState(() => _currentPage++) : null,
             splashRadius: 18,
           ),
@@ -888,17 +888,17 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
+        title: Text('Confirmer la suppression'),
         content: Text('Voulez-vous vraiment supprimer la facture ${inv.number} ?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler')),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               context.read<InvoicesBloc>().add(DeleteInvoice(inv.id));
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+            child: Text('Supprimer', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -920,8 +920,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Voulez-vous transformer cette facture en avoir ?'),
-            const SizedBox(height: 16),
+            Text('Voulez-vous transformer cette facture en avoir ?'),
+            SizedBox(height: 16),
             Text('Facture: ${inv.number}', style: TextStyle(fontWeight: FontWeight.bold)),
             Text('Client: ${inv.customerName}'),
             Text('Montant: ${formatCurrencyDT(inv.totalTTC + inv.timbreFiscal)}'),
@@ -979,7 +979,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Confirmer', style: TextStyle(color: Colors.white)),
+            child: Text('Confirmer', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -1086,25 +1086,25 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       builder: (dialogCtx) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            title: const Text('Changer le statut'),
+            title: Text('Changer le statut'),
             content: SizedBox(
               width: 400,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Nouveau statut:'),
-                  const SizedBox(height: 8),
+                  Text('Nouveau statut:'),
+                  SizedBox(height: 8),
                   DropdownButtonFormField(
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     value: selectedStatus,
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    decoration: InputDecoration(border: OutlineInputBorder()),
                     items: InvoiceStatus.values.map((s) => DropdownMenuItem(
                       value: s,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: s.color.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(4),
@@ -1118,13 +1118,13 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                       }
                     },
                   ),
-                  const SizedBox(height: 16),
-                  const Text('Notes (optionnel):'),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 16),
+                  Text('Notes (optionnel):'),
+                  SizedBox(height: 8),
                   TextField(
                     controller: notesController,
                     maxLines: 3,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       border: OutlineInputBorder(),
                       hintText: 'Ajouter une note...',
                     ),
@@ -1135,7 +1135,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogCtx),
-                child: const Text('Annuler'),
+                child: Text('Annuler'),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -1148,7 +1148,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Enregistrer'),
+                child: Text('Enregistrer'),
               ),
             ],
           );

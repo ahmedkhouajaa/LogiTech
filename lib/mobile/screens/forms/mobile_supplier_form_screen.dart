@@ -115,7 +115,7 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
                 title: 'Informations Générales',
                 icon: Icons.business_rounded,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -133,7 +133,7 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
                 title: 'Contact',
                 icon: Icons.contact_phone_outlined,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -143,7 +143,7 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
                         keyboardType: TextInputType.phone,
                         onChanged: (v) { if (!widget.isReadOnly) _phone = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Email',
                         initialValue: _email,
@@ -159,7 +159,7 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
                 title: 'Fiscalité',
                 icon: Icons.account_balance_wallet_outlined,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -168,7 +168,7 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
                         initialValue: _taxId,
                         onChanged: (v) { if (!widget.isReadOnly) _taxId = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Registre de Commerce (RC)',
                         initialValue: _rc,
@@ -184,7 +184,7 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
                 icon: Icons.location_on_outlined,
                 isInitiallyExpanded: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -194,7 +194,7 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
                         maxLines: 2,
                         onChanged: (v) { if (!widget.isReadOnly) _address = v; },
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Ville',
                         initialValue: _city,
@@ -210,7 +210,7 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
                 icon: Icons.notes_outlined,
                 isInitiallyExpanded: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   child: SmartTextInput(
                     label: 'Remarques',
                     initialValue: _notes,

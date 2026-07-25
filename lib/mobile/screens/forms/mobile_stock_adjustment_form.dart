@@ -142,14 +142,14 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
           title: 'Article',
           icon: Icons.inventory_2_outlined,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 BlocBuilder<ProductsBloc, ProductsState>(
                   builder: (context, pState) {
                     if (pState is! ProductsLoaded) {
-                      return const Center(child: CircularProgressIndicator());
+                      return Center(child: CircularProgressIndicator());
                     }
                     return Autocomplete<Product>(
                       displayStringForOption: (p) => p.name,
@@ -259,7 +259,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                           ),
                           child: Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.primary),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,11 +290,11 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
           title: 'Entrepôt & Action',
           icon: Icons.warehouse_rounded,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: BlocBuilder<StockBloc, StockState>(
               builder: (context, stockState) {
                 if (stockState is! StockLoaded) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(child: CircularProgressIndicator());
                 }
 
                 // Auto-select default warehouse
@@ -327,7 +327,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                       _adjustmentAction == 'correct' ? 'Nouveau stock réel' : 'Quantité',
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     TextFormField(
                       controller: _quantityCtrl,
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
@@ -368,7 +368,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
           icon: Icons.notes_rounded,
           isInitiallyExpanded: false,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: SmartTextInput(
               label: 'Notes internes, motif d\'ajustement...',
               controller: _notesCtrl,
@@ -385,7 +385,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
     return Container(
       padding: EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Color(0xFFF1F5F9),
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(
@@ -416,7 +416,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.sm),
