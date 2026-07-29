@@ -19,11 +19,13 @@ class MobileGenericListScreen extends StatelessWidget {
   final bool isEmpty;
   final String emptyMessage;
   final Widget child; // The list of cards
-  final VoidCallback onFabPressed;
-  final String fabText;
+  final VoidCallback? onFabPressed;
+  final String? fabText;
   final int? itemCount;
   final Widget? customFilterWidget;
   final ScrollController? scrollController;
+  final Widget? customFab;
+  final String? subtitle;
 
   const MobileGenericListScreen({
     super.key,
@@ -39,11 +41,13 @@ class MobileGenericListScreen extends StatelessWidget {
     required this.isEmpty,
     required this.emptyMessage,
     required this.child,
-    required this.onFabPressed,
-    required this.fabText,
+    this.onFabPressed,
+    this.fabText,
     this.itemCount,
     this.customFilterWidget,
     this.scrollController,
+    this.customFab,
+    this.subtitle,
   });
 
   @override
@@ -51,7 +55,20 @@ class MobileGenericListScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (subtitle != null && subtitle!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 4.0),
+              child: Text(
+                subtitle!,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
           // Sticky Search Bar
           MobileSearchBar(onChanged: onSearchChanged),
           
@@ -112,12 +129,12 @@ class MobileGenericListScreen extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: customFab ?? (onFabPressed != null && fabText != null ? FloatingActionButton.extended(
         onPressed: onFabPressed,
         icon: Icon(Icons.add, color: Colors.white),
-        label: Text(fabText, style: TextStyle(color: Colors.white)),
+        label: Text(fabText!, style: TextStyle(color: Colors.white)),
         backgroundColor: AppColors.primary,
-      ),
+      ) : null),
     );
   }
 }

@@ -30,6 +30,8 @@ import 'blocs/projects/projects_bloc.dart';
 import 'blocs/payments/payments_bloc.dart';
 import 'blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import 'blocs/treasury_transactions/treasury_transactions_bloc.dart';
+import 'blocs/reports/reports_bloc.dart';
+import 'blocs/retenue_source_vente/retenue_source_vente_bloc.dart';
 import 'blocs/checks_traites/checks_traites_bloc.dart';
 import 'blocs/return_notes/return_notes_bloc.dart';
 import 'blocs/supplier_returns/supplier_returns_bloc.dart';
@@ -162,6 +164,7 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => WarehousesBloc()..add(LoadWarehouses())),
         BlocProvider(create: (_) => InventorySheetsBloc(databaseHelper: DatabaseHelper.instance)..add(InventorySheetsLoadRequested())),
         BlocProvider(create: (_) => ReportsBloc()..add(ReportsRefreshRequested(dateRange: 'Cette Année'))),
+        BlocProvider(create: (_) => RetenueSourceVenteBloc()),
         BlocProvider(create: (_) => ThemeCubit()),
       ],
       child: BlocBuilder<ThemeCubit, ThemeMode>(

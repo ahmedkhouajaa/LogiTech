@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../models/treasury_transaction.dart';
 import '../../models/transaction_category.dart';
 import '../../database/database_helper.dart';
+import '../../services/firestore_pagination_service.dart';
 
 // Events
 abstract class TreasuryTransactionsEvent extends Equatable {
@@ -17,6 +18,26 @@ class LoadTreasuryTransactions extends TreasuryTransactionsEvent {
   const LoadTreasuryTransactions({this.startDate, this.endDate});
   @override
   List<Object?> get props => [startDate, endDate];
+}
+
+class LoadFirstTreasuryTransactions extends TreasuryTransactionsEvent {
+  final String searchQuery;
+  final String typeFilter;
+  const LoadFirstTreasuryTransactions({this.searchQuery = '', this.typeFilter = 'Tous'});
+  @override
+  List<Object?> get props => [searchQuery, typeFilter];
+}
+
+class LoadNextTreasuryTransactions extends TreasuryTransactionsEvent {
+  const LoadNextTreasuryTransactions();
+}
+
+class ResetTreasuryTransactionsPagination extends TreasuryTransactionsEvent {
+  final String searchQuery;
+  final String typeFilter;
+  const ResetTreasuryTransactionsPagination({this.searchQuery = '', this.typeFilter = 'Tous'});
+  @override
+  List<Object?> get props => [searchQuery, typeFilter];
 }
 
 class CreateTreasuryTransaction extends TreasuryTransactionsEvent {
@@ -62,9 +83,44 @@ class TreasuryTransactionsLoading extends TreasuryTransactionsState {}
 class TreasuryTransactionsLoaded extends TreasuryTransactionsState {
   final List<TreasuryTransaction> transactions;
   final List<TransactionCategory> categories;
-  const TreasuryTransactionsLoaded({required this.transactions, required this.categories});
+  final int totalCount;
+  final bool hasMore;
+  final bool isLoadingMore;
+  final String activeTypeFilter;
+  final String searchQuery;
+
+  const TreasuryTransactionsLoaded({
+    required this.transactions, 
+    required this.categories,
+    this.totalCount = 0,
+    this.hasMore = false,
+    this.isLoadingMore = false,
+    this.activeTypeFilter = 'Tous',
+    this.searchQuery = '',
+  });
+
+  TreasuryTransactionsLoaded copyWith({
+    List<TreasuryTransaction>? transactions,
+    List<TransactionCategory>? categories,
+    int? totalCount,
+    bool? hasMore,
+    bool? isLoadingMore,
+    String? activeTypeFilter,
+    String? searchQuery,
+  }) {
+    return TreasuryTransactionsLoaded(
+      transactions: transactions ?? this.transactions,
+      categories: categories ?? this.categories,
+      totalCount: totalCount ?? this.totalCount,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      activeTypeFilter: activeTypeFilter ?? this.activeTypeFilter,
+      searchQuery: searchQuery ?? this.searchQuery,
+    );
+  }
+
   @override
-  List<Object?> get props => [transactions, categories];
+  List<Object?> get props => [transactions, categories, totalCount, hasMore, isLoadingMore, activeTypeFilter, searchQuery];
 }
 
 class TreasuryTransactionsError extends TreasuryTransactionsState {
@@ -80,6 +136,9 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
 
   TreasuryTransactionsBloc({required this.databaseHelper}) : super(TreasuryTransactionsInitial()) {
     on<LoadTreasuryTransactions>(_onLoadTransactions);
+    on<LoadFirstTreasuryTransactions>(_onLoadFirst);
+    on<LoadNextTreasuryTransactions>(_onLoadNext);
+    on<ResetTreasuryTransactionsPagination>(_onResetPagination);
     on<CreateTreasuryTransaction>(_onCreateTransaction);
     on<DeleteTreasuryTransaction>(_onDeleteTransaction);
     on<LoadTransactionCategories>(_onLoadCategories);
@@ -125,10 +184,72 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
     }
   }
 
+  Future<void> _onLoadFirst(LoadFirstTreasuryTransactions event, Emitter<TreasuryTransactionsState> emit) async {
+    emit(TreasuryTransactionsLoading());
+    try {
+      final count = await FirestorePaginationService.instance.getTreasuryTransactionsCount(
+        searchQuery: event.searchQuery,
+        typeFilter: event.typeFilter,
+      );
+      final txs = await FirestorePaginationService.instance.getFirstTreasuryTransactions(
+        searchQuery: event.searchQuery,
+        typeFilter: event.typeFilter,
+      );
+      
+      final catMaps = await databaseHelper.getTransactionCategories();
+      final categories = catMaps.map((e) => TransactionCategory.fromMap(e)).toList();
+
+      emit(TreasuryTransactionsLoaded(
+        transactions: txs,
+        categories: categories,
+        totalCount: count,
+        hasMore: txs.length >= 10,
+        activeTypeFilter: event.typeFilter,
+        searchQuery: event.searchQuery,
+      ));
+    } catch (e) {
+      emit(TreasuryTransactionsError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadNext(LoadNextTreasuryTransactions event, Emitter<TreasuryTransactionsState> emit) async {
+    if (state is TreasuryTransactionsLoaded) {
+      final currentState = state as TreasuryTransactionsLoaded;
+      if (!currentState.hasMore || currentState.isLoadingMore) return;
+
+      emit(currentState.copyWith(isLoadingMore: true));
+      try {
+        final nextTxs = await FirestorePaginationService.instance.getNextTreasuryTransactions(
+          currentOffset: currentState.transactions.length,
+          searchQuery: currentState.searchQuery,
+          typeFilter: currentState.activeTypeFilter,
+        );
+
+        emit(currentState.copyWith(
+          transactions: [...currentState.transactions, ...nextTxs],
+          hasMore: nextTxs.length >= 10,
+          isLoadingMore: false,
+        ));
+      } catch (e) {
+        emit(currentState.copyWith(isLoadingMore: false));
+      }
+    }
+  }
+
+  Future<void> _onResetPagination(ResetTreasuryTransactionsPagination event, Emitter<TreasuryTransactionsState> emit) async {
+    FirestorePaginationService.instance.resetTreasuryTransactionsPagination();
+    add(LoadFirstTreasuryTransactions(searchQuery: event.searchQuery, typeFilter: event.typeFilter));
+  }
+
   Future<void> _onCreateTransaction(CreateTreasuryTransaction event, Emitter<TreasuryTransactionsState> emit) async {
     try {
       await databaseHelper.createTreasuryTransaction(event.transaction.toMap());
-      add(const LoadTreasuryTransactions());
+      if (state is TreasuryTransactionsLoaded) {
+        final s = state as TreasuryTransactionsLoaded;
+        add(LoadFirstTreasuryTransactions(searchQuery: s.searchQuery, typeFilter: s.activeTypeFilter));
+      } else {
+        add(const LoadTreasuryTransactions());
+      }
     } catch (e) {
       emit(TreasuryTransactionsError(e.toString()));
     }
@@ -137,7 +258,12 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
   Future<void> _onDeleteTransaction(DeleteTreasuryTransaction event, Emitter<TreasuryTransactionsState> emit) async {
     try {
       await databaseHelper.deleteTreasuryTransaction(event.id);
-      add(const LoadTreasuryTransactions());
+      if (state is TreasuryTransactionsLoaded) {
+        final s = state as TreasuryTransactionsLoaded;
+        add(LoadFirstTreasuryTransactions(searchQuery: s.searchQuery, typeFilter: s.activeTypeFilter));
+      } else {
+        add(const LoadTreasuryTransactions());
+      }
     } catch (e) {
       emit(TreasuryTransactionsError(e.toString()));
     }

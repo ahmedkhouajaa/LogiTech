@@ -5,11 +5,13 @@ class MobileModuleConfig {
   final String title;
   final String fabText;
   final List<String> filterOptions;
+  final String? subtitle;
 
   MobileModuleConfig({
     required this.title,
     required this.fabText,
     required this.filterOptions,
+    this.subtitle,
   });
 
   static MobileModuleConfig getConfig(AppModule module) {
@@ -99,13 +101,15 @@ class MobileModuleConfig {
         );
       case AppModule.withholdingTaxSales:
         return MobileModuleConfig(
-          title: 'RS vente',
+          title: 'RS Vente',
+          subtitle: 'Gérer les RS vente',
           fabText: 'Nouvelle retenue vente',
           filterOptions: ['Tous', 'En attente', 'Payé', 'Annulé'],
         );
       case AppModule.withholdingTaxPurchase:
         return MobileModuleConfig(
-          title: 'RS achat',
+          title: 'RS Achat',
+          subtitle: 'Gérer les RS achat',
           fabText: 'Nouvelle retenue achat',
           filterOptions: ['Tous', 'En attente', 'Payé', 'Annulé'],
         );

@@ -526,48 +526,83 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
 
                           // Section 2: Conditional Fields (Company vs Individual)
                           if (_supplierType == 'entreprise') ...[
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Nom de l\'Entreprise *',
-                                    hint: 'Saisissez le nom de l\'entreprise',
-                                    controller: _companyNameCtrl,
-                                    validator: (v) => v!.trim().isEmpty ? 'Le nom de l\'entreprise est requis' : null,
+                            isMobile
+                                ? Column(
+                                    children: [
+                                      AppTextField(
+                                        label: 'Nom de l\'Entreprise *',
+                                        hint: 'Saisissez le nom de l\'entreprise',
+                                        controller: _companyNameCtrl,
+                                        validator: (v) => v!.trim().isEmpty ? 'Le nom de l\'entreprise est requis' : null,
+                                      ),
+                                      SizedBox(height: 12),
+                                      AppTextField(
+                                        label: 'Nom du responsable',
+                                        hint: 'Saisissez le nom du responsable',
+                                        controller: _responsibleNameCtrl,
+                                      ),
+                                    ],
+                                  )
+                                : Row(
+                                    children: [
+                                      Expanded(
+                                        child: AppTextField(
+                                          label: 'Nom de l\'Entreprise *',
+                                          hint: 'Saisissez le nom de l\'entreprise',
+                                          controller: _companyNameCtrl,
+                                          validator: (v) => v!.trim().isEmpty ? 'Le nom de l\'entreprise est requis' : null,
+                                        ),
+                                      ),
+                                      SizedBox(width: 16),
+                                      Expanded(
+                                        child: AppTextField(
+                                          label: 'Nom du responsable',
+                                          hint: 'Saisissez le nom du responsable',
+                                          controller: _responsibleNameCtrl,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Nom du responsable',
-                                    hint: 'Saisissez le nom du responsable',
-                                    controller: _responsibleNameCtrl,
-                                  ),
-                                ),
-                              ],
-                            ),
                             SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Email Personnel *',
-                                    hint: 'Saisissez l\'email personnel',
-                                    controller: _emailCtrl,
-                                    keyboardType: TextInputType.emailAddress,
-                                    validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
+                            isMobile
+                                ? Column(
+                                    children: [
+                                      AppTextField(
+                                        label: 'Email Personnel *',
+                                        hint: 'Saisissez l\'email personnel',
+                                        controller: _emailCtrl,
+                                        keyboardType: TextInputType.emailAddress,
+                                        validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
+                                      ),
+                                      SizedBox(height: 12),
+                                      AppTextField(
+                                        label: 'Reference',
+                                        hint: 'Saisissez le code de reference',
+                                        controller: _referenceCtrl,
+                                      ),
+                                    ],
+                                  )
+                                : Row(
+                                    children: [
+                                      Expanded(
+                                        child: AppTextField(
+                                          label: 'Email Personnel *',
+                                          hint: 'Saisissez l\'email personnel',
+                                          controller: _emailCtrl,
+                                          keyboardType: TextInputType.emailAddress,
+                                          validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
+                                        ),
+                                      ),
+                                      SizedBox(width: 16),
+                                      Expanded(
+                                        child: AppTextField(
+                                          label: 'Reference',
+                                          hint: 'Saisissez le code de reference',
+                                          controller: _referenceCtrl,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Reference',
-                                    hint: 'Saisissez le code de reference',
-                                    controller: _referenceCtrl,
-                                  ),
-                                ),
-                              ],
-                            ),
                             SizedBox(height: 16),
                             Row(
                               children: [
@@ -583,55 +618,97 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                               ],
                             ),
                           ] else ...[
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Nom du responsable *',
-                                    hint: 'Saisissez le nom du responsable',
-                                    controller: _responsibleNameCtrl,
-                                    validator: (v) => v!.trim().isEmpty ? 'Le nom du responsable est requis' : null,
+                            isMobile
+                                ? Column(
+                                    children: [
+                                      AppTextField(
+                                        label: 'Nom du responsable *',
+                                        hint: 'Saisissez le nom du responsable',
+                                        controller: _responsibleNameCtrl,
+                                        validator: (v) => v!.trim().isEmpty ? 'Le nom du responsable est requis' : null,
+                                      ),
+                                      SizedBox(height: 12),
+                                      AppTextField(
+                                        label: 'Email Personnel *',
+                                        hint: 'Saisissez l\'email personnel',
+                                        controller: _emailCtrl,
+                                        keyboardType: TextInputType.emailAddress,
+                                        validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
+                                      ),
+                                    ],
+                                  )
+                                : Row(
+                                    children: [
+                                      Expanded(
+                                        child: AppTextField(
+                                          label: 'Nom du responsable *',
+                                          hint: 'Saisissez le nom du responsable',
+                                          controller: _responsibleNameCtrl,
+                                          validator: (v) => v!.trim().isEmpty ? 'Le nom du responsable est requis' : null,
+                                        ),
+                                      ),
+                                      SizedBox(width: 16),
+                                      Expanded(
+                                        child: AppTextField(
+                                          label: 'Email Personnel *',
+                                          hint: 'Saisissez l\'email personnel',
+                                          controller: _emailCtrl,
+                                          keyboardType: TextInputType.emailAddress,
+                                          validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Email Personnel *',
-                                    hint: 'Saisissez l\'email personnel',
-                                    controller: _emailCtrl,
-                                    keyboardType: TextInputType.emailAddress,
-                                    validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
-                                  ),
-                                ),
-                              ],
-                            ),
                             SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Reference',
-                                    hint: 'Saisissez le code de reference',
-                                    controller: _referenceCtrl,
+                            isMobile
+                                ? Column(
+                                    children: [
+                                      AppTextField(
+                                        label: 'Reference',
+                                        hint: 'Saisissez le code de reference',
+                                        controller: _referenceCtrl,
+                                      ),
+                                      SizedBox(height: 12),
+                                      AppTextField(
+                                        label: 'Numero CIN',
+                                        hint: 'Saisissez le numero CIN (8 chiffres)',
+                                        controller: _cinCtrl,
+                                        keyboardType: TextInputType.number,
+                                        validator: (v) {
+                                          if (v!.trim().isNotEmpty && v.trim().length != 8) {
+                                            return 'Le CIN doit contenir exactement 8 chiffres';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ],
+                                  )
+                                : Row(
+                                    children: [
+                                      Expanded(
+                                        child: AppTextField(
+                                          label: 'Reference',
+                                          hint: 'Saisissez le code de reference',
+                                          controller: _referenceCtrl,
+                                        ),
+                                      ),
+                                      SizedBox(width: 16),
+                                      Expanded(
+                                        child: AppTextField(
+                                          label: 'Numero CIN',
+                                          hint: 'Saisissez le numero CIN (8 chiffres)',
+                                          controller: _cinCtrl,
+                                          keyboardType: TextInputType.number,
+                                          validator: (v) {
+                                            if (v!.trim().isNotEmpty && v.trim().length != 8) {
+                                              return 'Le CIN doit contenir exactement 8 chiffres';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Numero CIN',
-                                    hint: 'Saisissez le numero CIN (8 chiffres)',
-                                    controller: _cinCtrl,
-                                    keyboardType: TextInputType.number,
-                                    validator: (v) {
-                                      if (v!.trim().isNotEmpty && v.trim().length != 8) {
-                                        return 'Le CIN doit contenir exactement 8 chiffres';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
                             SizedBox(height: 16),
                             Row(
                               children: [
@@ -761,11 +838,19 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                         children: [
                           _buildBankAccountSection(),
                           SizedBox(height: 24),
-                          Row(children: [
-                            Expanded(child: AppTextField(label: 'NIF (Numero d\'Identification Fiscale)', controller: _taxCtrl)),
-                            SizedBox(width: 16),
-                            Expanded(child: AppTextField(label: 'RC (Registre de Commerce)', controller: _rcCtrl)),
-                          ]),
+                          isMobile
+                              ? Column(
+                                  children: [
+                                    AppTextField(label: 'NIF (Numero d\'Identification Fiscale)', controller: _taxCtrl),
+                                    SizedBox(height: 12),
+                                    AppTextField(label: 'RC (Registre de Commerce)', controller: _rcCtrl),
+                                  ],
+                                )
+                              : Row(children: [
+                                  Expanded(child: AppTextField(label: 'NIF (Numero d\'Identification Fiscale)', controller: _taxCtrl)),
+                                  SizedBox(width: 16),
+                                  Expanded(child: AppTextField(label: 'RC (Registre de Commerce)', controller: _rcCtrl)),
+                                ]),
                           SizedBox(height: 16),
                           AppTextField(label: 'Notes privees', controller: _notesCtrl, maxLines: 5, hint: 'Ajouter une note sur ce fournisseur...'),
                         ],

@@ -5813,6 +5813,59 @@ class DatabaseHelper {
     return await db.query('treasury_accounts', orderBy: 'is_default DESC, name ASC');
   }
 
+  Future<List<Map<String, dynamic>>> getTreasuryAccountsPaginated({
+    required int limit,
+    required int offset,
+    String? searchQuery,
+  }) async {
+    final db = await database;
+    
+    // Auto-sync account balances before returning
+    await db.rawUpdate('''
+      UPDATE treasury_accounts
+      SET balance = COALESCE((
+        SELECT SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END)
+        FROM treasury_transactions
+        WHERE account_id = treasury_accounts.id
+      ), 0.0)
+    ''');
+
+    String where = '';
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      where = 'name LIKE ?';
+      whereArgs.add('%${searchQuery.trim()}%');
+    }
+
+    return await db.query(
+      'treasury_accounts',
+      where: where.isEmpty ? null : where,
+      whereArgs: whereArgs.isEmpty ? null : whereArgs,
+      orderBy: 'is_default DESC, name ASC',
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  Future<int> getTreasuryAccountsCount({String? searchQuery}) async {
+    final db = await database;
+    String where = '';
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      where = 'name LIKE ?';
+      whereArgs.add('%${searchQuery.trim()}%');
+    }
+
+    final queryStr = 'SELECT COUNT(*) as count FROM treasury_accounts ' + (where.isEmpty ? '' : 'WHERE $where');
+    final result = await db.rawQuery(
+      queryStr,
+      whereArgs.isEmpty ? null : whereArgs,
+    );
+    return result.isNotEmpty ? (result.first['count'] as int? ?? 0) : 0;
+  }
+
   Future<void> createTreasuryAccount(Map<String, dynamic> data) async {
     final db = await database;
     await db.insert('treasury_accounts', data);
@@ -5853,6 +5906,79 @@ class DatabaseHelper {
       ORDER BY t.date_transaction DESC, t.created_at DESC
     ''';
     return await db.rawQuery(query, whereArgs);
+  }
+
+  Future<List<Map<String, dynamic>>> getTreasuryTransactionsPaginated(int limit, int offset, String searchQuery, String typeFilter) async {
+    final db = await database;
+    
+    String whereClause = '';
+    List<dynamic> whereArgs = [];
+    List<String> conditions = [];
+    
+    if (searchQuery.isNotEmpty) {
+      conditions.add('(t.transaction_number LIKE ? OR a.name LIKE ? OR t.description LIKE ?)');
+      whereArgs.add('%$searchQuery%');
+      whereArgs.add('%$searchQuery%');
+      whereArgs.add('%$searchQuery%');
+    }
+    
+    if (typeFilter != 'Tous') {
+      conditions.add('t.type = ?');
+      whereArgs.add(typeFilter == 'Entrée' ? 'income' : 'expense');
+    }
+    
+    if (conditions.isNotEmpty) {
+      whereClause = 'WHERE ${conditions.join(' AND ')}';
+    }
+    
+    final query = '''
+      SELECT t.*, a.name AS account_name, p.name AS project_name
+      FROM treasury_transactions t
+      LEFT JOIN treasury_accounts a ON t.account_id = a.id
+      LEFT JOIN projects p ON t.project_id = p.id
+      $whereClause
+      ORDER BY t.date_transaction DESC, t.created_at DESC
+      LIMIT ? OFFSET ?
+    ''';
+    
+    whereArgs.add(limit);
+    whereArgs.add(offset);
+    
+    return await db.rawQuery(query, whereArgs);
+  }
+
+  Future<int> getTreasuryTransactionsCount(String searchQuery, String typeFilter) async {
+    final db = await database;
+    
+    String whereClause = '';
+    List<dynamic> whereArgs = [];
+    List<String> conditions = [];
+    
+    if (searchQuery.isNotEmpty) {
+      conditions.add('(t.transaction_number LIKE ? OR a.name LIKE ? OR t.description LIKE ?)');
+      whereArgs.add('%$searchQuery%');
+      whereArgs.add('%$searchQuery%');
+      whereArgs.add('%$searchQuery%');
+    }
+    
+    if (typeFilter != 'Tous') {
+      conditions.add('t.type = ?');
+      whereArgs.add(typeFilter == 'Entrée' ? 'income' : 'expense');
+    }
+    
+    if (conditions.isNotEmpty) {
+      whereClause = 'WHERE ${conditions.join(' AND ')}';
+    }
+    
+    final query = '''
+      SELECT COUNT(*)
+      FROM treasury_transactions t
+      LEFT JOIN treasury_accounts a ON t.account_id = a.id
+      $whereClause
+    ''';
+    
+    final result = await db.rawQuery(query, whereArgs);
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<void> createTreasuryTransaction(Map<String, dynamic> data) async {

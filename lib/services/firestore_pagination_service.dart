@@ -17,6 +17,10 @@ import '../models/purchase_invoice.dart';
 import '../models/customer.dart';
 import '../models/supplier.dart';
 import '../models/payment_model.dart';
+import '../models/treasury_account.dart';
+import '../models/treasury_transaction.dart';
+import '../models/retenue_source_vente.dart';
+import '../models/product.dart';
 import '../database/database_helper.dart';
 
 class FirestorePaginationService {
@@ -31,6 +35,7 @@ class FirestorePaginationService {
   DocumentSnapshot? _lastCustomerSnapshot;
   DocumentSnapshot? _lastSupplierSnapshot;
   DocumentSnapshot? _lastPaymentSnapshot;
+  DocumentSnapshot? _lastTreasuryAccountSnapshot;
   bool _initialized = false;
 
   void enablePersistence() {
@@ -3649,6 +3654,624 @@ class FirestorePaginationService {
         status: status,
       );
     }
+  }
+
+  // ─── TREASURY ACCOUNTS PAGINATION ──────────────────────────────────
+  void resetTreasuryAccountsPagination() {
+    _lastTreasuryAccountSnapshot = null;
+  }
+
+  Future<List<TreasuryAccount>> getFirstTreasuryAccounts({
+    int pageSize = 10,
+    String? searchQuery,
+  }) async {
+    resetTreasuryAccountsPagination();
+    try {
+      final localAccounts = await DatabaseHelper.instance.getTreasuryAccountsPaginated(
+        limit: pageSize,
+        offset: 0,
+        searchQuery: searchQuery,
+      );
+      if (localAccounts.isNotEmpty) {
+        return localAccounts.map((e) => TreasuryAccount.fromMap(e)).toList();
+      }
+    } catch (_) {}
+
+    try {
+      Query query = _firestore.collection('treasury_accounts');
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim();
+        query = query
+            .where('name', isGreaterThanOrEqualTo: q)
+            .where('name', isLessThanOrEqualTo: '$q\uf8ff');
+      }
+      query = query.orderBy('name', descending: false).limit(pageSize);
+
+      QuerySnapshot snapshot;
+      try {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
+        if (snapshot.docs.isEmpty) {
+          snapshot = await query.get(const GetOptions(source: Source.server));
+        }
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.server));
+      }
+
+      if (snapshot.docs.isNotEmpty) {
+        _lastTreasuryAccountSnapshot = snapshot.docs.last;
+      }
+      return snapshot.docs.map((doc) => TreasuryAccount.fromMap(doc.data() as Map<String, dynamic>)).toList();
+    } catch (e) {
+      final localData = await DatabaseHelper.instance.getTreasuryAccountsPaginated(
+        limit: pageSize,
+        offset: 0,
+        searchQuery: searchQuery,
+      );
+      return localData.map((e) => TreasuryAccount.fromMap(e)).toList();
+    }
+  }
+
+  Future<List<TreasuryAccount>> getNextTreasuryAccounts({
+    int pageSize = 10,
+    int currentOffset = 0,
+    String? searchQuery,
+  }) async {
+    try {
+      final localAccounts = await DatabaseHelper.instance.getTreasuryAccountsPaginated(
+        limit: pageSize,
+        offset: currentOffset,
+        searchQuery: searchQuery,
+      );
+      if (localAccounts.isNotEmpty) {
+        return localAccounts.map((e) => TreasuryAccount.fromMap(e)).toList();
+      }
+    } catch (_) {}
+
+    try {
+      if (_lastTreasuryAccountSnapshot == null) return [];
+
+      Query query = _firestore.collection('treasury_accounts');
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim();
+        query = query
+            .where('name', isGreaterThanOrEqualTo: q)
+            .where('name', isLessThanOrEqualTo: '$q\uf8ff');
+      }
+      query = query.orderBy('name', descending: false).startAfterDocument(_lastTreasuryAccountSnapshot!).limit(pageSize);
+
+      QuerySnapshot snapshot;
+      try {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
+        if (snapshot.docs.isEmpty) {
+          snapshot = await query.get(const GetOptions(source: Source.server));
+        }
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.server));
+      }
+
+      if (snapshot.docs.isNotEmpty) {
+        _lastTreasuryAccountSnapshot = snapshot.docs.last;
+      }
+      return snapshot.docs.map((doc) => TreasuryAccount.fromMap(doc.data() as Map<String, dynamic>)).toList();
+    } catch (e) {
+      final localData = await DatabaseHelper.instance.getTreasuryAccountsPaginated(
+        limit: pageSize,
+        offset: currentOffset,
+        searchQuery: searchQuery,
+      );
+      return localData.map((e) => TreasuryAccount.fromMap(e)).toList();
+    }
+  }
+
+  Future<int> getTreasuryAccountsCount({String? searchQuery}) async {
+    try {
+      final localCount = await DatabaseHelper.instance.getTreasuryAccountsCount(searchQuery: searchQuery);
+      if (localCount > 0) return localCount;
+    } catch (_) {}
+
+    try {
+      Query query = _firestore.collection('treasury_accounts');
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim();
+        query = query
+            .where('name', isGreaterThanOrEqualTo: q)
+            .where('name', isLessThanOrEqualTo: '$q\uf8ff');
+      }
+      final AggregateQuerySnapshot snapshot = await query.count().get();
+      return snapshot.count ?? 0;
+    } catch (e) {
+      return await DatabaseHelper.instance.getTreasuryAccountsCount(searchQuery: searchQuery);
+    }
+  }
+
+  // Treasury Transactions Pagination
+  DocumentSnapshot? _lastTreasuryTransactionSnapshot;
+
+  void resetTreasuryTransactionsPagination() {
+    _lastTreasuryTransactionSnapshot = null;
+  }
+
+  Future<List<TreasuryTransaction>> getFirstTreasuryTransactions({
+    int pageSize = 10,
+    String? searchQuery,
+    String typeFilter = 'Tous',
+  }) async {
+    resetTreasuryTransactionsPagination();
+    try {
+      final localData = await DatabaseHelper.instance.getTreasuryTransactionsPaginated(
+        pageSize,
+        0,
+        searchQuery ?? '',
+        typeFilter,
+      );
+      if (localData.isNotEmpty) {
+        return localData.map((e) => TreasuryTransaction.fromMap(e)).toList();
+      }
+    } catch (_) {}
+
+    try {
+      Query query = _firestore.collection('treasury_transactions');
+      
+      if (typeFilter != 'Tous') {
+        query = query.where('type', isEqualTo: typeFilter == 'Entrée' ? 'income' : 'expense');
+      }
+
+      // No range query on reference for transactions to allow ordering by date
+      // We will sort by created_at DESC as required
+      query = query.orderBy('created_at', descending: true).limit(pageSize);
+
+      QuerySnapshot snapshot;
+      try {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
+        if (snapshot.docs.isEmpty) {
+          snapshot = await query.get(const GetOptions(source: Source.server));
+        }
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.server));
+      }
+
+      if (snapshot.docs.isNotEmpty) {
+        _lastTreasuryTransactionSnapshot = snapshot.docs.last;
+      }
+      
+      var results = snapshot.docs.map((doc) => TreasuryTransaction.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim().toLowerCase();
+        results = results.where((t) => 
+          (t.transactionNumber.toLowerCase().contains(q)) || 
+          (t.accountName?.toLowerCase().contains(q) ?? false) ||
+          (t.description?.toLowerCase().contains(q) ?? false)
+        ).toList();
+      }
+      
+      return results;
+    } catch (e) {
+      final localData = await DatabaseHelper.instance.getTreasuryTransactionsPaginated(
+        pageSize,
+        0,
+        searchQuery ?? '',
+        typeFilter,
+      );
+      return localData.map((e) => TreasuryTransaction.fromMap(e)).toList();
+    }
+  }
+
+  Future<List<TreasuryTransaction>> getNextTreasuryTransactions({
+    int pageSize = 10,
+    int currentOffset = 0,
+    String? searchQuery,
+    String typeFilter = 'Tous',
+  }) async {
+    try {
+      final localData = await DatabaseHelper.instance.getTreasuryTransactionsPaginated(
+        pageSize,
+        currentOffset,
+        searchQuery ?? '',
+        typeFilter,
+      );
+      if (localData.isNotEmpty) {
+        return localData.map((e) => TreasuryTransaction.fromMap(e)).toList();
+      }
+    } catch (_) {}
+
+    try {
+      if (_lastTreasuryTransactionSnapshot == null) return [];
+
+      Query query = _firestore.collection('treasury_transactions');
+      
+      if (typeFilter != 'Tous') {
+        query = query.where('type', isEqualTo: typeFilter == 'Entrée' ? 'income' : 'expense');
+      }
+
+      query = query
+          .orderBy('created_at', descending: true)
+          .startAfterDocument(_lastTreasuryTransactionSnapshot!)
+          .limit(pageSize);
+
+      QuerySnapshot snapshot;
+      try {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
+        if (snapshot.docs.isEmpty) {
+          snapshot = await query.get(const GetOptions(source: Source.server));
+        }
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.server));
+      }
+
+      if (snapshot.docs.isNotEmpty) {
+        _lastTreasuryTransactionSnapshot = snapshot.docs.last;
+      }
+      
+      var results = snapshot.docs.map((doc) => TreasuryTransaction.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim().toLowerCase();
+        results = results.where((t) => 
+          (t.transactionNumber.toLowerCase().contains(q)) || 
+          (t.accountName?.toLowerCase().contains(q) ?? false) ||
+          (t.description?.toLowerCase().contains(q) ?? false)
+        ).toList();
+      }
+      
+      return results;
+    } catch (e) {
+      final localData = await DatabaseHelper.instance.getTreasuryTransactionsPaginated(
+        pageSize,
+        currentOffset,
+        searchQuery ?? '',
+        typeFilter,
+      );
+      return localData.map((e) => TreasuryTransaction.fromMap(e)).toList();
+    }
+  }
+
+  Future<int> getTreasuryTransactionsCount({String? searchQuery, String typeFilter = 'Tous'}) async {
+    try {
+      final localCount = await DatabaseHelper.instance.getTreasuryTransactionsCount(searchQuery ?? '', typeFilter);
+      if (localCount > 0) return localCount;
+    } catch (_) {}
+
+    try {
+      Query query = _firestore.collection('treasury_transactions');
+      
+      if (typeFilter != 'Tous') {
+        query = query.where('type', isEqualTo: typeFilter == 'Entrée' ? 'income' : 'expense');
+      }
+      
+      final AggregateQuerySnapshot snapshot = await query.count().get();
+      return snapshot.count ?? 0;
+    } catch (e) {
+      return await DatabaseHelper.instance.getTreasuryTransactionsCount(searchQuery ?? '', typeFilter);
+    }
+  }
+
+  // Retenue a la Source Vente Pagination
+  DocumentSnapshot? _lastRetenueSourceVenteSnapshot;
+
+  void resetRetenueSourceVentesPagination() {
+    _lastRetenueSourceVenteSnapshot = null;
+  }
+
+  Future<List<RetenueSourceVente>> _getRetenueSourceFromLocalDb({
+    required bool isSales,
+    String? searchQuery,
+    String statusFilter = 'Tous',
+  }) async {
+    try {
+      final payments = await DatabaseHelper.instance.getPayments();
+      final filtered = payments.where((p) {
+        if (p.method != 'retenue_source') return false;
+        if (isSales && p.direction != 'encaissement') return false;
+        if (!isSales && p.direction != 'decaissement') return false;
+
+        if (statusFilter != 'Tous') {
+          String dbStatus = statusFilter == 'Payé' ? 'paid' : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');
+          if (p.status != dbStatus) return false;
+        }
+
+        if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+          final q = searchQuery.trim().toLowerCase();
+          final ref = p.reference?.toLowerCase() ?? '';
+          final num = p.paymentNumber.toLowerCase();
+          final contact = p.contactName?.toLowerCase() ?? '';
+          if (!ref.contains(q) && !num.contains(q) && !contact.contains(q)) return false;
+        }
+
+        return true;
+      }).toList();
+
+      return filtered.map((p) => RetenueSourceVente(
+        id: p.id,
+        invoiceReference: (p.reference != null && p.reference!.isNotEmpty) ? p.reference! : p.paymentNumber,
+        clientName: p.contactName ?? 'Inconnu',
+        date: p.paymentDate,
+        amount: p.amount,
+        status: p.status == 'paid' ? 'Payé' : (p.status == 'cancelled' ? 'Annulé' : 'En attente'),
+      )).toList();
+    } catch (e) {
+      print("Error reading local payments DB: $e");
+      return [];
+    }
+  }
+
+  Future<List<RetenueSourceVente>> getFirstRetenueSourceVentes({
+    int pageSize = 10,
+    String? searchQuery,
+    String statusFilter = 'Tous',
+    bool isSales = true,
+  }) async {
+    resetRetenueSourceVentesPagination();
+    try {
+      Query query = _firestore.collection('payments')
+        .where('method', isEqualTo: 'retenue_source')
+        .where('direction', isEqualTo: isSales ? 'encaissement' : 'decaissement');
+      
+      if (statusFilter != 'Tous') {
+        String dbStatus = statusFilter == 'Payé' ? 'paid' : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');
+        query = query.where('status', isEqualTo: dbStatus);
+      }
+      
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim();
+        query = query
+            .where('reference', isGreaterThanOrEqualTo: q)
+            .where('reference', isLessThanOrEqualTo: '$q\uf8ff');
+      }
+
+      final snapshot = await query.limit(pageSize).get();
+
+      if (snapshot.docs.isNotEmpty) {
+        _lastRetenueSourceVenteSnapshot = snapshot.docs.last;
+        var results = snapshot.docs.map((doc) => RetenueSourceVente.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+        results.sort((a, b) => b.date.compareTo(a.date));
+        return results;
+      }
+    } catch (e) {
+      print("Error getting retenue source ventes from Firebase: $e");
+    }
+
+    final localResults = await _getRetenueSourceFromLocalDb(
+      isSales: isSales,
+      searchQuery: searchQuery,
+      statusFilter: statusFilter,
+    );
+    localResults.sort((a, b) => b.date.compareTo(a.date));
+    return localResults.take(pageSize).toList();
+  }
+
+  Future<List<RetenueSourceVente>> getNextRetenueSourceVentes({
+    int pageSize = 10,
+    String? searchQuery,
+    String statusFilter = 'Tous',
+    bool isSales = true,
+  }) async {
+    if (_lastRetenueSourceVenteSnapshot == null) {
+      return getFirstRetenueSourceVentes(pageSize: pageSize, searchQuery: searchQuery, statusFilter: statusFilter, isSales: isSales);
+    }
+
+    try {
+      Query query = _firestore.collection('payments')
+        .where('method', isEqualTo: 'retenue_source')
+        .where('direction', isEqualTo: isSales ? 'encaissement' : 'decaissement');
+      
+      if (statusFilter != 'Tous') {
+        String dbStatus = statusFilter == 'Payé' ? 'paid' : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');
+        query = query.where('status', isEqualTo: dbStatus);
+      }
+      
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim();
+        query = query
+            .where('reference', isGreaterThanOrEqualTo: q)
+            .where('reference', isLessThanOrEqualTo: '$q\uf8ff');
+      }
+
+      query = query.startAfterDocument(_lastRetenueSourceVenteSnapshot!).limit(pageSize);
+      final snapshot = await query.get();
+
+      if (snapshot.docs.isNotEmpty) {
+        _lastRetenueSourceVenteSnapshot = snapshot.docs.last;
+        var results = snapshot.docs.map((doc) => RetenueSourceVente.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+        results.sort((a, b) => b.date.compareTo(a.date));
+        return results;
+      }
+    } catch (e) {
+      print("Error getting next retenue source ventes from Firebase: $e");
+    }
+
+    final localResults = await _getRetenueSourceFromLocalDb(
+      isSales: isSales,
+      searchQuery: searchQuery,
+      statusFilter: statusFilter,
+    );
+    localResults.sort((a, b) => b.date.compareTo(a.date));
+    return localResults;
+  }
+
+  Future<int> getRetenueSourceVentesCount({String? searchQuery, String statusFilter = 'Tous', bool isSales = true}) async {
+    try {
+      Query query = _firestore.collection('payments')
+        .where('method', isEqualTo: 'retenue_source')
+        .where('direction', isEqualTo: isSales ? 'encaissement' : 'decaissement');
+      
+      if (statusFilter != 'Tous') {
+        String dbStatus = statusFilter == 'Payé' ? 'paid' : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');
+        query = query.where('status', isEqualTo: dbStatus);
+      }
+      
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim();
+        query = query
+            .where('reference', isGreaterThanOrEqualTo: q)
+            .where('reference', isLessThanOrEqualTo: '$q\uf8ff');
+      }
+      
+      final AggregateQuerySnapshot snapshot = await query.count().get();
+      int count = snapshot.count ?? 0;
+      if (count > 0) return count;
+    } catch (e) {
+      print("Error getting count from Firebase: $e");
+    }
+
+    final localResults = await _getRetenueSourceFromLocalDb(
+      isSales: isSales,
+      searchQuery: searchQuery,
+      statusFilter: statusFilter,
+    );
+    return localResults.length;
+  }
+
+  // --- Products Pagination ---
+  DocumentSnapshot? _lastProductSnapshot;
+
+  void resetProductsPagination() {
+    _lastProductSnapshot = null;
+  }
+
+  Future<List<Product>> _getProductsFromLocalDb({
+    String? searchQuery,
+    String stockFilter = 'Tous',
+  }) async {
+    try {
+      final products = await DatabaseHelper.instance.getProducts();
+      final filtered = products.where((p) {
+        if (p.isDeleted) return false;
+
+        if (stockFilter == 'En stock' && p.stockQty <= 0) return false;
+        if (stockFilter == 'Rupture' && p.stockQty > 0) return false;
+
+        if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+          final q = searchQuery.trim().toLowerCase();
+          final name = p.name.toLowerCase();
+          final code = p.code.toLowerCase();
+          final ref = p.reference?.toLowerCase() ?? '';
+          if (!name.contains(q) && !code.contains(q) && !ref.contains(q)) return false;
+        }
+
+        return true;
+      }).toList();
+
+      return filtered;
+    } catch (e) {
+      print("Error reading local products DB: $e");
+      return [];
+    }
+  }
+
+  Future<List<Product>> getFirstProducts({
+    int pageSize = 10,
+    String? searchQuery,
+    String stockFilter = 'Tous',
+  }) async {
+    resetProductsPagination();
+    try {
+      Query query = _firestore.collection('products').where('is_deleted', isEqualTo: false);
+
+      if (stockFilter == 'En stock') {
+        query = query.where('stock_qty', isGreaterThan: 0);
+      } else if (stockFilter == 'Rupture') {
+        query = query.where('stock_qty', isEqualTo: 0);
+      }
+
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim();
+        query = query
+            .where('name', isGreaterThanOrEqualTo: q)
+            .where('name', isLessThanOrEqualTo: '$q\uf8ff');
+      }
+
+      final snapshot = await query.limit(pageSize).get();
+
+      if (snapshot.docs.isNotEmpty) {
+        _lastProductSnapshot = snapshot.docs.last;
+        var results = snapshot.docs.map((doc) => Product.fromMap(doc.data() as Map<String, dynamic>)).toList();
+        return results;
+      }
+    } catch (e) {
+      print("Error getting first products from Firebase: $e");
+    }
+
+    final localResults = await _getProductsFromLocalDb(
+      searchQuery: searchQuery,
+      stockFilter: stockFilter,
+    );
+    return localResults.take(pageSize).toList();
+  }
+
+  Future<List<Product>> getNextProducts({
+    int pageSize = 10,
+    String? searchQuery,
+    String stockFilter = 'Tous',
+  }) async {
+    if (_lastProductSnapshot == null) {
+      return getFirstProducts(pageSize: pageSize, searchQuery: searchQuery, stockFilter: stockFilter);
+    }
+
+    try {
+      Query query = _firestore.collection('products').where('is_deleted', isEqualTo: false);
+
+      if (stockFilter == 'En stock') {
+        query = query.where('stock_qty', isGreaterThan: 0);
+      } else if (stockFilter == 'Rupture') {
+        query = query.where('stock_qty', isEqualTo: 0);
+      }
+
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim();
+        query = query
+            .where('name', isGreaterThanOrEqualTo: q)
+            .where('name', isLessThanOrEqualTo: '$q\uf8ff');
+      }
+
+      query = query.startAfterDocument(_lastProductSnapshot!).limit(pageSize);
+      final snapshot = await query.get();
+
+      if (snapshot.docs.isNotEmpty) {
+        _lastProductSnapshot = snapshot.docs.last;
+        var results = snapshot.docs.map((doc) => Product.fromMap(doc.data() as Map<String, dynamic>)).toList();
+        return results;
+      }
+    } catch (e) {
+      print("Error getting next products from Firebase: $e");
+    }
+
+    final localResults = await _getProductsFromLocalDb(
+      searchQuery: searchQuery,
+      stockFilter: stockFilter,
+    );
+    return localResults;
+  }
+
+  Future<int> getProductsCount({String? searchQuery, String stockFilter = 'Tous'}) async {
+    try {
+      Query query = _firestore.collection('products').where('is_deleted', isEqualTo: false);
+
+      if (stockFilter == 'En stock') {
+        query = query.where('stock_qty', isGreaterThan: 0);
+      } else if (stockFilter == 'Rupture') {
+        query = query.where('stock_qty', isEqualTo: 0);
+      }
+
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim();
+        query = query
+            .where('name', isGreaterThanOrEqualTo: q)
+            .where('name', isLessThanOrEqualTo: '$q\uf8ff');
+      }
+
+      final AggregateQuerySnapshot snapshot = await query.count().get();
+      int count = snapshot.count ?? 0;
+      if (count > 0) return count;
+    } catch (e) {
+      print("Error getting products count from Firebase: $e");
+    }
+
+    final localResults = await _getProductsFromLocalDb(
+      searchQuery: searchQuery,
+      stockFilter: stockFilter,
+    );
+    return localResults.length;
   }
 }
 

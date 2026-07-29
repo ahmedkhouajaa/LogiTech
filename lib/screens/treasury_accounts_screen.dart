@@ -11,6 +11,7 @@ import '../models/treasury_transaction.dart';
 import '../models/project.dart';
 import '../services/expense_category_service.dart';
 import 'package:intl/intl.dart';
+import '../mobile/screens/mobile_treasury_accounts_screen.dart';
 
 class TreasuryAccountsScreen extends StatefulWidget {
   const TreasuryAccountsScreen({super.key});
@@ -67,6 +68,14 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
     
+    if (isMobile) {
+      return MobileTreasuryAccountsScreen(
+        showAccountDialog: _showAccountDialog,
+        showExpenseDialog: _showExpenseDialog,
+        handleAction: _handleAction,
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -390,11 +399,14 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmall = screenWidth < 600;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
       child: Container(
-        width: 500,
-        padding: EdgeInsets.all(24),
+        width: isSmall ? screenWidth * 0.92 : 500,
+        padding: EdgeInsets.all(isSmall ? 16 : 24),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -472,6 +484,7 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
                 SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   value: _selectedBank,
+                  isExpanded: true,
                   hint: Text('Sélectionnez une banque', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
                   icon: Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
                   decoration: InputDecoration(
@@ -480,7 +493,7 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                   ),
                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                  items: _tunisianBanks.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
+                  items: _tunisianBanks.map((b) => DropdownMenuItem(value: b, child: Text(b, overflow: TextOverflow.ellipsis))).toList(),
                   onChanged: (v) => setState(() => _selectedBank = v),
                   validator: (v) => v == null ? 'Requis' : null,
                 ),
@@ -522,6 +535,7 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
               SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _selectedCurrency,
+                isExpanded: true,
                 icon: Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
                 decoration: InputDecoration(
                   contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -537,7 +551,13 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
                       children: [
                         Text(c['flag']!, style: TextStyle(fontSize: 16)),
                         SizedBox(width: 8),
-                        Text('${c['code']} - ${c['name']}', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+                        Expanded(
+                          child: Text(
+                            '${c['code']} - ${c['name']}',
+                            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -557,7 +577,7 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12),
+        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 6),
         decoration: BoxDecoration(
           color: isSelected ? Color(0xFFEFF6FF) : Colors.white,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -566,10 +586,21 @@ class _CreateTreasuryAccountDialogState extends State<_CreateTreasuryAccountDial
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? AppColors.primary : AppColors.textSecondary)),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             if (isSelected) ...[
-              SizedBox(width: 8),
-              Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 16),
+              SizedBox(width: 4),
+              Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 14),
             ],
           ],
         ),
@@ -797,7 +828,7 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Catégorie de Dépense', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
+                    Expanded(child: Text('Catégorie de Dépense', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary))),
                     TextButton.icon(
                       onPressed: () async {
                         final updated = await showDialog<Map<String, String>>(
@@ -814,7 +845,7 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                         }
                       },
                       icon: Icon(Icons.edit_rounded, size: 14, color: AppColors.textSecondary),
-                      label: Text('Modifier les catégories de dépense', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                      label: Text('Modifier', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                       style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size(0, 0)),
                     ),
                   ],
