@@ -17,25 +17,26 @@ String formatCurrencyCompact(double amount) {
 
 // ─── Date Formatting ──────────────────────────────────────────────
 String formatDate(DateTime date) {
-  return DateFormat('dd/MM/yyyy', 'fr_FR').format(date);
+  return DateFormat('dd/MM/yyyy', 'fr_FR').format(date.toLocal());
 }
 
 String formatDateTime(DateTime date) {
-  return DateFormat('dd/MM/yyyy HH:mm', 'fr_FR').format(date);
+  return DateFormat('dd/MM/yyyy HH:mm', 'fr_FR').format(date.toLocal());
 }
 
 String formatDateShort(DateTime date) {
-  return DateFormat('dd MMM yyyy', 'fr_FR').format(date);
+  return DateFormat('dd MMM yyyy', 'fr_FR').format(date.toLocal());
 }
 
 String formatDateRelative(DateTime date) {
+  final d = date.toLocal();
   final now = DateTime.now();
-  final diff = now.difference(date);
+  final diff = now.difference(d);
   if (diff.inMinutes < 1) return "A l'instant";
   if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes} min';
   if (diff.inHours < 24) return 'Il y a ${diff.inHours}h';
   if (diff.inDays < 7) return 'Il y a ${diff.inDays} jours';
-  return formatDate(date);
+  return formatDate(d);
 }
 
 // ─── Document Number Generator ────────────────────────────────────
@@ -111,10 +112,11 @@ String formatCurrencyDT(double amount) {
 
 // ─── Long Date Format (e.g., "11 juin 2026") ──────────────────────
 String formatDateLong(DateTime date) {
-  return DateFormat('d MMMM yyyy', 'fr_FR').format(date);
+  return DateFormat('d MMMM yyyy', 'fr_FR').format(date.toLocal());
 }
 
 // ─── Date + Time Format (e.g., "11 juin 2026 - 18:18") ───────────
 String formatDateTimeLong(DateTime date) {
-  return '${DateFormat('d MMMM yyyy', 'fr_FR').format(date)} - ${DateFormat('HH:mm', 'fr_FR').format(date)}';
+  final d = date.toLocal();
+  return '${DateFormat('d MMMM yyyy', 'fr_FR').format(d)} - ${DateFormat('HH:mm', 'fr_FR').format(d)}';
 }

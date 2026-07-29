@@ -31,6 +31,7 @@ import '../models/credit_note.dart';
 import '../models/purchase_invoice.dart';
 import '../models/supplier_return.dart';
 import '../models/supplier_credit_note.dart';
+import '../models/stock_entry.dart';
 import '../utils/constants.dart';
 
 class DatabaseHelper {
@@ -342,6 +343,9 @@ class DatabaseHelper {
         "ALTER TABLE customers ADD COLUMN delivery_same_as_billing INTEGER DEFAULT 1",
         "ALTER TABLE customers ADD COLUMN bank_account TEXT",
         "ALTER TABLE customers ADD COLUMN tva_suspension INTEGER DEFAULT 0",
+        "ALTER TABLE customers ADD COLUMN tva_attestation TEXT",
+        "ALTER TABLE customers ADD COLUMN tva_start_date TEXT",
+        "ALTER TABLE customers ADD COLUMN tva_end_date TEXT",
         "ALTER TABLE customers ADD COLUMN price_list TEXT DEFAULT 'default'",
         "ALTER TABLE customers ADD COLUMN private_note TEXT",
       ];
@@ -1358,6 +1362,9 @@ class DatabaseHelper {
         delivery_same_as_billing INTEGER DEFAULT 1,
         bank_account TEXT,
         tva_suspension INTEGER DEFAULT 0,
+        tva_attestation TEXT,
+        tva_start_date TEXT,
+        tva_end_date TEXT,
         price_list TEXT DEFAULT 'default',
         private_note TEXT
       )
@@ -2554,6 +2561,59 @@ class DatabaseHelper {
     return maps.map((m) => Customer.fromMap(m)).toList();
   }
 
+  Future<List<Customer>> getCustomersPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(name) LIKE ? OR LOWER(code) LIKE ? OR LOWER(email) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final maps = await db.rawQuery('''
+      SELECT * 
+      FROM customers 
+      WHERE $whereString
+      ORDER BY name ASC
+      LIMIT ? OFFSET ?
+    ''', whereArgs);
+    
+    return maps.map((m) => Customer.fromMap(m)).toList();
+  }
+
+  Future<int> getCustomersCount({
+    String? searchQuery,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(name) LIKE ? OR LOWER(code) LIKE ? OR LOWER(email) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM customers 
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
   Future<Customer?> getCustomer(String id) async {
     final map = await getById('customers', id);
     return map != null ? Customer.fromMap(map) : null;
@@ -2593,6 +2653,59 @@ class DatabaseHelper {
 
   Future<void> deleteSupplier(String id) async {
     await softDelete('suppliers', id);
+  }
+
+  Future<List<Supplier>> getSuppliersPaginated({
+    required int limit,
+    required int offset,
+    String? searchQuery,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(name) LIKE ? OR LOWER(code) LIKE ? OR LOWER(email) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final maps = await db.rawQuery('''
+      SELECT * 
+      FROM suppliers 
+      WHERE $whereString
+      ORDER BY name ASC
+      LIMIT ? OFFSET ?
+    ''', whereArgs);
+    
+    return maps.map((m) => Supplier.fromMap(m)).toList();
+  }
+
+  Future<int> getSuppliersCount({
+    String? searchQuery,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(name) LIKE ? OR LOWER(code) LIKE ? OR LOWER(email) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM suppliers 
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
   }
 
   // ─── Products ───────────────────────────────────────────────────
@@ -2652,6 +2765,117 @@ class DatabaseHelper {
       invoices.add(invoice.copyWith(items: items));
     }
     return invoices;
+  }
+
+  Future<List<Invoice>> getInvoicesPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['i.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(i.number) LIKE ? OR LOWER(c.name) LIKE ?)');
+      whereArgs.addAll([q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('i.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(i.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('i.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('i.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final maps = await db.rawQuery('''
+      SELECT i.*, c.name as customer_name, p.name as project_name
+      FROM invoices i 
+      LEFT JOIN customers c ON i.customer_id = c.id 
+      LEFT JOIN projects p ON i.project_id = p.id
+      WHERE $whereString
+      ORDER BY i.created_at DESC
+      LIMIT ? OFFSET ?
+    ''', whereArgs);
+
+    List<Invoice> invoices = [];
+    for (var m in maps) {
+      final invoice = Invoice.fromMap(m);
+      final items = await getInvoiceItems(invoice.id);
+      invoices.add(invoice.copyWith(items: items));
+    }
+    return invoices;
+  }
+
+  Future<int> getInvoicesCount({
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['i.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(i.number) LIKE ? OR LOWER(c.name) LIKE ?)');
+      whereArgs.addAll([q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('i.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(i.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('i.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('i.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM invoices i 
+      LEFT JOIN customers c ON i.customer_id = c.id 
+      LEFT JOIN projects p ON i.project_id = p.id
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
   }
 
   Future<Invoice?> getInvoice(String id) async {
@@ -2724,6 +2948,120 @@ class DatabaseHelper {
       creditNotes.add(CreditNote.fromMap(map, items: items));
     }
     return creditNotes;
+  }
+
+  Future<List<CreditNote>> getCreditNotesPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['cn.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(cn.number) LIKE ? OR LOWER(c.name) LIKE ? OR LOWER(c.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('cn.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(cn.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('cn.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('cn.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final query = '''
+      SELECT cn.*, c.name as customer_name
+      FROM credit_notes cn
+      LEFT JOIN customers c ON cn.customer_id = c.id
+      WHERE $whereString
+      ORDER BY cn.date DESC, cn.created_at DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final maps = await db.rawQuery(query, whereArgs);
+    final creditNotes = <CreditNote>[];
+    for (final map in maps) {
+      final itemsMap = await db.query(
+        'credit_note_items',
+        where: 'credit_note_id = ?',
+        whereArgs: [map['id']],
+      );
+      final items = itemsMap.map((m) => CreditNoteItem.fromMap(m)).toList();
+      creditNotes.add(CreditNote.fromMap(map, items: items));
+    }
+    return creditNotes;
+  }
+
+  Future<int> getCreditNotesCount({
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['cn.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(cn.number) LIKE ? OR LOWER(c.name) LIKE ? OR LOWER(c.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('cn.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(cn.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('cn.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('cn.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM credit_notes cn
+      LEFT JOIN customers c ON cn.customer_id = c.id
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
   }
 
   Future<CreditNote?> getCreditNote(String id) async {
@@ -2893,6 +3231,117 @@ class DatabaseHelper {
     return quotes;
   }
 
+  Future<List<Quote>> getQuotesPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['q.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(q.number) LIKE ? OR LOWER(c.name) LIKE ?)');
+      whereArgs.addAll([q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('q.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(q.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('q.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('q.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final maps = await db.rawQuery('''
+      SELECT q.*, c.name as customer_name, p.name as project_name 
+      FROM quotes q 
+      LEFT JOIN customers c ON q.customer_id = c.id 
+      LEFT JOIN projects p ON q.project_id = p.id 
+      WHERE $whereString
+      ORDER BY q.created_at DESC
+      LIMIT ? OFFSET ?
+    ''', whereArgs);
+    
+    List<Quote> quotes = [];
+    for (var m in maps) {
+      final quote = Quote.fromMap(m);
+      final items = await getQuoteItems(quote.id);
+      quotes.add(quote.copyWith(items: items));
+    }
+    return quotes;
+  }
+
+  Future<int> getQuotesCount({
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['q.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(q.number) LIKE ? OR LOWER(c.name) LIKE ?)');
+      whereArgs.addAll([q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('q.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(q.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('q.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('q.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM quotes q 
+      LEFT JOIN customers c ON q.customer_id = c.id 
+      LEFT JOIN projects p ON q.project_id = p.id 
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
   Future<Quote?> getQuote(String id) async {
     final db = await database;
     final maps = await db.rawQuery('''
@@ -2984,6 +3433,126 @@ class DatabaseHelper {
       notes.add(note.copyWith(items: items));
     }
     return notes;
+  }
+
+  Future<List<DeliveryNote>> getDeliveryNotesPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['dn.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(dn.number) LIKE ? OR LOWER(c.name) LIKE ? OR LOWER(c.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('dn.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(dn.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('dn.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('dn.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final query = '''
+      SELECT dn.*,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
+             p.name AS project_name
+      FROM delivery_notes dn
+      LEFT JOIN customers c ON dn.customer_id = c.id
+      LEFT JOIN projects p ON dn.project_id = p.id
+      WHERE $whereString
+      ORDER BY dn.date DESC, dn.created_at DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final result = await db.rawQuery(query, whereArgs);
+    List<DeliveryNote> notes = [];
+    for (var m in result) {
+      final note = DeliveryNote.fromMap(m);
+      final itemsResult = await db.query(
+        'delivery_note_items',
+        where: 'delivery_note_id = ?',
+        whereArgs: [note.id],
+      );
+      final items = itemsResult.map((map) => DeliveryNoteItem.fromMap(map)).toList();
+      notes.add(note.copyWith(items: items));
+    }
+    return notes;
+  }
+
+  Future<int> getDeliveryNotesCount({
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['dn.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(dn.number) LIKE ? OR LOWER(c.name) LIKE ? OR LOWER(c.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('dn.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(dn.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('dn.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('dn.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM delivery_notes dn
+      LEFT JOIN customers c ON dn.customer_id = c.id
+      LEFT JOIN projects p ON dn.project_id = p.id
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
   }
 
   Future<DeliveryNote?> getDeliveryNote(String id) async {
@@ -3099,6 +3668,123 @@ class DatabaseHelper {
     return returnNotes;
   }
 
+  Future<List<ReturnNote>> getReturnNotesPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['1=1'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(rn.number) LIKE ? OR LOWER(c.name) LIKE ? OR LOWER(c.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('rn.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(rn.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('rn.date_emission >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('rn.date_emission <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final query = '''
+      SELECT rn.*,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name
+      FROM return_notes rn
+      LEFT JOIN customers c ON rn.customer_id = c.id
+      WHERE $whereString
+      ORDER BY rn.date_emission DESC, rn.created_at DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final result = await db.rawQuery(query, whereArgs);
+    List<ReturnNote> returnNotes = [];
+    for (var m in result) {
+      final note = ReturnNote.fromMap(m);
+      final itemsResult = await db.query(
+        'return_note_items',
+        where: 'return_note_id = ?',
+        whereArgs: [note.id],
+      );
+      final items = itemsResult.map((map) => ReturnNoteItem.fromMap(map)).toList();
+      returnNotes.add(note.copyWith(items: items));
+    }
+    return returnNotes;
+  }
+
+  Future<int> getReturnNotesCount({
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['1=1'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(rn.number) LIKE ? OR LOWER(c.name) LIKE ? OR LOWER(c.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('rn.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(rn.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('rn.date_emission >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('rn.date_emission <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM return_notes rn
+      LEFT JOIN customers c ON rn.customer_id = c.id
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
   Future<ReturnNote?> getReturnNote(String id) async {
     final db = await database;
     final rnResult = await db.rawQuery('''
@@ -3212,6 +3898,138 @@ class DatabaseHelper {
       withdrawals.add(withdrawal.copyWith(items: items));
     }
     return withdrawals;
+  }
+
+  Future<List<StockWithdrawal>> getStockWithdrawalsPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+    String? numberPrefix,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['sw.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (numberPrefix != null && numberPrefix.isNotEmpty) {
+      whereClauses.add('sw.number LIKE ?');
+      whereArgs.add('$numberPrefix%');
+    }
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(sw.number) LIKE ? OR LOWER(c.name) LIKE ? OR LOWER(c.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('sw.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(sw.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('sw.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('sw.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final query = '''
+      SELECT sw.*,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
+             p.name AS project_name
+      FROM bons_sortie sw
+      LEFT JOIN customers c ON sw.customer_id = c.id
+      LEFT JOIN projects p ON sw.project_id = p.id
+      WHERE $whereString
+      ORDER BY sw.date DESC, sw.created_at DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final result = await db.rawQuery(query, whereArgs);
+    List<StockWithdrawal> withdrawals = [];
+    for (var m in result) {
+      final withdrawal = StockWithdrawal.fromMap(m);
+      final itemsResult = await db.query(
+        'bons_sortie_items',
+        where: 'withdrawal_id = ?',
+        whereArgs: [withdrawal.id],
+      );
+      final items = itemsResult.map((map) => StockWithdrawalItem.fromMap(map)).toList();
+      withdrawals.add(withdrawal.copyWith(items: items));
+    }
+    return withdrawals;
+  }
+
+  Future<int> getStockWithdrawalsCount({
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+    String? numberPrefix,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['sw.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (numberPrefix != null && numberPrefix.isNotEmpty) {
+      whereClauses.add('sw.number LIKE ?');
+      whereArgs.add('$numberPrefix%');
+    }
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(sw.number) LIKE ? OR LOWER(c.name) LIKE ? OR LOWER(c.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('sw.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(sw.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('sw.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('sw.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM bons_sortie sw
+      LEFT JOIN customers c ON sw.customer_id = c.id
+      LEFT JOIN projects p ON sw.project_id = p.id
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
   }
 
   Future<StockWithdrawal?> getStockWithdrawal(String id) async {
@@ -3516,6 +4334,119 @@ class DatabaseHelper {
     );
   }
 
+  Future<List<PurchaseInvoice>> getPurchaseInvoicesPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? supplierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['pi.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(pi.number) LIKE ? OR LOWER(s.name) LIKE ?)');
+      whereArgs.addAll([q, q]);
+    }
+
+    if (supplierId != null && supplierId.isNotEmpty) {
+      whereClauses.add('pi.supplier_id = ?');
+      whereArgs.add(supplierId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(pi.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('pi.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('pi.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final maps = await db.rawQuery('''
+      SELECT pi.*, s.name as supplier_name 
+      FROM purchase_invoices pi 
+      LEFT JOIN suppliers s ON pi.supplier_id = s.id 
+      WHERE $whereString
+      ORDER BY pi.created_at DESC
+      LIMIT ? OFFSET ?
+    ''', whereArgs);
+    
+    List<PurchaseInvoice> invoices = [];
+    for (var map in maps) {
+      final itemsMap = await db.query(
+        'purchase_invoice_items',
+        where: 'invoice_id = ?',
+        whereArgs: [map['id']],
+      );
+      final items = itemsMap.map((m) => PurchaseInvoiceItem.fromMap(m)).toList();
+      invoices.add(PurchaseInvoice.fromMap(map).copyWith(items: items));
+    }
+    return invoices;
+  }
+
+  Future<int> getPurchaseInvoicesCount({
+    String? searchQuery,
+    String? supplierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['pi.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(pi.number) LIKE ? OR LOWER(s.name) LIKE ?)');
+      whereArgs.addAll([q, q]);
+    }
+
+    if (supplierId != null && supplierId.isNotEmpty) {
+      whereClauses.add('pi.supplier_id = ?');
+      whereArgs.add(supplierId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(pi.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('pi.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('pi.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM purchase_invoices pi 
+      LEFT JOIN suppliers s ON pi.supplier_id = s.id 
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
   // ─── Activity Log ──────────────────────────────────────────────
   Future<void> logActivity(String action, String description, {String? entityType, String? entityId}) async {
     final db = await database;
@@ -3627,6 +4558,121 @@ class DatabaseHelper {
     return vouchers;
   }
 
+  Future<List<ReceivingVoucher>> getReceivingVouchersPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? supplierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['rv.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(rv.number) LIKE ? OR LOWER(s.name) LIKE ? OR LOWER(s.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (supplierId != null && supplierId.isNotEmpty) {
+      whereClauses.add('rv.supplier_id = ?');
+      whereArgs.add(supplierId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(rv.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('rv.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('rv.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final query = '''
+      SELECT rv.*,
+        (SELECT name FROM suppliers WHERE id = rv.supplier_id AND is_deleted = 0 LIMIT 1) as supplier_name
+      FROM receiving_vouchers rv
+      LEFT JOIN suppliers s ON rv.supplier_id = s.id
+      WHERE $whereString
+      ORDER BY rv.date DESC, rv.created_at DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final maps = await db.rawQuery(query, whereArgs);
+    final vouchers = <ReceivingVoucher>[];
+    for (final map in maps) {
+      final itemsMap = await db.query(
+        'receiving_voucher_items',
+        where: 'voucher_id = ?',
+        whereArgs: [map['id']],
+      );
+      final items = itemsMap.map((m) => ReceivingVoucherItem.fromMap(m)).toList();
+      vouchers.add(ReceivingVoucher.fromMap(map, items));
+    }
+    return vouchers;
+  }
+
+  Future<int> getReceivingVouchersCount({
+    String? searchQuery,
+    String? supplierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['rv.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(rv.number) LIKE ? OR LOWER(s.name) LIKE ? OR LOWER(s.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (supplierId != null && supplierId.isNotEmpty) {
+      whereClauses.add('rv.supplier_id = ?');
+      whereArgs.add(supplierId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(rv.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('rv.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('rv.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM receiving_vouchers rv
+      LEFT JOIN suppliers s ON rv.supplier_id = s.id
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
   Future<Map<String, dynamic>?> getReceivingVoucher(String id) async {
     final db = await database;
     final rvResult = await db.query(
@@ -3678,6 +4724,24 @@ class DatabaseHelper {
   // ─── Supplier Returns ──────────────────────────────────────────
   Future<List<SupplierReturn>> getSupplierReturns() async {
     final db = await database;
+
+    // Normalize any legacy BRF-BC-XXXXXXXX numbers to BRF-YYYY-XXXXX format
+    final legacyReturns = await db.rawQuery("SELECT id, date, created_at FROM supplier_returns WHERE number LIKE 'BRF-BC-%' ORDER BY created_at ASC");
+    if (legacyReturns.isNotEmpty) {
+      for (var i = 0; i < legacyReturns.length; i++) {
+        final id = legacyReturns[i]['id'] as String;
+        final dateStr = legacyReturns[i]['date'] as String? ?? legacyReturns[i]['created_at'] as String?;
+        int year = DateTime.now().year;
+        if (dateStr != null) {
+          final parsed = DateTime.tryParse(dateStr);
+          if (parsed != null) year = parsed.year;
+        }
+        final seq = (i + 1).toString().padLeft(5, '0');
+        final fixedNum = 'BRF-$year-$seq';
+        await db.update('supplier_returns', {'number': fixedNum}, where: 'id = ?', whereArgs: [id]);
+      }
+    }
+
     final maps = await db.rawQuery('''
       SELECT sr.*, s.name as supplier_name 
       FROM supplier_returns sr
@@ -3694,9 +4758,123 @@ class DatabaseHelper {
         whereArgs: [map['id']],
       );
       final items = itemsMap.map((m) => SupplierReturnItem.fromMap(m)).toList();
-      returns.add(SupplierReturn.fromMap(map, items: items, supplierName: map['supplier_name'] as String?));
+      returns.add(SupplierReturn.fromMap(map, items, map['supplier_name'] as String?));
     }
     return returns;
+  }
+
+  Future<List<SupplierReturn>> getSupplierReturnsPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? supplierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['sr.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(sr.number) LIKE ? OR LOWER(s.name) LIKE ? OR LOWER(s.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (supplierId != null && supplierId.isNotEmpty) {
+      whereClauses.add('sr.supplier_id = ?');
+      whereArgs.add(supplierId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(sr.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('sr.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('sr.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final query = '''
+      SELECT sr.*, s.name as supplier_name
+      FROM supplier_returns sr
+      LEFT JOIN suppliers s ON sr.supplier_id = s.id
+      WHERE $whereString
+      ORDER BY sr.date DESC, sr.created_at DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final maps = await db.rawQuery(query, whereArgs);
+    List<SupplierReturn> returns = [];
+    for (var map in maps) {
+      final itemsMap = await db.query(
+        'supplier_return_items',
+        where: 'supplier_return_id = ?',
+        whereArgs: [map['id']],
+      );
+      final items = itemsMap.map((m) => SupplierReturnItem.fromMap(m)).toList();
+      returns.add(SupplierReturn.fromMap(map, items));
+    }
+    return returns;
+  }
+
+  Future<int> getSupplierReturnsCount({
+    String? searchQuery,
+    String? supplierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['sr.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(sr.number) LIKE ? OR LOWER(s.name) LIKE ? OR LOWER(s.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (supplierId != null && supplierId.isNotEmpty) {
+      whereClauses.add('sr.supplier_id = ?');
+      whereArgs.add(supplierId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(sr.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('sr.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('sr.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM supplier_returns sr
+      LEFT JOIN suppliers s ON sr.supplier_id = s.id
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
   }
 
   Future<SupplierReturn?> getSupplierReturn(String id) async {
@@ -3715,7 +4893,7 @@ class DatabaseHelper {
         whereArgs: [id],
       );
       final items = itemsMap.map((m) => SupplierReturnItem.fromMap(m)).toList();
-      return SupplierReturn.fromMap(maps.first, items: items, supplierName: maps.first['supplier_name'] as String?);
+      return SupplierReturn.fromMap(maps.first, items, maps.first['supplier_name'] as String?);
     }
     return null;
   }
@@ -3803,6 +4981,87 @@ class DatabaseHelper {
       ORDER BY p.created_at DESC
     ''');
     return maps.map((m) => Payment.fromMap(m)).toList();
+  }
+
+  Future<List<Payment>> getPaymentsPaginated({
+    required int limit,
+    required int offset,
+    String? searchQuery,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['p.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (status != null && status.isNotEmpty) {
+      whereClauses.add('p.status = ?');
+      whereArgs.add(status);
+    }
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add(
+        '(LOWER(p.payment_number) LIKE ? OR LOWER(p.reference) LIKE ? OR LOWER(COALESCE('
+        '(SELECT name FROM customers WHERE id = p.contact_id AND is_deleted = 0 LIMIT 1),'
+        '(SELECT name FROM suppliers WHERE id = p.contact_id AND is_deleted = 0 LIMIT 1)'
+        ')) LIKE ?)'
+      );
+      whereArgs.addAll([q, q, q]);
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final maps = await db.rawQuery('''
+      SELECT p.*,
+        COALESCE(
+          (SELECT name FROM customers WHERE id = p.contact_id AND is_deleted = 0 LIMIT 1),
+          (SELECT name FROM suppliers WHERE id = p.contact_id AND is_deleted = 0 LIMIT 1)
+        ) as contact_name,
+        pa.name as account_name
+      FROM payments p
+      LEFT JOIN payment_accounts pa ON p.account_id = pa.id
+      WHERE $whereString
+      ORDER BY p.created_at DESC
+      LIMIT ? OFFSET ?
+    ''', whereArgs);
+    
+    return maps.map((m) => Payment.fromMap(m)).toList();
+  }
+
+  Future<int> getPaymentsCount({
+    String? searchQuery,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['p.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (status != null && status.isNotEmpty) {
+      whereClauses.add('p.status = ?');
+      whereArgs.add(status);
+    }
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add(
+        '(LOWER(p.payment_number) LIKE ? OR LOWER(p.reference) LIKE ? OR LOWER(COALESCE('
+        '(SELECT name FROM customers WHERE id = p.contact_id AND is_deleted = 0 LIMIT 1),'
+        '(SELECT name FROM suppliers WHERE id = p.contact_id AND is_deleted = 0 LIMIT 1)'
+        ')) LIKE ?)'
+      );
+      whereArgs.addAll([q, q, q]);
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM payments p
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
   }
 
   Future<void> insertPayment(Payment payment) async {
@@ -3950,6 +5209,240 @@ class DatabaseHelper {
     return orders;
   }
 
+  Future<List<CustomerOrder>> getCustomerOrdersPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['o.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(o.number) LIKE ? OR LOWER(c.name) LIKE ? OR LOWER(c.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('o.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(o.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('o.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('o.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final query = '''
+      SELECT o.*,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
+             COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name,
+             p.name AS project_name
+      FROM customer_orders o
+      LEFT JOIN customers c ON o.customer_id = c.id
+      LEFT JOIN projects p ON o.project_id = p.id
+      WHERE $whereString
+      ORDER BY o.date DESC, o.created_at DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final result = await db.rawQuery(query, whereArgs);
+    List<CustomerOrder> orders = [];
+    for (var m in result) {
+      final order = CustomerOrder.fromMap(m);
+      final itemsResult = await db.query(
+        'customer_order_items',
+        where: 'order_id = ?',
+        whereArgs: [order.id],
+      );
+      final items = itemsResult.map((map) => CustomerOrderItem.fromMap(map)).toList();
+      orders.add(order.copyWith(items: items));
+    }
+    return orders;
+  }
+
+  Future<int> getCustomerOrdersCount({
+    String? searchQuery,
+    String? customerId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['o.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(o.number) LIKE ? OR LOWER(c.name) LIKE ? OR LOWER(c.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (customerId != null && customerId.isNotEmpty) {
+      whereClauses.add('o.customer_id = ?');
+      whereArgs.add(customerId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(o.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('o.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('o.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM customer_orders o
+      LEFT JOIN customers c ON o.customer_id = c.id
+      LEFT JOIN projects p ON o.project_id = p.id
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
+  Future<List<StockEntry>> getStockEntriesPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? supplierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['e.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(e.number) LIKE ? OR LOWER(s.name) LIKE ? OR LOWER(s.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (supplierId != null && supplierId.isNotEmpty) {
+      whereClauses.add('e.supplier_id = ?');
+      whereArgs.add(supplierId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(e.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('e.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('e.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final query = '''
+      SELECT e.*, s.name as supplier_name
+      FROM stock_entries e
+      LEFT JOIN suppliers s ON e.supplier_id = s.id
+      WHERE $whereString
+      ORDER BY e.date DESC, e.created_at DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final entryMaps = await db.rawQuery(query, whereArgs);
+    List<StockEntry> entries = [];
+    for (var map in entryMaps) {
+      final itemMaps = await db.query(
+        'stock_entry_items',
+        where: 'entry_id = ?',
+        whereArgs: [map['id']],
+      );
+      final items = itemMaps.map((i) => StockEntryItem.fromMap(i)).toList();
+      entries.add(StockEntry.fromMap(map, items));
+    }
+    return entries;
+  }
+
+  Future<int> getStockEntriesCount({
+    String? searchQuery,
+    String? supplierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['e.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(e.number) LIKE ? OR LOWER(s.name) LIKE ? OR LOWER(s.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (supplierId != null && supplierId.isNotEmpty) {
+      whereClauses.add('e.supplier_id = ?');
+      whereArgs.add(supplierId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(e.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('e.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('e.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM stock_entries e
+      LEFT JOIN suppliers s ON e.supplier_id = s.id
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
   Future<CustomerOrder?> getCustomerOrder(String id) async {
     final db = await database;
     final orderResult = await db.rawQuery('''
@@ -4090,6 +5583,126 @@ class DatabaseHelper {
     return orders;
   }
 
+  Future<List<SupplierOrder>> getSupplierOrdersPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? supplierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['so.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(so.number) LIKE ? OR LOWER(s.name) LIKE ? OR LOWER(s.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (supplierId != null && supplierId.isNotEmpty) {
+      whereClauses.add('so.supplier_id = ?');
+      whereArgs.add(supplierId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(so.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('so.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('so.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final query = '''
+      SELECT so.*, 
+             s.name AS supplier_name,
+             p.name AS project_name
+      FROM supplier_orders so
+      LEFT JOIN suppliers s ON so.supplier_id = s.id
+      LEFT JOIN projects p ON so.project_id = p.id
+      WHERE $whereString
+      ORDER BY so.date DESC, so.created_at DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final result = await db.rawQuery(query, whereArgs);
+
+    final List<SupplierOrder> orders = [];
+    for (var row in result) {
+      final itemsResult = await db.query(
+        'supplier_order_items',
+        where: 'order_id = ?',
+        whereArgs: [row['id']],
+      );
+      final items = itemsResult.map((i) => SupplierOrderItem.fromMap(i)).toList();
+      orders.add(SupplierOrder.fromMap(row, items));
+    }
+
+    return orders;
+  }
+
+  Future<int> getSupplierOrdersCount({
+    String? searchQuery,
+    String? supplierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['so.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(so.number) LIKE ? OR LOWER(s.name) LIKE ? OR LOWER(s.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (supplierId != null && supplierId.isNotEmpty) {
+      whereClauses.add('so.supplier_id = ?');
+      whereArgs.add(supplierId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(so.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('so.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('so.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM supplier_orders so
+      LEFT JOIN suppliers s ON so.supplier_id = s.id
+      LEFT JOIN projects p ON so.project_id = p.id
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
   Future<SupplierOrder?> getSupplierOrderById(String id) async {
     final db = await database;
     final result = await db.rawQuery('''
@@ -4171,6 +5784,16 @@ class DatabaseHelper {
     final result = await db.rawQuery(
       'SELECT COUNT(*) + 1 as next FROM supplier_orders WHERE number LIKE ?',
       ['CF-$year-%'],
+    );
+    return result.first['next'] as int? ?? 1;
+  }
+
+  Future<int> getNextReceivingVoucherSequence() async {
+    final db = await database;
+    final year = DateTime.now().year;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) + 1 as next FROM receiving_vouchers WHERE number LIKE ? OR number LIKE ? OR number LIKE ?',
+      ['BR-$year-%', 'BRec-$year-%', 'BC-%'],
     );
     return result.first['next'] as int? ?? 1;
   }
@@ -4325,6 +5948,115 @@ class DatabaseHelper {
       notes.add(SupplierCreditNote.fromMap(map, items));
     }
     return notes;
+  }
+
+  Future<List<SupplierCreditNote>> getSupplierCreditNotesPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? supplierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['scn.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(scn.number) LIKE ? OR LOWER(s.name) LIKE ? OR LOWER(s.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (supplierId != null && supplierId.isNotEmpty) {
+      whereClauses.add('scn.supplier_id = ?');
+      whereArgs.add(supplierId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(scn.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('scn.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('scn.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final query = '''
+      SELECT scn.*, s.name as supplier_name
+      FROM supplier_credit_notes scn
+      LEFT JOIN suppliers s ON scn.supplier_id = s.id
+      WHERE $whereString
+      ORDER BY scn.date DESC, scn.created_at DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final maps = await db.rawQuery(query, whereArgs);
+    List<SupplierCreditNote> notes = [];
+    for (var map in maps) {
+      final items = await _getSupplierCreditNoteItems(map['id'] as String);
+      notes.add(SupplierCreditNote.fromMap(map, items));
+    }
+    return notes;
+  }
+
+  Future<int> getSupplierCreditNotesCount({
+    String? searchQuery,
+    String? supplierId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['scn.is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('(LOWER(scn.number) LIKE ? OR LOWER(s.name) LIKE ? OR LOWER(s.company_name) LIKE ?)');
+      whereArgs.addAll([q, q, q]);
+    }
+
+    if (supplierId != null && supplierId.isNotEmpty) {
+      whereClauses.add('scn.supplier_id = ?');
+      whereArgs.add(supplierId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(scn.status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('scn.date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('scn.date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM supplier_credit_notes scn
+      LEFT JOIN suppliers s ON scn.supplier_id = s.id
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
   }
 
   Future<SupplierCreditNote?> getSupplierCreditNoteById(String id) async {
@@ -4487,6 +6219,118 @@ class DatabaseHelper {
     return transfers;
   }
 
+  Future<List<StockTransfer>> getStockTransfersPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? sourceWarehouseId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('LOWER(number) LIKE ?');
+      whereArgs.add(q);
+    }
+
+    if (sourceWarehouseId != null && sourceWarehouseId.isNotEmpty) {
+      whereClauses.add('source_warehouse_id = ?');
+      whereArgs.add(sourceWarehouseId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final query = '''
+      SELECT *
+      FROM stock_transfers
+      WHERE $whereString
+      ORDER BY date DESC, created_at DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final maps = await db.rawQuery(query, whereArgs);
+    List<StockTransfer> transfers = [];
+    for (var map in maps) {
+      final itemMaps = await db.query(
+        'stock_transfer_items',
+        where: 'transfer_id = ?',
+        whereArgs: [map['id']],
+      );
+      final items = itemMaps.map((i) => StockTransferItem.fromMap(i)).toList();
+      transfers.add(StockTransfer.fromMap(map, items));
+    }
+    return transfers;
+  }
+
+  Future<int> getStockTransfersCount({
+    String? searchQuery,
+    String? sourceWarehouseId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('LOWER(number) LIKE ?');
+      whereArgs.add(q);
+    }
+
+    if (sourceWarehouseId != null && sourceWarehouseId.isNotEmpty) {
+      whereClauses.add('source_warehouse_id = ?');
+      whereArgs.add(sourceWarehouseId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM stock_transfers
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
+  }
+
   Future<void> insertStockTransfer(StockTransfer transfer) async {
     final db = await database;
     await db.transaction((txn) async {
@@ -4635,6 +6479,128 @@ class DatabaseHelper {
       sheets.add(InventorySheet.fromMap(map, items));
     }
     return sheets;
+  }
+
+  Future<List<InventorySheet>> getInventorySheetsPaginated({
+    int limit = 10,
+    int offset = 0,
+    String? searchQuery,
+    String? warehouseId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('LOWER(number) LIKE ?');
+      whereArgs.add(q);
+    }
+
+    if (warehouseId != null && warehouseId.isNotEmpty) {
+      whereClauses.add('emplacement_id = ?');
+      whereArgs.add(warehouseId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+    whereArgs.addAll([limit, offset]);
+
+    final query = '''
+      SELECT *
+      FROM inventory_sheets
+      WHERE $whereString
+      ORDER BY date DESC, created_at DESC
+      LIMIT ? OFFSET ?
+    ''';
+
+    final maps = await db.rawQuery(query, whereArgs);
+    List<InventorySheet> sheets = [];
+    for (var map in maps) {
+      final itemMaps = await db.query(
+        'inventory_sheet_items',
+        where: 'inventory_id = ?',
+        whereArgs: [map['id']],
+      );
+      final items = <InventorySheetItem>[];
+      for (var imap in itemMaps) {
+        final productMaps = await db.query('products', where: 'id = ?', whereArgs: [imap['product_id']]);
+        String? productName;
+        String? productSku;
+        if (productMaps.isNotEmpty) {
+          productName = productMaps.first['name'] as String?;
+          productSku = productMaps.first['reference'] as String?;
+        }
+        items.add(InventorySheetItem.fromMap(imap, productName: productName, productSku: productSku));
+      }
+      sheets.add(InventorySheet.fromMap(map, items));
+    }
+    return sheets;
+  }
+
+  Future<int> getInventorySheetsCount({
+    String? searchQuery,
+    String? warehouseId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    String? status,
+  }) async {
+    final db = await database;
+    List<String> whereClauses = ['is_deleted = 0'];
+    List<dynamic> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final q = '%${searchQuery.trim().toLowerCase()}%';
+      whereClauses.add('LOWER(number) LIKE ?');
+      whereArgs.add(q);
+    }
+
+    if (warehouseId != null && warehouseId.isNotEmpty) {
+      whereClauses.add('emplacement_id = ?');
+      whereArgs.add(warehouseId);
+    }
+
+    if (status != null && status != 'Tous' && status.isNotEmpty) {
+      whereClauses.add('LOWER(status) = ?');
+      whereArgs.add(status.toLowerCase());
+    }
+
+    if (dateFrom != null) {
+      whereClauses.add('date >= ?');
+      whereArgs.add(DateTime(dateFrom.year, dateFrom.month, dateFrom.day).toIso8601String());
+    }
+
+    if (dateTo != null) {
+      whereClauses.add('date <= ?');
+      whereArgs.add(DateTime(dateTo.year, dateTo.month, dateTo.day, 23, 59, 59).toIso8601String());
+    }
+
+    final whereString = whereClauses.join(' AND ');
+
+    final res = await db.rawQuery('''
+      SELECT COUNT(*) as cnt 
+      FROM inventory_sheets
+      WHERE $whereString
+    ''', whereArgs);
+    
+    return Sqflite.firstIntValue(res) ?? 0;
   }
 
   Future<void> insertInventorySheet(InventorySheet sheet) async {

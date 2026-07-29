@@ -43,8 +43,8 @@ class _MobileDrawerState extends State<MobileDrawer> {
                 padding: EdgeInsets.symmetric(horizontal: 12),
                 children: [
                   _buildItem(AppModule.dashboard, Icons.dashboard_rounded, 'Tableau de bord'),
-                  _buildItem(AppModule.reports, Icons.bar_chart_rounded, 'Rapports'),
-                  const _DrawerDivider(),
+/*                   _buildItem(AppModule.reports, Icons.bar_chart_rounded, 'Rapports'),
+ */                  const _DrawerDivider(),
                   _buildGroup('ventes', 'Ventes', Icons.trending_up_rounded, [
                     _buildItem(AppModule.quotes, Icons.description_rounded, 'Devis'),
                     _buildItem(AppModule.customerOrders, Icons.shopping_cart_rounded, 'Commandes Client'),

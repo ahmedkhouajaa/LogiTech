@@ -4,14 +4,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/constants.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
-import '../../utils/helpers.dart';
+import '../widgets/mobile_generic_card.dart';
+import '../widgets/mobile_advanced_filter_panel.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
+import '../../blocs/exit_vouchers/exit_vouchers_bloc.dart';
+import '../../blocs/customers/customers_bloc.dart';
+import '../../models/customer.dart';
 import '../../services/sync_service.dart';
 import 'forms/mobile_exit_voucher_form_screen.dart';
 import 'mobile_stock_withdrawal_detail_screen.dart';
 import '../../models/stock_withdrawal.dart';
-
+import '../../services/firestore_pagination_service.dart';
 
 class MobileStockWithdrawalsScreen extends StatefulWidget {
   final AppModule activeModule;
@@ -22,60 +26,111 @@ class MobileStockWithdrawalsScreen extends StatefulWidget {
 }
 
 class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScreen> {
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
-  String _selectedFilter = 'Tous';
+  String? _selectedCustomerId;
+  DateTime? _dateFrom;
+  DateTime? _dateTo;
+  String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<SyncStatus>? _syncSubscription;
+
+  bool get _isExitVoucher => widget.activeModule == AppModule.exitVouchers;
 
   @override
   void initState() {
     super.initState();
     _config = MobileModuleConfig.getConfig(widget.activeModule);
-    context.read<StockWithdrawalsBloc>().add(LoadStockWithdrawals());
+    FirestorePaginationService.instance.enablePersistence();
+    _fetchFilteredWithdrawals();
+    context.read<CustomersBloc>().add(LoadCustomers());
+    _scrollController.addListener(_onScroll);
 
-    // Reload data automatically when sync pulls new data from Firebase
     _syncSubscription = SyncService.instance.onSyncStatusChanged.listen((status) {
       if (status == SyncStatus.success && mounted) {
-        context.read<StockWithdrawalsBloc>().add(LoadStockWithdrawals());
+        _fetchFilteredWithdrawals();
       }
     });
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _syncSubscription?.cancel();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      if (_isExitVoucher) {
+        context.read<ExitVouchersBloc>().add(LoadNextExitVouchers(
+          searchQuery: _searchQuery,
+          customerId: _selectedCustomerId,
+          dateFrom: _dateFrom,
+          dateTo: _dateTo,
+          status: _selectedStatus,
+        ));
+      } else {
+        context.read<StockWithdrawalsBloc>().add(LoadNextStockWithdrawals(
+          searchQuery: _searchQuery,
+          customerId: _selectedCustomerId,
+          dateFrom: _dateFrom,
+          dateTo: _dateTo,
+          status: _selectedStatus,
+        ));
+      }
+    }
+  }
+
+  void _fetchFilteredWithdrawals() {
+    if (_isExitVoucher) {
+      context.read<ExitVouchersBloc>().add(LoadFirstExitVouchers(
+        searchQuery: _searchQuery,
+        customerId: _selectedCustomerId,
+        dateFrom: _dateFrom,
+        dateTo: _dateTo,
+        status: _selectedStatus,
+      ));
+    } else {
+      context.read<StockWithdrawalsBloc>().add(LoadFirstStockWithdrawals(
+        searchQuery: _searchQuery,
+        customerId: _selectedCustomerId,
+        dateFrom: _dateFrom,
+        dateTo: _dateTo,
+        status: _selectedStatus,
+      ));
+    }
   }
 
   void _onSearchChanged(String query) {
     setState(() {
       _searchQuery = query;
     });
-  }
-
-  void _onFilterChanged(String filter) {
-    setState(() {
-      _selectedFilter = filter;
-    });
+    _fetchFilteredWithdrawals();
   }
 
   void _handleDelete(String id) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer cet élément ?'),
+        title: const Text('Confirmer la suppression'),
+        content: const Text('Voulez-vous vraiment supprimer cet élément ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler'),
+            child: const Text('Annuler'),
           ),
           TextButton(
             onPressed: () {
-              context.read<StockWithdrawalsBloc>().add(DeleteStockWithdrawal(id));
+              if (_isExitVoucher) {
+                context.read<ExitVouchersBloc>().add(DeleteExitVoucher(id));
+              } else {
+                context.read<StockWithdrawalsBloc>().add(DeleteStockWithdrawal(id));
+              }
               Navigator.pop(ctx);
             },
-            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -84,302 +139,221 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<StockWithdrawalsBloc, StockWithdrawalsState>(
-      builder: (context, state) {
-        bool isLoading = state is StockWithdrawalsLoading || state is StockWithdrawalsInitial;
-        bool isEmpty = true;
-        List<Widget> cards = [];
-
-        if (state is StockWithdrawalsLoaded) {
-          final items = state.withdrawals;
-          
-          final filteredItems = items.where((item) {
-            bool matchesSearch = true;
-            bool matchesFilter = true;
-
-            String statusStr = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                statusStr = translateStatus(s.toString());
-              }
-            } catch (_) {}
-
-            String reference = '';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? '').toString(); } catch (_) {}
-            
-            String name = '';
-            try { name = ((item as dynamic).customerName ?? (item as dynamic).supplierName ?? (item as dynamic).companyName ?? (item as dynamic).name ?? '').toString(); } catch (_) {}
-
-            if (_searchQuery.isNotEmpty) {
-              final query = _searchQuery.toLowerCase();
-              if (!reference.toLowerCase().contains(query) && !name.toLowerCase().contains(query)) {
-                matchesSearch = false;
-              }
-            }
-
-            if (_selectedFilter != 'Tous') {
-               if (statusStr.toLowerCase() != _selectedFilter.toLowerCase()) {
-                   matchesFilter = false;
-               }
-            }
-
-            return matchesSearch && matchesFilter;
-          }).toList();
-          
-          isEmpty = filteredItems.isEmpty;
-          
-          cards = filteredItems.map((item) {
-            return _MobileStockWithdrawalCard(
-              withdrawal: item,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => MobileStockWithdrawalDetailScreen(withdrawal: item)),
-                );
-              },
-              onEdit: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => MobileExitVoucherFormScreen(
-                    existing: item,
-                    isExitVoucher: widget.activeModule == AppModule.exitVouchers,
-                  )),
-                ).then((_) {
-                  if (context.mounted) {
-                    context.read<StockWithdrawalsBloc>().add(LoadStockWithdrawals());
-                  }
-                });
-              },
-              onDelete: () => _handleDelete(item.id),
-            );
-          }).toList();
-        }
-
-        return MobileGenericListScreen(
-          title: _config.title,
-          activeModule: widget.activeModule,
-          onModuleSelected: (module) {
-          },
-          onRefresh: () {
-            context.read<StockWithdrawalsBloc>().add(LoadStockWithdrawals());
-          },
-          onSearchChanged: _onSearchChanged,
-          filterOptions: _config.filterOptions,
-          selectedFilter: _selectedFilter,
-          onFilterChanged: _onFilterChanged,
-          isLoading: isLoading,
-          isEmpty: isEmpty,
-          emptyMessage: 'Aucun élément trouvé.',
-          itemCount: cards.length,
-          fabText: _config.fabText,
-          onFabPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => MobileExitVoucherFormScreen(
-                isExitVoucher: widget.activeModule == AppModule.exitVouchers,
-              )),
-              ).then((_) {
-                if (context.mounted) {
-                  context.read<StockWithdrawalsBloc>().add(LoadStockWithdrawals());
-                }
-              });
-            },
-          child: ListView(
-            padding: EdgeInsets.only(bottom: 80),
-            children: cards,
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _MobileStockWithdrawalCard extends StatelessWidget {
-  final StockWithdrawal withdrawal;
-  final VoidCallback onTap;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-
-  const _MobileStockWithdrawalCard({
-    required this.withdrawal,
-    required this.onTap,
-    required this.onEdit,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final statusStr = translateStatus(withdrawal.status);
-    final statusColor = _getStatusColor(withdrawal.status);
-    final name = withdrawal.customerName ?? withdrawal.customerCompany ?? withdrawal.projectName ?? 'Inconnu';
-    final nameIcon = withdrawal.projectName != null ? Icons.business_center_rounded : Icons.person_rounded;
-
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.border),
-      ),
-      color: AppColors.surface,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Row 1: Date & Status & Actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      formatDate(withdrawal.date),
-                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(
-                      statusStr,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: statusColor,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 4),
-                  SizedBox(
-                    height: 24,
-                    width: 24,
-                    child: PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert, color: AppColors.textSecondary, size: 20),
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      onSelected: (val) {
-                        if (val == 'edit') onEdit();
-                        if (val == 'delete') onDelete();
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                          value: 'edit',
-                          child: Row(children: [
-                            Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
-                            SizedBox(width: 8),
-                            Text('Modifier'),
-                          ]),
-                        ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(children: [
-                            Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
-                            SizedBox(width: 8),
-                            Text('Supprimer', style: TextStyle(color: AppColors.error)),
-                          ]),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              // Row 2: Icon & Number & Name
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.outbox_rounded, size: 20, color: AppColors.primary),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          withdrawal.number,
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary),
-                        ),
-                        SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(nameIcon, size: 14, color: AppColors.textTertiary),
-                            SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                name,
-                                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              Divider(height: 1),
-              SizedBox(height: 12),
-              // Row 3: Items count & Warehouse
-              Row(
-                children: [
-                  Icon(Icons.shopping_bag_outlined, size: 14, color: AppColors.textTertiary),
-                  SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      '${withdrawal.items.length} article${withdrawal.items.length > 1 ? 's' : ''}',
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Icon(Icons.warehouse_outlined, size: 14, color: AppColors.textTertiary),
-                  SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      withdrawal.warehouseId == 'default_warehouse' ? 'Entrepôt par défaut' : 'Entrepôt', // Can be enhanced later
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'validated':
-        return AppColors.success;
-      case 'cancelled':
-        return AppColors.error;
-      default:
-        return AppColors.textTertiary;
+    final customersState = context.watch<CustomersBloc>().state;
+    List<Customer> customersList = [];
+    if (customersState is CustomersLoaded) {
+      customersList = customersState.customers;
     }
+
+    if (_isExitVoucher) {
+      return BlocBuilder<ExitVouchersBloc, ExitVouchersState>(
+        builder: (context, state) {
+          bool isLoading = state is ExitVouchersLoading || state is ExitVouchersInitial;
+          bool isLoadingMore = false;
+          int totalMatchingCount = 0;
+          List<StockWithdrawal> items = [];
+          if (state is ExitVouchersLoaded) {
+            items = state.withdrawals;
+            isLoadingMore = state.isLoadingMore;
+            totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
+          }
+          return _buildListScreen(items, isLoading, isLoadingMore, totalMatchingCount, customersList);
+        },
+      );
+    } else {
+      return BlocBuilder<StockWithdrawalsBloc, StockWithdrawalsState>(
+        builder: (context, state) {
+          bool isLoading = state is StockWithdrawalsLoading || state is StockWithdrawalsInitial;
+          bool isLoadingMore = false;
+          int totalMatchingCount = 0;
+          List<StockWithdrawal> items = [];
+          if (state is StockWithdrawalsLoaded) {
+            items = state.withdrawals;
+            isLoadingMore = state.isLoadingMore;
+            totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
+          }
+          return _buildListScreen(items, isLoading, isLoadingMore, totalMatchingCount, customersList);
+        },
+      );
+    }
+  }
+
+  Widget _buildListScreen(List<StockWithdrawal> items, bool isLoading, bool isLoadingMore, int totalMatchingCount, List<Customer> customersList) {
+    final filteredItems = items.where((item) {
+      String reference = item.number;
+      String name = item.customerName ?? item.customerCompany ?? '';
+
+      if (_searchQuery.isNotEmpty) {
+        final query = _searchQuery.toLowerCase();
+        if (!reference.toLowerCase().contains(query) && !name.toLowerCase().contains(query)) {
+          return false;
+        }
+      }
+
+      if (_selectedCustomerId != null && _selectedCustomerId!.isNotEmpty) {
+        if (item.customerId != _selectedCustomerId) return false;
+      }
+
+      if (_dateFrom != null) {
+        final itemDate = DateTime(item.date.year, item.date.month, item.date.day);
+        final fDate = DateTime(_dateFrom!.year, _dateFrom!.month, _dateFrom!.day);
+        if (itemDate.isBefore(fDate)) return false;
+      }
+
+      if (_dateTo != null) {
+        final itemDate = DateTime(item.date.year, item.date.month, item.date.day);
+        final tDate = DateTime(_dateTo!.year, _dateTo!.month, _dateTo!.day, 23, 59, 59);
+        if (itemDate.isAfter(tDate)) return false;
+      }
+
+      if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
+        final statusStr = translateStatus(item.status).toLowerCase();
+        final rawStatus = item.status.toLowerCase();
+        final filterLower = _selectedStatus!.toLowerCase();
+        if (statusStr != filterLower && rawStatus != filterLower) return false;
+      }
+
+      return true;
+    }).toList();
+
+    bool isEmpty = filteredItems.isEmpty;
+
+    List<Widget> cards = filteredItems.map((item) {
+      return MobileGenericCard(
+        reference: item.number,
+        status: item.status,
+        name: item.customerName ?? item.customerCompany ?? 'Client non spécifié',
+        nameIcon: Icons.person_outline,
+        date: item.date,
+        amount: item.totalTTC,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => MobileStockWithdrawalDetailScreen(withdrawal: item)),
+          ).then((_) {
+            _fetchFilteredWithdrawals();
+          });
+        },
+        onEdit: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: context.read<ExitVouchersBloc>()),
+                BlocProvider.value(value: context.read<StockWithdrawalsBloc>()),
+                BlocProvider.value(value: context.read<CustomersBloc>()),
+              ],
+              child: MobileExitVoucherFormScreen(
+                existing: item,
+                isExitVoucher: _isExitVoucher,
+              ),
+            )),
+          ).then((_) {
+            _fetchFilteredWithdrawals();
+          });
+        },
+        onDelete: () => _handleDelete(item.id),
+      );
+    }).toList();
+
+    return MobileGenericListScreen(
+      title: _config.title,
+      activeModule: widget.activeModule,
+      onModuleSelected: (module) {},
+      onRefresh: () async {
+        if (_isExitVoucher) {
+          context.read<ExitVouchersBloc>().add(ResetExitVouchersPagination(
+            searchQuery: _searchQuery,
+            customerId: _selectedCustomerId,
+            dateFrom: _dateFrom,
+            dateTo: _dateTo,
+            status: _selectedStatus,
+          ));
+        } else {
+          context.read<StockWithdrawalsBloc>().add(ResetStockWithdrawalsPagination(
+            searchQuery: _searchQuery,
+            customerId: _selectedCustomerId,
+            dateFrom: _dateFrom,
+            dateTo: _dateTo,
+            status: _selectedStatus,
+          ));
+        }
+        context.read<CustomersBloc>().add(LoadCustomers());
+      },
+      onSearchChanged: _onSearchChanged,
+      filterOptions: const [],
+      selectedFilter: _selectedStatus ?? 'Tous',
+      onFilterChanged: (val) {
+        setState(() => _selectedStatus = val == 'Tous' ? null : val);
+        _fetchFilteredWithdrawals();
+      },
+      customFilterWidget: MobileAdvancedFilterPanel(
+        entityLabel: 'Client',
+        selectedCustomerId: _selectedCustomerId,
+        customers: customersList,
+        onCustomerChanged: (id) {
+          setState(() => _selectedCustomerId = id);
+          _fetchFilteredWithdrawals();
+        },
+        dateFrom: _dateFrom,
+        onDateFromChanged: (d) {
+          setState(() => _dateFrom = d);
+          _fetchFilteredWithdrawals();
+        },
+        dateTo: _dateTo,
+        onDateToChanged: (d) {
+          setState(() => _dateTo = d);
+          _fetchFilteredWithdrawals();
+        },
+        selectedStatus: _selectedStatus,
+        statusOptions: const ['Tous', 'Brouillon', 'Validé', 'Facturé', 'Annulé'],
+        onStatusChanged: (s) {
+          setState(() => _selectedStatus = s);
+          _fetchFilteredWithdrawals();
+        },
+        onResetFilters: () {
+          setState(() {
+            _selectedCustomerId = null;
+            _dateFrom = null;
+            _dateTo = null;
+            _selectedStatus = null;
+          });
+          _fetchFilteredWithdrawals();
+        },
+        itemCount: totalMatchingCount > 0 ? totalMatchingCount : cards.length,
+      ),
+      scrollController: _scrollController,
+      isLoading: isLoading,
+      isEmpty: isEmpty,
+      emptyMessage: 'Aucun élément trouvé.',
+      itemCount: totalMatchingCount > 0 ? totalMatchingCount : cards.length,
+      fabText: _config.fabText,
+      onFabPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: context.read<ExitVouchersBloc>()),
+              BlocProvider.value(value: context.read<StockWithdrawalsBloc>()),
+              BlocProvider.value(value: context.read<CustomersBloc>()),
+            ],
+            child: MobileExitVoucherFormScreen(isExitVoucher: _isExitVoucher),
+          )),
+        ).then((_) {
+          _fetchFilteredWithdrawals();
+        });
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ...cards,
+          if (isLoadingMore)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.0),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+        ],
+      ),
+    );
   }
 }

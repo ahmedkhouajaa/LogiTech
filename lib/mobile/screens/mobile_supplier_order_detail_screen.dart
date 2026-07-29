@@ -278,6 +278,8 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
   List<PopupMenuEntry<String>> _buildActionMenu(BuildContext context, SupplierOrder order) {
     final List<PopupMenuEntry<String>> items = [];
 
+    items.add(_buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'));
+    items.add(const PopupMenuDivider(height: 1));
     items.add(_buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'));
     items.add(const PopupMenuDivider(height: 1));
     items.add(_buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'));
@@ -319,6 +321,10 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
 
   void _handleAction(BuildContext context, String action, SupplierOrder order) {
     switch (action) {
+      case 'view':
+        final viewDoc = DocumentWrapper.fromSupplierOrder(order);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
+        break;
       case 'edit':
         Navigator.push(
           context,
@@ -617,11 +623,12 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
     );
   }
 
-  void _convertToReceipt(BuildContext context, SupplierOrder order) {
+  Future<void> _convertToReceipt(BuildContext context, SupplierOrder order) async {
     final receiptId = const Uuid().v4();
+    final seq = await DatabaseHelper.instance.getNextReceivingVoucherSequence();
     final newReceipt = ReceivingVoucher(
       id: receiptId,
-      number: 'BR-${order.number.replaceAll("CMD-", "")}',
+      number: generateDocNumber(DocPrefix.receivingVoucher, seq),
       supplierId: order.supplierId,
       supplierName: order.supplierName,
       orderId: order.id,

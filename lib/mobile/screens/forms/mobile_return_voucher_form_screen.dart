@@ -220,7 +220,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
     return MobileFormScreen(
       title: widget.isReadOnly ? 'Détails du bon de retour' : (_isEditing ? 'Modifier le bon' : 'Nouveau bon de retour'),
       statusLabel: _status == 'draft' ? 'Brouillon' : (_status == 'validated' ? 'Validé' : 'Annulé'),
-      statusColor: _status == 'draft' ? AppColors.textSecondary : (_status == 'validated' ? AppColors.success : AppColors.error),
+      statusColor: _status == 'draft' ? AppColors.warning : (_status == 'validated' ? AppColors.success : AppColors.error),
       isLoading: _isLoading,
       saveLabel: 'Enregistrer',
       onCancel: () => Navigator.pop(context),

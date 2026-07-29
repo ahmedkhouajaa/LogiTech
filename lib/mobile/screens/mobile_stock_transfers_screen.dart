@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/constants.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
+import '../widgets/mobile_advanced_filter_panel.dart';
 import '../../utils/helpers.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/stock_transfers/stock_transfers_bloc.dart';
@@ -11,6 +12,7 @@ import '../../services/sync_service.dart';
 import 'forms/mobile_stock_transfer_form_screen.dart';
 import 'mobile_stock_transfer_detail_screen.dart';
 import '../../models/stock_transfer.dart';
+import '../../services/firestore_pagination_service.dart';
 
 class MobileStockTransfersScreen extends StatefulWidget {
   final AppModule activeModule;
@@ -21,8 +23,11 @@ class MobileStockTransfersScreen extends StatefulWidget {
 }
 
 class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen> {
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
-  String _selectedFilter = 'Tous';
+  DateTime? _dateFrom;
+  DateTime? _dateTo;
+  String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<SyncStatus>? _syncSubscription;
 
@@ -30,51 +35,69 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
   void initState() {
     super.initState();
     _config = MobileModuleConfig.getConfig(widget.activeModule);
-    context.read<StockTransfersBloc>().add(LoadStockTransfers());
+    FirestorePaginationService.instance.enablePersistence();
+    _fetchFilteredTransfers();
+    _scrollController.addListener(_onScroll);
 
-    // Reload data automatically when sync pulls new data from Firebase
     _syncSubscription = SyncService.instance.onSyncStatusChanged.listen((status) {
       if (status == SyncStatus.success && mounted) {
-        context.read<StockTransfersBloc>().add(LoadStockTransfers());
+        _fetchFilteredTransfers();
       }
     });
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _syncSubscription?.cancel();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      context.read<StockTransfersBloc>().add(LoadNextStockTransfers(
+        searchQuery: _searchQuery,
+        dateFrom: _dateFrom,
+        dateTo: _dateTo,
+        status: _selectedStatus,
+      ));
+    }
+  }
+
+  void _fetchFilteredTransfers() {
+    context.read<StockTransfersBloc>().add(LoadFirstStockTransfers(
+      searchQuery: _searchQuery,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      status: _selectedStatus,
+    ));
   }
 
   void _onSearchChanged(String query) {
     setState(() {
       _searchQuery = query;
     });
-  }
-
-  void _onFilterChanged(String filter) {
-    setState(() {
-      _selectedFilter = filter;
-    });
+    _fetchFilteredTransfers();
   }
 
   void _handleDelete(String id) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer cet élément ?'),
+        title: const Text('Confirmer la suppression'),
+        content: const Text('Voulez-vous vraiment supprimer cet élément ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler'),
+            child: const Text('Annuler'),
           ),
           TextButton(
             onPressed: () {
               context.read<StockTransfersBloc>().add(DeleteStockTransfer(id));
               Navigator.pop(ctx);
             },
-            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -87,40 +110,49 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
       builder: (context, state) {
         bool isLoading = state is StockTransfersLoading || state is StockTransfersInitial;
         bool isEmpty = true;
+        bool isLoadingMore = false;
+        int totalMatchingCount = 0;
         List<Widget> cards = [];
 
         if (state is StockTransfersLoaded) {
           final items = state.transfers;
-          
+          isLoadingMore = state.isLoadingMore;
+          totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
+
           final filteredItems = items.where((item) {
-            bool matchesSearch = true;
-            bool matchesFilter = true;
-
-            String statusStr = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                statusStr = translateStatus(s.toString());
-              }
-            } catch (_) {}
-
-            String reference = '';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? '').toString(); } catch (_) {}
+            String reference = item.number;
+            String reason = item.reason ?? '';
+            String notes = item.notes ?? '';
 
             if (_searchQuery.isNotEmpty) {
               final query = _searchQuery.toLowerCase();
-              if (!reference.toLowerCase().contains(query)) {
-                matchesSearch = false;
+              if (!reference.toLowerCase().contains(query) &&
+                  !reason.toLowerCase().contains(query) &&
+                  !notes.toLowerCase().contains(query)) {
+                return false;
               }
             }
 
-            if (_selectedFilter != 'Tous') {
-               if (statusStr.toLowerCase() != _selectedFilter.toLowerCase()) {
-                   matchesFilter = false;
-               }
+            if (_dateFrom != null) {
+              final itemDate = DateTime(item.date.year, item.date.month, item.date.day);
+              final fDate = DateTime(_dateFrom!.year, _dateFrom!.month, _dateFrom!.day);
+              if (itemDate.isBefore(fDate)) return false;
             }
 
-            return matchesSearch && matchesFilter;
+            if (_dateTo != null) {
+              final itemDate = DateTime(item.date.year, item.date.month, item.date.day);
+              final tDate = DateTime(_dateTo!.year, _dateTo!.month, _dateTo!.day, 23, 59, 59);
+              if (itemDate.isAfter(tDate)) return false;
+            }
+
+            if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
+              final statusStr = translateStatus(item.status).toLowerCase();
+              final rawStatus = item.status.toLowerCase();
+              final filterLower = _selectedStatus!.toLowerCase();
+              if (statusStr != filterLower && rawStatus != filterLower) return false;
+            }
+
+            return true;
           }).toList();
           
           isEmpty = filteredItems.isEmpty;
@@ -132,16 +164,16 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MobileStockTransferDetailScreen(transfer: item)),
-                );
+                ).then((_) {
+                  _fetchFilteredTransfers();
+                });
               },
               onEdit: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MobileStockTransferFormScreen(existing: item)),
                 ).then((_) {
-                  if (context.mounted) {
-                    context.read<StockTransfersBloc>().add(LoadStockTransfers());
-                  }
+                  _fetchFilteredTransfers();
                 });
               },
               onDelete: () => _handleDelete(item.id),
@@ -153,30 +185,73 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
           title: _config.title,
           activeModule: widget.activeModule,
           onModuleSelected: (module) {},
-          onRefresh: () {
-            context.read<StockTransfersBloc>().add(LoadStockTransfers());
+          onRefresh: () async {
+            context.read<StockTransfersBloc>().add(ResetStockTransfersPagination(
+              searchQuery: _searchQuery,
+              dateFrom: _dateFrom,
+              dateTo: _dateTo,
+              status: _selectedStatus,
+            ));
           },
           onSearchChanged: _onSearchChanged,
-          filterOptions: _config.filterOptions,
-          selectedFilter: _selectedFilter,
-          onFilterChanged: _onFilterChanged,
+          filterOptions: const [],
+          selectedFilter: _selectedStatus ?? 'Tous',
+          onFilterChanged: (val) {
+            setState(() => _selectedStatus = val == 'Tous' ? null : val);
+            _fetchFilteredTransfers();
+          },
+          customFilterWidget: MobileAdvancedFilterPanel(
+            entityLabel: null,
+            dateFrom: _dateFrom,
+            onDateFromChanged: (d) {
+              setState(() => _dateFrom = d);
+              _fetchFilteredTransfers();
+            },
+            dateTo: _dateTo,
+            onDateToChanged: (d) {
+              setState(() => _dateTo = d);
+              _fetchFilteredTransfers();
+            },
+            selectedStatus: _selectedStatus,
+            statusOptions: const ['Tous', 'Brouillon', 'Validé', 'Annulé'],
+            onStatusChanged: (s) {
+              setState(() => _selectedStatus = s);
+              _fetchFilteredTransfers();
+            },
+            onResetFilters: () {
+              setState(() {
+                _dateFrom = null;
+                _dateTo = null;
+                _selectedStatus = null;
+              });
+              _fetchFilteredTransfers();
+            },
+            itemCount: totalMatchingCount,
+          ),
+          scrollController: _scrollController,
           isLoading: isLoading,
           isEmpty: isEmpty,
           emptyMessage: 'Aucun bon de transfert trouvé.',
+          itemCount: totalMatchingCount,
           fabText: _config.fabText,
           onFabPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MobileStockTransferFormScreen()),
             ).then((_) {
-              if (context.mounted) {
-                context.read<StockTransfersBloc>().add(LoadStockTransfers());
-              }
+              _fetchFilteredTransfers();
             });
           },
-          child: ListView(
-            padding: EdgeInsets.only(bottom: 80),
-            children: cards,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...cards,
+              if (isLoadingMore)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+            ],
           ),
         );
       },
@@ -199,132 +274,85 @@ class _MobileStockTransferCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusStr = translateStatus(transfer.status);
     final statusColor = _getStatusColor(transfer.status);
+    final statusText = translateStatus(transfer.status);
 
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.border),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppShadows.sm,
       ),
-      color: AppColors.surface,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
                     child: Text(
-                      formatDate(transfer.date),
-                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(
-                      statusStr,
+                      transfer.number,
                       style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: statusColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ),
-                  SizedBox(width: 4),
-                  SizedBox(
-                    height: 24,
-                    width: 24,
-                    child: PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert, color: AppColors.textSecondary, size: 20),
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      onSelected: (val) {
-                        if (val == 'edit') onEdit();
-                        if (val == 'delete') onDelete();
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                          value: 'edit',
-                          child: Row(children: [
-                            Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
-                            SizedBox(width: 8),
-                            Text('Modifier'),
-                          ]),
-                        ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(children: [
-                            Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
-                            SizedBox(width: 8),
-                            Text('Supprimer', style: TextStyle(color: AppColors.error)),
-                          ]),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
                   Container(
-                    padding: EdgeInsets.all(8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: statusColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                     ),
-                    child: Icon(Icons.sync_alt_rounded, size: 20, color: AppColors.primary),
+                    child: Text(
+                      statusText,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          transfer.number,
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary),
-                        ),
-                        if (transfer.reason != null && transfer.reason!.isNotEmpty) ...[
-                          SizedBox(height: 4),
-                          Text(
-                            transfer.reason!,
-                            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ]
-                      ],
-                    ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: AppColors.textTertiary,
                   ),
                 ],
               ),
-              SizedBox(height: 12),
-              Divider(height: 1),
-              SizedBox(height: 12),
+              const SizedBox(height: 8),
+              if (transfer.reason != null && transfer.reason!.isNotEmpty) ...[
+                Text(
+                  transfer.reason!,
+                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 4),
+              ],
               Row(
                 children: [
-                  Icon(Icons.shopping_bag_outlined, size: 14, color: AppColors.textTertiary),
-                  SizedBox(width: 6),
+                  Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                  const SizedBox(width: 6),
+                  Text(
+                    formatDate(transfer.date),
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                  const Spacer(),
                   Text(
                     '${transfer.items.length} article${transfer.items.length > 1 ? 's' : ''}',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ],
               ),
@@ -336,13 +364,14 @@ class _MobileStockTransferCard extends StatelessWidget {
   }
 
   Color _getStatusColor(String status) {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'validated':
         return AppColors.success;
       case 'cancelled':
         return AppColors.error;
+      case 'draft':
       default:
-        return AppColors.textTertiary;
+        return AppColors.textSecondary;
     }
   }
 }

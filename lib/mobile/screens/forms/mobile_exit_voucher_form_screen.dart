@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+import '../../../../blocs/exit_vouchers/exit_vouchers_bloc.dart';
 import '../../../../blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
 import '../../../../blocs/customers/customers_bloc.dart';
 import '../../../../blocs/projects/projects_bloc.dart';
@@ -132,11 +133,14 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
       return;
     }
 
+    final exitVouchersBloc = context.read<ExitVouchersBloc>();
+    final stockWithdrawalsBloc = context.read<StockWithdrawalsBloc>();
+    final messenger = ScaffoldMessenger.of(context);
+    final nav = Navigator.of(context);
+
     setState(() => _isLoading = true);
 
     try {
-      final bloc = context.read<StockWithdrawalsBloc>();
-      
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
         final seq = await DatabaseHelper.instance.getNextStockWithdrawalSequence();
@@ -173,15 +177,23 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
         isDeleted: widget.existing?.isDeleted ?? false,
       );
 
-      if (_isEditing) {
-        bloc.add(UpdateStockWithdrawal(note));
+      if (widget.isExitVoucher) {
+        if (_isEditing) {
+          exitVouchersBloc.add(UpdateExitVoucher(note));
+        } else {
+          exitVouchersBloc.add(AddExitVoucher(note));
+        }
       } else {
-        bloc.add(AddStockWithdrawal(note));
+        if (_isEditing) {
+          stockWithdrawalsBloc.add(UpdateStockWithdrawal(note));
+        } else {
+          stockWithdrawalsBloc.add(AddStockWithdrawal(note));
+        }
       }
 
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        nav.pop();
+        messenger.showSnackBar(SnackBar(
           content: Text(_isEditing ? 'Bon mis à jour' : 'Bon créé avec succès'),
           backgroundColor: AppColors.success,
         ));

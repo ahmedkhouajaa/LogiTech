@@ -74,6 +74,8 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
               icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentCreditNote),
               itemBuilder: (_) => [
+                _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
                 PopupMenuDivider(height: 1),
                 _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
@@ -258,6 +260,10 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
 
   void _handleAction(BuildContext context, String action, CreditNote creditNote) {
     switch (action) {
+      case 'view':
+        final viewDoc = DocumentWrapper.fromCreditNote(creditNote);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
+        break;
       case 'edit':
         Navigator.push(
           context,

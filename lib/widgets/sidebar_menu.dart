@@ -84,8 +84,8 @@ class _SidebarMenuState extends State<SidebarMenu> {
               child: Column(
                 children: [
                   _buildItem(AppModule.dashboard, Icons.dashboard_rounded, 'Tableau de bord'),
-                  _buildItem(AppModule.reports, Icons.bar_chart_rounded, 'Rapports'),
-                  const _SidebarDivider(),
+/*                   _buildItem(AppModule.reports, Icons.bar_chart_rounded, 'Rapports'),
+ */                  const _SidebarDivider(),
                   _buildGroup('ventes', Icons.shopping_cart_rounded, 'Ventes', [
                     _buildSubItem(AppModule.quotes, 'Devis'),
                     _buildSubItem(AppModule.customerOrders, 'Commandes'),

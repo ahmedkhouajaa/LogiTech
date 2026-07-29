@@ -188,6 +188,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                   ),
                                 ),
                                 
+                                /*
                                 // Solde
                                 Expanded(
                                   flex: 1,
@@ -214,6 +215,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                     ],
                                   ),
                                 ),
+                                */
                                 
                                 // Actions
                                 SizedBox(width: 16),
@@ -271,6 +273,25 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
 
   late final TextEditingController _codeCtrl, _nameCtrl, _emailCtrl, _phoneCtrl, _addressCtrl, _cityCtrl, _postalCodeCtrl, _deliveryStreetCtrl, _deliveryCityCtrl, _deliveryPostalCodeCtrl, _taxCtrl, _rcCtrl, _notesCtrl, _bankAccountCtrl;
   late final TextEditingController _companyNameCtrl, _responsibleNameCtrl, _cinCtrl, _birthDateCtrl, _referenceCtrl;
+  
+  String _selectedCountryCode = '+216';
+  String _selectedFlag = '🇹🇳';
+  
+  static const List<Map<String, String>> _countryPrefixes = [
+    {'flag': '🇹🇳', 'code': '+216', 'name': 'Tunisie'},
+    {'flag': '🇫🇷', 'code': '+33', 'name': 'France'},
+    {'flag': '🇩🇿', 'code': '+213', 'name': 'Algérie'},
+    {'flag': '🇲🇦', 'code': '+212', 'name': 'Maroc'},
+    {'flag': '🇱🇾', 'code': '+218', 'name': 'Libye'},
+    {'flag': '🇨🇦', 'code': '+1', 'name': 'Canada / USA'},
+    {'flag': '🇩🇪', 'code': '+49', 'name': 'Allemagne'},
+    {'flag': '🇮🇹', 'code': '+39', 'name': 'Italie'},
+    {'flag': '🇪🇸', 'code': '+34', 'name': 'Espagne'},
+    {'flag': '🇬🇧', 'code': '+44', 'name': 'Royaume-Uni'},
+    {'flag': '🇧🇪', 'code': '+32', 'name': 'Belgique'},
+    {'flag': '🇨🇭', 'code': '+41', 'name': 'Suisse'},
+  ];
+
   late TabController _tabController;
 
   @override
@@ -284,7 +305,21 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
     _codeCtrl = TextEditingController(text: s?.code ?? 'FOU-${DateTime.now().millisecondsSinceEpoch % 10000}');
     _nameCtrl = TextEditingController(text: s?.name ?? '');
     _emailCtrl = TextEditingController(text: s?.email ?? '');
-    _phoneCtrl = TextEditingController(text: s?.phone ?? '');
+    
+    String phoneVal = s?.phone ?? '';
+    _selectedCountryCode = '+216';
+    _selectedFlag = '🇹🇳';
+    if (phoneVal.isNotEmpty) {
+      for (final prefix in _countryPrefixes) {
+        if (phoneVal.startsWith(prefix['code']!)) {
+          _selectedCountryCode = prefix['code']!;
+          _selectedFlag = prefix['flag']!;
+          phoneVal = phoneVal.substring(prefix['code']!.length).trim();
+          break;
+        }
+      }
+    }
+    _phoneCtrl = TextEditingController(text: phoneVal);
     
     _companyNameCtrl = TextEditingController(text: s?.companyName ?? '');
     _responsibleNameCtrl = TextEditingController(text: s?.responsibleName ?? (s?.supplierType == 'particulier' ? s?.name : '') ?? '');
@@ -339,11 +374,15 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 600;
+
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+      insetPadding: isMobile ? EdgeInsets.symmetric(horizontal: 20, vertical: 36) : EdgeInsets.symmetric(horizontal: 80, vertical: 48),
       child: Container(
-        width: 800,
+        width: isMobile ? size.width : 650,
+        constraints: BoxConstraints(maxHeight: size.height * 0.80),
         decoration: BoxDecoration(
           color: AppColors.background,
           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -354,43 +393,68 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: isMobile ? 12 : 16),
               decoration: BoxDecoration(
                 color: AppColors.surface,
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(AppRadius.lg), topRight: Radius.circular(AppRadius.lg)),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(AppRadius.lg),
+                  topRight: Radius.circular(AppRadius.lg),
+                ),
                 border: Border(bottom: BorderSide(color: AppColors.border)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.factory_rounded, color: AppColors.primary),
-                  SizedBox(width: 8),
-                  Text(
-                    widget.existing == null ? 'Creer un Nouveau Fournisseur' : 'Modifier le Fournisseur',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                  ),
-                  Spacer(),
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
-                    label: Text('Retour', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                    child: Icon(Icons.factory_rounded, color: AppColors.primary, size: isMobile ? 20 : 24),
                   ),
                   SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: _save,
-                    icon: Icon(Icons.save_rounded, size: 16, color: Colors.white),
-                    label: Text(widget.existing == null ? 'Creer' : 'Enregistrer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  Expanded(
+                    child: Text(
+                      widget.existing == null ? 'Creer un Nouveau Fournisseur' : 'Modifier le Fournisseur',
+                      style: TextStyle(
+                        fontSize: isMobile ? 16 : 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (isMobile) ...[
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                      tooltip: 'Fermer',
+                    ),
+                  ] else ...[
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
+                      label: Text('Retour', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: AppColors.border),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: _save,
+                      icon: Icon(Icons.save_rounded, size: 16, color: Colors.white),
+                      label: Text(widget.existing == null ? 'Creer' : 'Enregistrer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -402,12 +466,14 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
               ),
               child: TabBar(
                 controller: _tabController,
+                isScrollable: false,
+                tabAlignment: TabAlignment.fill,
                 labelColor: AppColors.primary,
                 unselectedLabelColor: AppColors.textTertiary,
                 indicatorColor: AppColors.primary,
                 indicatorWeight: 3,
-                labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
                 tabs: const [
                   Tab(text: 'Informations', icon: Icon(Icons.info_outline_rounded, size: 20)),
                   Tab(text: 'Adresses', icon: Icon(Icons.location_on_outlined, size: 20)),
@@ -591,28 +657,51 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Numero de Telephone',
+                                'Numero de Telephone *',
                                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                               ),
                               SizedBox(height: 6),
                               Row(
                                 children: [
-                                  Container(
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.surfaceAlt,
-                                      borderRadius: BorderRadius.circular(AppRadius.md),
-                                      border: Border.all(color: AppColors.border),
-                                    ),
-                                    padding: EdgeInsets.symmetric(horizontal: 12),
-                                    child: Row(
-                                      children: [
-                                        Text('🇹🇳', style: TextStyle(fontSize: 18)),
-                                        SizedBox(width: 6),
-                                        Text('+216', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                                        SizedBox(width: 4),
-                                        Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textSecondary),
-                                      ],
+                                  PopupMenuButton<Map<String, String>>(
+                                    onSelected: (item) {
+                                      setState(() {
+                                        _selectedFlag = item['flag']!;
+                                        _selectedCountryCode = item['code']!;
+                                      });
+                                    },
+                                    offset: const Offset(0, 44),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                    itemBuilder: (context) => _countryPrefixes.map((item) => PopupMenuItem(
+                                      value: item,
+                                      child: Row(
+                                        children: [
+                                          Text(item['flag']!, style: const TextStyle(fontSize: 18)),
+                                          const SizedBox(width: 8),
+                                          Text(item['code']!, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                                          const SizedBox(width: 8),
+                                          Expanded(child: Text(item['name']!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary), overflow: TextOverflow.ellipsis)),
+                                        ],
+                                      ),
+                                    )).toList(),
+                                    child: Container(
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceAlt,
+                                        borderRadius: BorderRadius.circular(AppRadius.md),
+                                        border: Border.all(color: AppColors.border),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(_selectedFlag, style: const TextStyle(fontSize: 18)),
+                                          const SizedBox(width: 6),
+                                          Text(_selectedCountryCode, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                                          const SizedBox(width: 4),
+                                          Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textSecondary),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                   SizedBox(width: 12),
@@ -620,6 +709,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                                     child: TextFormField(
                                       controller: _phoneCtrl,
                                       keyboardType: TextInputType.phone,
+                                      validator: (v) => v == null || v.trim().isEmpty ? 'Téléphone obligatoire' : null,
                                       style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
                                       decoration: InputDecoration(
                                         hintText: 'Saisissez le numero de telephone',
@@ -1016,11 +1106,12 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
     required bool isSelected,
     required VoidCallback onTap,
   }) {
+    final bool isMobile = MediaQuery.of(context).size.width < 768;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: Container(
-        height: 54,
+        height: isMobile ? 38 : 46,
         decoration: BoxDecoration(
           color: isSelected ? Color(0xFFEFF6FF) : AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -1029,21 +1120,21 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
             width: isSelected ? 2 : 1,
           ),
         ),
-        padding: EdgeInsets.symmetric(horizontal: 16),
+        padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 16),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               label,
               style: TextStyle(
-                fontSize: 15,
+                fontSize: isMobile ? 13 : 14,
                 fontWeight: FontWeight.bold,
                 color: isSelected ? AppColors.primary : AppColors.textSecondary,
               ),
             ),
             if (isSelected) ...[
               Spacer(),
-              Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
+              Icon(Icons.check_circle_rounded, color: AppColors.primary, size: isMobile ? 16 : 18),
             ],
           ],
         ),
@@ -1094,7 +1185,11 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
       code: _codeCtrl.text.trim(),
       name: clientName,
       email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
-      phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim().isEmpty 
+          ? null 
+          : (_phoneCtrl.text.trim().startsWith('+') || _phoneCtrl.text.trim().startsWith('00')
+              ? _phoneCtrl.text.trim()
+              : '$_selectedCountryCode ${_phoneCtrl.text.trim()}'),
       address: _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
       city: _cityCtrl.text.trim().isEmpty ? null : _cityCtrl.text.trim(),
       postalCode: _postalCodeCtrl.text.trim().isEmpty ? null : _postalCodeCtrl.text.trim(),

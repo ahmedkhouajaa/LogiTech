@@ -25,7 +25,7 @@ enum StockEntryStatus {
 
   Color get color {
     switch (this) {
-      case draft: return AppColors.textSecondary;
+      case draft: return AppColors.warning;
       case validated: return AppColors.primary;
       case cancelled: return AppColors.error;
     }
@@ -216,10 +216,10 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
             
             // Collapsible filters
             AnimatedCrossFade(
-              firstChild: SizedBox(height: 0, width: double.infinity),
+              firstChild: const SizedBox(height: 0, width: double.infinity),
               secondChild: Container(
-                margin: EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 16),
-                padding: EdgeInsets.all(12),
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -232,27 +232,26 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                         hintText: 'Rechercher article...',
                         hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary),
                         prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                         filled: true,
                         fillColor: AppColors.surfaceAlt,
                       ),
-                      style: TextStyle(fontSize: 13),
+                      style: const TextStyle(fontSize: 13),
                       onChanged: (v) => setState(() => _searchQuery = v),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
                           child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  
+                            dropdownColor: AppColors.surfaceAlt,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
                             value: _filterWarehouseId,
                             isExpanded: true,
                             decoration: InputDecoration(
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                               filled: true,
@@ -261,31 +260,31 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                             style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                             items: [
                               const DropdownMenuItem<String?>(value: null, child: Text('Entrepôt', style: TextStyle(fontSize: 12))),
-                              ..._warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
+                              ..._warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
                             ],
                             onChanged: (v) => setState(() => _filterWarehouseId = v),
                           ),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
                             decoration: InputDecoration(
                               hintText: 'Référence',
                               hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                               prefixIcon: Icon(Icons.numbers, size: 16, color: AppColors.textSecondary),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                               filled: true,
                               fillColor: AppColors.surfaceAlt,
                             ),
-                            style: TextStyle(fontSize: 12),
+                            style: const TextStyle(fontSize: 12),
                             onChanged: (v) => setState(() => _filterReference = v),
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     SizedBox(
                       height: 40,
                       child: OutlinedButton(
@@ -298,7 +297,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                         },
                         style: OutlinedButton.styleFrom(
                           alignment: Alignment.centerLeft,
-                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
                           backgroundColor: AppColors.surface,
                           side: BorderSide(color: AppColors.border),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -306,7 +305,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                         child: Row(
                           children: [
                             Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 _filterDateRange != null
@@ -338,11 +337,11 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
             // Active filters indicator + reset
             if (_filterWarehouseId != null || _searchQuery.isNotEmpty || _filterReference.isNotEmpty || _filterDateRange != null)
               Padding(
-                padding: EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 12),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
@@ -361,50 +360,74 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                         _filterDateRange = null;
                         _currentPage = 0;
                       }),
-                      icon: Icon(Icons.clear_all, size: 16),
-                      label: Text('Réinitialiser', style: TextStyle(fontSize: 12)),
+                      icon: const Icon(Icons.clear_all, size: 16),
+                      label: const Text('Réinitialiser', style: TextStyle(fontSize: 12)),
                       style: TextButton.styleFrom(foregroundColor: AppColors.error, padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
                     ),
                   ],
                 ),
               ),
 
-            // Cards list
+            // Scrollable Content
             Expanded(
-              child: Builder(
-                builder: (context) {
-                  if (state is StockEntriesLoading) {
-                    return Center(child: CircularProgressIndicator());
-                  }
-                  if (state is StockEntriesError) {
-                    return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
-                  }
-                  if (state is StockEntriesLoaded) {
-                    if (entries.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.inbox_rounded, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
-                            SizedBox(height: 12),
-                            Text("Aucun bon d'entrée", style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
-                            SizedBox(height: 4),
-                            Text("Appuyez sur + pour en créer un", style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      padding: EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 80),
-                      itemCount: entries.length,
-                      itemBuilder: (context, index) {
-                        return _buildMobileCard(context, entries[index]);
-                      },
-                    );
-                  }
-                  return SizedBox();
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  context.read<StockEntriesBloc>().add(LoadStockEntries());
                 },
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 80),
+                  child: Column(
+                    children: [
+                      Builder(
+                        builder: (context) {
+                          if (state is StockEntriesLoading) {
+                            return const Padding(
+                              padding: EdgeInsets.all(32.0),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          if (state is StockEntriesError) {
+                            return Padding(
+                              padding: const EdgeInsets.all(32.0),
+                              child: Center(child: Text(state.message, style: TextStyle(color: AppColors.error))),
+                            );
+                          }
+                          if (state is StockEntriesLoaded) {
+                            if (entries.isEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.all(48.0),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.inbox_rounded, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
+                                      const SizedBox(height: 12),
+                                      Text("Aucun bon d'entrée", style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                                      const SizedBox(height: 4),
+                                      Text("Appuyez sur + pour en créer un", style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              padding: EdgeInsets.zero,
+                              itemCount: entries.length,
+                              itemBuilder: (context, index) {
+                                return _buildMobileCard(context, entries[index]);
+                              },
+                            );
+                          }
+                          return const SizedBox();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -416,7 +439,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
           child: FloatingActionButton(
             onPressed: () => _navigate(context),
             backgroundColor: AppColors.primary,
-            child: Icon(Icons.add, color: Colors.white),
+            child: const Icon(Icons.add, color: Colors.white),
           ),
         ),
       ],
@@ -425,49 +448,49 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
 
   Widget _buildMobileCard(BuildContext context, StockEntry entry) {
     return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.sm),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
         boxShadow: AppShadows.sm,
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           onTap: () => _navigate(context, entry),
           child: Padding(
-            padding: EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top row: Reference + Actions
+                // Top row: Ref Badge + Status Chip + Actions
                 Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         entry.number,
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.bold,
                           color: AppColors.primary,
                         ),
                       ),
                     ),
-                    Spacer(),
+                    const Spacer(),
                     _buildStatusChip(entry.status),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 4),
                     PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert, color: AppColors.textSecondary, size: 20),
+                      icon: Icon(Icons.more_vert, color: AppColors.textTertiary),
                       padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(),
+                      constraints: const BoxConstraints(),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       color: AppColors.surface,
                       onSelected: (val) {
@@ -480,23 +503,23 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                           value: 'voir',
                           child: Row(children: [
                             Icon(Icons.visibility_rounded, size: 16, color: AppColors.textSecondary),
-                            SizedBox(width: 8),
-                            Text('Voir'),
+                            const SizedBox(width: 8),
+                            const Text('Voir'),
                           ]),
                         ),
                         PopupMenuItem(
                           value: 'edit',
                           child: Row(children: [
                             Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
-                            SizedBox(width: 8),
-                            Text('Modifier'),
+                            const SizedBox(width: 8),
+                            const Text('Modifier'),
                           ]),
                         ),
                         PopupMenuItem(
                           value: 'delete',
                           child: Row(children: [
                             Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Text('Supprimer', style: TextStyle(color: AppColors.error)),
                           ]),
                         ),
@@ -504,28 +527,41 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: 12),
-                // Info rows
+                const SizedBox(height: 10),
+                
+                // Row 1: Date & Time
                 Row(
                   children: [
-                    _buildInfoItem(Icons.calendar_today_rounded, formatDateTimeLong(entry.date)),
-                  ],
-                ),
-                SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildInfoItem(Icons.warehouse_rounded, 'Entrepôt par défaut'),
-                    ),
-                    Expanded(
-                      child: _buildArticlesDisplay(entry.items),
+                    Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Text(
+                      formatDateTimeLong(entry.date),
+                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                     ),
                   ],
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 6),
+
+                // Row 2: Warehouse + Article Count on the right
                 Row(
                   children: [
-                    _buildInfoItem(Icons.person_rounded, 'Admin'),
+                    Icon(Icons.store_rounded, size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _getWarehouseName(entry.warehouseId),
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Text(
+                      '${entry.items.length} article${entry.items.length > 1 ? 's' : ''}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
                   ],
                 ),
               ],

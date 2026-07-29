@@ -20,6 +20,7 @@ import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
 import '../../services/auth_service.dart';
 import '../../database/database_helper.dart';
+import '../utils/mobile_status_colors.dart';
 
 import 'mobile_invoice_detail_screen.dart';
 import 'forms/mobile_quote_form_screen.dart';
@@ -76,6 +77,8 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
               icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentQuote),
               itemBuilder: (_) => [
+                _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
                 PopupMenuDivider(height: 1),
                 _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
@@ -135,16 +138,23 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('Réf: ${currentQuote.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: currentQuote.status.color.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              currentQuote.status.label,
-                              style: TextStyle(color: currentQuote.status.color, fontWeight: FontWeight.bold, fontSize: 12),
-                            ),
+                          Builder(
+                            builder: (context) {
+                              final label = currentQuote.status.label;
+                              final color = MobileStatusColors.getColorForStatus(label);
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
+                                ),
+                                child: Text(
+                                  label,
+                                  style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12),
+                                ),
+                              );
+                            }
                           ),
                         ],
                       ),
@@ -252,7 +262,16 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
+        SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary),
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+          ),
+        ),
       ],
     );
   }
@@ -265,7 +284,14 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
         children: [
           Icon(icon, size: 18, color: Color(0xFF64748B)),
           SizedBox(width: 12),
-          Text(text, style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ),
         ],
       ),
     );
@@ -273,6 +299,10 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
 
   void _handleAction(BuildContext context, String action, Quote quote) {
     switch (action) {
+      case 'view':
+        final viewDoc = DocumentWrapper.fromQuote(quote);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
+        break;
       case 'edit':
         Navigator.push(
           context,

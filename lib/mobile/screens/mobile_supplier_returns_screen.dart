@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../utils/constants.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
+import '../widgets/mobile_advanced_filter_panel.dart';
 import '../../widgets/sidebar_menu.dart';
+import '../../utils/constants.dart';
 import '../../blocs/supplier_returns/supplier_returns_bloc.dart';
 import '../../blocs/supplier_returns/supplier_returns_state.dart';
 import '../../blocs/supplier_returns/supplier_returns_event.dart';
+import '../../blocs/suppliers/suppliers_bloc.dart';
+import '../../models/supplier.dart';
 import 'forms/mobile_supplier_return_form_screen.dart';
 import 'mobile_supplier_return_detail_screen.dart';
-
+import '../../services/firestore_pagination_service.dart';
 
 class MobileSupplierReturnsScreen extends StatefulWidget {
   const MobileSupplierReturnsScreen({super.key});
@@ -20,27 +23,58 @@ class MobileSupplierReturnsScreen extends StatefulWidget {
 }
 
 class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScreen> {
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
-  String _selectedFilter = 'Tous';
+  String? _selectedSupplierId;
+  DateTime? _dateFrom;
+  DateTime? _dateTo;
+  String? _selectedStatus;
   late MobileModuleConfig _config;
 
   @override
   void initState() {
     super.initState();
     _config = MobileModuleConfig.getConfig(AppModule.supplierReturns);
-    context.read<SupplierReturnsBloc>().add(LoadSupplierReturns());
+    FirestorePaginationService.instance.enablePersistence();
+    _fetchFilteredSupplierReturns();
+    context.read<SuppliersBloc>().add(LoadSuppliers());
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      context.read<SupplierReturnsBloc>().add(LoadNextSupplierReturns(
+        searchQuery: _searchQuery,
+        supplierId: _selectedSupplierId,
+        dateFrom: _dateFrom,
+        dateTo: _dateTo,
+        status: _selectedStatus,
+      ));
+    }
+  }
+
+  void _fetchFilteredSupplierReturns() {
+    context.read<SupplierReturnsBloc>().add(LoadFirstSupplierReturns(
+      searchQuery: _searchQuery,
+      supplierId: _selectedSupplierId,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      status: _selectedStatus,
+    ));
   }
 
   void _onSearchChanged(String query) {
     setState(() {
       _searchQuery = query;
     });
-  }
-
-  void _onFilterChanged(String filter) {
-    setState(() {
-      _selectedFilter = filter;
-    });
+    _fetchFilteredSupplierReturns();
   }
 
   void _handleDelete(String id) {
@@ -72,76 +106,67 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
       builder: (context, state) {
         bool isLoading = state is SupplierReturnsLoading || state is SupplierReturnsInitial;
         bool isEmpty = true;
+        bool isLoadingMore = false;
+        int totalMatchingCount = 0;
         List<Widget> cards = [];
+
+        final suppliersState = context.watch<SuppliersBloc>().state;
+        List<Supplier> suppliersList = [];
+        if (suppliersState is SuppliersLoaded) {
+          suppliersList = suppliersState.suppliers;
+        }
 
         if (state is SupplierReturnsLoaded) {
           final items = state.returns;
-          
+          isLoadingMore = state.isLoadingMore;
+          totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
+
           final filteredItems = items.where((item) {
-            bool matchesSearch = true;
-            bool matchesFilter = true;
-
-            String statusStr = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                statusStr = translateStatus(s.toString());
-              }
-            } catch (_) {}
-
-            String reference = '';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? '').toString(); } catch (_) {}
-            
-            String name = '';
-            try { name = ((item as dynamic).customerName ?? (item as dynamic).supplierName ?? (item as dynamic).companyName ?? (item as dynamic).name ?? '').toString(); } catch (_) {}
+            String reference = item.number;
+            String name = item.supplierName ?? '';
 
             if (_searchQuery.isNotEmpty) {
               final query = _searchQuery.toLowerCase();
               if (!reference.toLowerCase().contains(query) && !name.toLowerCase().contains(query)) {
-                matchesSearch = false;
+                return false;
               }
             }
 
-            if (_selectedFilter != 'Tous') {
-               if (statusStr.toLowerCase() != _selectedFilter.toLowerCase()) {
-                   matchesFilter = false;
-               }
+            if (_selectedSupplierId != null && _selectedSupplierId!.isNotEmpty) {
+              if (item.supplierId != _selectedSupplierId) return false;
             }
 
-            return matchesSearch && matchesFilter;
+            if (_dateFrom != null) {
+              final itemDate = DateTime(item.date.year, item.date.month, item.date.day);
+              final fDate = DateTime(_dateFrom!.year, _dateFrom!.month, _dateFrom!.day);
+              if (itemDate.isBefore(fDate)) return false;
+            }
+
+            if (_dateTo != null) {
+              final itemDate = DateTime(item.date.year, item.date.month, item.date.day);
+              final tDate = DateTime(_dateTo!.year, _dateTo!.month, _dateTo!.day, 23, 59, 59);
+              if (itemDate.isAfter(tDate)) return false;
+            }
+
+            if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
+              final rawStatus = item.status.toLowerCase();
+              final translatedLower = translateStatus(item.status).toLowerCase();
+              final filterLower = _selectedStatus!.toLowerCase();
+              if (rawStatus != filterLower && translatedLower != filterLower) return false;
+            }
+
+            return true;
           }).toList();
-          
+
           isEmpty = filteredItems.isEmpty;
-          
+
           cards = filteredItems.map((item) {
-            String reference = 'N/A';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? 'N/A').toString(); } catch (_) {}
-            
-            String status = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                status = translateStatus(s.toString());
-              }
-            } catch (_) {}
-            
-            String? name;
-            try { name = (item as dynamic).customerName ?? (item as dynamic).supplierName ?? (item as dynamic).companyName ?? (item as dynamic).name; } catch (_) {}
-            
-            DateTime? date;
-            try { date = (item as dynamic).date ?? (item as dynamic).createdAt; } catch (_) {}
-            
-            double amount = 0;
-            try { amount = (item as dynamic).totalTTC?.toDouble() ?? (item as dynamic).totalTTC.toDouble(); } catch (_) {}
-            if (amount == 0) {
-              try { amount = (item as dynamic).amount?.toDouble() ?? (item as dynamic).amount.toDouble(); } catch (_) {}
-            }
-            if (amount == 0) {
-              try { amount = (item as dynamic).price?.toDouble() ?? (item as dynamic).price.toDouble(); } catch (_) {}
-            }
-            
-            String id = '';
-            try { id = (item as dynamic).id; } catch (_) {}
+            String reference = item.number;
+            String status = item.status;
+            String? name = item.supplierName ?? 'Fournisseur Inconnu';
+            DateTime? date = item.date;
+            double amount = item.totalTTC;
+            String id = item.id;
 
             return MobileGenericCard(
               reference: reference,
@@ -153,14 +178,16 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MobileSupplierReturnDetailScreen(returnNote: item)),
-                );
+                ).then((_) {
+                  _fetchFilteredSupplierReturns();
+                });
               },
               onEdit: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MobileSupplierReturnFormScreen(existing: item)),
                 ).then((_) {
-                  context.read<SupplierReturnsBloc>().add(LoadSupplierReturns());
+                  _fetchFilteredSupplierReturns();
                 });
               },
               onDelete: () => _handleDelete(id),
@@ -171,31 +198,83 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
         return MobileGenericListScreen(
           title: _config.title,
           activeModule: AppModule.supplierReturns,
-          onModuleSelected: (module) {
-          },
-          onRefresh: () {
-            context.read<SupplierReturnsBloc>().add(LoadSupplierReturns());
+          onModuleSelected: (module) {},
+          onRefresh: () async {
+            context.read<SupplierReturnsBloc>().add(ResetSupplierReturnsPagination(
+              searchQuery: _searchQuery,
+              supplierId: _selectedSupplierId,
+              dateFrom: _dateFrom,
+              dateTo: _dateTo,
+              status: _selectedStatus,
+            ));
+            context.read<SuppliersBloc>().add(LoadSuppliers());
           },
           onSearchChanged: _onSearchChanged,
-          filterOptions: _config.filterOptions,
-          selectedFilter: _selectedFilter,
-          onFilterChanged: _onFilterChanged,
+          filterOptions: const [],
+          selectedFilter: _selectedStatus ?? 'Tous',
+          onFilterChanged: (val) {
+            setState(() => _selectedStatus = val == 'Tous' ? null : val);
+            _fetchFilteredSupplierReturns();
+          },
+          customFilterWidget: MobileAdvancedFilterPanel(
+            entityLabel: 'Fournisseur',
+            selectedCustomerId: _selectedSupplierId,
+            suppliers: suppliersList,
+            onCustomerChanged: (id) {
+              setState(() => _selectedSupplierId = id);
+              _fetchFilteredSupplierReturns();
+            },
+            dateFrom: _dateFrom,
+            onDateFromChanged: (d) {
+              setState(() => _dateFrom = d);
+              _fetchFilteredSupplierReturns();
+            },
+            dateTo: _dateTo,
+            onDateToChanged: (d) {
+              setState(() => _dateTo = d);
+              _fetchFilteredSupplierReturns();
+            },
+            selectedStatus: _selectedStatus,
+            statusOptions: const ['Tous', 'Brouillon', 'Validé', 'Annulé'],
+            onStatusChanged: (s) {
+              setState(() => _selectedStatus = s);
+              _fetchFilteredSupplierReturns();
+            },
+            onResetFilters: () {
+              setState(() {
+                _selectedSupplierId = null;
+                _dateFrom = null;
+                _dateTo = null;
+                _selectedStatus = null;
+              });
+              _fetchFilteredSupplierReturns();
+            },
+            itemCount: totalMatchingCount,
+          ),
+          scrollController: _scrollController,
           isLoading: isLoading,
           isEmpty: isEmpty,
-          emptyMessage: 'Aucun élément trouvé.',
-          itemCount: cards.length,
+          emptyMessage: 'Aucun retour fournisseur trouvé.',
+          itemCount: totalMatchingCount,
           fabText: _config.fabText,
           onFabPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MobileSupplierReturnFormScreen()),
-              ).then((_) {
-                context.read<SupplierReturnsBloc>().add(LoadSupplierReturns());
-              });
-            },
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 80),
-            children: cards,
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MobileSupplierReturnFormScreen()),
+            ).then((_) {
+              _fetchFilteredSupplierReturns();
+            });
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...cards,
+              if (isLoadingMore)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+            ],
           ),
         );
       },

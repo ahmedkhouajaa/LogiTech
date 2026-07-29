@@ -14,10 +14,33 @@ class InventorySheetsLoading extends InventorySheetsState {}
 
 class InventorySheetsLoaded extends InventorySheetsState {
   final List<InventorySheet> sheets;
-  const InventorySheetsLoaded(this.sheets);
+  final int totalCount;
+  final bool hasMore;
+  final bool isLoadingMore;
+
+  const InventorySheetsLoaded(
+    this.sheets, {
+    this.totalCount = 0,
+    this.hasMore = true,
+    this.isLoadingMore = false,
+  });
+
+  InventorySheetsLoaded copyWith({
+    List<InventorySheet>? sheets,
+    int? totalCount,
+    bool? hasMore,
+    bool? isLoadingMore,
+  }) {
+    return InventorySheetsLoaded(
+      sheets ?? this.sheets,
+      totalCount: totalCount ?? this.totalCount,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    );
+  }
 
   @override
-  List<Object?> get props => [sheets];
+  List<Object?> get props => [sheets, totalCount, hasMore, isLoadingMore];
 }
 
 class InventorySheetsError extends InventorySheetsState {

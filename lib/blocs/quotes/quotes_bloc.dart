@@ -4,9 +4,68 @@ import '../../database/database_helper.dart';
 import '../../models/quote.dart';
 import '../../models/quote_status_history.dart';
 import '../../utils/constants.dart';
+import '../../services/firestore_pagination_service.dart';
 
 abstract class QuotesEvent extends Equatable { const QuotesEvent(); @override List<Object?> get props => []; }
 class LoadQuotes extends QuotesEvent {}
+
+class LoadFirstDevis extends QuotesEvent {
+  final String? searchQuery;
+  final String? customerId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  const LoadFirstDevis({
+    this.searchQuery,
+    this.customerId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+
+  @override
+  List<Object?> get props => [searchQuery, customerId, dateFrom, dateTo, status];
+}
+
+class LoadNextDevis extends QuotesEvent {
+  final String? searchQuery;
+  final String? customerId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  const LoadNextDevis({
+    this.searchQuery,
+    this.customerId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+
+  @override
+  List<Object?> get props => [searchQuery, customerId, dateFrom, dateTo, status];
+}
+
+class ResetDevisPagination extends QuotesEvent {
+  final String? searchQuery;
+  final String? customerId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  const ResetDevisPagination({
+    this.searchQuery,
+    this.customerId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+
+  @override
+  List<Object?> get props => [searchQuery, customerId, dateFrom, dateTo, status];
+}
+
 class AddQuote extends QuotesEvent { final Quote quote; const AddQuote(this.quote); @override List<Object?> get props => [quote]; }
 class UpdateQuote extends QuotesEvent { final Quote quote; const UpdateQuote(this.quote); @override List<Object?> get props => [quote]; }
 class UpdateQuoteStatus extends QuotesEvent {
@@ -23,12 +82,47 @@ class DeleteQuote extends QuotesEvent { final String id; const DeleteQuote(this.
 abstract class QuotesState extends Equatable { const QuotesState(); @override List<Object?> get props => []; }
 class QuotesInitial extends QuotesState {}
 class QuotesLoading extends QuotesState {}
-class QuotesLoaded extends QuotesState { final List<Quote> quotes; const QuotesLoaded(this.quotes); @override List<Object?> get props => [quotes]; }
+class QuotesLoaded extends QuotesState {
+  final List<Quote> quotes;
+  final int totalCount;
+  final bool hasMore;
+  final bool isLoadingMore;
+
+  const QuotesLoaded(
+    this.quotes, {
+    this.totalCount = 0,
+    this.hasMore = true,
+    this.isLoadingMore = false,
+  });
+
+  QuotesLoaded copyWith({
+    List<Quote>? quotes,
+    int? totalCount,
+    bool? hasMore,
+    bool? isLoadingMore,
+  }) {
+    return QuotesLoaded(
+      quotes ?? this.quotes,
+      totalCount: totalCount ?? this.totalCount,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+    );
+  }
+
+  @override
+  List<Object?> get props => [quotes, totalCount, hasMore, isLoadingMore];
+}
+
 class QuotesError extends QuotesState { final String message; const QuotesError(this.message); @override List<Object?> get props => [message]; }
 
 class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
+  static const int pageSize = 10;
+
   QuotesBloc() : super(QuotesInitial()) {
     on<LoadQuotes>(_onLoad);
+    on<LoadFirstDevis>(_onLoadFirstDevis);
+    on<LoadNextDevis>(_onLoadNextDevis);
+    on<ResetDevisPagination>(_onResetDevisPagination);
     on<AddQuote>(_onAdd);
     on<UpdateQuote>(_onUpdate);
     on<UpdateQuoteStatus>(_onUpdateStatus);
@@ -37,14 +131,109 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
 
   Future<void> _onLoad(LoadQuotes event, Emitter<QuotesState> emit) async {
     emit(QuotesLoading());
-    try { emit(QuotesLoaded(await DatabaseHelper.instance.getQuotes())); } catch (e) { emit(QuotesError(e.toString())); }
+    try {
+      final quotes = await DatabaseHelper.instance.getQuotes();
+      emit(QuotesLoaded(quotes, totalCount: quotes.length));
+    } catch (e) {
+      emit(QuotesError(e.toString()));
+    }
   }
+
+  Future<void> _onLoadFirstDevis(LoadFirstDevis event, Emitter<QuotesState> emit) async {
+    emit(QuotesLoading());
+    try {
+      FirestorePaginationService.instance.resetDevisPagination();
+      final quotesFuture = FirestorePaginationService.instance.getFirstDevis(
+        pageSize: pageSize,
+        searchQuery: event.searchQuery,
+        customerId: event.customerId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+      final countFuture = FirestorePaginationService.instance.getDevisCount(
+        searchQuery: event.searchQuery,
+        customerId: event.customerId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+
+      final results = await Future.wait([quotesFuture, countFuture]);
+      final quotes = results[0] as List<Quote>;
+      final totalCount = results[1] as int;
+
+      emit(QuotesLoaded(
+        quotes,
+        totalCount: totalCount > quotes.length ? totalCount : quotes.length,
+        hasMore: quotes.length >= pageSize,
+      ));
+    } catch (e) {
+      emit(QuotesError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadNextDevis(LoadNextDevis event, Emitter<QuotesState> emit) async {
+    final currentState = state;
+    if (currentState is! QuotesLoaded || currentState.isLoadingMore || !currentState.hasMore) return;
+
+    emit(currentState.copyWith(isLoadingMore: true));
+    try {
+      final nextQuotes = await FirestorePaginationService.instance.getNextDevis(
+        pageSize: pageSize,
+        currentOffset: currentState.quotes.length,
+        searchQuery: event.searchQuery,
+        customerId: event.customerId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+
+      if (nextQuotes.isEmpty) {
+        emit(currentState.copyWith(hasMore: false, isLoadingMore: false));
+      } else {
+        final updatedList = List<Quote>.from(currentState.quotes)..addAll(nextQuotes);
+        emit(QuotesLoaded(
+          updatedList,
+          totalCount: currentState.totalCount > updatedList.length ? currentState.totalCount : updatedList.length,
+          hasMore: nextQuotes.length >= pageSize,
+          isLoadingMore: false,
+        ));
+      }
+    } catch (e) {
+      emit(currentState.copyWith(isLoadingMore: false));
+    }
+  }
+
+  Future<void> _onResetDevisPagination(ResetDevisPagination event, Emitter<QuotesState> emit) async {
+    FirestorePaginationService.instance.resetDevisPagination();
+    add(LoadFirstDevis(
+      searchQuery: event.searchQuery,
+      customerId: event.customerId,
+      dateFrom: event.dateFrom,
+      dateTo: event.dateTo,
+      status: event.status,
+    ));
+  }
+
   Future<void> _onAdd(AddQuote event, Emitter<QuotesState> emit) async {
-    try { await DatabaseHelper.instance.insertQuote(event.quote); add(LoadQuotes()); } catch (e) { emit(QuotesError(e.toString())); }
+    try {
+      await DatabaseHelper.instance.insertQuote(event.quote);
+      add(LoadQuotes());
+    } catch (e) {
+      emit(QuotesError(e.toString()));
+    }
   }
+
   Future<void> _onUpdate(UpdateQuote event, Emitter<QuotesState> emit) async {
-    try { await DatabaseHelper.instance.updateQuote(event.quote); add(LoadQuotes()); } catch (e) { emit(QuotesError(e.toString())); }
+    try {
+      await DatabaseHelper.instance.updateQuote(event.quote);
+      add(LoadQuotes());
+    } catch (e) {
+      emit(QuotesError(e.toString()));
+    }
   }
+
   Future<void> _onUpdateStatus(UpdateQuoteStatus event, Emitter<QuotesState> emit) async {
     try {
       await DatabaseHelper.instance.update('quotes', {'status': event.newStatus.name, 'updated_at': DateTime.now().toIso8601String()}, event.id);
@@ -63,7 +252,13 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
       emit(QuotesError(e.toString()));
     }
   }
+
   Future<void> _onDelete(DeleteQuote event, Emitter<QuotesState> emit) async {
-    try { await DatabaseHelper.instance.softDelete('quotes', event.id); add(LoadQuotes()); } catch (e) { emit(QuotesError(e.toString())); }
+    try {
+      await DatabaseHelper.instance.softDelete('quotes', event.id);
+      add(LoadQuotes());
+    } catch (e) {
+      emit(QuotesError(e.toString()));
+    }
   }
 }

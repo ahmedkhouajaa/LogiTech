@@ -33,7 +33,7 @@ enum SupplierCreditNoteStatus {
 
   Color get color {
     switch (this) {
-      case draft: return AppColors.textSecondary;
+      case draft: return AppColors.warning;
       case validated: return AppColors.success;
       case canceled: return AppColors.error;
     }
@@ -48,7 +48,7 @@ class SupplierCreditNotesScreen extends StatefulWidget {
 }
 
 class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
-  String? _selectedFournisseurId;
+  String? _selectedSupplierId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
   SupplierCreditNoteStatus? _statusFilter;
@@ -65,7 +65,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
 
   void _applyFilters() {
     context.read<SupplierCreditNotesBloc>().add(FilterSupplierCreditNotes(
-      supplierId: _selectedFournisseurId,
+      supplierId: _selectedSupplierId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
       status: _statusFilter?.name,
@@ -78,7 +78,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Ã¢a€€Ã¢a€€ Header Ã¢a€€Ã¢a€€
+        // Ã¢a€ €Ã¢a€ € Header Ã¢a€ €Ã¢a€ €
         Padding(
           padding: EdgeInsets.all(AppSpacing.lg),
           child: Row(
@@ -161,8 +161,8 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
     int totalItems = 0;
     if (state is SupplierCreditNotesLoaded) {
       List<SupplierCreditNote> filteredNotes = state.creditNotes;
-      if (_selectedFournisseurId != null && _selectedFournisseurId != 'all') {
-        filteredNotes = filteredNotes.where((q) => q.supplierId == _selectedFournisseurId).toList();
+      if (_selectedSupplierId != null && _selectedSupplierId != 'all') {
+        filteredNotes = filteredNotes.where((q) => q.supplierId == _selectedSupplierId).toList();
       }
       if (_dateFrom != null) {
         filteredNotes = filteredNotes.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
@@ -176,7 +176,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
       totalItems = filteredNotes.length;
     }
 
-    final activeFilterCount = (_selectedFournisseurId != null && _selectedFournisseurId != 'all' ? 1 : 0) +
+    final activeFilterCount = (_selectedSupplierId != null && _selectedSupplierId != 'all' ? 1 : 0) +
         (_dateFrom != null ? 1 : 0) +
         (_dateTo != null ? 1 : 0) +
         (_statusFilter != null ? 1 : 0);
@@ -203,9 +203,9 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                 builder: (context, state) {
                   final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
                   String selectedSupplierName = 'Tous les fournisseurs';
-                  if (_selectedFournisseurId != null && _selectedFournisseurId != 'all') {
+                  if (_selectedSupplierId != null && _selectedSupplierId != 'all') {
                     final found = suppliers.firstWhere(
-                      (s) => s.id == _selectedFournisseurId,
+                      (s) => s.id == _selectedSupplierId,
                       orElse: () => Supplier(id: '', code: '', name: 'Inconnu', country: ''),
                     );
                     selectedSupplierName = found.companyName?.isNotEmpty == true
@@ -215,10 +215,10 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
 
                   return InkWell(
                     onTap: () async {
-                      final selected = await _showSupplierSearchDialog(context, suppliers, _selectedFournisseurId);
+                      final selected = await _showSupplierSearchDialog(context, suppliers, _selectedSupplierId);
                       if (selected != null) {
                         setState(() {
-                          _selectedFournisseurId = selected.id == 'all' ? null : selected.id;
+                          _selectedSupplierId = selected.id == 'all' ? null : selected.id;
                         });
                         _applyFilters();
                       }
@@ -236,12 +236,12 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              _selectedFournisseurId == null || _selectedFournisseurId == 'all'
+                              _selectedSupplierId == null || _selectedSupplierId == 'all'
                                   ? 'Tous les fournisseurs'
                                   : selectedSupplierName,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: _selectedFournisseurId != null && _selectedFournisseurId != 'all'
+                                color: _selectedSupplierId != null && _selectedSupplierId != 'all'
                                     ? AppColors.textPrimary
                                     : AppColors.textSecondary,
                               ),
@@ -431,7 +431,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
               TextButton.icon(
                 onPressed: () {
                   setState(() {
-                    _selectedFournisseurId = null;
+                    _selectedSupplierId = null;
                     _dateFrom = null;
                     _dateTo = null;
                     _statusFilter = null;

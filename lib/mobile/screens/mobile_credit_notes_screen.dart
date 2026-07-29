@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../utils/constants.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
+import '../widgets/mobile_advanced_filter_panel.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/credit_notes/credit_notes_bloc.dart';
+import '../../blocs/customers/customers_bloc.dart';
+import '../../models/customer.dart';
 import 'forms/mobile_credit_note_form_screen.dart';
 import 'mobile_credit_note_detail_screen.dart';
-
+import '../../services/firestore_pagination_service.dart';
 
 class MobileCreditNotesScreen extends StatefulWidget {
   const MobileCreditNotesScreen({super.key});
@@ -18,27 +20,58 @@ class MobileCreditNotesScreen extends StatefulWidget {
 }
 
 class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
-  String _selectedFilter = 'Tous';
+  String? _selectedCustomerId;
+  DateTime? _dateFrom;
+  DateTime? _dateTo;
+  String? _selectedStatus;
   late MobileModuleConfig _config;
 
   @override
   void initState() {
     super.initState();
     _config = MobileModuleConfig.getConfig(AppModule.creditNotes);
-    context.read<CreditNotesBloc>().add(LoadCreditNotes());
+    FirestorePaginationService.instance.enablePersistence();
+    _fetchFilteredCreditNotes();
+    context.read<CustomersBloc>().add(LoadCustomers());
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      context.read<CreditNotesBloc>().add(LoadNextCreditNotes(
+        searchQuery: _searchQuery,
+        customerId: _selectedCustomerId,
+        dateFrom: _dateFrom,
+        dateTo: _dateTo,
+        status: _selectedStatus,
+      ));
+    }
+  }
+
+  void _fetchFilteredCreditNotes() {
+    context.read<CreditNotesBloc>().add(LoadFirstCreditNotes(
+      searchQuery: _searchQuery,
+      customerId: _selectedCustomerId,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      status: _selectedStatus,
+    ));
   }
 
   void _onSearchChanged(String query) {
     setState(() {
       _searchQuery = query;
     });
-  }
-
-  void _onFilterChanged(String filter) {
-    setState(() {
-      _selectedFilter = filter;
-    });
+    _fetchFilteredCreditNotes();
   }
 
   void _handleDelete(String id) {
@@ -70,54 +103,62 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
       builder: (context, state) {
         bool isLoading = state is CreditNotesLoading || state is CreditNotesInitial;
         bool isEmpty = true;
+        bool isLoadingMore = false;
+        int totalMatchingCount = 0;
         List<Widget> cards = [];
+
+        final customersState = context.watch<CustomersBloc>().state;
+        List<Customer> customersList = [];
+        if (customersState is CustomersLoaded) {
+          customersList = customersState.customers;
+        }
 
         if (state is CreditNotesLoaded) {
           final items = state.creditNotes;
-          
+          isLoadingMore = state.isLoadingMore;
+          totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
+
           final filteredItems = items.where((item) {
-            bool matchesSearch = true;
-            bool matchesFilter = true;
-
-            String statusStr = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                statusStr = translateStatus(s.toString());
-              }
-            } catch (_) {}
-
-            String reference = '';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? '').toString(); } catch (_) {}
-            
-            String name = '';
-            try { name = ((item as dynamic).customerName ?? (item as dynamic).supplierName ?? (item as dynamic).companyName ?? (item as dynamic).name ?? '').toString(); } catch (_) {}
-
             if (_searchQuery.isNotEmpty) {
               final query = _searchQuery.toLowerCase();
-              if (!reference.toLowerCase().contains(query) && !name.toLowerCase().contains(query)) {
-                matchesSearch = false;
-              }
+              final numMatch = item.number.toLowerCase().contains(query);
+              final custMatch = (item.customerName ?? '').toLowerCase().contains(query);
+              if (!numMatch && !custMatch) return false;
             }
 
-            if (_selectedFilter != 'Tous') {
-               if (statusStr.toLowerCase() != _selectedFilter.toLowerCase()) {
-                   matchesFilter = false;
-               }
+            if (_selectedCustomerId != null && _selectedCustomerId!.isNotEmpty) {
+              if (item.customerId != _selectedCustomerId) return false;
             }
 
-            return matchesSearch && matchesFilter;
+            if (_dateFrom != null) {
+              final iDate = DateTime(item.date.year, item.date.month, item.date.day);
+              final fDate = DateTime(_dateFrom!.year, _dateFrom!.month, _dateFrom!.day);
+              if (iDate.isBefore(fDate)) return false;
+            }
+
+            if (_dateTo != null) {
+              final iDate = DateTime(item.date.year, item.date.month, item.date.day);
+              final tDate = DateTime(_dateTo!.year, _dateTo!.month, _dateTo!.day, 23, 59, 59);
+              if (iDate.isAfter(tDate)) return false;
+            }
+
+            if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
+              final statusLabel = item.status.label.toLowerCase();
+              final filterLower = _selectedStatus!.toLowerCase();
+              if (statusLabel != filterLower) return false;
+            }
+
+            return true;
           }).toList();
-          
+
           isEmpty = filteredItems.isEmpty;
-          
+
           cards = filteredItems.map((item) {
-            String reference = item.number;
-            String status = item.status.label;
-            String? name = item.customerName ?? 'Client Inconnu';
-            DateTime? date = item.date;
-            double amount = item.totalTTC;
-            String id = item.id;
+            final reference = item.number;
+            final status = item.status.label;
+            final name = item.customerName ?? 'Client Inconnu';
+            final date = item.date;
+            final amount = item.totalTTC;
 
             return MobileGenericCard(
               reference: reference,
@@ -129,17 +170,19 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MobileCreditNoteDetailScreen(creditNote: item)),
-                );
+                ).then((_) {
+                  _fetchFilteredCreditNotes();
+                });
               },
               onEdit: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MobileCreditNoteFormScreen(existing: item)),
                 ).then((_) {
-                  context.read<CreditNotesBloc>().add(LoadCreditNotes());
+                  _fetchFilteredCreditNotes();
                 });
               },
-              onDelete: () => _handleDelete(id),
+              onDelete: () => _handleDelete(item.id),
             );
           }).toList();
         }
@@ -147,31 +190,83 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
         return MobileGenericListScreen(
           title: _config.title,
           activeModule: AppModule.creditNotes,
-          onModuleSelected: (module) {
-          },
-          onRefresh: () {
-            context.read<CreditNotesBloc>().add(LoadCreditNotes());
+          onModuleSelected: (module) {},
+          onRefresh: () async {
+            context.read<CreditNotesBloc>().add(ResetCreditNotesPagination(
+              searchQuery: _searchQuery,
+              customerId: _selectedCustomerId,
+              dateFrom: _dateFrom,
+              dateTo: _dateTo,
+              status: _selectedStatus,
+            ));
+            context.read<CustomersBloc>().add(LoadCustomers());
           },
           onSearchChanged: _onSearchChanged,
-          filterOptions: _config.filterOptions,
-          selectedFilter: _selectedFilter,
-          onFilterChanged: _onFilterChanged,
+          filterOptions: const [],
+          selectedFilter: _selectedStatus ?? 'Tous',
+          onFilterChanged: (val) {
+            setState(() => _selectedStatus = val == 'Tous' ? null : val);
+            _fetchFilteredCreditNotes();
+          },
+          customFilterWidget: MobileAdvancedFilterPanel(
+            entityLabel: 'Client',
+            selectedCustomerId: _selectedCustomerId,
+            customers: customersList,
+            onCustomerChanged: (id) {
+              setState(() => _selectedCustomerId = id);
+              _fetchFilteredCreditNotes();
+            },
+            dateFrom: _dateFrom,
+            onDateFromChanged: (d) {
+              setState(() => _dateFrom = d);
+              _fetchFilteredCreditNotes();
+            },
+            dateTo: _dateTo,
+            onDateToChanged: (d) {
+              setState(() => _dateTo = d);
+              _fetchFilteredCreditNotes();
+            },
+            selectedStatus: _selectedStatus,
+            statusOptions: const ['Tous', 'Brouillon', 'Créé', 'Validé', 'Annulé'],
+            onStatusChanged: (s) {
+              setState(() => _selectedStatus = s);
+              _fetchFilteredCreditNotes();
+            },
+            onResetFilters: () {
+              setState(() {
+                _selectedCustomerId = null;
+                _dateFrom = null;
+                _dateTo = null;
+                _selectedStatus = null;
+              });
+              _fetchFilteredCreditNotes();
+            },
+            itemCount: totalMatchingCount,
+          ),
+          scrollController: _scrollController,
           isLoading: isLoading,
           isEmpty: isEmpty,
-          emptyMessage: 'Aucun élément trouvé.',
-          itemCount: cards.length,
+          emptyMessage: 'Aucun avoir trouvé.',
+          itemCount: totalMatchingCount,
           fabText: _config.fabText,
           onFabPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MobileCreditNoteFormScreen()),
             ).then((_) {
-              context.read<CreditNotesBloc>().add(LoadCreditNotes());
+              _fetchFilteredCreditNotes();
             });
           },
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 80),
-            children: cards,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...cards,
+              if (isLoadingMore)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+            ],
           ),
         );
       },

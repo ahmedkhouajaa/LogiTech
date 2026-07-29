@@ -268,6 +268,8 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
   List<PopupMenuEntry<String>> _buildActionMenu(BuildContext context, PurchaseInvoice inv) {
     final List<PopupMenuEntry<String>> items = [];
 
+    items.add(_buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'));
+    items.add(const PopupMenuDivider(height: 1));
     items.add(_buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'));
     items.add(const PopupMenuDivider(height: 1));
     items.add(_buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'));
@@ -303,6 +305,10 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
 
   void _handleAction(BuildContext context, String action, PurchaseInvoice inv) {
     switch (action) {
+      case 'view':
+        final viewDoc = DocumentWrapper.fromPurchaseInvoice(inv);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
+        break;
       case 'edit':
         Navigator.push(
           context,

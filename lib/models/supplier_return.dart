@@ -142,7 +142,7 @@ class SupplierReturn extends Equatable {
     };
   }
 
-  factory SupplierReturn.fromMap(Map<String, dynamic> map, {String? supplierName, List<SupplierReturnItem>? items}) {
+  factory SupplierReturn.fromMap(Map<String, dynamic> map, [List<SupplierReturnItem>? items, String? supplierName]) {
     return SupplierReturn(
       id: map['id'],
       number: map['number'],
@@ -156,7 +156,7 @@ class SupplierReturn extends Equatable {
       isDeleted: map['is_deleted'] == 1,
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
-      supplierName: supplierName,
+      supplierName: supplierName ?? map['supplier_name'],
       items: items ?? [],
     );
   }

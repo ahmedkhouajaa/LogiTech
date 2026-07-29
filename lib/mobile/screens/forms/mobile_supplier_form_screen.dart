@@ -138,10 +138,11 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       SmartTextInput(
-                        label: 'Téléphone',
+                        label: 'Téléphone *',
                         initialValue: _phone,
                         keyboardType: TextInputType.phone,
                         onChanged: (v) { if (!widget.isReadOnly) _phone = v; },
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Téléphone obligatoire' : null,
                       ),
                       SizedBox(height: 16),
                       SmartTextInput(

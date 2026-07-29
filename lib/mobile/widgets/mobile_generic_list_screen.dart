@@ -21,7 +21,9 @@ class MobileGenericListScreen extends StatelessWidget {
   final Widget child; // The list of cards
   final VoidCallback onFabPressed;
   final String fabText;
-  final int? itemCount; // Added itemCount
+  final int? itemCount;
+  final Widget? customFilterWidget;
+  final ScrollController? scrollController;
 
   const MobileGenericListScreen({
     super.key,
@@ -40,6 +42,8 @@ class MobileGenericListScreen extends StatelessWidget {
     required this.onFabPressed,
     required this.fabText,
     this.itemCount,
+    this.customFilterWidget,
+    this.scrollController,
   });
 
   @override
@@ -51,50 +55,59 @@ class MobileGenericListScreen extends StatelessWidget {
           // Sticky Search Bar
           MobileSearchBar(onChanged: onSearchChanged),
           
-          // Horizontal Filter Chips
-          if (filterOptions.isNotEmpty)
-            MobileFilterChips(
-              options: filterOptions,
-              selectedOption: selectedFilter,
-              onSelected: onFilterChanged,
-            ),
-            
-          if (itemCount != null)
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    '$itemCount résultat${itemCount! > 1 ? 's' : ''}',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+          if (customFilterWidget == null) ...[
+            // Horizontal Filter Chips
+            if (filterOptions.isNotEmpty)
+              MobileFilterChips(
+                options: filterOptions,
+                selectedOption: selectedFilter,
+                onSelected: onFilterChanged,
+              ),
+              
+            if (itemCount != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '$itemCount résultat${itemCount! > 1 ? 's' : ''}',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                    ),
                   ),
                 ),
               ),
-            ),
+          ],
           
-          // Content
+          // Content Area
           Expanded(
             child: isLoading
-                ? Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator())
                 : RefreshIndicator(
                     onRefresh: () async {
                       await SyncService.instance.triggerSync();
                       onRefresh();
                     },
-                    child: isEmpty
-                        ? Stack(
-                            children: [
-                              child,
-                              MobileEmptyState(message: emptyMessage),
-                            ],
-                          )
-                        : child,
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: 80),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (customFilterWidget != null) customFilterWidget!,
+                          if (isEmpty)
+                            MobileEmptyState(message: emptyMessage)
+                          else
+                            child,
+                        ],
+                      ),
+                    ),
                   ),
           ),
         ],

@@ -10,6 +10,63 @@ abstract class SupplierReturnsEvent extends Equatable {
 
 class LoadSupplierReturns extends SupplierReturnsEvent {}
 
+class LoadFirstSupplierReturns extends SupplierReturnsEvent {
+  final String? searchQuery;
+  final String? supplierId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  const LoadFirstSupplierReturns({
+    this.searchQuery,
+    this.supplierId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+
+  @override
+  List<Object?> get props => [searchQuery, supplierId, dateFrom, dateTo, status];
+}
+
+class LoadNextSupplierReturns extends SupplierReturnsEvent {
+  final String? searchQuery;
+  final String? supplierId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  const LoadNextSupplierReturns({
+    this.searchQuery,
+    this.supplierId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+
+  @override
+  List<Object?> get props => [searchQuery, supplierId, dateFrom, dateTo, status];
+}
+
+class ResetSupplierReturnsPagination extends SupplierReturnsEvent {
+  final String? searchQuery;
+  final String? supplierId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  const ResetSupplierReturnsPagination({
+    this.searchQuery,
+    this.supplierId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+
+  @override
+  List<Object?> get props => [searchQuery, supplierId, dateFrom, dateTo, status];
+}
+
 class AddSupplierReturn extends SupplierReturnsEvent {
   final SupplierReturn supplierReturn;
 
@@ -38,18 +95,18 @@ class DeleteSupplierReturn extends SupplierReturnsEvent {
 }
 
 class FilterSupplierReturns extends SupplierReturnsEvent {
-  final String? FournisseurId;
+  final String? supplierId;
   final DateTime? dateFrom;
   final DateTime? dateTo;
   final String? status;
 
   const FilterSupplierReturns({
-    this.FournisseurId,
+    this.supplierId,
     this.dateFrom,
     this.dateTo,
     this.status,
   });
 
   @override
-  List<Object?> get props => [FournisseurId, dateFrom, dateTo, status];
+  List<Object?> get props => [supplierId, dateFrom, dateTo, status];
 }

@@ -1137,11 +1137,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     );
   }
 
-  void _convertToReceipt(BuildContext context, SupplierOrder order) {
+  Future<void> _convertToReceipt(BuildContext context, SupplierOrder order) async {
     final receiptId = const Uuid().v4();
+    final seq = await DatabaseHelper.instance.getNextReceivingVoucherSequence();
     final newReceipt = ReceivingVoucher(
       id: receiptId,
-      number: 'BR-${order.number.replaceAll("CMD-", "")}',
+      number: generateDocNumber(DocPrefix.receivingVoucher, seq),
       supplierId: order.supplierId,
       supplierName: order.supplierName,
       orderId: order.id,

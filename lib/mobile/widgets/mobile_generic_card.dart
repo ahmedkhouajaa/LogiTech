@@ -8,7 +8,7 @@ class MobileGenericCard extends StatelessWidget {
   final String? name;
   final IconData? nameIcon;
   final DateTime? date;
-  final double amount;
+  final double? amount;
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onPdf;
@@ -21,7 +21,7 @@ class MobileGenericCard extends StatelessWidget {
     this.name,
     this.nameIcon,
     this.date,
-    required this.amount,
+    this.amount,
     required this.onTap,
     this.onEdit,
     this.onPdf,
@@ -30,112 +30,112 @@ class MobileGenericCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget card = Card(
-      elevation: 2,
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: AppColors.surface,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Row 1: Reference and Status
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    reference,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: MobileStatusColors.getColorForStatus(status).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: MobileStatusColors.getColorForStatus(status),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      status,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: MobileStatusColors.getColorForStatus(status),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8),
+    final statusLabel = translateStatus(status);
+    final statusColor = MobileStatusColors.getColorForStatus(statusLabel);
 
-              // Row 2: Name
-              if (name != null)
+    Widget card = Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top row: Ref Badge Chip + Status Pill + Chevron
                 Row(
                   children: [
-                    Icon(nameIcon ?? Icons.person, size: 16, color: AppColors.textSecondary),
-                    SizedBox(width: 8),
-                    Expanded(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
                       child: Text(
-                        name!,
+                        reference,
                         style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                      ),
+                      child: Text(
+                        statusLabel,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.chevron_right, size: 18, color: AppColors.textTertiary),
                   ],
                 ),
-              if (name != null) SizedBox(height: 8),
+                const SizedBox(height: 10),
 
-              // Row 3: Date and Amount
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (date != null)
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Text(
-                          '${date!.day.toString().padLeft(2, '0')}/${date!.month.toString().padLeft(2, '0')}/${date!.year}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    SizedBox.shrink(),
+                // Row 1: Date
+                if (date != null) ...[
                   Row(
                     children: [
-                      Icon(Icons.attach_money, size: 16, color: AppColors.textSecondary),
-                      SizedBox(width: 4),
+                      Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 6),
                       Text(
-                        '${amount.toStringAsFixed(2)} TND',
+                        '${date!.day.toString().padLeft(2, '0')}/${date!.month.toString().padLeft(2, '0')}/${date!.year}',
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                ],
+
+                // Row 2: Name / Client on left + Total Amount on right (NO $ SIGN)
+                Row(
+                  children: [
+                    if (name != null && name!.isNotEmpty) ...[
+                      Icon(nameIcon ?? Icons.person_outline, size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          name!,
+                          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ] else
+                      const Spacer(),
+                    if (amount != null)
+                      Text(
+                        '${amount!.toStringAsFixed(2)} TND',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
                         ),
                       ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

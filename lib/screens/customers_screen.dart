@@ -192,6 +192,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                   ),
                                 ),
                                 
+                                /*
                                 // Solde
                                 Expanded(
                                   flex: 1,
@@ -218,6 +219,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                     ],
                                   ),
                                 ),
+                                */
                                 
                                 // Actions
                                 SizedBox(width: 16),
@@ -265,7 +267,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
 class CustomerDialog extends StatefulWidget {
   final Customer? existing;
-  const CustomerDialog({this.existing});
+  const CustomerDialog({super.key, this.existing});
   @override
   State<CustomerDialog> createState() => CustomerDialogState();
 }
@@ -299,12 +301,31 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
   late final TextEditingController _deliveryCityCtrl;
   late final TextEditingController _deliveryPostalCodeCtrl;
 
-  // Collapsible sections state
-  bool _deliveryExpanded = true;
-  bool _bankExpanded = false;
-
-  late final TextEditingController _bankAccountCtrl;
+  // Dynamic Bank Accounts & Financier
+  late List<TextEditingController> _bankAccountControllers;
   late final TextEditingController _privateNoteCtrl;
+  late final TextEditingController _tvaAttestationCtrl;
+  late final TextEditingController _tvaStartDateCtrl;
+  late final TextEditingController _tvaEndDateCtrl;
+
+  String _selectedCountryCode = '+216';
+  String _selectedFlag = '🇹🇳';
+  
+  static const List<Map<String, String>> _countryPrefixes = [
+    {'flag': '🇹🇳', 'code': '+216', 'name': 'Tunisie'},
+    {'flag': '🇫🇷', 'code': '+33', 'name': 'France'},
+    {'flag': '🇩🇿', 'code': '+213', 'name': 'Algérie'},
+    {'flag': '🇲🇦', 'code': '+212', 'name': 'Maroc'},
+    {'flag': '🇱🇾', 'code': '+218', 'name': 'Libye'},
+    {'flag': '🇨🇦', 'code': '+1', 'name': 'Canada / USA'},
+    {'flag': '🇩🇪', 'code': '+49', 'name': 'Allemagne'},
+    {'flag': '🇮🇹', 'code': '+39', 'name': 'Italie'},
+    {'flag': '🇪🇸', 'code': '+34', 'name': 'Espagne'},
+    {'flag': '🇬🇧', 'code': '+44', 'name': 'Royaume-Uni'},
+    {'flag': '🇧🇪', 'code': '+32', 'name': 'Belgique'},
+    {'flag': '🇨🇭', 'code': '+41', 'name': 'Suisse'},
+  ];
+
   late TabController _tabController;
 
   @override
@@ -322,7 +343,22 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
     _responsibleNameCtrl = TextEditingController(text: c?.responsibleName ?? (c?.customerType == 'particulier' ? c?.name : '') ?? '');
     _cinCtrl = TextEditingController(text: c?.cinNumber ?? '');
     _birthDateCtrl = TextEditingController(text: c?.birthDate ?? '');
-    _phoneCtrl = TextEditingController(text: c?.phone ?? '');
+    
+    String phoneVal = c?.phone ?? '';
+    _selectedCountryCode = '+216';
+    _selectedFlag = '🇹🇳';
+    if (phoneVal.isNotEmpty) {
+      for (final prefix in _countryPrefixes) {
+        if (phoneVal.startsWith(prefix['code']!)) {
+          _selectedCountryCode = prefix['code']!;
+          _selectedFlag = prefix['flag']!;
+          phoneVal = phoneVal.substring(prefix['code']!.length).trim();
+          break;
+        }
+      }
+    }
+    _phoneCtrl = TextEditingController(text: phoneVal);
+    
     _emailCtrl = TextEditingController(text: c?.email ?? '');
     _referenceCtrl = TextEditingController(text: c?.referenceCode ?? '');
     _taxCtrl = TextEditingController(text: c?.taxId ?? '');
@@ -335,8 +371,23 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
     _deliveryCityCtrl = TextEditingController(text: c?.deliveryCity ?? '');
     _deliveryPostalCodeCtrl = TextEditingController(text: c?.deliveryPostalCode ?? '');
 
-    _bankAccountCtrl = TextEditingController(text: c?.bankAccount ?? '');
+    // Initialize dynamic bank accounts
+    if (c?.bankAccount != null && c!.bankAccount!.trim().isNotEmpty) {
+      final accounts = c.bankAccount!.split(RegExp(r'[\n,]|\|'))
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+      _bankAccountControllers = accounts.isNotEmpty
+          ? accounts.map((acc) => TextEditingController(text: acc)).toList()
+          : [TextEditingController()];
+    } else {
+      _bankAccountControllers = [TextEditingController()];
+    }
+
     _privateNoteCtrl = TextEditingController(text: c?.privateNote ?? c?.notes ?? '');
+    _tvaAttestationCtrl = TextEditingController(text: c?.tvaAttestation ?? '');
+    _tvaStartDateCtrl = TextEditingController(text: c?.tvaStartDate ?? '');
+    _tvaEndDateCtrl = TextEditingController(text: c?.tvaEndDate ?? '');
 
     // Restore price list if custom
     if (c?.priceList != null && c!.priceList.isNotEmpty && c.priceList != 'default') {
@@ -358,7 +409,6 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
           }
         }
       } catch (_) {
-        // Fallback if it is just a string name
         _selectedPriceList = c.priceList;
         if (!_priceLists.contains(c.priceList)) {
           _priceLists.add(c.priceList);
@@ -366,7 +416,6 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
       }
     }
 
-    // Set listeners for billing address to sync with delivery if checked
     _billingStreetCtrl.addListener(_syncDeliveryAddress);
     _billingCityCtrl.addListener(_syncDeliveryAddress);
     _billingPostalCodeCtrl.addListener(_syncDeliveryAddress);
@@ -392,9 +441,12 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
       _codeCtrl, _companyNameCtrl, _responsibleNameCtrl, _cinCtrl, _birthDateCtrl,
       _phoneCtrl, _emailCtrl, _referenceCtrl, _taxCtrl, _billingStreetCtrl, _billingCityCtrl,
       _billingPostalCodeCtrl, _deliveryStreetCtrl, _deliveryCityCtrl, _deliveryPostalCodeCtrl,
-      _bankAccountCtrl, _privateNoteCtrl
+      _privateNoteCtrl, _tvaAttestationCtrl, _tvaStartDateCtrl, _tvaEndDateCtrl
     ]) {
       c.dispose();
+    }
+    for (var ctrl in _bankAccountControllers) {
+      ctrl.dispose();
     }
     _tabController.dispose();
     super.dispose();
@@ -402,12 +454,15 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 600;
+
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+      insetPadding: isMobile ? EdgeInsets.symmetric(horizontal: 20, vertical: 36) : EdgeInsets.symmetric(horizontal: 80, vertical: 48),
       child: Container(
-        width: 1000,
+        width: isMobile ? size.width : 650,
+        constraints: BoxConstraints(maxHeight: size.height * 0.80),
         decoration: BoxDecoration(
           color: AppColors.background,
           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -417,9 +472,9 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Redesigned Header to match screenshot
+            // Responsive Header
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: isMobile ? 12 : 16),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.only(
@@ -430,83 +485,62 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
               ),
               child: Row(
                 children: [
-                  Text(
-                    widget.existing == null ? 'Creer un Nouveau Client' : 'Modifier le Client',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.person_add_alt_1_rounded, color: AppColors.primary, size: isMobile ? 20 : 24),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.existing == null ? 'Créer un Nouveau Client' : 'Modifier le Client',
+                      style: TextStyle(
+                        fontSize: isMobile ? 16 : 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Spacer(),
-                  // AI Scan Button (BETA) - Temporarily hidden per user request
-                  /*
-                  Container(
-                    margin: EdgeInsets.only(right: 12),
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Scanner avec l\'IA bientot disponible !')),
-                        );
-                      },
-                      icon: Icon(Icons.auto_awesome_rounded, size: 16, color: Colors.purple),
-                      label: Row(
-                        children: [
-                          Text(
-                            'Scanner avec l\'IA',
-                            style: TextStyle(color: Colors.purple, fontWeight: FontWeight.bold, fontSize: 13),
-                          ),
-                          SizedBox(width: 6),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.purple.shade100,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'BETA',
-                              style: TextStyle(color: Colors.purple, fontSize: 9, fontWeight: FontWeight.w900),
-                            ),
-                          ),
-                        ],
-                      ),
+                  if (isMobile) ...[
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                      tooltip: 'Fermer',
+                    ),
+                  ] else ...[
+                    OutlinedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
+                      label: Text('Retour', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.purple, width: 1.5),
+                        side: BorderSide(color: AppColors.border),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
                     ),
-                  ),
-                  */
-                  // Retour Button
-                  OutlinedButton.icon(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
-                    label: Text('Retour', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: _save,
+                      icon: Icon(Icons.save_rounded, size: 16, color: Colors.white),
+                      label: Text(widget.existing == null ? 'Créer' : 'Enregistrer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 12),
-                  // Creer / Enregistrer Button
-                  ElevatedButton.icon(
-                    onPressed: _save,
-                    icon: Icon(Icons.save_rounded, size: 16, color: Colors.white),
-                    label: Text(widget.existing == null ? 'Creer' : 'Enregistrer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ),
             
-            // TabBar Header
+            // TabBar Header (Scrollable on Android to prevent overflow)
             Container(
               decoration: BoxDecoration(
                 color: AppColors.surface,
@@ -514,389 +548,43 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
               ),
               child: TabBar(
                 controller: _tabController,
+                isScrollable: false,
+                tabAlignment: TabAlignment.fill,
                 labelColor: AppColors.primary,
                 unselectedLabelColor: AppColors.textTertiary,
                 indicatorColor: AppColors.primary,
                 indicatorWeight: 3,
-                labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 12 : 13),
+                unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: isMobile ? 12 : 13),
                 tabs: const [
-                  Tab(text: 'Informations', icon: Icon(Icons.info_outline_rounded, size: 20)),
-                  Tab(text: 'Adresses', icon: Icon(Icons.location_on_outlined, size: 20)),
-                  Tab(text: 'Financier', icon: Icon(Icons.account_balance_wallet_outlined, size: 20)),
+                  Tab(text: 'Informations', icon: Icon(Icons.info_outline_rounded, size: 18)),
+                  Tab(text: 'Adresses', icon: Icon(Icons.location_on_outlined, size: 18)),
+                  Tab(text: 'Financier', icon: Icon(Icons.account_balance_wallet_outlined, size: 18)),
                 ],
               ),
             ),
             
-            // TabBarView Content
+            // TabBarView Content (Scrollable Layouts with Material Cards)
             Expanded(
               child: Form(
                 key: _formKey,
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    // TAB 1: Informations
-                    SingleChildScrollView(
-                      padding: EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Section 1: Type d'Entreprise
-                          Text(
-                            "Type d'Entreprise",
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
-                          ),
-                          SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildTypeButton(
-                                  label: 'Entreprise',
-                                  value: 'entreprise',
-                                  isSelected: _customerType == 'entreprise',
-                                  onTap: () => setState(() => _customerType = 'entreprise'),
-                                ),
-                              ),
-                              SizedBox(width: 16),
-                              Expanded(
-                                child: _buildTypeButton(
-                                  label: 'Particulier',
-                                  value: 'particulier',
-                                  isSelected: _customerType == 'particulier',
-                                  onTap: () => setState(() => _customerType = 'particulier'),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 24),
-
-                          // Section 2: Conditional Fields (Company vs Individual)
-                          if (_customerType == 'entreprise') ...[
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Nom de l\'Entreprise *',
-                                    hint: 'Saisissez le nom de l\'entreprise',
-                                    controller: _companyNameCtrl,
-                                    validator: (v) => v!.trim().isEmpty ? 'Le nom de l\'entreprise est requis' : null,
-                                  ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Nom du responsable',
-                                    hint: 'Saisissez le nom du responsable',
-                                    controller: _responsibleNameCtrl,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Email Personnel *',
-                                    hint: 'Saisissez l\'email personnel',
-                                    controller: _emailCtrl,
-                                    keyboardType: TextInputType.emailAddress,
-                                    validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
-                                  ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Reference',
-                                    hint: 'Saisissez le code de reference',
-                                    controller: _referenceCtrl,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Matricule Fiscal',
-                                    hint: '1234567X/X/X/000',
-                                    controller: _taxCtrl,
-                                  ),
-                                ),
-                                SizedBox(width: 16),
-                                const Spacer(),
-                              ],
-                            ),
-                          ] else ...[
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Nom du responsable *',
-                                    hint: 'Saisissez le nom du responsable',
-                                    controller: _responsibleNameCtrl,
-                                    validator: (v) => v!.trim().isEmpty ? 'Le nom du responsable est requis' : null,
-                                  ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Email Personnel *',
-                                    hint: 'Saisissez l\'email personnel',
-                                    controller: _emailCtrl,
-                                    keyboardType: TextInputType.emailAddress,
-                                    validator: (v) => v!.trim().isEmpty ? 'L\'email personnel est requis' : null,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Reference',
-                                    hint: 'Saisissez le code de reference',
-                                    controller: _referenceCtrl,
-                                  ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Numero CIN',
-                                    hint: 'Saisissez le numero CIN (8 chiffres)',
-                                    controller: _cinCtrl,
-                                    keyboardType: TextInputType.number,
-                                    validator: (v) {
-                                      if (v!.trim().isNotEmpty && v.trim().length != 8) {
-                                        return 'Le CIN doit contenir exactement 8 chiffres';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: AppTextField(
-                                    label: 'Date de Naissance',
-                                    hint: 'JJ/MM/AAAA',
-                                    controller: _birthDateCtrl,
-                                    readOnly: true,
-                                    suffix: Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
-                                    onTap: _selectBirthDate,
-                                  ),
-                                ),
-                                SizedBox(width: 16),
-                                const Spacer(),
-                              ],
-                            ),
-                          ],
-                          SizedBox(height: 16),
-
-                          // Numero de Telephone (with flag & +216 prefix)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Numero de Telephone',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                              ),
-                              SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  // Country dropdown styled simulator
-                                  Container(
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.surfaceAlt,
-                                      borderRadius: BorderRadius.circular(AppRadius.md),
-                                      border: Border.all(color: AppColors.border),
-                                    ),
-                                    padding: EdgeInsets.symmetric(horizontal: 12),
-                                    child: Row(
-                                      children: [
-                                        Text('🇹🇳', style: TextStyle(fontSize: 18)),
-                                        SizedBox(width: 6),
-                                        Text('+216', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                                        SizedBox(width: 4),
-                                        Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textSecondary),
-                                      ],
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: TextFormField(
-                                      controller: _phoneCtrl,
-                                      keyboardType: TextInputType.phone,
-                                      style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
-                                      decoration: InputDecoration(
-                                        hintText: 'Saisissez le numero de telephone',
-                                        hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
-                                        filled: true,
-                                        fillColor: AppColors.surfaceAlt,
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(AppRadius.md),
-                                          borderSide: BorderSide(color: AppColors.border),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(AppRadius.md),
-                                          borderSide: BorderSide(color: AppColors.border),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(AppRadius.md),
-                                          borderSide: BorderSide(color: AppColors.primary, width: 2),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    // TAB 2: Adresses
-                    SingleChildScrollView(
-                      padding: EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Section 3: Shared Fields (Billing Address)
-                          _buildBillingAddressSection(),
-                          SizedBox(height: 20),
-
-                          // Delivery Address Section (Collapsible)
-                          _buildDeliveryAddressSection(),
-                        ],
-                      ),
-                    ),
-                    
-                    // TAB 3: Financier
-                    SingleChildScrollView(
-                      padding: EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Bank Accounts Section (Collapsible)
-                          _buildBankAccountSection(),
-                          SizedBox(height: 24),
-
-                          // TVA suspension checkbox
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: _tvaSuspension,
-                                activeColor: AppColors.primary,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                onChanged: (v) => setState(() => _tvaSuspension = v ?? false),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  'Ce client possede un permis de suspension de TVA',
-                                  style: TextStyle(fontSize: 14, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 24),
-
-                          // Price List Dropdown + Create Price List
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Liste de Prix',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                              ),
-                              SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      height: 44,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surfaceAlt,
-                                        borderRadius: BorderRadius.circular(AppRadius.md),
-                                        border: Border.all(color: AppColors.border),
-                                      ),
-                                      padding: EdgeInsets.symmetric(horizontal: 14),
-                                      child: DropdownButtonHideUnderline(
-                                        child: DropdownButton<String>(
-                                          value: _selectedPriceList,
-                                          isExpanded: true,
-                                          style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
-                                          items: _priceLists.map((name) => DropdownMenuItem(
-                                            value: name,
-                                            child: Text(name),
-                                          )).toList(),
-                                          onChanged: (val) {
-                                            if (val != null) {
-                                              setState(() => _selectedPriceList = val);
-                                            }
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  // "+" Button
-                                  SizedBox(
-                                    height: 44,
-                                    width: 44,
-                                    child: ElevatedButton(
-                                      onPressed: _showAddPriceListDialog,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.surfaceAlt,
-                                        foregroundColor: AppColors.textPrimary,
-                                        elevation: 0,
-                                        padding: EdgeInsets.zero,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(AppRadius.md),
-                                          side: BorderSide(color: AppColors.border),
-                                        ),
-                                      ),
-                                      child: Icon(Icons.add_rounded, size: 20),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Choisissez une liste de prix par defaut pour ce client',
-                                style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 24),
-
-                          // Private Note (3-4 lines height)
-                          AppTextField(
-                            label: 'Note privee',
-                            hint: 'Saisissez une note privee concernant ce client',
-                            controller: _privateNoteCtrl,
-                            maxLines: 4,
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildInformationsTab(isMobile),
+                    _buildAdressesTab(isMobile),
+                    _buildFinancierTab(isMobile),
                   ],
                 ),
               ),
             ),
-            // Bottom Navigation
+
+            // Bottom Navigation Footer
             AnimatedBuilder(
               animation: _tabController,
               builder: (context, child) {
                 return Container(
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: isMobile ? 12 : 16),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     border: Border(top: BorderSide(color: AppColors.border)),
@@ -908,51 +596,56 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _tabController.index > 0
-                          ? OutlinedButton.icon(
-                              onPressed: () => _tabController.animateTo(_tabController.index - 1),
-                              icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
-                              label: Text('Précédent', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: AppColors.border),
-                                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                              ),
-                            )
-                          : SizedBox(width: 100),
-                      _tabController.index < _tabController.length - 1
-                          ? ElevatedButton(
-                              onPressed: () {
-                                if (_formKey.currentState?.validate() ?? true) {
-                                  _tabController.animateTo(_tabController.index + 1);
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                                elevation: 0,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text('Suivant', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                  SizedBox(width: 8),
-                                  Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
-                                ],
-                              ),
-                            )
-                          : ElevatedButton.icon(
-                              onPressed: _save,
-                              icon: Icon(Icons.check_rounded, size: 16, color: Colors.white),
-                              label: Text('Terminer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.success,
-                                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                                elevation: 0,
-                              ),
-                            ),
+                      if (_tabController.index > 0)
+                        OutlinedButton.icon(
+                          onPressed: () => _tabController.animateTo(_tabController.index - 1),
+                          icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
+                          label: Text('Précédent', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: AppColors.border),
+                            padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                          ),
+                        )
+                      else
+                        SizedBox.shrink(),
+                      
+                      const Spacer(),
+
+                      if (_tabController.index < _tabController.length - 1)
+                        ElevatedButton(
+                          onPressed: () {
+                            if (_validateCurrentTab()) {
+                              _tabController.animateTo(_tabController.index + 1);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 20, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                            elevation: 0,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Suivant', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                              SizedBox(width: 8),
+                              Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+                            ],
+                          ),
+                        )
+                      else
+                        ElevatedButton.icon(
+                          onPressed: _save,
+                          icon: Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                          label: Text('Terminer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 20, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                            elevation: 0,
+                          ),
+                        ),
                     ],
                   ),
                 );
@@ -964,7 +657,924 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
     );
   }
 
-  // Helper widget for Type buttons
+  // Reusable Material Card helper for distinct section hierarchy
+  Widget _buildMaterialCard({
+    required String title,
+    required IconData icon,
+    required Widget child,
+    Widget? trailing,
+    bool isMobile = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceAlt.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(AppRadius.lg),
+                topRight: Radius.circular(AppRadius.lg),
+              ),
+              border: Border(bottom: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: AppColors.primary),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                if (trailing != null) trailing,
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(20),
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // TAB 1: Informations
+  Widget _buildInformationsTab(bool isMobile) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isMobile ? 10 : 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Card 1: Type d'Entreprise
+          _buildMaterialCard(
+            title: "Type de Client",
+            icon: Icons.business_rounded,
+            isMobile: isMobile,
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildTypeButton(
+                    label: 'Entreprise',
+                    value: 'entreprise',
+                    isSelected: _customerType == 'entreprise',
+                    onTap: () => setState(() => _customerType = 'entreprise'),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: _buildTypeButton(
+                    label: 'Particulier',
+                    value: 'particulier',
+                    isSelected: _customerType == 'particulier',
+                    onTap: () => setState(() => _customerType = 'particulier'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: isMobile ? 10 : 16),
+
+          // Card 2: Informations Principales
+          _buildMaterialCard(
+            title: _customerType == 'entreprise' ? "Détails de l'Entreprise" : "Identité & Contact",
+            icon: _customerType == 'entreprise' ? Icons.domain_rounded : Icons.person_rounded,
+            isMobile: isMobile,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_customerType == 'entreprise') ...[
+                  isMobile
+                      ? Column(
+                          children: [
+                            AppTextField(
+                              label: 'Raison Sociale / Nom de l\'Entreprise *',
+                              hint: 'Ex: LogiTech SARL',
+                              controller: _companyNameCtrl,
+                              validator: (v) => v!.trim().isEmpty ? 'Le nom de l\'entreprise est requis' : null,
+                            ),
+                            SizedBox(height: isMobile ? 8 : 12),
+                            AppTextField(
+                              label: 'Nom du responsable',
+                              hint: 'Ex: Mohamed Ali',
+                              controller: _responsibleNameCtrl,
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                              child: AppTextField(
+                                label: 'Raison Sociale / Nom de l\'Entreprise *',
+                                hint: 'Ex: LogiTech SARL',
+                                controller: _companyNameCtrl,
+                                validator: (v) => v!.trim().isEmpty ? 'Le nom de l\'entreprise est requis' : null,
+                              ),
+                            ),
+                            SizedBox(width: 16),
+                            Expanded(
+                              child: AppTextField(
+                                label: 'Nom du responsable',
+                                hint: 'Ex: Mohamed Ali',
+                                controller: _responsibleNameCtrl,
+                              ),
+                            ),
+                          ],
+                        ),
+                ] else ...[
+                  AppTextField(
+                    label: 'Nom Complet *',
+                    hint: 'Ex: Mohamed Ali',
+                    controller: _responsibleNameCtrl,
+                    validator: (v) => v!.trim().isEmpty ? 'Le nom est requis' : null,
+                  ),
+                ],
+                SizedBox(height: isMobile ? 8 : 12),
+                isMobile
+                    ? Column(
+                        children: [
+                          AppTextField(
+                            label: 'Email Personnel *',
+                            hint: 'Ex: contact@client.tn',
+                            controller: _emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (v) {
+                              if (v!.trim().isEmpty) return 'L\'email est requis';
+                              if (!v.contains('@')) return 'Email invalide';
+                              return null;
+                            },
+                          ),
+                          SizedBox(height: isMobile ? 8 : 12),
+                          AppTextField(
+                            label: 'Code Référence',
+                            hint: 'Ex: REF-2026',
+                            controller: _referenceCtrl,
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: AppTextField(
+                              label: 'Email Personnel *',
+                              hint: 'Ex: contact@client.tn',
+                              controller: _emailCtrl,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (v) {
+                                if (v!.trim().isEmpty) return 'L\'email est requis';
+                                if (!v.contains('@')) return 'Email invalide';
+                                return null;
+                              },
+                            ),
+                          ),
+                          SizedBox(width: 16),
+                          Expanded(
+                            child: AppTextField(
+                              label: 'Code Référence',
+                              hint: 'Ex: REF-2026',
+                              controller: _referenceCtrl,
+                            ),
+                          ),
+                        ],
+                      ),
+              ],
+            ),
+          ),
+          SizedBox(height: isMobile ? 10 : 16),
+
+          // Card 3: Coordonnées & Fiscalité
+          _buildMaterialCard(
+            title: "Coordonnées & Fiscalité",
+            icon: Icons.badge_outlined,
+            isMobile: isMobile,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_customerType == 'entreprise') ...[
+                  AppTextField(
+                    label: 'Matricule Fiscal',
+                    hint: '1234567X/A/M/000',
+                    controller: _taxCtrl,
+                  ),
+                ] else ...[
+                  isMobile
+                      ? Column(
+                          children: [
+                            AppTextField(
+                              label: 'Numéro CIN',
+                              hint: '8 chiffres (Ex: 08123456)',
+                              controller: _cinCtrl,
+                              keyboardType: TextInputType.number,
+                              validator: (v) {
+                                if (v!.trim().isNotEmpty && v.trim().length != 8) {
+                                  return 'Le CIN doit contenir exactement 8 chiffres';
+                                }
+                                return null;
+                              },
+                            ),
+                            SizedBox(height: isMobile ? 8 : 12),
+                            AppTextField(
+                              label: 'Date de Naissance',
+                              hint: 'JJ/MM/AAAA',
+                              controller: _birthDateCtrl,
+                              readOnly: true,
+                              suffix: Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
+                              onTap: _selectBirthDate,
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                              child: AppTextField(
+                                label: 'Numéro CIN',
+                                hint: '8 chiffres (Ex: 08123456)',
+                                controller: _cinCtrl,
+                                keyboardType: TextInputType.number,
+                                validator: (v) {
+                                  if (v!.trim().isNotEmpty && v.trim().length != 8) {
+                                    return 'Le CIN doit contenir exactly 8 chiffres';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            SizedBox(width: 16),
+                            Expanded(
+                              child: AppTextField(
+                                label: 'Date de Naissance',
+                                hint: 'JJ/MM/AAAA',
+                                controller: _birthDateCtrl,
+                                readOnly: true,
+                                suffix: Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
+                                onTap: _selectBirthDate,
+                              ),
+                            ),
+                          ],
+                        ),
+                ],
+                SizedBox(height: isMobile ? 8 : 12),
+
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Numéro de Téléphone *',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                    ),
+                    SizedBox(height: 4),
+                    Row(
+                      children: [
+                        PopupMenuButton<Map<String, String>>(
+                          onSelected: (item) {
+                            setState(() {
+                              _selectedFlag = item['flag']!;
+                              _selectedCountryCode = item['code']!;
+                            });
+                          },
+                          offset: Offset(0, isMobile ? 40 : 48),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                          itemBuilder: (context) => _countryPrefixes.map((item) => PopupMenuItem(
+                            value: item,
+                            child: Row(
+                              children: [
+                                Text(item['flag']!, style: const TextStyle(fontSize: 18)),
+                                const SizedBox(width: 8),
+                                Text(item['code']!, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(item['name']!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary), overflow: TextOverflow.ellipsis)),
+                              ],
+                            ),
+                          )).toList(),
+                          child: Container(
+                            height: isMobile ? 40 : 48,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceAlt,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(_selectedFlag, style: const TextStyle(fontSize: 18)),
+                                const SizedBox(width: 6),
+                                Text(_selectedCountryCode, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                                const SizedBox(width: 4),
+                                Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textSecondary),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _phoneCtrl,
+                            keyboardType: TextInputType.phone,
+                            validator: (v) => v == null || v.trim().isEmpty ? 'Téléphone obligatoire' : null,
+                            style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                            decoration: InputDecoration(
+                              hintText: 'Ex: 20 123 456',
+                              hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                              filled: true,
+                              fillColor: AppColors.surface,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: isMobile ? 10 : 12),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                borderSide: BorderSide(color: AppColors.border),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                borderSide: BorderSide(color: AppColors.border),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                borderSide: BorderSide(color: AppColors.primary, width: 2),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // TAB 2: Adresses
+  Widget _buildAdressesTab(bool isMobile) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isMobile ? 10 : 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Card 1: Adresse de Facturation
+          _buildMaterialCard(
+            title: "Adresse de Facturation",
+            icon: Icons.receipt_long_outlined,
+            isMobile: isMobile,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppTextField(
+                  label: 'Adresse de la rue',
+                  hint: 'Ex: 123 Rue de la République',
+                  controller: _billingStreetCtrl,
+                ),
+                SizedBox(height: isMobile ? 8 : 12),
+                isMobile
+                    ? Column(
+                        children: [
+                          AppTextField(
+                            label: 'Ville',
+                            hint: 'Ex: Tunis',
+                            controller: _billingCityCtrl,
+                          ),
+                          SizedBox(height: isMobile ? 8 : 12),
+                          AppTextField(
+                            label: 'Code postal',
+                            hint: 'Ex: 1000',
+                            controller: _billingPostalCodeCtrl,
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: AppTextField(
+                              label: 'Ville',
+                              hint: 'Ex: Tunis',
+                              controller: _billingCityCtrl,
+                            ),
+                          ),
+                          SizedBox(width: 16),
+                          Expanded(
+                            child: AppTextField(
+                              label: 'Code postal',
+                              hint: 'Ex: 1000',
+                              controller: _billingPostalCodeCtrl,
+                            ),
+                          ),
+                        ],
+                      ),
+                SizedBox(height: isMobile ? 8 : 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Pays', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    SizedBox(height: 4),
+                    Container(
+                      height: isMobile ? 40 : 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceAlt.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      padding: EdgeInsets.symmetric(horizontal: 14),
+                      child: Row(
+                        children: [
+                          Text('🇹🇳', style: TextStyle(fontSize: 18)),
+                          SizedBox(width: 10),
+                          Text('Tunisie', style: TextStyle(fontSize: 14, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: isMobile ? 10 : 16),
+
+          // Card 2: Adresse de Livraison
+          _buildMaterialCard(
+            title: "Adresse de Livraison",
+            icon: Icons.local_shipping_outlined,
+            isMobile: isMobile,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _deliverySameAsBilling ? AppColors.primary.withValues(alpha: 0.05) : AppColors.surfaceAlt.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: _deliverySameAsBilling ? AppColors.primary.withValues(alpha: 0.3) : AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Switch(
+                        value: _deliverySameAsBilling,
+                        activeColor: AppColors.primary,
+                        onChanged: (v) {
+                          setState(() {
+                            _deliverySameAsBilling = v;
+                            if (_deliverySameAsBilling) {
+                              _deliveryStreetCtrl.text = _billingStreetCtrl.text;
+                              _deliveryCityCtrl.text = _billingCityCtrl.text;
+                              _deliveryPostalCodeCtrl.text = _billingPostalCodeCtrl.text;
+                            }
+                          });
+                        },
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Identique à l\'adresse de facturation',
+                          style: TextStyle(fontSize: 14, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!_deliverySameAsBilling) ...[
+                  SizedBox(height: isMobile ? 10 : 16),
+                  AppTextField(
+                    label: 'Adresse de la rue',
+                    hint: 'Ex: 456 Avenue de la Liberté',
+                    controller: _deliveryStreetCtrl,
+                  ),
+                  SizedBox(height: isMobile ? 8 : 12),
+                  isMobile
+                      ? Column(
+                          children: [
+                            AppTextField(
+                              label: 'Ville',
+                              hint: 'Ex: Sfax',
+                              controller: _deliveryCityCtrl,
+                            ),
+                            SizedBox(height: isMobile ? 8 : 12),
+                            AppTextField(
+                              label: 'Code postal',
+                              hint: 'Ex: 3000',
+                              controller: _deliveryPostalCodeCtrl,
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                              child: AppTextField(
+                                label: 'Ville',
+                                hint: 'Ex: Sfax',
+                                controller: _deliveryCityCtrl,
+                              ),
+                            ),
+                            SizedBox(width: 16),
+                            Expanded(
+                              child: AppTextField(
+                                label: 'Code postal',
+                                hint: 'Ex: 3000',
+                                controller: _deliveryPostalCodeCtrl,
+                              ),
+                            ),
+                          ],
+                        ),
+                  SizedBox(height: isMobile ? 8 : 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Pays', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      SizedBox(height: 4),
+                      Container(
+                        height: isMobile ? 40 : 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceAlt.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 14),
+                        child: Row(
+                          children: [
+                            Text('🇹🇳', style: TextStyle(fontSize: 18)),
+                            SizedBox(width: 10),
+                            Text('Tunisie', style: TextStyle(fontSize: 14, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // TAB 3: Financier
+  Widget _buildFinancierTab(bool isMobile) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isMobile ? 10 : 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Card 1: Dynamic Bank Accounts
+          _buildMaterialCard(
+            title: "Comptes Bancaires (RIB / IBAN)",
+            icon: Icons.account_balance_rounded,
+            isMobile: isMobile,
+            trailing: ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _bankAccountControllers.add(TextEditingController());
+                });
+              },
+              icon: Icon(Icons.add_rounded, size: 16, color: Colors.white),
+              label: Text('Ajouter', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                minimumSize: const Size(0, 32),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_bankAccountControllers.isEmpty) ...[
+                  Text('Aucun compte bancaire renseigné.', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                ] else ...[
+                  ...List.generate(_bankAccountControllers.length, (index) {
+                    final ctrl = _bankAccountControllers[index];
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: index == _bankAccountControllers.length - 1 ? 0 : 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 38,
+                            height: isMobile ? 40 : 48,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '#${index + 1}',
+                                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: TextFormField(
+                              controller: ctrl,
+                              style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                              decoration: InputDecoration(
+                                hintText: 'Saisissez le RIB (20 chiffres) ou l\'IBAN',
+                                hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                                filled: true,
+                                fillColor: AppColors.surface,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: isMobile ? 10 : 12),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  borderSide: BorderSide(color: AppColors.border),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  borderSide: BorderSide(color: AppColors.border),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  borderSide: BorderSide(color: AppColors.primary, width: 2),
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (_bankAccountControllers.length > 1) ...[
+                            SizedBox(width: 8),
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  ctrl.dispose();
+                                  _bankAccountControllers.removeAt(index);
+                                });
+                              },
+                              icon: Icon(Icons.delete_outline_rounded, color: AppColors.error),
+                              tooltip: 'Supprimer ce compte',
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ],
+            ),
+          ),
+          SizedBox(height: isMobile ? 10 : 16),
+
+          // Card 2: Exonération & TVA Suspension Toggle
+          _buildMaterialCard(
+            title: "Exonération & TVA",
+            icon: Icons.gavel_rounded,
+            isMobile: isMobile,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: isMobile ? 8 : 12),
+                  decoration: BoxDecoration(
+                    color: _tvaSuspension ? AppColors.successLight.withValues(alpha: 0.3) : AppColors.surfaceAlt.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: _tvaSuspension ? AppColors.success.withValues(alpha: 0.4) : AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _tvaSuspension ? Icons.verified_rounded : Icons.info_outline_rounded,
+                        color: _tvaSuspension ? AppColors.success : AppColors.textSecondary,
+                        size: 20,
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Suspension / Exonération de TVA',
+                              style: TextStyle(fontSize: isMobile ? 13 : 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              _tvaSuspension ? 'Le client bénéficie d\'une exemption active de TVA' : 'Facturation avec taux de TVA standard',
+                              style: TextStyle(fontSize: 12, color: _tvaSuspension ? AppColors.success : AppColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: _tvaSuspension,
+                        activeColor: AppColors.success,
+                        onChanged: (v) => setState(() => _tvaSuspension = v),
+                      ),
+                    ],
+                  ),
+                ),
+                // Animated Conditional Fields when toggled ON
+                AnimatedCrossFade(
+                  firstChild: SizedBox.shrink(),
+                  secondChild: Padding(
+                    padding: EdgeInsets.only(top: isMobile ? 12 : 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        AppTextField(
+                          label: 'N° d\'Attestation / Décision de Suspension *',
+                          hint: 'Ex: 2026/DGI/12345',
+                          controller: _tvaAttestationCtrl,
+                          validator: (v) => _tvaSuspension && (v == null || v.trim().isEmpty)
+                              ? 'Le numéro d\'attestation est requis pour la suspension'
+                              : null,
+                        ),
+                        SizedBox(height: isMobile ? 8 : 12),
+                        isMobile
+                            ? Column(
+                                children: [
+                                  AppTextField(
+                                    label: 'Date de Début',
+                                    hint: 'JJ/MM/AAAA',
+                                    controller: _tvaStartDateCtrl,
+                                    readOnly: true,
+                                    suffix: Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
+                                    onTap: () => _selectDate(_tvaStartDateCtrl),
+                                  ),
+                                  SizedBox(height: isMobile ? 8 : 12),
+                                  AppTextField(
+                                    label: 'Date d\'Expiration *',
+                                    hint: 'JJ/MM/AAAA',
+                                    controller: _tvaEndDateCtrl,
+                                    readOnly: true,
+                                    suffix: Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
+                                    onTap: () => _selectDate(_tvaEndDateCtrl),
+                                    validator: (v) => _tvaSuspension && (v == null || v.trim().isEmpty)
+                                        ? 'Date d\'expiration requise'
+                                        : null,
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                children: [
+                                  Expanded(
+                                    child: AppTextField(
+                                      label: 'Date de Début',
+                                      hint: 'JJ/MM/AAAA',
+                                      controller: _tvaStartDateCtrl,
+                                      readOnly: true,
+                                      suffix: Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
+                                      onTap: () => _selectDate(_tvaStartDateCtrl),
+                                    ),
+                                  ),
+                                  SizedBox(width: 16),
+                                  Expanded(
+                                    child: AppTextField(
+                                      label: 'Date d\'Expiration *',
+                                      hint: 'JJ/MM/AAAA',
+                                      controller: _tvaEndDateCtrl,
+                                      readOnly: true,
+                                      suffix: Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
+                                      onTap: () => _selectDate(_tvaEndDateCtrl),
+                                      validator: (v) => _tvaSuspension && (v == null || v.trim().isEmpty)
+                                          ? 'Date d\'expiration requise'
+                                          : null,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ],
+                    ),
+                  ),
+                  crossFadeState: _tvaSuspension ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                  duration: const Duration(milliseconds: 250),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: isMobile ? 10 : 16),
+
+          // Card 3: Tarification & Liste de Prix
+          _buildMaterialCard(
+            title: "Tarification & Liste de Prix",
+            icon: Icons.sell_outlined,
+            isMobile: isMobile,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Sélectionnez ou créez une grille tarifaire pour ce client :',
+                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                ),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: isMobile ? 40 : 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 14),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedPriceList,
+                            isExpanded: true,
+                            style: TextStyle(fontSize: 14, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                            icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary),
+                            items: _priceLists.map((name) => DropdownMenuItem(
+                              value: name,
+                              child: Row(
+                                children: [
+                                  Icon(Icons.discount_outlined, size: 16, color: AppColors.textTertiary),
+                                  SizedBox(width: 8),
+                                  Text(name),
+                                ],
+                              ),
+                            )).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _selectedPriceList = val);
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: _showAddPriceListDialog,
+                      icon: Icon(Icons.add_circle_outline_rounded, size: 18),
+                      label: Text(isMobile ? 'Créer' : 'Nouvelle liste', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                        foregroundColor: AppColors.primary,
+                        elevation: 0,
+                        minimumSize: Size(0, isMobile ? 40 : 48),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: isMobile ? 10 : 16),
+
+          // Card 4: Note Privée
+          _buildMaterialCard(
+            title: "Note Privée (Interne)",
+            icon: Icons.lock_outline_rounded,
+            isMobile: isMobile,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Remarques confidentielles (invisibles sur les factures et documents).',
+                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                ),
+                SizedBox(height: 8),
+                TextFormField(
+                  controller: _privateNoteCtrl,
+                  maxLines: 3,
+                  style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'Notes internes sur le client...',
+                    hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                    filled: true,
+                    fillColor: AppColors.surface,
+                    contentPadding: EdgeInsets.all(isMobile ? 10 : 14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderSide: BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderSide: BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTypeButton({
     required String label,
     required String value,
@@ -975,9 +1585,9 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: Container(
-        height: 54,
+        height: 52,
         decoration: BoxDecoration(
-          color: isSelected ? Color(0xFFEFF6FF) : AppColors.surface,
+          color: isSelected ? const Color(0xFFEFF6FF) : AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.border,
@@ -997,7 +1607,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
               ),
             ),
             if (isSelected) ...[
-              Spacer(),
+              const Spacer(),
               Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
             ],
           ],
@@ -1006,273 +1616,36 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
     );
   }
 
-  // Billing Address Section widget
-  Widget _buildBillingAddressSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border),
-      ),
-      padding: EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Adresse de Facturation',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-          ),
-          SizedBox(height: 16),
-          AppTextField(
-            label: 'Adresse de la rue',
-            hint: 'Saisissez l\'adresse de la rue',
-            controller: _billingStreetCtrl,
-          ),
-          SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: AppTextField(
-                  label: 'Ville',
-                  hint: 'Saisissez la ville',
-                  controller: _billingCityCtrl,
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: AppTextField(
-                  label: 'Code postal',
-                  hint: 'Saisissez le code postal',
-                  controller: _billingPostalCodeCtrl,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          // Country: Fixed Tunisia dropdown layout simulation
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Pays', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-              SizedBox(height: 6),
-              Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceAlt,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: AppColors.border),
-                ),
-                padding: EdgeInsets.symmetric(horizontal: 14),
-                child: Row(
-                  children: [
-                    Text('🇹🇳', style: TextStyle(fontSize: 18)),
-                    SizedBox(width: 8),
-                    Text('Tunisia', style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
-                    Spacer(),
-                    Icon(Icons.unfold_more_rounded, size: 18, color: AppColors.textTertiary),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+  bool _validateCurrentTab() {
+    if (_tabController.index == 0) {
+      if (_customerType == 'entreprise' && _companyNameCtrl.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez renseigner la raison sociale'), backgroundColor: AppColors.error));
+        return false;
+      }
+      if (_customerType == 'particulier' && _responsibleNameCtrl.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez renseigner le nom complet'), backgroundColor: AppColors.error));
+        return false;
+      }
+      if (_emailCtrl.text.trim().isEmpty || !_emailCtrl.text.contains('@')) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez renseigner un email valide'), backgroundColor: AppColors.error));
+        return false;
+      }
+    } else if (_tabController.index == 2) {
+      if (_tvaSuspension && (_tvaAttestationCtrl.text.trim().isEmpty || _tvaEndDateCtrl.text.trim().isEmpty)) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez renseigner les détails de l\'attestation de suspension TVA'), backgroundColor: AppColors.error));
+        return false;
+      }
+    }
+    return true;
   }
 
-  // Delivery Address Section (Collapsible)
-  Widget _buildDeliveryAddressSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Collapsible Header
-          InkWell(
-            onTap: () => setState(() => _deliveryExpanded = !_deliveryExpanded),
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(AppRadius.md),
-              topRight: const Radius.circular(AppRadius.md),
-              bottomLeft: Radius.circular(_deliveryExpanded ? 0 : AppRadius.md),
-              bottomRight: Radius.circular(_deliveryExpanded ? 0 : AppRadius.md),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Text(
-                    'Adresse de Livraison',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                  ),
-                  Spacer(),
-                  Icon(
-                    _deliveryExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                    color: AppColors.textSecondary,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_deliveryExpanded) ...[
-            Divider(height: 1, color: AppColors.border),
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Checkbox: Same as Billing
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _deliverySameAsBilling,
-                        activeColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                        onChanged: (v) {
-                          setState(() {
-                            _deliverySameAsBilling = v ?? false;
-                            if (_deliverySameAsBilling) {
-                              _deliveryStreetCtrl.text = _billingStreetCtrl.text;
-                              _deliveryCityCtrl.text = _billingCityCtrl.text;
-                              _deliveryPostalCodeCtrl.text = _billingPostalCodeCtrl.text;
-                            }
-                          });
-                        },
-                      ),
-                      Expanded(
-                        child: Text(
-                          'Identique a l\'adresse de facturation',
-                          style: TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12),
-                  AppTextField(
-                    label: 'Adresse de la rue',
-                    hint: 'Saisissez l\'adresse de la rue',
-                    controller: _deliveryStreetCtrl,
-                    readOnly: _deliverySameAsBilling,
-                  ),
-                  SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppTextField(
-                          label: 'Ville',
-                          hint: 'Saisissez la ville',
-                          controller: _deliveryCityCtrl,
-                          readOnly: _deliverySameAsBilling,
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: AppTextField(
-                          label: 'Code postal',
-                          hint: 'Saisissez le code postal',
-                          controller: _deliveryPostalCodeCtrl,
-                          readOnly: _deliverySameAsBilling,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Pays', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                      SizedBox(height: 6),
-                      Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceAlt,
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        padding: EdgeInsets.symmetric(horizontal: 14),
-                        child: Row(
-                          children: [
-                            Text('🇹🇳', style: TextStyle(fontSize: 18)),
-                            SizedBox(width: 8),
-                            Text('Tunisia', style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // Bank Accounts Section (Collapsible)
-  Widget _buildBankAccountSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          InkWell(
-            onTap: () => setState(() => _bankExpanded = !_bankExpanded),
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(AppRadius.md),
-              topRight: const Radius.circular(AppRadius.md),
-              bottomLeft: Radius.circular(_bankExpanded ? 0 : AppRadius.md),
-              bottomRight: Radius.circular(_bankExpanded ? 0 : AppRadius.md),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Text(
-                    'Comptes Bancaires',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                  ),
-                  Spacer(),
-                  Icon(
-                    _bankExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                    color: AppColors.textSecondary,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_bankExpanded) ...[
-            Divider(height: 1, color: AppColors.border),
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: AppTextField(
-                label: 'Numero de compte / IBAN',
-                hint: 'Saisissez le compte bancaire',
-                controller: _bankAccountCtrl,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // Date Picker with French formatting
   Future<void> _selectBirthDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().subtract(Duration(days: 365 * 30)),
+      initialDate: DateTime.now().subtract(const Duration(days: 365 * 30)),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
-      locale: Locale('fr'),
+      locale: const Locale('fr'),
       builder: (BuildContext context, Widget? child) {
         return Theme(
           data: ThemeData.light().copyWith(
@@ -1297,7 +1670,37 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
     }
   }
 
-  // Dialog to Add a custom price list
+  Future<void> _selectDate(TextEditingController ctrl) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2050),
+      locale: const Locale('fr'),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: AppColors.surface,
+              surface: AppColors.surface,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      final day = picked.day.toString().padLeft(2, '0');
+      final month = picked.month.toString().padLeft(2, '0');
+      final year = picked.year;
+      setState(() {
+        ctrl.text = '$day/$month/$year';
+      });
+    }
+  }
+
   void _showAddPriceListDialog() async {
     final products = await DatabaseHelper.instance.getProducts();
     if (!mounted) return;
@@ -1318,17 +1721,19 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
     showDialog(
       context: context,
       builder: (ctx) {
+        final isMobileDialog = MediaQuery.of(ctx).size.width < 600;
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+          insetPadding: EdgeInsets.all(isMobileDialog ? 16 : 40),
           child: Container(
-            width: 500,
-            padding: EdgeInsets.all(24),
+            width: isMobileDialog ? MediaQuery.of(ctx).size.width : 500,
+            padding: EdgeInsets.all(isMobileDialog ? 16 : 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Creer une liste de prix personnalisee',
+                  'Créer une liste de prix personnalisée',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 SizedBox(height: 16),
@@ -1339,7 +1744,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
                 ),
                 SizedBox(height: 16),
                 Text(
-                  'Definir les tarifs des articles :',
+                  'Définir les tarifs des articles :',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
                 ),
                 SizedBox(height: 8),
@@ -1435,9 +1840,30 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
   }
 
   void _save() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      if (_customerType == 'entreprise' && _companyNameCtrl.text.trim().isEmpty) {
+        _tabController.animateTo(0);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez renseigner le nom de l\'entreprise (Tab Informations)'), backgroundColor: AppColors.error));
+        return;
+      }
+      if (_customerType == 'particulier' && _responsibleNameCtrl.text.trim().isEmpty) {
+        _tabController.animateTo(0);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez renseigner le nom complet (Tab Informations)'), backgroundColor: AppColors.error));
+        return;
+      }
+      if (_emailCtrl.text.trim().isEmpty || !_emailCtrl.text.contains('@')) {
+        _tabController.animateTo(0);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez renseigner un email valide (Tab Informations)'), backgroundColor: AppColors.error));
+        return;
+      }
+      if (_tvaSuspension && (_tvaAttestationCtrl.text.trim().isEmpty || _tvaEndDateCtrl.text.trim().isEmpty)) {
+        _tabController.animateTo(2);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez renseigner les détails de l\'attestation de suspension TVA (Tab Financier)'), backgroundColor: AppColors.error));
+        return;
+      }
+      return;
+    }
 
-    // Serialize custom price list to JSON string if it's not default
     String priceListVal = 'default';
     if (_selectedPriceList != 'Prix par defaut') {
       final customPrices = _customPriceLists[_selectedPriceList] ?? {};
@@ -1451,20 +1877,29 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
         ? _companyNameCtrl.text.trim()
         : _responsibleNameCtrl.text.trim();
 
+    final bankAccountsList = _bankAccountControllers
+        .map((c) => c.text.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+    final bankAccountVal = bankAccountsList.isEmpty ? null : bankAccountsList.join('\n');
+
     final customer = Customer(
       id: widget.existing?.id ?? const Uuid().v4(),
       code: _codeCtrl.text.trim(),
       name: clientName,
       email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
-      phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim().isEmpty 
+          ? null 
+          : (_phoneCtrl.text.trim().startsWith('+') || _phoneCtrl.text.trim().startsWith('00')
+              ? _phoneCtrl.text.trim()
+              : '$_selectedCountryCode ${_phoneCtrl.text.trim()}'),
       address: _billingStreetCtrl.text.trim().isEmpty ? null : _billingStreetCtrl.text.trim(),
       city: _billingCityCtrl.text.trim().isEmpty ? null : _billingCityCtrl.text.trim(),
       taxId: _customerType == 'entreprise' ? (_taxCtrl.text.trim().isEmpty ? null : _taxCtrl.text.trim()) : null,
-      rc: widget.existing?.rc, // keep existing rc if any
+      rc: widget.existing?.rc,
       notes: _privateNoteCtrl.text.trim().isEmpty ? null : _privateNoteCtrl.text.trim(),
       updatedAt: DateTime.now(),
 
-      // New columns values
       customerType: _customerType,
       companyName: _customerType == 'entreprise' ? _companyNameCtrl.text.trim() : null,
       responsibleName: _responsibleNameCtrl.text.trim().isEmpty ? null : _responsibleNameCtrl.text.trim(),
@@ -1479,8 +1914,11 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
       deliveryPostalCode: _deliveryPostalCodeCtrl.text.trim().isEmpty ? null : _deliveryPostalCodeCtrl.text.trim(),
       deliveryCountry: 'Tunisia',
       deliverySameAsBilling: _deliverySameAsBilling,
-      bankAccount: _bankAccountCtrl.text.trim().isEmpty ? null : _bankAccountCtrl.text.trim(),
+      bankAccount: bankAccountVal,
       tvaSuspension: _tvaSuspension,
+      tvaAttestation: _tvaSuspension ? (_tvaAttestationCtrl.text.trim().isEmpty ? null : _tvaAttestationCtrl.text.trim()) : null,
+      tvaStartDate: _tvaSuspension ? (_tvaStartDateCtrl.text.trim().isEmpty ? null : _tvaStartDateCtrl.text.trim()) : null,
+      tvaEndDate: _tvaSuspension ? (_tvaEndDateCtrl.text.trim().isEmpty ? null : _tvaEndDateCtrl.text.trim()) : null,
       priceList: priceListVal,
       privateNote: _privateNoteCtrl.text.trim().isEmpty ? null : _privateNoteCtrl.text.trim(),
     );
@@ -1493,3 +1931,4 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
     Navigator.pop(context);
   }
 }
+

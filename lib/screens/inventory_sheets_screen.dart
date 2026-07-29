@@ -30,7 +30,7 @@ enum InventorySheetStatus {
 
   Color get color {
     switch (this) {
-      case draft: return AppColors.textSecondary;
+      case draft: return AppColors.warning;
       case validated: return AppColors.primary;
       case cancelled: return AppColors.error;
     }
@@ -204,10 +204,10 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
             
             // Collapsible filters
             AnimatedCrossFade(
-              firstChild: SizedBox(height: 0, width: double.infinity),
+              firstChild: const SizedBox(height: 0, width: double.infinity),
               secondChild: Container(
-                margin: EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 16),
-                padding: EdgeInsets.all(12),
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -220,27 +220,26 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                         hintText: 'Rechercher article...',
                         hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary),
                         prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                         filled: true,
                         fillColor: AppColors.surfaceAlt,
                       ),
-                      style: TextStyle(fontSize: 13),
+                      style: const TextStyle(fontSize: 13),
                       onChanged: (v) => setState(() => _searchQuery = v),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
                           child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  
+                            dropdownColor: AppColors.surfaceAlt,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
                             value: _filterWarehouseId,
                             isExpanded: true,
                             decoration: InputDecoration(
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                               filled: true,
@@ -249,31 +248,31 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                             style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
                             items: [
                               const DropdownMenuItem<String?>(value: null, child: Text('Entrepôt', style: TextStyle(fontSize: 12))),
-                              ..._warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
+                              ..._warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
                             ],
                             onChanged: (v) => setState(() => _filterWarehouseId = v),
                           ),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
                             decoration: InputDecoration(
                               hintText: 'Référence',
                               hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
                               prefixIcon: Icon(Icons.numbers, size: 16, color: AppColors.textSecondary),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
                               filled: true,
                               fillColor: AppColors.surfaceAlt,
                             ),
-                            style: TextStyle(fontSize: 12),
+                            style: const TextStyle(fontSize: 12),
                             onChanged: (v) => setState(() => _filterReference = v),
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     SizedBox(
                       height: 40,
                       child: OutlinedButton(
@@ -286,7 +285,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                         },
                         style: OutlinedButton.styleFrom(
                           alignment: Alignment.centerLeft,
-                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
                           backgroundColor: AppColors.surface,
                           side: BorderSide(color: AppColors.border),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -294,7 +293,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                         child: Row(
                           children: [
                             Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 _filterDateRange != null
@@ -326,11 +325,11 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
             // Active filters indicator + reset
             if (_filterWarehouseId != null || _searchQuery.isNotEmpty || _filterReference.isNotEmpty || _filterDateRange != null)
               Padding(
-                padding: EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 12),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
@@ -350,50 +349,74 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                         _filterEcart = null;
                         _currentPage = 0;
                       }),
-                      icon: Icon(Icons.clear_all, size: 16),
-                      label: Text('Réinitialiser', style: TextStyle(fontSize: 12)),
+                      icon: const Icon(Icons.clear_all, size: 16),
+                      label: const Text('Réinitialiser', style: TextStyle(fontSize: 12)),
                       style: TextButton.styleFrom(foregroundColor: AppColors.error, padding: EdgeInsets.zero, minimumSize: const Size(0, 0)),
                     ),
                   ],
                 ),
               ),
 
-            // Cards list
+            // Scrollable Content
             Expanded(
-              child: Builder(
-                builder: (context) {
-                  if (state is InventorySheetsLoading) {
-                    return Center(child: CircularProgressIndicator());
-                  }
-                  if (state is InventorySheetsError) {
-                    return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
-                  }
-                  if (state is InventorySheetsLoaded) {
-                    if (entries.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.inbox_rounded, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
-                            SizedBox(height: 12),
-                            Text("Aucun bon d'entrée", style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
-                            SizedBox(height: 4),
-                            Text("Appuyez sur + pour en créer un", style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      padding: EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 80),
-                      itemCount: entries.length,
-                      itemBuilder: (context, index) {
-                        return _buildMobileCard(context, entries[index]);
-                      },
-                    );
-                  }
-                  return SizedBox();
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  context.read<InventorySheetsBloc>().add(InventorySheetsLoadRequested());
                 },
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 80),
+                  child: Column(
+                    children: [
+                      Builder(
+                        builder: (context) {
+                          if (state is InventorySheetsLoading) {
+                            return const Padding(
+                              padding: EdgeInsets.all(32.0),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          if (state is InventorySheetsError) {
+                            return Padding(
+                              padding: const EdgeInsets.all(32.0),
+                              child: Center(child: Text(state.message, style: TextStyle(color: AppColors.error))),
+                            );
+                          }
+                          if (state is InventorySheetsLoaded) {
+                            if (entries.isEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.all(48.0),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.inbox_rounded, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
+                                      const SizedBox(height: 12),
+                                      Text("Aucune fiche d'inventaire", style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                                      const SizedBox(height: 4),
+                                      Text("Appuyez sur + pour en créer une", style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              padding: EdgeInsets.zero,
+                              itemCount: entries.length,
+                              itemBuilder: (context, index) {
+                                return _buildMobileCard(context, entries[index]);
+                              },
+                            );
+                          }
+                          return const SizedBox();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -405,7 +428,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
           child: FloatingActionButton(
             onPressed: () => _navigate(context),
             backgroundColor: AppColors.primary,
-            child: Icon(Icons.add, color: Colors.white),
+            child: const Icon(Icons.add, color: Colors.white),
           ),
         ),
       ],
@@ -413,110 +436,123 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
   }
 
   Widget _buildMobileCard(BuildContext context, InventorySheet entry) {
-    final totalSurplus = entry.items.fold(0.0, (sum, item) {
-      final diff = item.actualQty - item.theoreticalQty;
-      return diff > 0 ? sum + diff : sum;
-    });
-    final totalMissing = entry.items.fold(0.0, (sum, item) {
-      final diff = item.actualQty - item.theoreticalQty;
-      return diff < 0 ? sum + diff.abs() : sum;
-    });
-
     return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.sm),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
         boxShadow: AppShadows.sm,
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          onTap: () {},
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          onTap: () => _navigate(context, entry),
           child: Padding(
-            padding: EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Top row: Blue Ref Badge Chip + Status Chip + Actions
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(entry.number, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    Row(
-                      children: [
-                        _buildStatusChip(entry.status),
-                        SizedBox(width: 8),
-                        PopupMenuButton<String>(
-                          icon: Icon(Icons.more_vert, color: AppColors.textSecondary),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          color: AppColors.surface,
-                          onSelected: (val) {
-                            if (val == 'voir') _previewDocument(entry);
-                            if (val == 'edit') _navigate(context, entry);
-                            if (val == 'delete') _confirmDelete(entry);
-                          },
-                          itemBuilder: (_) => [
-                            PopupMenuItem(
-                              value: 'voir',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.visibility_outlined, size: 20, color: AppColors.textSecondary),
-                                  SizedBox(width: 12),
-                                  Text('Voir', style: TextStyle(fontSize: 13)),
-                                ],
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'edit',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
-                                  SizedBox(width: 12),
-                                  Text('Modifier', style: TextStyle(fontSize: 13, color: AppColors.primary)),
-                                ],
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.delete_outline, size: 20, color: AppColors.error),
-                                  SizedBox(width: 12),
-                                  Text('Supprimer', style: TextStyle(fontSize: 13, color: AppColors.error)),
-                                ],
-                              ),
-                            ),
-                          ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        entry.number,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    _buildStatusChip(entry.status),
+                    const SizedBox(width: 4),
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert, color: AppColors.textTertiary),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      color: AppColors.surface,
+                      onSelected: (val) {
+                        if (val == 'voir') _previewDocument(entry);
+                        if (val == 'edit') _navigate(context, entry);
+                        if (val == 'delete') _confirmDelete(entry);
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: 'voir',
+                          child: Row(children: [
+                            Icon(Icons.visibility_rounded, size: 16, color: AppColors.textSecondary),
+                            const SizedBox(width: 8),
+                            const Text('Voir'),
+                          ]),
+                        ),
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(children: [
+                            Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            const Text('Modifier'),
+                          ]),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(children: [
+                            Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
+                            const SizedBox(width: 8),
+                            Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                          ]),
                         ),
                       ],
                     ),
                   ],
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 10),
+                
+                // Row 1: Long Date & Time
                 Row(
                   children: [
-                    Expanded(
-                      child: _buildInfoItem(Icons.date_range_rounded, formatDateTime(entry.inventoryDate)),
+                    Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Text(
+                      formatDateTimeLong(entry.inventoryDate),
+                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                     ),
-                    _buildInfoItem(Icons.warehouse_rounded, _getWarehouseName(entry.warehouseId)),
                   ],
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 6),
+
+                // Row 2: Warehouse Name on left + Article Count on the right (Image 3 exact match)
                 Row(
                   children: [
+                    Icon(Icons.store_rounded, size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
                     Expanded(
-                      child: _buildArticlesDisplay(entry.items),
-                    ),
-                    if (totalSurplus > 0)
-                      Padding(
-                        padding: EdgeInsets.only(right: 8.0),
-                        child: Text('+${totalSurplus.toStringAsFixed(1)}', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 13)),
+                      child: Text(
+                        (entry.notes != null && entry.notes!.isNotEmpty)
+                            ? entry.notes!
+                            : _getWarehouseName(entry.warehouseId),
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    if (totalMissing > 0)
-                      Text('-${totalMissing.toStringAsFixed(1)}', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                    Text(
+                      '${entry.items.length} article${entry.items.length > 1 ? 's' : ''}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
                   ],
                 ),
               ],

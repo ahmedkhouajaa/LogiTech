@@ -27,7 +27,7 @@ enum StockWithdrawalStatus {
 
   Color get color {
     switch (this) {
-      case draft: return AppColors.textSecondary;
+      case draft: return AppColors.warning;
       case validated: return AppColors.primary;
       case cancelled: return AppColors.error;
     }

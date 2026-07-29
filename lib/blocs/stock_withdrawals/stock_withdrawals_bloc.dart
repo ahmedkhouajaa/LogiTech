@@ -4,11 +4,60 @@ import '../../models/stock_withdrawal.dart';
 import '../../models/stock_movement.dart';
 import '../../utils/constants.dart';
 import '../../database/database_helper.dart';
+import '../../services/firestore_pagination_service.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
 abstract class StockWithdrawalsEvent {}
 
 class LoadStockWithdrawals extends StockWithdrawalsEvent {}
+
+class LoadFirstStockWithdrawals extends StockWithdrawalsEvent {
+  final String? searchQuery;
+  final String? customerId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  LoadFirstStockWithdrawals({
+    this.searchQuery,
+    this.customerId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+}
+
+class LoadNextStockWithdrawals extends StockWithdrawalsEvent {
+  final String? searchQuery;
+  final String? customerId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  LoadNextStockWithdrawals({
+    this.searchQuery,
+    this.customerId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+}
+
+class ResetStockWithdrawalsPagination extends StockWithdrawalsEvent {
+  final String? searchQuery;
+  final String? customerId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  ResetStockWithdrawalsPagination({
+    this.searchQuery,
+    this.customerId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+}
 
 class AddStockWithdrawal extends StockWithdrawalsEvent {
   final StockWithdrawal withdrawal;
@@ -42,6 +91,9 @@ class StockWithdrawalsLoading extends StockWithdrawalsState {}
 
 class StockWithdrawalsLoaded extends StockWithdrawalsState {
   final List<StockWithdrawal> withdrawals;
+  final int totalCount;
+  final bool hasMore;
+  final bool isLoadingMore;
   final String? clientFilter;
   final DateTime? dateFromFilter;
   final DateTime? dateToFilter;
@@ -49,11 +101,36 @@ class StockWithdrawalsLoaded extends StockWithdrawalsState {
 
   StockWithdrawalsLoaded(
     this.withdrawals, {
+    this.totalCount = 0,
+    this.hasMore = true,
+    this.isLoadingMore = false,
     this.clientFilter,
     this.dateFromFilter,
     this.dateToFilter,
     this.statusFilter,
   });
+
+  StockWithdrawalsLoaded copyWith({
+    List<StockWithdrawal>? withdrawals,
+    int? totalCount,
+    bool? hasMore,
+    bool? isLoadingMore,
+    String? clientFilter,
+    DateTime? dateFromFilter,
+    DateTime? dateToFilter,
+    String? statusFilter,
+  }) {
+    return StockWithdrawalsLoaded(
+      withdrawals ?? this.withdrawals,
+      totalCount: totalCount ?? this.totalCount,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      clientFilter: clientFilter ?? this.clientFilter,
+      dateFromFilter: dateFromFilter ?? this.dateFromFilter,
+      dateToFilter: dateToFilter ?? this.dateToFilter,
+      statusFilter: statusFilter ?? this.statusFilter,
+    );
+  }
 }
 
 class StockWithdrawalsError extends StockWithdrawalsState {
@@ -63,15 +140,96 @@ class StockWithdrawalsError extends StockWithdrawalsState {
 
 // ─── BLoC ────────────────────────────────────────────────────────
 class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsState> {
+  static const int pageSize = 10;
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   final _uuid = const Uuid();
 
   StockWithdrawalsBloc() : super(StockWithdrawalsInitial()) {
     on<LoadStockWithdrawals>(_onLoad);
+    on<LoadFirstStockWithdrawals>(_onLoadFirstStockWithdrawals);
+    on<LoadNextStockWithdrawals>(_onLoadNextStockWithdrawals);
+    on<ResetStockWithdrawalsPagination>(_onResetStockWithdrawalsPagination);
     on<AddStockWithdrawal>(_onAdd);
     on<UpdateStockWithdrawal>(_onUpdate);
     on<DeleteStockWithdrawal>(_onDelete);
     on<FilterStockWithdrawals>(_onFilter);
+  }
+
+  Future<void> _onLoadFirstStockWithdrawals(LoadFirstStockWithdrawals event, Emitter<StockWithdrawalsState> emit) async {
+    emit(StockWithdrawalsLoading());
+    try {
+      FirestorePaginationService.instance.resetStockWithdrawalsPagination();
+      final itemsFuture = FirestorePaginationService.instance.getFirstStockWithdrawals(
+        pageSize: pageSize,
+        searchQuery: event.searchQuery,
+        customerId: event.customerId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+      final countFuture = FirestorePaginationService.instance.getStockWithdrawalsCount(
+        searchQuery: event.searchQuery,
+        customerId: event.customerId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+
+      final results = await Future.wait([itemsFuture, countFuture]);
+      final items = results[0] as List<StockWithdrawal>;
+      final totalCount = results[1] as int;
+
+      emit(StockWithdrawalsLoaded(
+        items,
+        totalCount: totalCount > items.length ? totalCount : items.length,
+        hasMore: items.length >= pageSize,
+      ));
+    } catch (e) {
+      emit(StockWithdrawalsError("Erreur lors du chargement: $e"));
+    }
+  }
+
+  Future<void> _onLoadNextStockWithdrawals(LoadNextStockWithdrawals event, Emitter<StockWithdrawalsState> emit) async {
+    final currentState = state;
+    if (currentState is! StockWithdrawalsLoaded || currentState.isLoadingMore || !currentState.hasMore) return;
+
+    emit(currentState.copyWith(isLoadingMore: true));
+    try {
+      final nextItems = await FirestorePaginationService.instance.getNextStockWithdrawals(
+        pageSize: pageSize,
+        currentOffset: currentState.withdrawals.length,
+        searchQuery: event.searchQuery,
+        customerId: event.customerId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+
+      if (nextItems.isEmpty) {
+        emit(currentState.copyWith(hasMore: false, isLoadingMore: false));
+      } else {
+        final updatedList = List<StockWithdrawal>.from(currentState.withdrawals)..addAll(nextItems);
+        emit(StockWithdrawalsLoaded(
+          updatedList,
+          totalCount: currentState.totalCount > updatedList.length ? currentState.totalCount : updatedList.length,
+          hasMore: nextItems.length >= pageSize,
+          isLoadingMore: false,
+        ));
+      }
+    } catch (e) {
+      emit(currentState.copyWith(isLoadingMore: false));
+    }
+  }
+
+  Future<void> _onResetStockWithdrawalsPagination(ResetStockWithdrawalsPagination event, Emitter<StockWithdrawalsState> emit) async {
+    FirestorePaginationService.instance.resetStockWithdrawalsPagination();
+    add(LoadFirstStockWithdrawals(
+      searchQuery: event.searchQuery,
+      customerId: event.customerId,
+      dateFrom: event.dateFrom,
+      dateTo: event.dateTo,
+      status: event.status,
+    ));
   }
 
   Future<void> _onLoad(LoadStockWithdrawals event, Emitter<StockWithdrawalsState> emit) async {
@@ -79,7 +237,7 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
     try {
       final allWithdrawals = await _dbHelper.getStockWithdrawals();
       final filtered = allWithdrawals.where((w) => w.number.startsWith('BP-')).toList();
-      emit(StockWithdrawalsLoaded(filtered));
+      emit(StockWithdrawalsLoaded(filtered, totalCount: filtered.length));
     } catch (e) {
       emit(StockWithdrawalsError("Erreur lors du chargement: $e"));
     }

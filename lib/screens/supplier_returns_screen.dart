@@ -30,7 +30,7 @@ enum SupplierReturnStatus {
 
   Color get color {
     switch (this) {
-      case draft: return AppColors.textSecondary;
+      case draft: return AppColors.warning;
       case validated: return AppColors.success;
       case canceled: return AppColors.error;
       case paid: return AppColors.success;
@@ -46,7 +46,7 @@ class SupplierReturnsScreen extends StatefulWidget {
 }
 
 class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
-  String? _selectedFournisseurId;
+  String? _selectedSupplierId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
   SupplierReturnStatus? _statusFilter;
@@ -63,7 +63,7 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
 
   void _applyFilters() {
     context.read<SupplierReturnsBloc>().add(FilterSupplierReturns(
-      FournisseurId: _selectedFournisseurId,
+      supplierId: _selectedSupplierId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
       status: _statusFilter?.name,
@@ -76,7 +76,7 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Ã¢a€ €Ã¢a€ € Header Ã¢a€ €Ã¢a€ €
+        // Header
         Padding(
           padding: EdgeInsets.all(AppSpacing.lg),
           child: Row(
@@ -165,8 +165,8 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
     int totalItems = 0;
     if (state is SupplierReturnsLoaded) {
       List<SupplierReturn> filteredReturns = state.returns;
-      if (_selectedFournisseurId != null && _selectedFournisseurId != 'all') {
-        filteredReturns = filteredReturns.where((q) => q.supplierId == _selectedFournisseurId).toList();
+      if (_selectedSupplierId != null && _selectedSupplierId != 'all') {
+        filteredReturns = filteredReturns.where((q) => q.supplierId == _selectedSupplierId).toList();
       }
       if (_dateFrom != null) {
         filteredReturns = filteredReturns.where((q) => q.date.isAfter(_dateFrom!.subtract(const Duration(days: 1)))).toList();
@@ -180,7 +180,7 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
       totalItems = filteredReturns.length;
     }
 
-    final activeFilterCount = (_selectedFournisseurId != null && _selectedFournisseurId != 'all' ? 1 : 0) +
+    final activeFilterCount = (_selectedSupplierId != null && _selectedSupplierId != 'all' ? 1 : 0) +
         (_dateFrom != null ? 1 : 0) +
         (_dateTo != null ? 1 : 0) +
         (_statusFilter != null ? 1 : 0);
@@ -207,9 +207,9 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
                     builder: (context, state) {
                   final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
                   String selectedSupplierName = 'Tous les fournisseurs';
-                  if (_selectedFournisseurId != null && _selectedFournisseurId != 'all') {
+                  if (_selectedSupplierId != null && _selectedSupplierId != 'all') {
                     final found = suppliers.firstWhere(
-                      (s) => s.id == _selectedFournisseurId,
+                      (s) => s.id == _selectedSupplierId,
                       orElse: () => Supplier(id: '', code: '', name: 'Inconnu', country: ''),
                     );
                     selectedSupplierName = found.companyName?.isNotEmpty == true
@@ -219,10 +219,10 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
 
                   return InkWell(
                     onTap: () async {
-                      final selected = await _showSupplierSearchDialog(context, suppliers, _selectedFournisseurId);
+                      final selected = await _showSupplierSearchDialog(context, suppliers, _selectedSupplierId);
                       if (selected != null) {
                         setState(() {
-                          _selectedFournisseurId = selected.id == 'all' ? null : selected.id;
+                          _selectedSupplierId = selected.id == 'all' ? null : selected.id;
                         });
                         _applyFilters();
                       }
@@ -240,12 +240,12 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              _selectedFournisseurId == null || _selectedFournisseurId == 'all'
+                              _selectedSupplierId == null || _selectedSupplierId == 'all'
                                   ? 'Tous les fournisseurs'
                                   : selectedSupplierName,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: _selectedFournisseurId != null && _selectedFournisseurId != 'all'
+                                color: _selectedSupplierId != null && _selectedSupplierId != 'all'
                                     ? AppColors.textPrimary
                                     : AppColors.textSecondary,
                               ),
@@ -435,7 +435,7 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
               TextButton.icon(
                 onPressed: () {
                   setState(() {
-                    _selectedFournisseurId = null;
+                    _selectedSupplierId = null;
                     _dateFrom = null;
                     _dateTo = null;
                     _statusFilter = null;

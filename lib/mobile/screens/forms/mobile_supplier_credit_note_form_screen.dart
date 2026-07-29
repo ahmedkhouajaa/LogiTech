@@ -222,7 +222,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
     return MobileFormScreen(
       title: widget.isReadOnly ? 'Détails de l\'avoir' : (_isEditing ? 'Modifier l\'avoir' : 'Nouvel avoir'),
       statusLabel: _status == 'draft' ? 'Brouillon' : (_status == 'validated' ? 'Validé' : 'Annulé'),
-      statusColor: _status == 'draft' ? AppColors.textSecondary : (_status == 'validated' ? AppColors.success : AppColors.error),
+      statusColor: _status == 'draft' ? AppColors.warning : (_status == 'validated' ? AppColors.success : AppColors.error),
       isLoading: _isLoading,
       saveLabel: 'Enregistrer',
       onCancel: () => Navigator.pop(context),

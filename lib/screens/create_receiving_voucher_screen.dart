@@ -31,7 +31,7 @@ enum ReceivingVoucherStatus {
 
   Color get color {
     switch (this) {
-      case draft: return AppColors.textSecondary;
+      case draft: return AppColors.warning;
       case validated: return AppColors.primary;
       case received: return AppColors.info;
       case cancelled: return AppColors.error;
@@ -113,7 +113,6 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
       final n = widget.existing!;
       _date = n.date;
       _selectedSupplierId = n.supplierId;
-      
       _pricingModeHT = n.pricingMode == 'ht';
       _withGlobalDiscount = n.globalDiscountPercent > 0;
       _globalDiscountPercent = n.globalDiscountPercent;
@@ -162,8 +161,8 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
 
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = "BC-${DateTime.now().millisecondsSinceEpoch}";
-      number = seq;
+      final seq = await DatabaseHelper.instance.getNextReceivingVoucherSequence();
+      number = generateDocNumber(DocPrefix.receivingVoucher, seq);
     }
 
     final orderId = widget.existing?.id ?? _uuid.v4();
@@ -171,7 +170,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
       id: orderId,
       number: number,
       supplierId: _selectedSupplierId!,
-            date: _date,
+      date: _date,
       status: _status.name,
       pricingMode: _pricingModeHT ? 'ht' : 'ttc',
       globalDiscountPercent: _withGlobalDiscount ? _globalDiscountPercent : 0,
@@ -201,8 +200,8 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
     nav.pop();
     messenger.showSnackBar(SnackBar(
       content: Text(_isEditing
-          ? 'Commande ${order.number} mise a jour'
-          : 'Commande ${order.number} creee avec succes'),
+          ? 'Bon ${order.number} mis a jour'
+          : 'Bon ${order.number} cree avec succes'),
       backgroundColor: AppColors.success,
     ));
   }
@@ -337,8 +336,6 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Date d'emission
-          Text("Date", style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
           SizedBox(height: 6),
           GestureDetector(
             onTap: () async {

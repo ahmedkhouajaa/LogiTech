@@ -3,11 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/constants.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
-import '../widgets/mobile_generic_card.dart';
+import '../widgets/mobile_supplier_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/suppliers/suppliers_bloc.dart';
-import 'forms/mobile_supplier_form_screen.dart';
-
+import '../../screens/suppliers_screen.dart';
 
 class MobileSuppliersScreen extends StatefulWidget {
   const MobileSuppliersScreen({super.key});
@@ -17,50 +16,44 @@ class MobileSuppliersScreen extends StatefulWidget {
 }
 
 class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
-  String _selectedFilter = 'Tous';
   late MobileModuleConfig _config;
 
   @override
   void initState() {
     super.initState();
     _config = MobileModuleConfig.getConfig(AppModule.suppliers);
-    context.read<SuppliersBloc>().add(LoadSuppliers());
+    _fetchFilteredSuppliers();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      context.read<SuppliersBloc>().add(LoadNextSuppliers(
+        searchQuery: _searchQuery,
+      ));
+    }
+  }
+
+  void _fetchFilteredSuppliers() {
+    context.read<SuppliersBloc>().add(LoadFirstSuppliers(
+      searchQuery: _searchQuery,
+    ));
   }
 
   void _onSearchChanged(String query) {
     setState(() {
       _searchQuery = query;
     });
-  }
-
-  void _onFilterChanged(String filter) {
-    setState(() {
-      _selectedFilter = filter;
-    });
-  }
-
-  void _handleDelete(String id) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer cet élément ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () {
-              context.read<SuppliersBloc>().add(DeleteSupplier(id));
-              Navigator.pop(ctx);
-            },
-            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+    _fetchFilteredSuppliers();
   }
 
   @override
@@ -69,188 +62,41 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
       builder: (context, state) {
         bool isLoading = state is SuppliersLoading || state is SuppliersInitial;
         bool isEmpty = true;
+        bool isLoadingMore = false;
+        int totalMatchingCount = 0;
         List<Widget> cards = [];
 
         if (state is SuppliersLoaded) {
           final items = state.suppliers;
-          
-          final filteredItems = items.where((supplier) {
-            bool matchesSearch = true;
-            bool matchesFilter = true;
+          isLoadingMore = state.isLoadingMore;
+          totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
 
+          // Locally double-filter matches just in case SQLite fallback gets loaded
+          final filteredItems = items.where((supplier) {
             if (_searchQuery.isNotEmpty) {
               final query = _searchQuery.toLowerCase();
-              final name = supplier.name.toLowerCase();
-              final code = supplier.code.toLowerCase();
-              final phone = (supplier.phone ?? '').toLowerCase();
-              final email = (supplier.email ?? '').toLowerCase();
-              if (!name.contains(query) && !code.contains(query) && !phone.contains(query) && !email.contains(query)) {
-                matchesSearch = false;
-              }
+              final nameMatch = supplier.name.toLowerCase().contains(query);
+              final codeMatch = supplier.code.toLowerCase().contains(query);
+              final emailMatch = (supplier.email ?? '').toLowerCase().contains(query);
+              if (!nameMatch && !codeMatch && !emailMatch) return false;
             }
-
-            // No specific filter needed for 'Tous' since we removed 'Actif'/'Inactif'
-
-            return matchesSearch && matchesFilter;
+            return true;
           }).toList();
-          
+
           isEmpty = filteredItems.isEmpty;
-          
+
           cards = filteredItems.map((supplier) {
-            final isEntreprise = supplier.supplierType.toLowerCase() == 'entreprise';
-            
-            return Card(
-              margin: EdgeInsets.only(bottom: 12),
-              elevation: 0,
-              color: AppColors.surface,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: AppColors.border),
-              ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () {
-                  // Detail screen if needed
-                },
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      // Avatar
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceAlt.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            isEntreprise ? Icons.domain_rounded : Icons.person_outline_rounded,
-                            color: AppColors.textSecondary,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 16),
-                      // Info
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    supplier.name,
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                SizedBox(width: 8),
-                                Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: isEntreprise ? Colors.blue.withOpacity(0.15) : Colors.purple.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    isEntreprise ? 'Entreprise' : 'Particulier',
-                                    style: TextStyle(
-                                      color: isEntreprise ? Colors.blue[700] : Colors.purple[700],
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 6),
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 4,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.tag, size: 14, color: AppColors.textSecondary),
-                                    SizedBox(width: 4),
-                                    Text(supplier.code, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                                  ],
-                                ),
-                                if (supplier.email != null && supplier.email!.isNotEmpty)
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.email_outlined, size: 14, color: AppColors.textSecondary),
-                                      SizedBox(width: 4),
-                                      Text(supplier.email!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                                    ],
-                                  ),
-                                if (supplier.phone != null && supplier.phone!.isNotEmpty)
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.phone_outlined, size: 14, color: AppColors.textSecondary),
-                                      SizedBox(width: 4),
-                                      Text(supplier.phone!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      // Balance & Actions
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text('Dette', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                          SizedBox(height: 4),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: supplier.balance >= 0 ? AppColors.success.withOpacity(0.1) : AppColors.error.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              '${supplier.balance.toStringAsFixed(2)} TND',
-                              style: TextStyle(
-                                color: supplier.balance >= 0 ? AppColors.success : AppColors.error,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      PopupMenuButton<String>(
-                        icon: Icon(Icons.more_vert, color: AppColors.textSecondary),
-                        onSelected: (val) {
-                          if (val == 'edit') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => MobileSupplierFormScreen(existing: supplier)),
-                            ).then((_) {
-                              context.read<SuppliersBloc>().add(LoadSuppliers());
-                            });
-                          } else if (val == 'delete') {
-                            _handleDelete(supplier.id);
-                          }
-                        },
-                        itemBuilder: (_) => [
-                          PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 20, color: AppColors.primary), SizedBox(width: 8), Text('Modifier')])),
-                          PopupMenuDivider(),
-                          PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline, size: 20, color: AppColors.error), SizedBox(width: 8), Text('Supprimer')])),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            return MobileSupplierCard(
+              supplier: supplier,
+              onTap: () {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (ctx) => SupplierDialog(existing: supplier),
+                ).then((_) {
+                  _fetchFilteredSuppliers();
+                });
+              },
             );
           }).toList();
         }
@@ -259,28 +105,40 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
           title: _config.title,
           activeModule: AppModule.suppliers,
           onModuleSelected: (module) {},
-          onRefresh: () {
-            context.read<SuppliersBloc>().add(LoadSuppliers());
+          onRefresh: () async {
+            context.read<SuppliersBloc>().add(ResetSuppliersPagination(
+              searchQuery: _searchQuery,
+            ));
           },
           onSearchChanged: _onSearchChanged,
-          filterOptions: const [], // Supplier does not have active/inactive status in model
-          selectedFilter: _selectedFilter,
-          onFilterChanged: _onFilterChanged,
+          filterOptions: const [],
+          selectedFilter: 'Tous',
+          onFilterChanged: (_) {},
+          scrollController: _scrollController,
           isLoading: isLoading,
           isEmpty: isEmpty,
           emptyMessage: 'Aucun fournisseur trouvé.',
+          itemCount: totalMatchingCount,
           fabText: _config.fabText,
           onFabPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MobileSupplierFormScreen()),
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => const SupplierDialog(existing: null),
             ).then((_) {
-              context.read<SuppliersBloc>().add(LoadSuppliers());
+              _fetchFilteredSuppliers();
             });
           },
-          child: ListView(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12).copyWith(bottom: 80),
-            children: cards,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...cards,
+              if (isLoadingMore)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+            ],
           ),
         );
       },

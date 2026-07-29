@@ -90,6 +90,8 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
               icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentDeliveryNote),
               itemBuilder: (_) => [
+                _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
                 PopupMenuDivider(height: 1),
                 _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
@@ -270,7 +272,14 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
         children: [
           Icon(icon, size: 18, color: Color(0xFF64748B)),
           SizedBox(width: 12),
-          Text(text, style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ),
         ],
       ),
     );
@@ -278,6 +287,10 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
 
   void _handleAction(BuildContext context, String action, DeliveryNote deliveryNote) {
     switch (action) {
+      case 'view':
+        final viewDoc = DocumentWrapper.fromDeliveryNote(deliveryNote);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
+        break;
       case 'edit':
         Navigator.push(
           context,

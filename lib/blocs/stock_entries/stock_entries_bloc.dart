@@ -4,19 +4,101 @@ import '../../models/stock_entry.dart';
 import '../../models/stock_movement.dart';
 import '../../utils/constants.dart';
 import '../../database/database_helper.dart';
+import '../../services/firestore_pagination_service.dart';
 import 'stock_entries_event.dart';
 import 'stock_entries_state.dart';
 
 class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
+  static const int pageSize = 10;
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   final _uuid = const Uuid();
 
   StockEntriesBloc() : super(StockEntriesInitial()) {
     on<LoadStockEntries>(_onLoadStockEntries);
+    on<LoadFirstStockEntries>(_onLoadFirstStockEntries);
+    on<LoadNextStockEntries>(_onLoadNextStockEntries);
+    on<ResetStockEntriesPagination>(_onResetStockEntriesPagination);
     on<AddStockEntry>(_onAddStockEntry);
     on<UpdateStockEntry>(_onUpdateStockEntry);
     on<DeleteStockEntry>(_onDeleteStockEntry);
     on<FilterStockEntries>(_onFilterStockEntries);
+  }
+
+  Future<void> _onLoadFirstStockEntries(LoadFirstStockEntries event, Emitter<StockEntriesState> emit) async {
+    emit(StockEntriesLoading());
+    try {
+      FirestorePaginationService.instance.resetStockEntriesPagination();
+      final entriesFuture = FirestorePaginationService.instance.getFirstStockEntries(
+        pageSize: pageSize,
+        searchQuery: event.searchQuery,
+        supplierId: event.supplierId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+      final countFuture = FirestorePaginationService.instance.getStockEntriesCount(
+        searchQuery: event.searchQuery,
+        supplierId: event.supplierId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+
+      final results = await Future.wait([entriesFuture, countFuture]);
+      final entries = results[0] as List<StockEntry>;
+      final totalCount = results[1] as int;
+
+      emit(StockEntriesLoaded(
+        entries,
+        totalCount: totalCount > entries.length ? totalCount : entries.length,
+        hasMore: entries.length >= pageSize,
+      ));
+    } catch (e) {
+      emit(StockEntriesError("Erreur lors du chargement des bons d'entree: $e"));
+    }
+  }
+
+  Future<void> _onLoadNextStockEntries(LoadNextStockEntries event, Emitter<StockEntriesState> emit) async {
+    final currentState = state;
+    if (currentState is! StockEntriesLoaded || currentState.isLoadingMore || !currentState.hasMore) return;
+
+    emit(currentState.copyWith(isLoadingMore: true));
+    try {
+      final nextEntries = await FirestorePaginationService.instance.getNextStockEntries(
+        pageSize: pageSize,
+        currentOffset: currentState.entries.length,
+        searchQuery: event.searchQuery,
+        supplierId: event.supplierId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+
+      if (nextEntries.isEmpty) {
+        emit(currentState.copyWith(hasMore: false, isLoadingMore: false));
+      } else {
+        final updatedList = List<StockEntry>.from(currentState.entries)..addAll(nextEntries);
+        emit(StockEntriesLoaded(
+          updatedList,
+          totalCount: currentState.totalCount > updatedList.length ? currentState.totalCount : updatedList.length,
+          hasMore: nextEntries.length >= pageSize,
+          isLoadingMore: false,
+        ));
+      }
+    } catch (e) {
+      emit(currentState.copyWith(isLoadingMore: false));
+    }
+  }
+
+  Future<void> _onResetStockEntriesPagination(ResetStockEntriesPagination event, Emitter<StockEntriesState> emit) async {
+    FirestorePaginationService.instance.resetStockEntriesPagination();
+    add(LoadFirstStockEntries(
+      searchQuery: event.searchQuery,
+      supplierId: event.supplierId,
+      dateFrom: event.dateFrom,
+      dateTo: event.dateTo,
+      status: event.status,
+    ));
   }
 
   Future<void> _onLoadStockEntries(LoadStockEntries event, Emitter<StockEntriesState> emit) async {

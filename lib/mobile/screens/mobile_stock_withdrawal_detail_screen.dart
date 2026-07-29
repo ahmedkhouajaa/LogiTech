@@ -121,6 +121,8 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
               icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentWithdrawal),
               itemBuilder: (_) => [
+                _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
                 PopupMenuDivider(height: 1),
                 _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
@@ -304,6 +306,10 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
 
   void _handleAction(BuildContext context, String action, StockWithdrawal withdrawal) {
     switch (action) {
+      case 'view':
+        final viewDoc = _createDocumentWrapper(withdrawal);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
+        break;
       case 'edit':
         Navigator.push(
           context,

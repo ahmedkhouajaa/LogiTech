@@ -23,6 +23,7 @@ import 'document_preview_screen.dart';
 import '../models/document_wrapper.dart';
 import 'app_shell_screen.dart';
 import '../widgets/sidebar_menu.dart';
+import '../database/database_helper.dart';
 import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
 import '../widgets/receiving_voucher_payment_dialog.dart';
@@ -41,7 +42,7 @@ enum ReceivingVoucherStatus {
 
   Color get color {
     switch (this) {
-      case draft: return AppColors.textSecondary;
+      case draft: return AppColors.warning;
       case validated: return AppColors.primary;
       case received: return AppColors.info;
       case cancelled: return AppColors.error;
@@ -1207,9 +1208,10 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     );
   }
 
-  void _executeConvertToReturn(ReceivingVoucher voucher) {
+  Future<void> _executeConvertToReturn(ReceivingVoucher voucher) async {
     final newReturnId = const Uuid().v4();
-    final returnNumber = 'BRF-${voucher.number.replaceAll("BR-", "")}';
+    final seq = await DatabaseHelper.instance.getNextSupplierReturnSequence();
+    final returnNumber = generateDocNumber('BRF', seq);
 
     List<SupplierReturnItem> newItems = [];
 

@@ -4,6 +4,54 @@ abstract class StockEntriesEvent {}
 
 class LoadStockEntries extends StockEntriesEvent {}
 
+class LoadFirstStockEntries extends StockEntriesEvent {
+  final String? searchQuery;
+  final String? supplierId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  LoadFirstStockEntries({
+    this.searchQuery,
+    this.supplierId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+}
+
+class LoadNextStockEntries extends StockEntriesEvent {
+  final String? searchQuery;
+  final String? supplierId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  LoadNextStockEntries({
+    this.searchQuery,
+    this.supplierId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+}
+
+class ResetStockEntriesPagination extends StockEntriesEvent {
+  final String? searchQuery;
+  final String? supplierId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  ResetStockEntriesPagination({
+    this.searchQuery,
+    this.supplierId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+}
+
 class AddStockEntry extends StockEntriesEvent {
   final StockEntry entry;
   AddStockEntry(this.entry);

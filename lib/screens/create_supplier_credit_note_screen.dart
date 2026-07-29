@@ -27,7 +27,7 @@ enum SupplierCreditNoteStatus {
 
   Color get color {
     switch (this) {
-      case draft: return AppColors.textSecondary;
+      case draft: return AppColors.warning;
       case validated: return AppColors.success;
       case canceled: return AppColors.error;
     }

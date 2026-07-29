@@ -4,12 +4,14 @@ import '../../utils/constants.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_generic_card.dart';
+import '../widgets/mobile_advanced_filter_panel.dart';
 import '../../widgets/sidebar_menu.dart';
-
 import 'mobile_customer_order_detail_screen.dart';
 import '../../blocs/customer_orders/customer_orders_bloc.dart';
+import '../../blocs/customers/customers_bloc.dart';
+import '../../models/customer.dart';
 import 'forms/mobile_customer_order_form_screen.dart';
-
+import '../../services/firestore_pagination_service.dart';
 
 class MobileCustomerOrdersScreen extends StatefulWidget {
   const MobileCustomerOrdersScreen({super.key});
@@ -19,27 +21,58 @@ class MobileCustomerOrdersScreen extends StatefulWidget {
 }
 
 class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen> {
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
-  String _selectedFilter = 'Tous';
+  String? _selectedCustomerId;
+  DateTime? _dateFrom;
+  DateTime? _dateTo;
+  String? _selectedStatus;
   late MobileModuleConfig _config;
 
   @override
   void initState() {
     super.initState();
     _config = MobileModuleConfig.getConfig(AppModule.customerOrders);
-    context.read<CustomerOrdersBloc>().add(LoadCustomerOrders());
+    FirestorePaginationService.instance.enablePersistence();
+    _fetchFilteredOrders();
+    context.read<CustomersBloc>().add(LoadCustomers());
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      context.read<CustomerOrdersBloc>().add(LoadNextCustomerOrders(
+        searchQuery: _searchQuery,
+        customerId: _selectedCustomerId,
+        dateFrom: _dateFrom,
+        dateTo: _dateTo,
+        status: _selectedStatus,
+      ));
+    }
+  }
+
+  void _fetchFilteredOrders() {
+    context.read<CustomerOrdersBloc>().add(LoadFirstCustomerOrders(
+      searchQuery: _searchQuery,
+      customerId: _selectedCustomerId,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      status: _selectedStatus,
+    ));
   }
 
   void _onSearchChanged(String query) {
     setState(() {
       _searchQuery = query;
     });
-  }
-
-  void _onFilterChanged(String filter) {
-    setState(() {
-      _selectedFilter = filter;
-    });
+    _fetchFilteredOrders();
   }
 
   void _handleDelete(String id) {
@@ -71,78 +104,62 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
       builder: (context, state) {
         bool isLoading = state is CustomerOrdersLoading || state is CustomerOrdersInitial;
         bool isEmpty = true;
+        bool isLoadingMore = false;
+        int totalMatchingCount = 0;
         List<Widget> cards = [];
+
+        final customersState = context.watch<CustomersBloc>().state;
+        List<Customer> customersList = [];
+        if (customersState is CustomersLoaded) {
+          customersList = customersState.customers;
+        }
 
         if (state is CustomerOrdersLoaded) {
           final items = state.orders;
-          
+          isLoadingMore = state.isLoadingMore;
+          totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
+
           final filteredItems = items.where((item) {
-            bool matchesSearch = true;
-            bool matchesFilter = true;
-
-            String statusStr = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                statusStr = translateStatus(s.toString());
-              }
-            } catch (_) {}
-
-            String reference = '';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? '').toString(); } catch (_) {}
-            
-            String name = '';
-            try { name = ((item as dynamic).customerName ?? (item as dynamic).supplierName ?? (item as dynamic).companyName ?? (item as dynamic).name ?? '').toString(); } catch (_) {}
-
             if (_searchQuery.isNotEmpty) {
               final query = _searchQuery.toLowerCase();
-              if (!reference.toLowerCase().contains(query) && !name.toLowerCase().contains(query)) {
-                matchesSearch = false;
-              }
+              final numMatch = item.number.toLowerCase().contains(query);
+              final custMatch = (item.customerName ?? '').toLowerCase().contains(query);
+              if (!numMatch && !custMatch) return false;
             }
 
-            if (_selectedFilter != 'Tous') {
-               String s1 = statusStr.toLowerCase().replaceAll('é', 'e').replaceAll('è', 'e').replaceAll('ée', 'e');
-               String s2 = _selectedFilter.toLowerCase().replaceAll('é', 'e').replaceAll('è', 'e').replaceAll('ée', 'e');
-               if (s1 != s2 && !s2.startsWith(s1) && !s1.startsWith(s2)) {
-                   matchesFilter = false;
-               }
+            if (_selectedCustomerId != null && _selectedCustomerId!.isNotEmpty) {
+              if (item.customerId != _selectedCustomerId) return false;
             }
 
-            return matchesSearch && matchesFilter;
+            if (_dateFrom != null) {
+              final iDate = DateTime(item.date.year, item.date.month, item.date.day);
+              final fDate = DateTime(_dateFrom!.year, _dateFrom!.month, _dateFrom!.day);
+              if (iDate.isBefore(fDate)) return false;
+            }
+
+            if (_dateTo != null) {
+              final iDate = DateTime(item.date.year, item.date.month, item.date.day);
+              final tDate = DateTime(_dateTo!.year, _dateTo!.month, _dateTo!.day, 23, 59, 59);
+              if (iDate.isAfter(tDate)) return false;
+            }
+
+            if (_selectedStatus != null && _selectedStatus != 'Tous' && _selectedStatus!.isNotEmpty) {
+              final statusLabel = translateStatus(item.status).toLowerCase();
+              final filterLower = _selectedStatus!.toLowerCase();
+              if (statusLabel != filterLower) return false;
+            }
+
+            return true;
           }).toList();
-          
+
           isEmpty = filteredItems.isEmpty;
-          
+
           cards = filteredItems.map((item) {
-            String reference = 'N/A';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? 'N/A').toString(); } catch (_) {}
-            
-            String status = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                status = translateStatus(s.toString());
-              }
-            } catch (_) {}
-            
-            String? name;
-            try { name = (item as dynamic).customerName ?? (item as dynamic).supplierName ?? (item as dynamic).companyName ?? (item as dynamic).name; } catch (_) {}
-            
-            DateTime? date;
-            try { date = (item as dynamic).date ?? (item as dynamic).createdAt; } catch (_) {}
-            
-            double amount = 0;
-            try { amount = (item as dynamic).totalTTC?.toDouble() ?? (item as dynamic).totalTTC.toDouble(); } catch (_) {}
-            if (amount == 0) {
-              try { amount = (item as dynamic).amount?.toDouble() ?? (item as dynamic).amount.toDouble(); } catch (_) {}
-            }
-            if (amount == 0) {
-              try { amount = (item as dynamic).price?.toDouble() ?? (item as dynamic).price.toDouble(); } catch (_) {}
-            }
-            
-            String id = '';
-            try { id = (item as dynamic).id; } catch (_) {}
+            final reference = item.number;
+            final status = translateStatus(item.status);
+            final name = item.customerName;
+            final date = item.date;
+            final amount = item.totalTTC;
 
             return MobileGenericCard(
               reference: reference,
@@ -154,17 +171,19 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MobileCustomerOrderDetailScreen(order: item)),
-                );
+                ).then((_) {
+                  _fetchFilteredOrders();
+                });
               },
               onEdit: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MobileCustomerOrderFormScreen(existing: item)),
                 ).then((_) {
-                  context.read<CustomerOrdersBloc>().add(LoadCustomerOrders());
+                  _fetchFilteredOrders();
                 });
               },
-              onDelete: () => _handleDelete(id),
+              onDelete: () => _handleDelete(item.id),
             );
           }).toList();
         }
@@ -172,28 +191,80 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
         return MobileGenericListScreen(
           title: _config.title,
           activeModule: AppModule.customerOrders,
-          onModuleSelected: (module) {
-          },
-          onRefresh: () {
-            context.read<CustomerOrdersBloc>().add(LoadCustomerOrders());
+          onModuleSelected: (module) {},
+          onRefresh: () async {
+            context.read<CustomerOrdersBloc>().add(ResetCustomerOrdersPagination(
+              searchQuery: _searchQuery,
+              customerId: _selectedCustomerId,
+              dateFrom: _dateFrom,
+              dateTo: _dateTo,
+              status: _selectedStatus,
+            ));
+            context.read<CustomersBloc>().add(LoadCustomers());
           },
           onSearchChanged: _onSearchChanged,
-          filterOptions: _config.filterOptions,
-          selectedFilter: _selectedFilter,
-          onFilterChanged: _onFilterChanged,
+          filterOptions: const [],
+          selectedFilter: _selectedStatus ?? 'Tous',
+          onFilterChanged: (val) {
+            setState(() => _selectedStatus = val == 'Tous' ? null : val);
+            _fetchFilteredOrders();
+          },
+          customFilterWidget: MobileAdvancedFilterPanel(
+            entityLabel: 'Client',
+            selectedCustomerId: _selectedCustomerId,
+            customers: customersList,
+            onCustomerChanged: (id) {
+              setState(() => _selectedCustomerId = id);
+              _fetchFilteredOrders();
+            },
+            dateFrom: _dateFrom,
+            onDateFromChanged: (d) {
+              setState(() => _dateFrom = d);
+              _fetchFilteredOrders();
+            },
+            dateTo: _dateTo,
+            onDateToChanged: (d) {
+              setState(() => _dateTo = d);
+              _fetchFilteredOrders();
+            },
+            selectedStatus: _selectedStatus,
+            statusOptions: const ['Tous', 'Brouillon', 'Créé', 'Validé', 'Validée et facturée', 'Livré', 'Annulé'],
+            onStatusChanged: (s) {
+              setState(() => _selectedStatus = s);
+              _fetchFilteredOrders();
+            },
+            onResetFilters: () {
+              setState(() {
+                _selectedCustomerId = null;
+                _dateFrom = null;
+                _dateTo = null;
+                _selectedStatus = null;
+              });
+              _fetchFilteredOrders();
+            },
+            itemCount: totalMatchingCount,
+          ),
+          scrollController: _scrollController,
           isLoading: isLoading,
           isEmpty: isEmpty,
-          emptyMessage: 'Aucun élément trouvé.',
-          itemCount: cards.length,
+          emptyMessage: 'Aucune commande trouvée.',
+          itemCount: totalMatchingCount,
           fabText: _config.fabText,
-           onFabPressed: () {
-             Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileCustomerOrderFormScreen())).then((_) {
-                context.read<CustomerOrdersBloc>().add(LoadCustomerOrders());
-              });
-            },
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 80),
-            children: cards,
+          onFabPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileCustomerOrderFormScreen())).then((_) {
+              _fetchFilteredOrders();
+            });
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...cards,
+              if (isLoadingMore)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+            ],
           ),
         );
       },

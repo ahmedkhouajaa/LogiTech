@@ -248,6 +248,8 @@ class _MobileSupplierReturnDetailScreenState extends State<MobileSupplierReturnD
   List<PopupMenuEntry<String>> _buildActionMenu(BuildContext context, SupplierReturn note) {
     final List<PopupMenuEntry<String>> items = [];
 
+    items.add(_buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'));
+    items.add(const PopupMenuDivider(height: 1));
     items.add(_buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'));
     items.add(const PopupMenuDivider(height: 1));
     items.add(_buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'));
@@ -273,6 +275,10 @@ class _MobileSupplierReturnDetailScreenState extends State<MobileSupplierReturnD
 
   void _handleAction(BuildContext context, String action, SupplierReturn note) {
     switch (action) {
+      case 'view':
+        final viewDoc = DocumentWrapper.fromSupplierReturn(note);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
+        break;
       case 'edit':
         Navigator.push(
           context,

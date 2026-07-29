@@ -4,11 +4,61 @@ import '../../models/stock_withdrawal.dart';
 import '../../models/stock_movement.dart';
 import '../../utils/constants.dart';
 import '../../database/database_helper.dart';
+import '../../services/firestore_pagination_service.dart';
+import '../../services/sync_service.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
 abstract class ExitVouchersEvent {}
 
 class LoadExitVouchers extends ExitVouchersEvent {}
+
+class LoadFirstExitVouchers extends ExitVouchersEvent {
+  final String? searchQuery;
+  final String? customerId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  LoadFirstExitVouchers({
+    this.searchQuery,
+    this.customerId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+}
+
+class LoadNextExitVouchers extends ExitVouchersEvent {
+  final String? searchQuery;
+  final String? customerId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  LoadNextExitVouchers({
+    this.searchQuery,
+    this.customerId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+}
+
+class ResetExitVouchersPagination extends ExitVouchersEvent {
+  final String? searchQuery;
+  final String? customerId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  ResetExitVouchersPagination({
+    this.searchQuery,
+    this.customerId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+}
 
 class AddExitVoucher extends ExitVouchersEvent {
   final StockWithdrawal withdrawal;
@@ -42,6 +92,9 @@ class ExitVouchersLoading extends ExitVouchersState {}
 
 class ExitVouchersLoaded extends ExitVouchersState {
   final List<StockWithdrawal> withdrawals;
+  final int totalCount;
+  final bool hasMore;
+  final bool isLoadingMore;
   final String? clientFilter;
   final DateTime? dateFromFilter;
   final DateTime? dateToFilter;
@@ -49,11 +102,36 @@ class ExitVouchersLoaded extends ExitVouchersState {
 
   ExitVouchersLoaded(
     this.withdrawals, {
+    this.totalCount = 0,
+    this.hasMore = true,
+    this.isLoadingMore = false,
     this.clientFilter,
     this.dateFromFilter,
     this.dateToFilter,
     this.statusFilter,
   });
+
+  ExitVouchersLoaded copyWith({
+    List<StockWithdrawal>? withdrawals,
+    int? totalCount,
+    bool? hasMore,
+    bool? isLoadingMore,
+    String? clientFilter,
+    DateTime? dateFromFilter,
+    DateTime? dateToFilter,
+    String? statusFilter,
+  }) {
+    return ExitVouchersLoaded(
+      withdrawals ?? this.withdrawals,
+      totalCount: totalCount ?? this.totalCount,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      clientFilter: clientFilter ?? this.clientFilter,
+      dateFromFilter: dateFromFilter ?? this.dateFromFilter,
+      dateToFilter: dateToFilter ?? this.dateToFilter,
+      statusFilter: statusFilter ?? this.statusFilter,
+    );
+  }
 }
 
 class ExitVouchersError extends ExitVouchersState {
@@ -63,26 +141,108 @@ class ExitVouchersError extends ExitVouchersState {
 
 // ─── BLoC ────────────────────────────────────────────────────────
 class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
+  static const int pageSize = 10;
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
   final _uuid = const Uuid();
 
   ExitVouchersBloc() : super(ExitVouchersInitial()) {
     on<LoadExitVouchers>(_onLoad);
+    on<LoadFirstExitVouchers>(_onLoadFirstExitVouchers);
+    on<LoadNextExitVouchers>(_onLoadNextExitVouchers);
+    on<ResetExitVouchersPagination>(_onResetExitVouchersPagination);
     on<AddExitVoucher>(_onAdd);
     on<UpdateExitVoucher>(_onUpdate);
     on<DeleteExitVoucher>(_onDelete);
     on<FilterExitVouchers>(_onFilter);
   }
 
-  Future<void> _onLoad(LoadExitVouchers event, Emitter<ExitVouchersState> emit) async {
+  Future<void> _onLoadFirstExitVouchers(LoadFirstExitVouchers event, Emitter<ExitVouchersState> emit) async {
     emit(ExitVouchersLoading());
     try {
-      final allWithdrawals = await _dbHelper.getStockWithdrawals();
-      final filtered = allWithdrawals.where((w) => w.number.startsWith('BS-')).toList();
-      emit(ExitVouchersLoaded(filtered));
+      FirestorePaginationService.instance.resetExitVouchersPagination();
+      final itemsFuture = FirestorePaginationService.instance.getFirstExitVouchers(
+        pageSize: pageSize,
+        searchQuery: event.searchQuery,
+        customerId: event.customerId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+      final countFuture = FirestorePaginationService.instance.getExitVouchersCount(
+        searchQuery: event.searchQuery,
+        customerId: event.customerId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+
+      final results = await Future.wait([itemsFuture, countFuture]);
+      final items = results[0] as List<StockWithdrawal>;
+      final totalCount = results[1] as int;
+
+      emit(ExitVouchersLoaded(
+        items,
+        totalCount: totalCount > items.length ? totalCount : items.length,
+        hasMore: items.length >= pageSize,
+        clientFilter: event.customerId,
+        dateFromFilter: event.dateFrom,
+        dateToFilter: event.dateTo,
+        statusFilter: event.status,
+      ));
     } catch (e) {
       emit(ExitVouchersError("Erreur lors du chargement: $e"));
     }
+  }
+
+  Future<void> _onLoadNextExitVouchers(LoadNextExitVouchers event, Emitter<ExitVouchersState> emit) async {
+    final currentState = state;
+    if (currentState is! ExitVouchersLoaded || currentState.isLoadingMore || !currentState.hasMore) return;
+
+    emit(currentState.copyWith(isLoadingMore: true));
+    try {
+      final nextItems = await FirestorePaginationService.instance.getNextExitVouchers(
+        pageSize: pageSize,
+        currentOffset: currentState.withdrawals.length,
+        searchQuery: event.searchQuery,
+        customerId: event.customerId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+
+      if (nextItems.isEmpty) {
+        emit(currentState.copyWith(hasMore: false, isLoadingMore: false));
+      } else {
+        final updatedList = List<StockWithdrawal>.from(currentState.withdrawals)..addAll(nextItems);
+        emit(ExitVouchersLoaded(
+          updatedList,
+          totalCount: currentState.totalCount > updatedList.length ? currentState.totalCount : updatedList.length,
+          hasMore: nextItems.length >= pageSize,
+          isLoadingMore: false,
+          clientFilter: event.customerId,
+          dateFromFilter: event.dateFrom,
+          dateToFilter: event.dateTo,
+          statusFilter: event.status,
+        ));
+      }
+    } catch (e) {
+      emit(currentState.copyWith(isLoadingMore: false));
+    }
+  }
+
+  Future<void> _onResetExitVouchersPagination(ResetExitVouchersPagination event, Emitter<ExitVouchersState> emit) async {
+    FirestorePaginationService.instance.resetExitVouchersPagination();
+    add(LoadFirstExitVouchers(
+      searchQuery: event.searchQuery,
+      customerId: event.customerId,
+      dateFrom: event.dateFrom,
+      dateTo: event.dateTo,
+      status: event.status,
+    ));
+  }
+
+  Future<void> _onLoad(LoadExitVouchers event, Emitter<ExitVouchersState> emit) async {
+    await _onLoadFirstExitVouchers(LoadFirstExitVouchers(), emit);
   }
 
   Future<void> _onAdd(AddExitVoucher event, Emitter<ExitVouchersState> emit) async {
@@ -90,10 +250,11 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
       final db = await _dbHelper.database;
       
       String number = event.withdrawal.number;
-      if (number.isEmpty || number.startsWith('BP-') || number.startsWith('BS-') || number.startsWith('BL-')) {
+      // Only auto-generate a number if it's genuinely empty
+      if (number.trim().isEmpty) {
         final now = DateTime.now();
         final countMap = await db.rawQuery(
-            "SELECT COUNT(*) as count FROM bons_sortie WHERE date LIKE '${now.year}-%'"
+            "SELECT COUNT(*) as count FROM bons_sortie WHERE number LIKE 'BS-${now.year}-%'"
         );
         final count = (countMap.first['count'] as int? ?? 0) + 1;
         number = 'BS-${now.year}-${count.toString().padLeft(5, '0')}';
@@ -149,7 +310,10 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
         }
       }
 
-      add(LoadExitVouchers());
+      // Immediately sync to Firestore so the new item appears when we reload from Firestore
+      await SyncService.instance.triggerSync();
+
+      add(LoadFirstExitVouchers());
     } catch (e) {
       emit(ExitVouchersError("Erreur lors de l'ajout: $e"));
     }
@@ -260,7 +424,7 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
         }
       }
 
-      add(LoadExitVouchers());
+      add(LoadFirstExitVouchers());
     } catch (e) {
       emit(ExitVouchersError('Erreur lors de la mise a jour: $e'));
     }
@@ -320,38 +484,18 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
         }
       }
 
-      add(LoadExitVouchers());
+      add(LoadFirstExitVouchers());
     } catch (e) {
       emit(ExitVouchersError('Erreur lors de la suppression: $e'));
     }
   }
 
   Future<void> _onFilter(FilterExitVouchers event, Emitter<ExitVouchersState> emit) async {
-    emit(ExitVouchersLoading());
-    try {
-      final allWithdrawals = await _dbHelper.getStockWithdrawals(
-        status: event.status,
-        startDate: event.dateFrom,
-        endDate: event.dateTo,
-      );
-
-      final filtered = allWithdrawals.where((w) {
-        if (!w.number.startsWith('BS-')) return false;
-        if (event.clientId != null && event.clientId!.isNotEmpty && event.clientId != 'all') {
-          return w.customerId == event.clientId;
-        }
-        return true;
-      }).toList();
-
-      emit(ExitVouchersLoaded(
-        filtered,
-        clientFilter: event.clientId,
-        dateFromFilter: event.dateFrom,
-        dateToFilter: event.dateTo,
-        statusFilter: event.status,
-      ));
-    } catch (e) {
-      emit(ExitVouchersError(e.toString()));
-    }
+    add(LoadFirstExitVouchers(
+      customerId: event.clientId,
+      dateFrom: event.dateFrom,
+      dateTo: event.dateTo,
+      status: event.status,
+    ));
   }
 }

@@ -33,6 +33,9 @@ class Customer {
   final bool deliverySameAsBilling;
   final String? bankAccount;
   final bool tvaSuspension;
+  final String? tvaAttestation;
+  final String? tvaStartDate;
+  final String? tvaEndDate;
   final String priceList;
   final String? privateNote;
 
@@ -69,6 +72,9 @@ class Customer {
     this.deliverySameAsBilling = true,
     this.bankAccount,
     this.tvaSuspension = false,
+    this.tvaAttestation,
+    this.tvaStartDate,
+    this.tvaEndDate,
     this.priceList = 'default',
     this.privateNote,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -107,6 +113,9 @@ class Customer {
         'delivery_same_as_billing': deliverySameAsBilling ? 1 : 0,
         'bank_account': bankAccount,
         'tva_suspension': tvaSuspension ? 1 : 0,
+        'tva_attestation': tvaAttestation,
+        'tva_start_date': tvaStartDate,
+        'tva_end_date': tvaEndDate,
         'price_list': priceList,
         'private_note': privateNote,
       };
@@ -144,6 +153,9 @@ class Customer {
         deliverySameAsBilling: map['delivery_same_as_billing'] == 1 || map['delivery_same_as_billing'] == null,
         bankAccount: map['bank_account'] as String?,
         tvaSuspension: map['tva_suspension'] == 1,
+        tvaAttestation: map['tva_attestation'] as String?,
+        tvaStartDate: map['tva_start_date'] as String?,
+        tvaEndDate: map['tva_end_date'] as String?,
         priceList: map['price_list'] as String? ?? 'default',
         privateNote: map['private_note'] as String?,
       );
@@ -181,6 +193,9 @@ class Customer {
     bool? deliverySameAsBilling,
     String? bankAccount,
     bool? tvaSuspension,
+    String? tvaAttestation,
+    String? tvaStartDate,
+    String? tvaEndDate,
     String? priceList,
     String? privateNote,
   }) =>
@@ -217,6 +232,9 @@ class Customer {
         deliverySameAsBilling: deliverySameAsBilling ?? this.deliverySameAsBilling,
         bankAccount: bankAccount ?? this.bankAccount,
         tvaSuspension: tvaSuspension ?? this.tvaSuspension,
+        tvaAttestation: tvaAttestation ?? this.tvaAttestation,
+        tvaStartDate: tvaStartDate ?? this.tvaStartDate,
+        tvaEndDate: tvaEndDate ?? this.tvaEndDate,
         priceList: priceList ?? this.priceList,
         privateNote: privateNote ?? this.privateNote,
       );

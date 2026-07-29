@@ -16,6 +16,63 @@ class LoadReturnNotes extends ReturnNotesEvent {
   List<Object?> get props => [status, startDate, endDate];
 }
 
+class LoadFirstReturnNotes extends ReturnNotesEvent {
+  final String? searchQuery;
+  final String? customerId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  const LoadFirstReturnNotes({
+    this.searchQuery,
+    this.customerId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+
+  @override
+  List<Object?> get props => [searchQuery, customerId, dateFrom, dateTo, status];
+}
+
+class LoadNextReturnNotes extends ReturnNotesEvent {
+  final String? searchQuery;
+  final String? customerId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  const LoadNextReturnNotes({
+    this.searchQuery,
+    this.customerId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+
+  @override
+  List<Object?> get props => [searchQuery, customerId, dateFrom, dateTo, status];
+}
+
+class ResetReturnNotesPagination extends ReturnNotesEvent {
+  final String? searchQuery;
+  final String? customerId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  const ResetReturnNotesPagination({
+    this.searchQuery,
+    this.customerId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+
+  @override
+  List<Object?> get props => [searchQuery, customerId, dateFrom, dateTo, status];
+}
+
 class FilterReturnNotes extends ReturnNotesEvent {
   final String? clientId;
   final DateTime? dateFrom;

@@ -34,7 +34,13 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
   String _country = 'Tunisie';
   double _creditLimit = 0.0;
   bool _tvaSuspension = false;
+  String _tvaAttestation = '';
+  String _tvaStartDate = '';
+  String _tvaEndDate = '';
+  List<String> _bankAccounts = [''];
+  String _priceList = 'default';
   String _notes = '';
+  String _privateNote = '';
 
   bool get _isEditing => widget.existing != null;
 
@@ -55,7 +61,16 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
       _country = c.country.isEmpty ? 'Tunisie' : c.country;
       _creditLimit = c.creditLimit;
       _tvaSuspension = c.tvaSuspension;
+      _tvaAttestation = c.tvaAttestation ?? '';
+      _tvaStartDate = c.tvaStartDate ?? '';
+      _tvaEndDate = c.tvaEndDate ?? '';
+      if (c.bankAccount != null && c.bankAccount!.trim().isNotEmpty) {
+        _bankAccounts = c.bankAccount!.split(RegExp(r'[\n,]|\|')).map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        if (_bankAccounts.isEmpty) _bankAccounts = [''];
+      }
+      _priceList = c.priceList;
       _notes = c.notes ?? '';
+      _privateNote = c.privateNote ?? '';
     }
   }
 
@@ -64,13 +79,19 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     
     if (_name.isEmpty && _companyName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez entrer un nom ou une raison sociale'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez entrer un nom ou une raison sociale'), backgroundColor: AppColors.error));
+      return;
+    }
+
+    if (_tvaSuspension && (_tvaAttestation.trim().isEmpty || _tvaEndDate.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Veuillez renseigner le N° d\'attestation TVA et la date d\'expiration'), backgroundColor: AppColors.error));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
+      final validBankAccounts = _bankAccounts.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
       final customer = Customer(
         id: widget.existing?.id ?? _uuid.v4(),
         code: widget.existing?.code ?? 'CLI-${DateTime.now().millisecondsSinceEpoch % 10000}',
@@ -86,7 +107,13 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
         country: _country,
         creditLimit: _creditLimit,
         tvaSuspension: _tvaSuspension,
+        tvaAttestation: _tvaSuspension ? (_tvaAttestation.trim().isEmpty ? null : _tvaAttestation.trim()) : null,
+        tvaStartDate: _tvaSuspension ? (_tvaStartDate.trim().isEmpty ? null : _tvaStartDate.trim()) : null,
+        tvaEndDate: _tvaSuspension ? (_tvaEndDate.trim().isEmpty ? null : _tvaEndDate.trim()) : null,
+        bankAccount: validBankAccounts.isEmpty ? null : validBankAccounts.join('\n'),
+        priceList: _priceList,
         notes: _notes.trim().isEmpty ? null : _notes.trim(),
+        privateNote: _privateNote.trim().isEmpty ? null : _privateNote.trim(),
         isDeleted: widget.existing?.isDeleted ?? false,
       );
 
@@ -130,7 +157,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                 title: 'Informations Générales',
                 icon: Icons.person_outline_rounded,
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -144,14 +171,14 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                           onChanged: (v) => setState(() => _customerType = v),
                         ),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       if (_customerType == 'entreprise') ...[
                         SmartTextInput(
                           label: 'Raison Sociale *',
                           initialValue: _companyName,
                           onChanged: (v) { if (!widget.isReadOnly) _companyName = v; },
                         ),
-                        SizedBox(height: 16),
+                        const SizedBox(height: 16),
                       ],
                       SmartTextInput(
                         label: 'Nom Complet / Responsable',
@@ -167,17 +194,18 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                 title: 'Contact',
                 icon: Icons.contact_phone_outlined,
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       SmartTextInput(
-                        label: 'Téléphone',
+                        label: 'Téléphone *',
                         initialValue: _phone,
                         keyboardType: TextInputType.phone,
                         onChanged: (v) { if (!widget.isReadOnly) _phone = v; },
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Téléphone obligatoire' : null,
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Email',
                         initialValue: _email,
@@ -190,10 +218,52 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
               ),
 
               MobileFormSection(
+                title: 'Comptes Bancaires (RIB / IBAN)',
+                icon: Icons.account_balance_outlined,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ...List.generate(_bankAccounts.length, (index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: SmartTextInput(
+                                  label: 'Compte #${index + 1}',
+                                  initialValue: _bankAccounts[index],
+                                  onChanged: (v) { if (!widget.isReadOnly) _bankAccounts[index] = v; },
+                                ),
+                              ),
+                              if (!widget.isReadOnly && _bankAccounts.length > 1) ...[
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: Icon(Icons.delete_outline_rounded, color: AppColors.error),
+                                  onPressed: () => setState(() => _bankAccounts.removeAt(index)),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      }),
+                      if (!widget.isReadOnly)
+                        OutlinedButton.icon(
+                          onPressed: () => setState(() => _bankAccounts.add('')),
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('Ajouter un compte bancaire'),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              MobileFormSection(
                 title: 'Fiscalité & Finance',
                 icon: Icons.account_balance_wallet_outlined,
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -202,25 +272,39 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                         initialValue: _taxId,
                         onChanged: (v) { if (!widget.isReadOnly) _taxId = v; },
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Registre de Commerce (RC)',
                         initialValue: _rc,
                         onChanged: (v) { if (!widget.isReadOnly) _rc = v; },
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       SmartTextInput(
                         label: 'Plafond de Crédit',
                         initialValue: _creditLimit > 0 ? _creditLimit.toString() : '',
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         onChanged: (v) { if (!widget.isReadOnly) _creditLimit = double.tryParse(v) ?? 0; },
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       SmartCheckbox(
                         label: 'Exonéré de TVA (Suspension)',
                         value: _tvaSuspension,
                         onChanged: widget.isReadOnly ? null : (v) => setState(() => _tvaSuspension = v ?? false),
                       ),
+                      if (_tvaSuspension) ...[
+                        const SizedBox(height: 16),
+                        SmartTextInput(
+                          label: 'N° Attestation de Suspension *',
+                          initialValue: _tvaAttestation,
+                          onChanged: (v) { if (!widget.isReadOnly) _tvaAttestation = v; },
+                        ),
+                        const SizedBox(height: 12),
+                        SmartTextInput(
+                          label: 'Date d\'Expiration (JJ/MM/AAAA) *',
+                          initialValue: _tvaEndDate,
+                          onChanged: (v) { if (!widget.isReadOnly) _tvaEndDate = v; },
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -231,7 +315,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                 icon: Icons.location_on_outlined,
                 isInitiallyExpanded: false,
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -241,7 +325,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                         maxLines: 2,
                         onChanged: (v) { if (!widget.isReadOnly) _address = v; },
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       Row(
                         children: [
                           Expanded(
@@ -251,7 +335,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
                               onChanged: (v) { if (!widget.isReadOnly) _city = v; },
                             ),
                           ),
-                          SizedBox(width: 16),
+                          const SizedBox(width: 16),
                           Expanded(
                             child: SmartTextInput(
                               label: 'Pays',
@@ -267,16 +351,28 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
               ),
 
               MobileFormSection(
-                title: 'Notes',
+                title: 'Notes & Confidentialité',
                 icon: Icons.notes_outlined,
                 isInitiallyExpanded: false,
                 child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: SmartTextInput(
-                    label: 'Remarques',
-                    initialValue: _notes,
-                    maxLines: 3,
-                    onChanged: (v) { if (!widget.isReadOnly) _notes = v; },
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SmartTextInput(
+                        label: 'Remarques Générales',
+                        initialValue: _notes,
+                        maxLines: 3,
+                        onChanged: (v) { if (!widget.isReadOnly) _notes = v; },
+                      ),
+                      const SizedBox(height: 16),
+                      SmartTextInput(
+                        label: 'Note Privée (Interne & Confidentielle)',
+                        initialValue: _privateNote,
+                        maxLines: 3,
+                        onChanged: (v) { if (!widget.isReadOnly) _privateNote = v; },
+                      ),
+                    ],
                   ),
                 ),
               ),

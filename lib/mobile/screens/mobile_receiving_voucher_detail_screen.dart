@@ -234,6 +234,8 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
   List<PopupMenuEntry<String>> _buildActionMenu(BuildContext context, ReceivingVoucher voucher) {
     final List<PopupMenuEntry<String>> items = [];
 
+    items.add(_buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'));
+    items.add(const PopupMenuDivider(height: 1));
     items.add(_buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'));
     items.add(const PopupMenuDivider(height: 1));
     items.add(_buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'));
@@ -271,6 +273,10 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
 
   void _handleAction(BuildContext context, String action, ReceivingVoucher voucher) {
     switch (action) {
+      case 'view':
+        final viewDoc = DocumentWrapper.fromReceivingVoucher(voucher);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
+        break;
       case 'edit':
         Navigator.push(
           context,
@@ -485,9 +491,10 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
     );
   }
 
-  void _convertToReturn(BuildContext context, ReceivingVoucher voucher) {
+  Future<void> _convertToReturn(BuildContext context, ReceivingVoucher voucher) async {
     final newReturnId = const Uuid().v4();
-    final returnNumber = 'BRF-${voucher.number.replaceAll("BR-", "")}';
+    final seq = await DatabaseHelper.instance.getNextSupplierReturnSequence();
+    final returnNumber = generateDocNumber('BRF', seq);
 
     List<SupplierReturnItem> newItems = [];
 

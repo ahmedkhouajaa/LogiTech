@@ -1,14 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/constants.dart';
 import '../utils/mobile_module_config.dart';
-import '../widgets/mobile_generic_list_screen.dart';
-import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/payments/payments_bloc.dart';
+import '../widgets/mobile_generic_list_screen.dart';
+import '../widgets/mobile_payment_card.dart';
 import 'forms/mobile_payment_form_screen.dart';
 import 'mobile_payment_detail_screen.dart';
-
 
 class MobilePaymentsScreen extends StatefulWidget {
   const MobilePaymentsScreen({super.key});
@@ -18,50 +18,66 @@ class MobilePaymentsScreen extends StatefulWidget {
 }
 
 class _MobilePaymentsScreenState extends State<MobilePaymentsScreen> {
-  String _searchQuery = '';
-  String _selectedFilter = 'Tous';
+  final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  String _activeFilter = 'Tous';
   late MobileModuleConfig _config;
 
   @override
   void initState() {
     super.initState();
     _config = MobileModuleConfig.getConfig(AppModule.payments);
-    context.read<PaymentsBloc>().add(LoadPayments());
+    _scrollController.addListener(_onScroll);
+    
+    // Load first page of payments on startup
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PaymentsBloc>().add(LoadFirstPayments(
+        statusFilter: _activeFilter,
+        searchQuery: _searchController.text,
+      ));
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    _searchController.dispose();
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      final state = context.read<PaymentsBloc>().state;
+      if (state is PaymentsLoaded && state.hasMore && !state.isLoadingMore) {
+        context.read<PaymentsBloc>().add(LoadNextPayments(
+          statusFilter: _activeFilter,
+          searchQuery: _searchController.text,
+        ));
+      }
+    }
   }
 
   void _onSearchChanged(String query) {
-    setState(() {
-      _searchQuery = query;
+    if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      context.read<PaymentsBloc>().add(LoadFirstPayments(
+        statusFilter: _activeFilter,
+        searchQuery: query,
+      ));
     });
   }
 
   void _onFilterChanged(String filter) {
     setState(() {
-      _selectedFilter = filter;
+      _activeFilter = filter;
     });
-  }
-
-  void _handleDelete(String id) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: const Text('Voulez-vous vraiment supprimer cet élément ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () {
-              context.read<PaymentsBloc>().add(DeletePayment(id));
-              Navigator.pop(ctx);
-            },
-            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+    context.read<PaymentsBloc>().add(LoadFirstPayments(
+      statusFilter: filter,
+      searchQuery: _searchController.text,
+    ));
   }
 
   @override
@@ -71,67 +87,32 @@ class _MobilePaymentsScreenState extends State<MobilePaymentsScreen> {
         bool isLoading = state is PaymentsLoading || state is PaymentsInitial;
         bool isEmpty = true;
         List<Widget> cards = [];
+        int totalMatchingCount = 0;
+        bool isLoadingMore = false;
 
         if (state is PaymentsLoaded) {
           final items = state.payments;
-          
-          final filteredItems = items.where((item) {
-            bool matchesSearch = true;
-            bool matchesFilter = true;
+          isLoadingMore = state.isLoadingMore;
+          totalMatchingCount = state.totalCount;
 
-            String statusStr = translateStatus(item.status);
-            String reference = item.paymentNumber;
-            String name = item.contactName ?? item.contactId;
+          isEmpty = items.isEmpty;
 
-            if (_searchQuery.isNotEmpty) {
-              final query = _searchQuery.toLowerCase();
-              if (!reference.toLowerCase().contains(query) && !name.toLowerCase().contains(query)) {
-                matchesSearch = false;
-              }
-            }
-
-            if (_selectedFilter != 'Tous') {
-               if (statusStr.toLowerCase() != _selectedFilter.toLowerCase()) {
-                   matchesFilter = false;
-               }
-            }
-
-            return matchesSearch && matchesFilter;
-          }).toList();
-          
-          isEmpty = filteredItems.isEmpty;
-          
-          cards = filteredItems.map((item) {
-            String reference = item.paymentNumber;
-            String status = translateStatus(item.status);
-            String name = item.contactName ?? item.contactId;
-            DateTime date = item.paymentDate;
-            double amount = item.amount;
-            String id = item.id;
-
-            return MobileGenericCard(
-              reference: reference,
-              status: status,
-              name: name,
-              date: date,
-              amount: amount,
+          cards = items.map((item) {
+            return MobilePaymentCard(
+              payment: item,
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobilePaymentDetailScreen(payment: item)),
+                  MaterialPageRoute(
+                    builder: (_) => MobilePaymentDetailScreen(payment: item),
+                  ),
                 ).then((_) {
-                  context.read<PaymentsBloc>().add(LoadPayments());
+                  context.read<PaymentsBloc>().add(LoadFirstPayments(
+                    statusFilter: _activeFilter,
+                    searchQuery: _searchController.text,
+                  ));
                 });
               },
-              onEdit: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => MobilePaymentFormScreen(existing: item)),
-                ).then((_) {
-                  context.read<PaymentsBloc>().add(LoadPayments());
-                });
-              },
-              onDelete: () => _handleDelete(id),
             );
           }).toList();
         }
@@ -139,31 +120,44 @@ class _MobilePaymentsScreenState extends State<MobilePaymentsScreen> {
         return MobileGenericListScreen(
           title: _config.title,
           activeModule: AppModule.payments,
-          onModuleSelected: (module) {
-          },
-          onRefresh: () {
-            context.read<PaymentsBloc>().add(LoadPayments());
+          onModuleSelected: (module) {},
+          onRefresh: () async {
+            context.read<PaymentsBloc>().add(ResetPaymentsPagination(
+              statusFilter: _activeFilter,
+              searchQuery: _searchController.text,
+            ));
           },
           onSearchChanged: _onSearchChanged,
-          filterOptions: _config.filterOptions,
-          selectedFilter: _selectedFilter,
+          filterOptions: const ['Tous', 'En attente', 'Confirmé', 'Rejeté'],
+          selectedFilter: _activeFilter,
           onFilterChanged: _onFilterChanged,
+          scrollController: _scrollController,
           isLoading: isLoading,
           isEmpty: isEmpty,
-          emptyMessage: 'Aucun élément trouvé.',
-          itemCount: cards.length,
+          emptyMessage: 'Aucun paiement trouvé.',
+          itemCount: totalMatchingCount,
           fabText: _config.fabText,
           onFabPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MobilePaymentFormScreen()),
             ).then((_) {
-              context.read<PaymentsBloc>().add(LoadPayments());
+              context.read<PaymentsBloc>().add(LoadFirstPayments(
+                statusFilter: _activeFilter,
+                searchQuery: _searchController.text,
+              ));
             });
           },
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 80),
-            children: cards,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...cards,
+              if (isLoadingMore)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+            ],
           ),
         );
       },

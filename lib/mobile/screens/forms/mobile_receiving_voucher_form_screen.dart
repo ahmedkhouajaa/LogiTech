@@ -10,6 +10,7 @@ import '../../../../models/supplier.dart';
 import '../../../../models/product.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
+import '../../../../database/database_helper.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
@@ -64,7 +65,8 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
 
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
-        number = 'BR-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+        final seq = await DatabaseHelper.instance.getNextReceivingVoucherSequence();
+        number = generateDocNumber(DocPrefix.receivingVoucher, seq);
       }
 
       final voucherId = widget.existing?.id ?? _uuid.v4();
@@ -79,8 +81,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
       );
 
       if (_isEditing) {
-        // bloc.add(UpdateReceivingVoucher(voucher)); // Ensure this exists or use Add if backend handles upsert
-        bloc.add(AddReceivingVoucher(voucher)); // For now relying on this based on original code
+        bloc.add(AddReceivingVoucher(voucher));
       } else {
         bloc.add(AddReceivingVoucher(voucher));
       }
@@ -126,9 +127,9 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                     builder: (context, state) {
                       final products = state is ProductsLoaded ? state.products : <Product>[];
                       return DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                        dropdownColor: AppColors.surfaceAlt,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                         value: selectedProductId,
                         decoration: InputDecoration(labelText: 'Article'),
                         items: products.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))).toList(),
@@ -183,7 +184,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
     return MobileFormScreen(
       title: widget.isReadOnly ? 'Détails du bon' : (_isEditing ? 'Modifier le bon' : 'Nouveau bon'),
       statusLabel: _status == 'draft' ? 'Brouillon' : (_status == 'validated' ? 'Validé' : 'Annulé'),
-      statusColor: _status == 'draft' ? AppColors.textSecondary : (_status == 'validated' ? AppColors.success : AppColors.error),
+      statusColor: _status == 'draft' ? AppColors.warning : (_status == 'validated' ? AppColors.success : AppColors.error),
       isLoading: _isLoading,
       saveLabel: 'Enregistrer',
       onCancel: () => Navigator.pop(context),
@@ -349,4 +350,3 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
     );
   }
 }
-

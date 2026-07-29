@@ -203,7 +203,7 @@ enum InvoiceStatus {
   Color get color {
     switch (this) {
       case draft:
-        return AppColors.textTertiary;
+        return AppColors.warning;
       case sent:
         return AppColors.info;
       case partial:
@@ -274,7 +274,7 @@ enum CustomerOrderStatus {
   Color get color {
     switch (this) {
       case draft:
-        return AppColors.textTertiary;
+        return AppColors.warning;
       case created:
         return AppColors.primary;
       case inProgress:
@@ -319,7 +319,7 @@ enum DeliveryNoteStatus {
   Color get color {
     switch (this) {
       case draft:
-        return AppColors.textTertiary;
+        return AppColors.warning;
       case delivered:
         return AppColors.success;
       case invoiced:
@@ -356,7 +356,7 @@ enum ReturnNoteStatus {
   Color get color {
     switch (this) {
       case draft:
-        return AppColors.textTertiary;
+        return AppColors.warning;
       case validated:
         return AppColors.success;
       case cancelled:
@@ -386,7 +386,7 @@ enum StockWithdrawalStatus {
   Color get color {
     switch (this) {
       case draft:
-        return AppColors.textTertiary;
+        return AppColors.warning;
       case validated:
         return AppColors.success;
       case cancelled:
@@ -552,7 +552,7 @@ enum SupplierOrderStatus {
   Color get color {
     switch (this) {
       case draft:
-        return AppColors.textTertiary;
+        return AppColors.warning;
       case sent:
         return AppColors.info;
       case validated:
@@ -600,7 +600,7 @@ class DocPrefix {
   static const String inventorySheet = 'FI';
   static const String customerOrder = 'CC';
   static const String supplierOrder = 'CF';
-  static const String receivingVoucher = 'BRec';
+  static const String receivingVoucher = 'BR';
   static const String supplierCreditNote = 'AVF';
   static const String supplierReturn = 'BRF';
   static const String paymentIn = 'PAI';
@@ -615,19 +615,27 @@ String translateStatus(String s) {
   if (s == 'accepted') return 'Accepté';
   if (s == 'rejected') return 'Rejeté';
   if (s == 'invoiced') return 'Facturé';
-  
-  // Orders
+
+  // Orders / Delivery notes
   if (s == 'created') return 'Créé';
   if (s == 'inProgress') return 'En cours';
   if (s == 'delivered') return 'Livré';
+  if (s == 'returned') return 'Retourné';
   if (s == 'cancelled') return 'Annulé';
   if (s == 'validated') return 'Validé';
   if (s == 'validatedAndInvoiced') return 'Validée et facturée';
-  
-  // Invoices
+
+  // Invoices / Payments
   if (s == 'unpaid') return 'Non payée';
   if (s == 'paid') return 'Payée';
   if (s == 'partiallyPaid') return 'Partiellement payée';
-  
+  if (s == 'partial') return 'Partiellement payée';
+  if (s == 'overdue') return 'En retard';
+  if (s == 'pending') return 'En attente';
+
+  // Stock
+  if (s == 'completed') return 'Terminé';
+  if (s == 'processing') return 'En cours';
+
   return s;
 }

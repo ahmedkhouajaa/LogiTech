@@ -18,6 +18,7 @@ import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
 import '../../database/database_helper.dart';
 import '../../screens/document_preview_screen.dart';
+import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_customer_order_form_screen.dart';
 import 'forms/mobile_invoice_form_screen.dart';
 import 'forms/mobile_delivery_note_form_screen.dart';
@@ -82,6 +83,8 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
               icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentCustomerOrder),
               itemBuilder: (_) => [
+                _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
+                PopupMenuDivider(height: 1),
                 _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
                 PopupMenuDivider(height: 1),
                 _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
@@ -138,16 +141,18 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
                           Text('Réf: ${currentCustomerOrder.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           Builder(
                             builder: (context) {
-                              final statusEnum = CustomerOrderStatus.values.firstWhere((s) => s.name == currentCustomerOrder.status, orElse: () => CustomerOrderStatus.draft);
+                              final label = translateStatus(currentCustomerOrder.status);
+                              final color = MobileStatusColors.getColorForStatus(label);
                               return Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: statusEnum.color.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: color.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
                                 ),
                                 child: Text(
-                                  statusEnum.label,
-                                  style: TextStyle(color: statusEnum.color, fontWeight: FontWeight.bold, fontSize: 12),
+                                  label,
+                                  style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12),
                                 ),
                               );
                             }
@@ -267,7 +272,14 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
         children: [
           Icon(icon, size: 18, color: Color(0xFF64748B)),
           SizedBox(width: 12),
-          Text(text, style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ),
         ],
       ),
     );
@@ -275,6 +287,10 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
 
   void _handleAction(BuildContext context, String action, CustomerOrder order) {
     switch (action) {
+      case 'view':
+        final viewDoc = DocumentWrapper.fromCustomerOrder(order);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
+        break;
       case 'edit':
         Navigator.push(
           context,

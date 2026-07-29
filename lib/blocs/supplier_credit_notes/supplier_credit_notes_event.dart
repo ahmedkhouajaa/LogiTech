@@ -10,6 +10,63 @@ abstract class SupplierCreditNotesEvent extends Equatable {
 
 class LoadSupplierCreditNotes extends SupplierCreditNotesEvent {}
 
+class LoadFirstSupplierCreditNotes extends SupplierCreditNotesEvent {
+  final String? searchQuery;
+  final String? supplierId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  const LoadFirstSupplierCreditNotes({
+    this.searchQuery,
+    this.supplierId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+
+  @override
+  List<Object?> get props => [searchQuery, supplierId, dateFrom, dateTo, status];
+}
+
+class LoadNextSupplierCreditNotes extends SupplierCreditNotesEvent {
+  final String? searchQuery;
+  final String? supplierId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  const LoadNextSupplierCreditNotes({
+    this.searchQuery,
+    this.supplierId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+
+  @override
+  List<Object?> get props => [searchQuery, supplierId, dateFrom, dateTo, status];
+}
+
+class ResetSupplierCreditNotesPagination extends SupplierCreditNotesEvent {
+  final String? searchQuery;
+  final String? supplierId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  const ResetSupplierCreditNotesPagination({
+    this.searchQuery,
+    this.supplierId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+
+  @override
+  List<Object?> get props => [searchQuery, supplierId, dateFrom, dateTo, status];
+}
+
 class AddSupplierCreditNote extends SupplierCreditNotesEvent {
   final SupplierCreditNote supplierCreditNote;
 

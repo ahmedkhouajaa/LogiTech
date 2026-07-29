@@ -1,11 +1,60 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/supplier_order.dart';
 import '../../database/database_helper.dart';
+import '../../services/firestore_pagination_service.dart';
 
 // ─── Events ────────────────────────────────────────────────────────
 abstract class SupplierOrdersEvent {}
 
 class LoadSupplierOrders extends SupplierOrdersEvent {}
+
+class LoadFirstSupplierOrders extends SupplierOrdersEvent {
+  final String? searchQuery;
+  final String? supplierId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  LoadFirstSupplierOrders({
+    this.searchQuery,
+    this.supplierId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+}
+
+class LoadNextSupplierOrders extends SupplierOrdersEvent {
+  final String? searchQuery;
+  final String? supplierId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  LoadNextSupplierOrders({
+    this.searchQuery,
+    this.supplierId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+}
+
+class ResetSupplierOrdersPagination extends SupplierOrdersEvent {
+  final String? searchQuery;
+  final String? supplierId;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final String? status;
+
+  ResetSupplierOrdersPagination({
+    this.searchQuery,
+    this.supplierId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
+}
 
 class AddSupplierOrder extends SupplierOrdersEvent {
   final SupplierOrder order;
@@ -40,6 +89,9 @@ class SupplierOrdersLoading extends SupplierOrdersState {}
 
 class SupplierOrdersLoaded extends SupplierOrdersState {
   final List<SupplierOrder> orders;
+  final int totalCount;
+  final bool hasMore;
+  final bool isLoadingMore;
   final String? supplierFilter;
   final DateTime? dateFromFilter;
   final DateTime? dateToFilter;
@@ -47,6 +99,9 @@ class SupplierOrdersLoaded extends SupplierOrdersState {
 
   SupplierOrdersLoaded(
     this.orders, {
+    this.totalCount = 0,
+    this.hasMore = true,
+    this.isLoadingMore = false,
     this.supplierFilter,
     this.dateFromFilter,
     this.dateToFilter,
@@ -55,6 +110,9 @@ class SupplierOrdersLoaded extends SupplierOrdersState {
 
   SupplierOrdersLoaded copyWith({
     List<SupplierOrder>? orders,
+    int? totalCount,
+    bool? hasMore,
+    bool? isLoadingMore,
     String? supplierFilter,
     DateTime? dateFromFilter,
     DateTime? dateToFilter,
@@ -62,6 +120,9 @@ class SupplierOrdersLoaded extends SupplierOrdersState {
   }) {
     return SupplierOrdersLoaded(
       orders ?? this.orders,
+      totalCount: totalCount ?? this.totalCount,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       supplierFilter: supplierFilter ?? this.supplierFilter,
       dateFromFilter: dateFromFilter ?? this.dateFromFilter,
       dateToFilter: dateToFilter ?? this.dateToFilter,
@@ -77,10 +138,14 @@ class SupplierOrdersError extends SupplierOrdersState {
 
 // ─── BLoC ──────────────────────────────────────────────────────────
 class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> {
+  static const int pageSize = 10;
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
   SupplierOrdersBloc() : super(SupplierOrdersInitial()) {
     on<LoadSupplierOrders>(_onLoadSupplierOrders);
+    on<LoadFirstSupplierOrders>(_onLoadFirstSupplierOrders);
+    on<LoadNextSupplierOrders>(_onLoadNextSupplierOrders);
+    on<ResetSupplierOrdersPagination>(_onResetSupplierOrdersPagination);
     on<AddSupplierOrder>(_onAddSupplierOrder);
     on<UpdateSupplierOrder>(_onUpdateSupplierOrder);
     on<DeleteSupplierOrder>(_onDeleteSupplierOrder);
@@ -91,10 +156,87 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
     emit(SupplierOrdersLoading());
     try {
       final orders = await _dbHelper.getSupplierOrders();
-      emit(SupplierOrdersLoaded(orders));
+      emit(SupplierOrdersLoaded(orders, totalCount: orders.length));
     } catch (e) {
       emit(SupplierOrdersError(e.toString()));
     }
+  }
+
+  Future<void> _onLoadFirstSupplierOrders(LoadFirstSupplierOrders event, Emitter<SupplierOrdersState> emit) async {
+    emit(SupplierOrdersLoading());
+    try {
+      FirestorePaginationService.instance.resetSupplierOrdersPagination();
+      final ordersFuture = FirestorePaginationService.instance.getFirstSupplierOrders(
+        pageSize: pageSize,
+        searchQuery: event.searchQuery,
+        supplierId: event.supplierId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+      final countFuture = FirestorePaginationService.instance.getSupplierOrdersCount(
+        searchQuery: event.searchQuery,
+        supplierId: event.supplierId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+
+      final results = await Future.wait([ordersFuture, countFuture]);
+      final orders = results[0] as List<SupplierOrder>;
+      final totalCount = results[1] as int;
+
+      emit(SupplierOrdersLoaded(
+        orders,
+        totalCount: totalCount > orders.length ? totalCount : orders.length,
+        hasMore: orders.length >= pageSize,
+      ));
+    } catch (e) {
+      emit(SupplierOrdersError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadNextSupplierOrders(LoadNextSupplierOrders event, Emitter<SupplierOrdersState> emit) async {
+    final currentState = state;
+    if (currentState is! SupplierOrdersLoaded || currentState.isLoadingMore || !currentState.hasMore) return;
+
+    emit(currentState.copyWith(isLoadingMore: true));
+    try {
+      final nextOrders = await FirestorePaginationService.instance.getNextSupplierOrders(
+        pageSize: pageSize,
+        currentOffset: currentState.orders.length,
+        searchQuery: event.searchQuery,
+        supplierId: event.supplierId,
+        dateFrom: event.dateFrom,
+        dateTo: event.dateTo,
+        status: event.status,
+      );
+
+      if (nextOrders.isEmpty) {
+        emit(currentState.copyWith(hasMore: false, isLoadingMore: false));
+      } else {
+        final updatedList = List<SupplierOrder>.from(currentState.orders)..addAll(nextOrders);
+        emit(SupplierOrdersLoaded(
+          updatedList,
+          totalCount: currentState.totalCount > updatedList.length ? currentState.totalCount : updatedList.length,
+          hasMore: nextOrders.length >= pageSize,
+          isLoadingMore: false,
+        ));
+      }
+    } catch (e) {
+      emit(currentState.copyWith(isLoadingMore: false));
+    }
+  }
+
+  Future<void> _onResetSupplierOrdersPagination(ResetSupplierOrdersPagination event, Emitter<SupplierOrdersState> emit) async {
+    FirestorePaginationService.instance.resetSupplierOrdersPagination();
+    add(LoadFirstSupplierOrders(
+      searchQuery: event.searchQuery,
+      supplierId: event.supplierId,
+      dateFrom: event.dateFrom,
+      dateTo: event.dateTo,
+      status: event.status,
+    ));
   }
 
   Future<void> _onAddSupplierOrder(AddSupplierOrder event, Emitter<SupplierOrdersState> emit) async {
@@ -117,7 +259,7 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
 
   Future<void> _onDeleteSupplierOrder(DeleteSupplierOrder event, Emitter<SupplierOrdersState> emit) async {
     try {
-      await _dbHelper.softDeleteSupplierOrder(event.orderId);
+      await _dbHelper.softDelete('supplier_orders', event.orderId);
       add(LoadSupplierOrders());
     } catch (e) {
       emit(SupplierOrdersError(e.toString()));
@@ -125,57 +267,27 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
   }
 
   Future<void> _onFilterSupplierOrders(FilterSupplierOrders event, Emitter<SupplierOrdersState> emit) async {
-    final currentState = state;
-    if (currentState is SupplierOrdersLoaded) {
-      emit(SupplierOrdersLoading());
-      try {
-        final allOrders = await _dbHelper.getSupplierOrders(
-          status: event.status,
-          startDate: event.dateFrom,
-          endDate: event.dateTo,
-        );
+    try {
+      final allOrders = await _dbHelper.getSupplierOrders(
+        status: event.status,
+        startDate: event.dateFrom,
+        endDate: event.dateTo,
+      );
 
-        final filteredOrders = allOrders.where((order) {
-          if (event.supplierId != null && event.supplierId != 'all' && event.supplierId!.isNotEmpty) {
-            return order.supplierId == event.supplierId;
-          }
-          return true;
-        }).toList();
+      var filtered = allOrders;
+      if (event.supplierId != null && event.supplierId!.isNotEmpty) {
+        filtered = filtered.where((o) => o.supplierId == event.supplierId).toList();
+      }
 
-        emit(SupplierOrdersLoaded(
-          filteredOrders,
-          supplierFilter: event.supplierId,
-          dateFromFilter: event.dateFrom,
-          dateToFilter: event.dateTo,
-          statusFilter: event.status,
-        ));
-      } catch (e) {
-        emit(SupplierOrdersError(e.toString()));
-      }
-    } else {
-      emit(SupplierOrdersLoading());
-      try {
-        final allOrders = await _dbHelper.getSupplierOrders(
-          status: event.status,
-          startDate: event.dateFrom,
-          endDate: event.dateTo,
-        );
-        final filteredOrders = allOrders.where((order) {
-          if (event.supplierId != null && event.supplierId != 'all' && event.supplierId!.isNotEmpty) {
-            return order.supplierId == event.supplierId;
-          }
-          return true;
-        }).toList();
-        emit(SupplierOrdersLoaded(
-          filteredOrders,
-          supplierFilter: event.supplierId,
-          dateFromFilter: event.dateFrom,
-          dateToFilter: event.dateTo,
-          statusFilter: event.status,
-        ));
-      } catch (e) {
-        emit(SupplierOrdersError(e.toString()));
-      }
+      emit(SupplierOrdersLoaded(
+        filtered,
+        supplierFilter: event.supplierId,
+        dateFromFilter: event.dateFrom,
+        dateToFilter: event.dateTo,
+        statusFilter: event.status,
+      ));
+    } catch (e) {
+      emit(SupplierOrdersError(e.toString()));
     }
   }
 }

@@ -24,7 +24,7 @@ enum ExitVoucherStatus {
 
   Color get color {
     switch (this) {
-      case draft: return AppColors.textSecondary;
+      case draft: return AppColors.warning;
       case validated: return AppColors.primary;
       case cancelled: return AppColors.error;
     }
@@ -50,7 +50,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<ExitVouchersBloc>().add(LoadExitVouchers());
+    context.read<ExitVouchersBloc>().add(LoadFirstExitVouchers());
     context.read<CustomersBloc>().add(LoadCustomers());
   }
 
@@ -101,8 +101,8 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
   }
 
   void _applyFilters() {
-    context.read<ExitVouchersBloc>().add(FilterExitVouchers(
-      clientId: _selectedClientId,
+    context.read<ExitVouchersBloc>().add(LoadFirstExitVouchers(
+      customerId: _selectedClientId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
       status: _statusFilter?.name,
@@ -484,7 +484,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
       if (_statusFilter != null) {
         filteredVouchers = filteredVouchers.where((q) => q.status == _statusFilter!.name).toList();
       }
-      totalItems = filteredVouchers.length;
+      totalItems = state.totalCount > 0 ? state.totalCount : filteredVouchers.length;
     }
 
     final activeFilterCount = (_selectedClientId != null && _selectedClientId != 'all' ? 1 : 0) +
@@ -855,11 +855,11 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
         }
         if (state is ExitVouchersLoaded) {
           final notes = state.withdrawals;
-          final total = notes.length;
+          final total = state.totalCount > 0 ? state.totalCount : notes.length;
           final totalPages = total == 0 ? 1 : (total / _rowsPerPage).ceil();
           final page = _currentPage.clamp(0, totalPages - 1);
           final start = page * _rowsPerPage;
-          final end = (start + _rowsPerPage).clamp(0, total);
+          final end = (start + _rowsPerPage).clamp(0, notes.length);
           final pageNotes = notes.sublist(start, end);
 
           return Column(
