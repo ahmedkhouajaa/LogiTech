@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../database/database_helper.dart';
 import '../../models/customer.dart';
 import '../../services/firestore_pagination_service.dart';
@@ -121,13 +122,29 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
   }
 
   Future<void> _onLoadCustomers(LoadCustomers event, Emitter<CustomersState> emit) async {
-    emit(CustomersLoading());
     try {
-      final customers = await DatabaseHelper.instance.getCustomers();
-      emit(CustomersLoaded(customers, totalCount: customers.length, hasMore: false));
+      final localCustomers = await DatabaseHelper.instance.getCustomers();
+      emit(CustomersLoaded(localCustomers, totalCount: localCustomers.length, hasMore: false));
     } catch (e) {
-      emit(CustomersError(e.toString()));
+      emit(CustomersLoading());
     }
+    FirebaseFirestore.instance
+        .collection('clients')
+        .where('is_deleted', isEqualTo: 0)
+        .get()
+        .then((snapshot) async {
+          final List<Customer> firestoreCustomers = snapshot.docs.map((doc) => Customer.fromMap(doc.data())).toList();
+          for (var customer in firestoreCustomers) {
+            await DatabaseHelper.instance.insertCustomer(customer);
+          }
+          final customers = await DatabaseHelper.instance.getCustomers();
+          if (!emit.isDone) {
+            emit(CustomersLoaded(customers, totalCount: customers.length, hasMore: false));
+          }
+        })
+        .catchError((e) {
+          print("Failed to fetch/save customers from Firestore: $e");
+        });
   }
 
   Future<void> _onLoadFirstClients(LoadFirstClients event, Emitter<CustomersState> emit) async {
@@ -190,29 +207,62 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
   }
 
   Future<void> _onAddCustomer(AddCustomer event, Emitter<CustomersState> emit) async {
-    try {
-      await DatabaseHelper.instance.insertCustomer(event.customer);
-      add(LoadCustomers());
-    } catch (e) {
-      emit(CustomersError(e.toString()));
+    final currentState = state;
+    List<Customer> currentList = [];
+    if (currentState is CustomersLoaded) {
+      currentList = List<Customer>.from(currentState.customers);
     }
+    currentList.removeWhere((c) => c.id == event.customer.id);
+    currentList.insert(0, event.customer);
+    emit(CustomersLoaded(currentList, totalCount: currentList.length, hasMore: false));
+
+    DatabaseHelper.instance.insertCustomer(event.customer).catchError((e) {
+      print("Failed to save customer to SQLite: $e");
+    });
+    FirebaseFirestore.instance
+        .collection('clients')
+        .doc(event.customer.id)
+        .set(event.customer.toMap(), SetOptions(merge: true))
+        .catchError((e) => print("Failed to add customer to Firestore: $e"));
   }
 
   Future<void> _onUpdateCustomer(UpdateCustomer event, Emitter<CustomersState> emit) async {
-    try {
-      await DatabaseHelper.instance.updateCustomer(event.customer);
-      add(LoadCustomers());
-    } catch (e) {
-      emit(CustomersError(e.toString()));
+    final currentState = state;
+    if (currentState is CustomersLoaded) {
+      final currentList = List<Customer>.from(currentState.customers);
+      final idx = currentList.indexWhere((c) => c.id == event.customer.id);
+      if (idx != -1) {
+        currentList[idx] = event.customer;
+      } else {
+        currentList.insert(0, event.customer);
+      }
+      emit(CustomersLoaded(currentList, totalCount: currentList.length, hasMore: false));
     }
+
+    DatabaseHelper.instance.updateCustomer(event.customer).catchError((e) {
+      print("Failed to update customer in SQLite: $e");
+    });
+    FirebaseFirestore.instance
+        .collection('clients')
+        .doc(event.customer.id)
+        .set(event.customer.toMap(), SetOptions(merge: true))
+        .catchError((e) => print("Failed to update customer in Firestore: $e"));
   }
 
   Future<void> _onDeleteCustomer(DeleteCustomer event, Emitter<CustomersState> emit) async {
-    try {
-      await DatabaseHelper.instance.deleteCustomer(event.id);
-      add(LoadCustomers());
-    } catch (e) {
-      emit(CustomersError(e.toString()));
+    final currentState = state;
+    if (currentState is CustomersLoaded) {
+      final currentList = List<Customer>.from(currentState.customers)..removeWhere((c) => c.id == event.id);
+      emit(CustomersLoaded(currentList, totalCount: currentList.length, hasMore: false));
     }
+
+    DatabaseHelper.instance.deleteCustomer(event.id).catchError((e) {
+      print("Failed to delete customer in SQLite: $e");
+    });
+    FirebaseFirestore.instance
+        .collection('clients')
+        .doc(event.id)
+        .update({'is_deleted': 1})
+        .catchError((e) => print("Failed to delete customer in Firestore: $e"));
   }
 }

@@ -17,6 +17,7 @@ import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import 'mobile_product_form_screen.dart';
 import '../../../../screens/customers_screen.dart';
+import '../../../../widgets/searchable_dropdown_field.dart';
 
 class MobileQuoteFormScreen extends StatefulWidget {
   final Quote? existing;
@@ -108,11 +109,24 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
         number = generateDocNumber('DV', seq);
       }
 
+      final custState = context.read<CustomersBloc>().state;
+      String? custName;
+      if (custState is CustomersLoaded) {
+        final found = custState.customers.firstWhere(
+          (c) => c.id == _selectedCustomerId,
+          orElse: () => Customer(id: '', code: '', name: 'Client Inconnu'),
+        );
+        custName = found.companyName?.isNotEmpty == true
+            ? found.companyName
+            : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
+      }
+
       final quoteId = widget.existing?.id ?? _uuid.v4();
       final quote = Quote(
         id: quoteId,
         number: number,
         customerId: _selectedCustomerId!,
+        customerName: custName,
         date: _date,
         validityDate: _validityDate,
         status: _status,
@@ -242,23 +256,34 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                       child: BlocBuilder<CustomersBloc, CustomersState>(
                         builder: (context, state) {
                           final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                          return SmartDropdown<String>(
+                          final selectedCustomer = customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null);
+                          final displayName = selectedCustomer != null
+                              ? (selectedCustomer.companyName?.isNotEmpty == true
+                                  ? selectedCustomer.companyName!
+                                  : (selectedCustomer.responsibleName?.isNotEmpty == true
+                                      ? selectedCustomer.responsibleName!
+                                      : selectedCustomer.name))
+                              : null;
+                          return SmartSearchableSelector(
                             label: 'Client',
-                            value: _selectedCustomerId,
-                            items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.companyName ?? c.name, style: TextStyle(fontSize: 16)))).toList(),
-                            onChanged: (v) => setState(() => _selectedCustomerId = v),
                             hint: 'Rechercher des clients...',
+                            selectedText: displayName,
+                            onTap: () async {
+                              final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
+                              if (res != null && mounted) {
+                                setState(() => _selectedCustomerId = res);
+                              }
+                            },
                           );
                         },
                       ),
                     ),
                     SizedBox(width: 8),
                     Container(
-                      height: 56,
-                      margin: EdgeInsets.only(bottom: 2),
+                      height: 50,
                       child: ElevatedButton(
-                        onPressed: () {
-                          showDialog(
+                        onPressed: () async {
+                          final newId = await showDialog<String>(
                             context: context,
                             barrierDismissible: false,
                             builder: (_) => BlocProvider.value(
@@ -266,6 +291,11 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                               child: const CustomerDialog(existing: null),
                             ),
                           );
+                          if (newId != null && mounted) {
+                            setState(() {
+                              _selectedCustomerId = newId;
+                            });
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary.withOpacity(0.1),

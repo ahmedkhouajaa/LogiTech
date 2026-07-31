@@ -11,6 +11,7 @@ import '../../../../utils/constants.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
+import '../../../../widgets/searchable_dropdown_field.dart';
 
 class MobileCheckTraiteFormScreen extends StatefulWidget {
   final CheckTraite? existing;
@@ -200,14 +201,20 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
                       final customers = state is CustomersLoaded ? state.customers : <Customer>[];
                       return AbsorbPointer(
                         absorbing: widget.isReadOnly,
-                        child: SmartDropdown<String>(
+                        child: SmartSearchableSelector(
                           label: 'Client (Optionnel)',
-                          value: _selectedContactId,
-                          items: [
-                            const DropdownMenuItem<String>(value: null, child: Text('Aucun / Saisie libre')),
-                            ...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
-                          ],
-                          onChanged: (v) => setState(() => _selectedContactId = v),
+                          hint: 'Aucun / Saisie libre',
+                          selectedText: _selectedContactId != null
+                              ? (customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedContactId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                  ? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedContactId, orElse: () => null)!.companyName!
+                                  : customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedContactId, orElse: () => null)?.name)
+                              : null,
+                          onTap: () async {
+                            final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedContactId);
+                            if (res != null && mounted) {
+                              setState(() => _selectedContactId = res == '__default__' ? null : res); // Assuming __default__ pattern is not needed, but they used null before.
+                            }
+                          },
                         ),
                       );
                     },
@@ -218,14 +225,20 @@ class _MobileCheckTraiteFormScreenState extends State<MobileCheckTraiteFormScree
                       final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
                       return AbsorbPointer(
                         absorbing: widget.isReadOnly,
-                        child: SmartDropdown<String>(
+                        child: SmartSearchableSelector(
                           label: 'Fournisseur (Optionnel)',
-                          value: _selectedContactId,
-                          items: [
-                            const DropdownMenuItem<String>(value: null, child: Text('Aucun / Saisie libre')),
-                            ...suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))),
-                          ],
-                          onChanged: (v) => setState(() => _selectedContactId = v),
+                          hint: 'Aucun / Saisie libre',
+                          selectedText: _selectedContactId != null
+                              ? (suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedContactId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                  ? suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedContactId, orElse: () => null)!.companyName!
+                                  : suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedContactId, orElse: () => null)?.name)
+                              : null,
+                          onTap: () async {
+                            final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedContactId);
+                            if (res != null && mounted) {
+                              setState(() => _selectedContactId = res == '__default__' ? null : res);
+                            }
+                          },
                         ),
                       );
                     },

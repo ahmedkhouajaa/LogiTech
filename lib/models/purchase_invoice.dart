@@ -97,6 +97,23 @@ class PurchaseInvoice {
       parsedItems = (map['items'] as List).map((i) => PurchaseInvoiceItem.fromMap(Map<String, dynamic>.from(i))).toList();
     }
 
+    double rawTotalHT = double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0;
+    double rawTotalTva = double.tryParse(map['total_tva']?.toString() ?? '0') ?? 0.0;
+    double rawTotalTTC = double.tryParse(map['total_ttc']?.toString() ?? '0') ?? 0.0;
+
+    if (rawTotalTTC == 0 && parsedItems.isNotEmpty) {
+      final itemsHT = parsedItems.fold(0.0, (s, i) => s + i.computedTotalHT);
+      final itemsTva = parsedItems.fold(0.0, (s, i) => s + i.tvaAmount);
+      final discountPercent = double.tryParse(map['global_discount_percent']?.toString() ?? '0') ?? 0.0;
+      final discountAmount = double.tryParse(map['global_discount_amount']?.toString() ?? '0') ?? 0.0;
+      final stamp = double.tryParse(map['timbre_fiscal']?.toString() ?? '0') ?? 0.0;
+
+      final totalDiscount = (itemsHT * discountPercent / 100) + discountAmount;
+      rawTotalHT = itemsHT - totalDiscount;
+      rawTotalTva = itemsTva;
+      rawTotalTTC = rawTotalHT + rawTotalTva + stamp;
+    }
+
     return PurchaseInvoice(
         id: map['id']?.toString() ?? '', number: map['number']?.toString() ?? '',
         supplierId: map['supplier_id']?.toString() ?? '',
@@ -112,9 +129,9 @@ class PurchaseInvoice {
         status: InvoiceStatus.values.firstWhere(
           (e) => e.name == map['status'], orElse: () => InvoiceStatus.unpaid,
         ),
-        totalHT: double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0,
-        totalTva: double.tryParse(map['total_tva']?.toString() ?? '0') ?? 0.0,
-        totalTTC: double.tryParse(map['total_ttc']?.toString() ?? '0') ?? 0.0,
+        totalHT: rawTotalHT,
+        totalTva: rawTotalTva,
+        totalTTC: rawTotalTTC,
         amountPaid: double.tryParse(map['amount_paid']?.toString() ?? '0') ?? 0.0,
         stampTax: double.tryParse(map['stamp_tax']?.toString() ?? '0') ?? 0.0,
         timbreFiscal: double.tryParse(map['timbre_fiscal']?.toString() ?? '0') ?? 0.0,
@@ -213,17 +230,22 @@ class PurchaseInvoiceItem {
         'discount_percent': discountPercent, 'total_ht': computedTotalHT,
       };
 
-  factory PurchaseInvoiceItem.fromMap(Map<String, dynamic> map) => PurchaseInvoiceItem(
-        id: map['id']?.toString() ?? '', purchaseInvoiceId: map['invoice_id']?.toString() ?? '',
-        productId: map['product_id']?.toString() ?? '',
-        productName: map['product_name']?.toString(),
-        description: map['description']?.toString(),
-        quantity: double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0,
-        unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
-        tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
-        discountPercent: double.tryParse(map['discount_percent']?.toString() ?? '0') ?? 0.0,
-        totalHT: double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0,
-      );
+  factory PurchaseInvoiceItem.fromMap(Map<String, dynamic> map) {
+    final pName = map['product_name']?.toString();
+    final desc = map['description']?.toString();
+    return PurchaseInvoiceItem(
+      id: map['id']?.toString() ?? '',
+      purchaseInvoiceId: map['invoice_id']?.toString() ?? '',
+      productId: map['product_id']?.toString() ?? '',
+      productName: (pName != null && pName.isNotEmpty) ? pName : desc,
+      description: desc,
+      quantity: double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0,
+      unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
+      tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
+      discountPercent: double.tryParse(map['discount_percent']?.toString() ?? '0') ?? 0.0,
+      totalHT: double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0,
+    );
+  }
 
   PurchaseInvoiceItem copyWith({
     String? id, String? purchaseInvoiceId, String? productId, String? productName,

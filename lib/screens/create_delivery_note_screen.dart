@@ -151,11 +151,24 @@ class _CreateDeliveryNoteScreenState
       number = generateDocNumber('BL', seq);
     }
 
+    final custState = context.read<CustomersBloc>().state;
+    String? custName;
+    if (custState is CustomersLoaded) {
+      final found = custState.customers.firstWhere(
+        (c) => c.id == _selectedCustomerId,
+        orElse: () => Customer(id: '', code: '', name: 'Client Inconnu'),
+      );
+      custName = found.companyName?.isNotEmpty == true
+          ? found.companyName
+          : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
+    }
+
     final noteId = widget.existing?.id ?? _uuid.v4();
     final note = DeliveryNote(
       id: noteId,
       number: number,
       customerId: _selectedCustomerId!,
+      customerName: custName,
       projectId: _selectedProjectId,
       date: _date,
       status: _status.name,
@@ -475,8 +488,8 @@ class _CreateDeliveryNoteScreenState
                           height: 48,
                           margin: EdgeInsets.only(bottom: 0),
                           child: ElevatedButton(
-                            onPressed: () {
-                              showDialog(
+                            onPressed: () async {
+                              final newId = await showDialog<String>(
                                 context: context,
                                 barrierDismissible: false,
                                 builder: (_) => BlocProvider.value(
@@ -484,6 +497,9 @@ class _CreateDeliveryNoteScreenState
                                   child: const CustomerDialog(existing: null),
                                 ),
                               );
+                              if (newId != null && mounted) {
+                                setState(() => _selectedCustomerId = newId);
+                              }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary.withOpacity(0.1),

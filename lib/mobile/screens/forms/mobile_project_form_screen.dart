@@ -10,6 +10,7 @@ import '../../../../utils/helpers.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
+import '../../../../widgets/searchable_dropdown_field.dart';
 
 class MobileProjectFormScreen extends StatefulWidget {
   final Project? existing;
@@ -142,15 +143,23 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
                       BlocBuilder<CustomersBloc, CustomersState>(
                         builder: (context, state) {
                           final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                          return SmartDropdown<String>(
-                            label: 'Client (Optionnel)',
-                            value: _selectedCustomerId,
-                            items: [
-                              const DropdownMenuItem<String>(value: null, child: Text('Aucun client', style: TextStyle(fontSize: 16))),
-                              ...customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: TextStyle(fontSize: 16)))),
-                            ],
-                            onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedCustomerId = v); },
-                            hint: 'Aucun client',
+                          return AbsorbPointer(
+                            absorbing: widget.isReadOnly,
+                            child: SmartSearchableSelector(
+                              label: 'Client (Optionnel)',
+                              hint: 'Aucun client',
+                              selectedText: _selectedCustomerId != null
+                                  ? (customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                      ? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)!.companyName!
+                                      : customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.name)
+                                  : null,
+                              onTap: () async {
+                                final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
+                                if (res != null && mounted && !widget.isReadOnly) {
+                                  setState(() => _selectedCustomerId = res);
+                                }
+                              },
+                            ),
                           );
                         },
                       ),

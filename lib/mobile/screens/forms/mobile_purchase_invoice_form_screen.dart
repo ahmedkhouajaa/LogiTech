@@ -17,6 +17,8 @@ import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
+import '../../../../screens/suppliers_screen.dart';
+import '../../../../widgets/searchable_dropdown_field.dart';
 import 'mobile_product_form_screen.dart';
 
 class MobilePurchaseInvoiceFormScreen extends StatefulWidget {
@@ -153,14 +155,18 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
         status: _status,
         pricingMode: _pricingModeHT ? 'ht' : 'ttc',
         globalDiscountPercent: _withGlobalDiscount ? _globalDiscountPercent : 0,
+        globalDiscountAmount: _globalDiscountAmount,
         timbreFiscal: _timbreFiscal,
+        totalHT: _totalHTAfterDiscount,
+        totalTva: _totalTvaAfterDiscount,
+        totalTTC: _totalTTC,
         notes: _notes.isNotEmpty ? _notes : null,
         conditionsGenerales: _conditions.isNotEmpty ? _conditions : null,
         items: _items.map((item) => PurchaseInvoiceItem(
           id: item.id.isNotEmpty ? item.id : _uuid.v4(),
           purchaseInvoiceId: invoiceId,
           productId: item.productId,
-          productName: item.productName ?? '',
+          productName: (item.description != null && item.description!.isNotEmpty) ? item.description : (item.productName ?? ''),
           description: item.description,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
@@ -278,12 +284,23 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
                 BlocBuilder<SuppliersBloc, SuppliersState>(
                   builder: (context, state) {
                     final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
-                    return SmartDropdown<String>(
-                      label: 'Fournisseur',
-                      value: _selectedSupplierId,
-                      items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: TextStyle(fontSize: 16)))).toList(),
-                      onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedSupplierId = v); },
-                      hint: 'Rechercher des fournisseurs...',
+                    return AbsorbPointer(
+                      absorbing: widget.isReadOnly,
+                      child: SmartSearchableSelector(
+                        label: 'Fournisseur',
+                        hint: 'Rechercher des fournisseurs...',
+                        selectedText: _selectedSupplierId != null
+                            ? (suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                ? suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)!.companyName!
+                                : suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)?.name)
+                            : null,
+                        onTap: () async {
+                          final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedSupplierId);
+                          if (res != null && mounted && !widget.isReadOnly) {
+                            setState(() => _selectedSupplierId = res);
+                          }
+                        },
+                      ),
                     );
                   },
                 ),

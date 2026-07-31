@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/delivery_note.dart';
 import '../models/payment_model.dart';
 import '../blocs/payments/payments_bloc.dart';
@@ -112,7 +113,39 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _pushToFirestore(String collection, String id, Map<String, dynamic> data) async {
+    try {
+      final Map<String, dynamic> firestoreData = Map.from(data);
+      firestoreData['updated_at'] = DateTime.now().toUtc().toIso8601String();
+      await FirebaseFirestore.instance.collection(collection).doc(id).set(firestoreData, SetOptions(merge: true));
+    } catch (e) {
+      print("Error pushing directly to Firestore: $e");
+    }
+  }
+
+  Future<String> _getOrCreateRSAccount(String accountName) async {
+    final db = await DatabaseHelper.instance.database;
+    final existing = await db.query('payment_accounts', where: "name = ?", whereArgs: [accountName]);
+    if (existing.isNotEmpty) {
+      return existing.first['id'] as String;
+    } else {
+      final id = const Uuid().v4();
+      final accountData = {
+        'id': id,
+        'name': accountName,
+        'type': 'bank',
+        'balance': 0.0,
+        'is_default': 0,
+        'created_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      };
+      await db.insert('payment_accounts', accountData);
+      await _pushToFirestore('payment_accounts', id, accountData);
+      return id;
+    }
+  }
+
+  void _save() async {
     if (_selectedAccountId == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
       return;
@@ -124,6 +157,12 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
     final db = context.read<PaymentsBloc>();
     final now = DateTime.now();
     final paymentNumber = 'PAI-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
+
+    // Determine the account ID for withholding tax
+    String rsAccountId = _selectedAccountId!;
+    if (_applyWithholdingTax) {
+      rsAccountId = await _getOrCreateRSAccount('RS Vente');
+    }
 
     final payment = Payment(
       id: const Uuid().v4(),
@@ -145,6 +184,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
     );
 
     db.add(AddPayment(payment));
+    await _pushToFirestore('payments', payment.id, payment.toMap());
 
     // Create TreasuryTransaction to increase caisse
     final treasuryTx = TreasuryTransaction(
@@ -161,6 +201,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
       updatedAt: now,
     );
     context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(treasuryTx));
+    await _pushToFirestore('treasury_transactions', treasuryTx.id, treasuryTx.toMap());
 
     // Update DeliveryNote status and amount paid
     double taxAmount = _applyWithholdingTax ? ((widget.deliveryNote.totalTTC + widget.deliveryNote.timbreFiscal) * _withholdingTaxRate) / 100 : 0;
@@ -177,7 +218,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
         contactName: widget.deliveryNote.customerName,
         amount: taxAmount,
         method: 'retenue_source',
-        accountId: _selectedAccountId,
+        accountId: rsAccountId,
         reference: widget.deliveryNote.number,
         paymentDate: _withholdingTaxDate,
         notes: 'Retenue à la source ($_withholdingTaxRate%)',
@@ -188,11 +229,12 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
       );
       
       db.add(AddPayment(rsPayment));
+      await _pushToFirestore('payments', rsPayment.id, rsPayment.toMap());
 
       final rsTreasuryTx = TreasuryTransaction(
         id: const Uuid().v4(),
         transactionNumber: 'TR-RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0'),
-        accountId: _selectedAccountId!,
+        accountId: rsAccountId,
         amount: taxAmount,
         type: 'income',
         category: 'Retenue à la source (Ventes)',
@@ -205,6 +247,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
         updatedAt: now.add(const Duration(seconds: 1)),
       );
       context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(rsTreasuryTx));
+      await _pushToFirestore('treasury_transactions', rsTreasuryTx.id, rsTreasuryTx.toMap());
     }
 
     double newAmountPaid = 0.0 + parsedAmount + taxAmount;
@@ -222,6 +265,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
       status: newStatus,
     );
     context.read<DeliveryNotesBloc>().add(UpdateDeliveryNote(updatedDeliveryNote));
+    await _pushToFirestore('delivery_notes', updatedDeliveryNote.id, updatedDeliveryNote.toMap());
 
     Navigator.pop(context, true);
   }

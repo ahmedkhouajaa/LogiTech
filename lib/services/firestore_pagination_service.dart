@@ -3987,7 +3987,7 @@ class FirestorePaginationService {
         clientName: p.contactName ?? 'Inconnu',
         date: p.paymentDate,
         amount: p.amount,
-        status: p.status == 'paid' ? 'Payé' : (p.status == 'cancelled' ? 'Annulé' : 'En attente'),
+        status: (p.status == 'paid' || p.status == 'payee') ? 'Payé' : (p.status == 'cancelled' ? 'Annulé' : 'En attente'),
       )).toList();
     } catch (e) {
       print("Error reading local payments DB: $e");
@@ -4005,7 +4005,8 @@ class FirestorePaginationService {
     try {
       Query query = _firestore.collection('payments')
         .where('method', isEqualTo: 'retenue_source')
-        .where('direction', isEqualTo: isSales ? 'encaissement' : 'decaissement');
+        .where('direction', isEqualTo: isSales ? 'encaissement' : 'decaissement')
+        .orderBy('payment_date', descending: true);
       
       if (statusFilter != 'Tous') {
         String dbStatus = statusFilter == 'Payé' ? 'paid' : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');
@@ -4053,7 +4054,8 @@ class FirestorePaginationService {
     try {
       Query query = _firestore.collection('payments')
         .where('method', isEqualTo: 'retenue_source')
-        .where('direction', isEqualTo: isSales ? 'encaissement' : 'decaissement');
+        .where('direction', isEqualTo: isSales ? 'encaissement' : 'decaissement')
+        .orderBy('payment_date', descending: true);
       
       if (statusFilter != 'Tous') {
         String dbStatus = statusFilter == 'Payé' ? 'paid' : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');

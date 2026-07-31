@@ -1,13 +1,12 @@
-import 'mobile_product_form_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import '../../../../blocs/suppliers/suppliers_bloc.dart';
-import '../../../../blocs/products/products_bloc.dart';
+import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../models/receiving_voucher.dart';
 import '../../../../models/supplier.dart';
-import '../../../../models/product.dart';
+import '../../../../models/project.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../database/database_helper.dart';
@@ -15,6 +14,11 @@ import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../../screens/suppliers_screen.dart';
+import '../../../../widgets/searchable_dropdown_field.dart';
+import '../../widgets/forms/mobile_article_card.dart';
+import '../../widgets/forms/mobile_article_form.dart';
+import 'mobile_product_form_screen.dart';
+import '../../widgets/forms/mobile_totals_card.dart';
 
 class MobileReceivingVoucherFormScreen extends StatefulWidget {
   final ReceivingVoucher? existing;
@@ -30,9 +34,48 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
   bool _isLoading = false;
 
   String? _selectedSupplierId;
-  DateTime _date = DateTime.now();
-  String _status = 'draft';
   List<ReceivingVoucherItem> _items = [];
+  DateTime _date = DateTime.now();
+  String _notes = '';
+  String _conditions = '';
+  bool _pricingModeHT = true;
+  bool _withTimbreFiscal = true;
+  bool _withGlobalDiscount = false;
+  double _globalDiscountPercent = 0;
+  String _status = 'draft';
+
+  // Computed totals
+  double get _totalHT => _items.fold(0, (s, i) => s + i.computedTotalHT);
+
+  Map<double, double> get _tvaBreakdown {
+    final map = <double, double>{};
+    for (final item in _items) {
+      final rate = item.tvaRate;
+      map[rate] = (map[rate] ?? 0) + item.tvaAmount;
+    }
+    return map;
+  }
+
+  double get _totalTva => _items.fold(0, (s, i) => s + i.tvaAmount);
+
+  double get _globalDiscountAmount {
+    if (!_withGlobalDiscount || _globalDiscountPercent <= 0) return 0;
+    return _totalHT * _globalDiscountPercent / 100;
+  }
+
+  double get _totalHTAfterDiscount => _totalHT - _globalDiscountAmount;
+  
+  double get _totalTvaAfterDiscount {
+    if (!_withGlobalDiscount || _globalDiscountPercent <= 0) return _totalTva;
+    return _items.fold(0, (s, i) {
+      final itemHT = i.computedTotalHT;
+      final discountedHT = itemHT - (itemHT * _globalDiscountPercent / 100);
+      return s + discountedHT * (i.tvaRate / 100);
+    });
+  }
+
+  double get _timbreFiscal => _withTimbreFiscal ? 1.000 : 0;
+  double get _totalTTC => _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal;
 
   bool get _isEditing => widget.existing != null;
 
@@ -40,21 +83,39 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
   void initState() {
     super.initState();
     context.read<SuppliersBloc>().add(LoadSuppliers());
-    context.read<ProductsBloc>().add(LoadProducts());
+    context.read<ProjectsBloc>().add(LoadProjects());
 
     if (widget.existing != null) {
-      final v = widget.existing!;
-      _date = v.date;
-      _selectedSupplierId = v.supplierId;
-      _status = v.status;
-      _items = v.items.map((i) => i.copyWith()).toList();
+      final n = widget.existing!;
+      _date = n.date;
+      _selectedSupplierId = n.supplierId;
+      _pricingModeHT = n.pricingMode == 'ht';
+      _withGlobalDiscount = n.globalDiscountPercent > 0;
+      _globalDiscountPercent = n.globalDiscountPercent;
+      _withTimbreFiscal = n.timbreFiscal > 0;
+      _status = n.status;
+      _notes = n.notes ?? '';
+      _conditions = n.conditionsGenerales ?? '';
+      _items = n.items.map((i) => ReceivingVoucherItem(
+        id: i.id,
+        voucherId: i.voucherId,
+        productId: i.productId,
+        productName: i.productName,
+        quantityExpected: i.quantityExpected,
+        quantityReceived: i.quantityReceived,
+        unitPrice: i.unitPrice,
+        tvaRate: i.tvaRate,
+        discountPercent: i.discountPercent,
+      )).toList();
     }
   }
 
   Future<void> _save() async {
     if (widget.isReadOnly) return;
     if (_selectedSupplierId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un fournisseur'), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez sélectionner un fournisseur'), backgroundColor: AppColors.error),
+      );
       return;
     }
 
@@ -62,7 +123,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
 
     try {
       final bloc = context.read<ReceivingVouchersBloc>();
-
+      
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
         final seq = await DatabaseHelper.instance.getNextReceivingVoucherSequence();
@@ -70,20 +131,36 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
       }
 
       final voucherId = widget.existing?.id ?? _uuid.v4();
-      final voucher = ReceivingVoucher(
+      final order = ReceivingVoucher(
         id: voucherId,
         number: number,
         supplierId: _selectedSupplierId!,
         orderId: widget.existing?.orderId,
         date: _date,
         status: _status,
-        items: _items.map((item) => item.copyWith(voucherId: voucherId)).toList(),
+        pricingMode: _pricingModeHT ? 'ht' : 'ttc',
+        globalDiscountPercent: _withGlobalDiscount ? _globalDiscountPercent : 0,
+        globalDiscountAmount: _globalDiscountAmount,
+        timbreFiscal: _timbreFiscal,
+        notes: _notes.isNotEmpty ? _notes : null,
+        conditionsGenerales: _conditions.isNotEmpty ? _conditions : null,
+        items: _items.map((item) => ReceivingVoucherItem(
+          id: item.id.isNotEmpty ? item.id : _uuid.v4(),
+          voucherId: voucherId,
+          productId: item.productId,
+          productName: item.productName,
+          quantityExpected: item.quantityExpected,
+          quantityReceived: item.quantityReceived,
+          unitPrice: item.unitPrice,
+          tvaRate: item.tvaRate,
+          discountPercent: item.discountPercent,
+        )).toList(),
       );
 
       if (_isEditing) {
-        bloc.add(AddReceivingVoucher(voucher));
+        bloc.add(UpdateReceivingVoucher(order));
       } else {
-        bloc.add(AddReceivingVoucher(voucher));
+        bloc.add(AddReceivingVoucher(order));
       }
 
       if (mounted) {
@@ -107,84 +184,91 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
     }
   }
 
-  void _showAddArticleDialog() {
+  void _showArticleForm([int? index]) async {
     if (widget.isReadOnly) return;
-    String? selectedProductId;
-    double expected = 1;
-    double received = 1;
+    
+    MobileArticleFormResult? initialData;
+    if (index != null) {
+      final item = _items[index];
+      initialData = MobileArticleFormResult(
+        productId: item.productId ?? '',
+        productName: item.productName ?? '',
+        description: item.productName ?? '',
+        quantity: item.quantityReceived,
+        unitPrice: item.unitPrice,
+        tvaRate: item.tvaRate,
+        discountPercent: item.discountPercent,
+      );
+    }
 
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text('Ajouter un article'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  BlocBuilder<ProductsBloc, ProductsState>(
-                    builder: (context, state) {
-                      final products = state is ProductsLoaded ? state.products : <Product>[];
-                      return DropdownButtonFormField(
-                        dropdownColor: AppColors.surfaceAlt,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                        value: selectedProductId,
-                        decoration: InputDecoration(labelText: 'Article'),
-                        items: products.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))).toList(),
-                        onChanged: (v) => setDialogState(() => selectedProductId = v),
-                      );
-                    },
-                  ),
-                  SizedBox(height: 16),
-                  TextFormField(
-                    initialValue: '1',
-                    decoration: InputDecoration(labelText: 'Quantité attendue'),
-                    keyboardType: TextInputType.number,
-                    onChanged: (v) => expected = double.tryParse(v) ?? 0,
-                  ),
-                  SizedBox(height: 16),
-                  TextFormField(
-                    initialValue: '1',
-                    decoration: InputDecoration(labelText: 'Quantité reçue'),
-                    keyboardType: TextInputType.number,
-                    onChanged: (v) => received = double.tryParse(v) ?? 0,
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler')),
-                ElevatedButton(
-                  onPressed: () {
-                    if (selectedProductId != null) {
-                      setState(() {
-                        _items.add(ReceivingVoucherItem(
-                          voucherId: widget.existing?.id ?? '',
-                          productId: selectedProductId!,
-                          quantityExpected: expected,
-                          quantityReceived: received,
-                        ));
-                      });
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: Text('Ajouter'),
-                ),
-              ],
-            );
-          },
+    final result = await MobileArticleForm.show(context, initialData: initialData, isPurchase: true);
+
+    if (result != null) {
+      setState(() {
+        final newItem = ReceivingVoucherItem(
+          id: index != null ? _items[index].id : _uuid.v4(),
+          voucherId: widget.existing?.id ?? '',
+          productId: result.productId,
+          productName: result.description,
+          quantityExpected: result.quantity,
+          quantityReceived: result.quantity,
+          unitPrice: result.unitPrice,
+          tvaRate: result.tvaRate,
+          discountPercent: result.discountPercent,
         );
-      },
-    );
+
+        if (index != null) {
+          _items[index] = newItem;
+        } else {
+          _items.add(newItem);
+        }
+      });
+    }
+  }
+
+  String _getStatusLabel(String status) {
+    if (status == 'draft') return 'Brouillon';
+    if (status == 'validated') return 'Validé';
+    if (status == 'cancelled' || status == 'annule') return 'Annulé';
+    if (status == 'payee' || status == 'paid') return 'Payée';
+    if (status == 'unpaid') return 'Non payée';
+    if (status == 'partiallyPaid' || status == 'partial') return 'Partiellement payée';
+    return translateStatus(status);
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'draft':
+      case 'brouillon':
+        return AppColors.warning;
+      case 'validated':
+      case 'validé':
+      case 'paid':
+      case 'payee':
+      case 'payée':
+        return AppColors.success;
+      case 'cancelled':
+      case 'annulé':
+      case 'annule':
+      case 'rejected':
+      case 'rejeté':
+        return AppColors.error;
+      case 'unpaid':
+      case 'non payée':
+      case 'partiallypaid':
+      case 'partial':
+        return AppColors.info;
+      default:
+        return AppColors.primary;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return MobileFormScreen(
       title: widget.isReadOnly ? 'Détails du bon' : (_isEditing ? 'Modifier le bon' : 'Nouveau bon'),
-      statusLabel: _status == 'draft' ? 'Brouillon' : (_status == 'validated' ? 'Validé' : 'Annulé'),
-      statusColor: _status == 'draft' ? AppColors.warning : (_status == 'validated' ? AppColors.success : AppColors.error),
+      statusLabel: _getStatusLabel(_status),
+      statusColor: _getStatusColor(_status),
       isLoading: _isLoading,
       saveLabel: 'Enregistrer',
       onCancel: () => Navigator.pop(context),
@@ -201,7 +285,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SmartDatePicker(
-                  label: 'Date',
+                  label: 'Date d\'émission',
                   value: _date,
                   onChanged: (v) { if (!widget.isReadOnly) setState(() => _date = v); },
                 ),
@@ -213,12 +297,23 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                       child: BlocBuilder<SuppliersBloc, SuppliersState>(
                         builder: (context, state) {
                           final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
-                          return SmartDropdown<String>(
-                            label: 'Fournisseur',
-                            value: _selectedSupplierId,
-                            items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: TextStyle(fontSize: 16)))).toList(),
-                            onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedSupplierId = v); },
-                            hint: 'Rechercher des fournisseurs...',
+                          return AbsorbPointer(
+                            absorbing: widget.isReadOnly,
+                            child: SmartSearchableSelector(
+                              label: 'Fournisseur',
+                              hint: 'Rechercher des fournisseurs...',
+                              selectedText: _selectedSupplierId != null
+                                  ? (suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                      ? suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)!.companyName!
+                                      : suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)?.name)
+                                  : null,
+                              onTap: () async {
+                                final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedSupplierId);
+                                if (res != null && mounted && !widget.isReadOnly) {
+                                  setState(() => _selectedSupplierId = res);
+                                }
+                              },
+                            ),
                           );
                         },
                       ),
@@ -226,19 +321,23 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                     if (!widget.isReadOnly) ...[
                       SizedBox(width: 8),
                       Container(
-                        height: 56,
-                        margin: EdgeInsets.only(bottom: 2),
+                        height: 50,
                         child: ElevatedButton(
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (_) => BlocProvider.value(
-                                value: context.read<SuppliersBloc>(),
-                                child: SupplierDialog(existing: null),
-                              ),
-                            );
-                          },
+                          onPressed: () async {
+                             final newId = await showDialog<String>(
+                               context: context,
+                               barrierDismissible: false,
+                               builder: (_) => BlocProvider.value(
+                                 value: context.read<SuppliersBloc>(),
+                                 child: SupplierDialog(existing: null),
+                               ),
+                             );
+                             if (newId != null && mounted) {
+                               setState(() {
+                                 _selectedSupplierId = newId;
+                               });
+                             }
+                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary.withOpacity(0.1),
                             foregroundColor: AppColors.primary,
@@ -254,6 +353,17 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                       ),
                     ]
                   ],
+                ),
+                SizedBox(height: 24),
+                AbsorbPointer(
+                  absorbing: widget.isReadOnly,
+                  child: SmartToggleChips<bool>(
+                    label: 'Les prix des articles sont en:',
+                    value: _pricingModeHT,
+                    options: const [true, false],
+                    labelBuilder: (v) => v ? 'Hors taxes' : 'Taxe incluse',
+                    onChanged: (v) => setState(() => _pricingModeHT = v),
+                  ),
                 ),
               ],
             ),
@@ -276,14 +386,24 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                     child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
                   )
                 else
-                  ..._items.asMap().entries.map((e) => _buildArticleItem(e.key, e.value)),
+                  ..._items.asMap().entries.map((e) => MobileArticleCard(
+                    index: e.key,
+                    designation: e.value.productName ?? 'Article',
+                    quantity: e.value.quantityReceived,
+                    unitPrice: e.value.unitPrice,
+                    tvaRate: e.value.tvaRate,
+                    discountPercent: e.value.discountPercent,
+                    totalHT: e.value.computedTotalHT,
+                    onEdit: () { if (!widget.isReadOnly) _showArticleForm(e.key); },
+                    onDelete: () { if (!widget.isReadOnly) setState(() => _items.removeAt(e.key)); },
+                  )),
                 if (!widget.isReadOnly) ...[
                   SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: _showAddArticleDialog,
+                          onPressed: () => _showArticleForm(),
                           icon: Icon(Icons.add_rounded),
                           label: Text('Ajouter une ligne'),
                           style: OutlinedButton.styleFrom(
@@ -304,7 +424,71 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                       ),
                     ],
                   ),
+                  SizedBox(height: 16),
+                  SmartCheckbox(
+                    label: 'Ajouter une remise globale',
+                    value: _withGlobalDiscount,
+                    onChanged: (v) => setState(() => _withGlobalDiscount = v ?? false),
+                  ),
+                  if (_withGlobalDiscount) ...[
+                    SizedBox(height: 8),
+                    SmartTextInput(
+                      label: 'Remise globale (%)',
+                      initialValue: _globalDiscountPercent > 0 ? _globalDiscountPercent.toStringAsFixed(0) : '',
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (v) => setState(() => _globalDiscountPercent = double.tryParse(v) ?? 0),
+                    ),
+                  ]
                 ]
+              ],
+            ),
+          ),
+        ),
+        
+        MobileFormSection(
+          title: 'Totaux',
+          icon: Icons.calculate_outlined,
+          child: MobileTotalsCard(
+            subTotalHT: _totalHTAfterDiscount,
+            tvaBreakdown: _tvaBreakdown,
+            totalTva: _totalTvaAfterDiscount,
+            timbreFiscal: 1.000,
+            applyTimbreFiscal: _withTimbreFiscal,
+            onTimbreFiscalChanged: (v) { if (!widget.isReadOnly) setState(() => _withTimbreFiscal = v ?? false); },
+            totalTTC: _totalTTC,
+          ),
+        ),
+        
+        MobileFormSection(
+          title: 'Notes & Conditions',
+          icon: Icons.notes_rounded,
+          isInitiallyExpanded: false,
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                AbsorbPointer(
+                  absorbing: widget.isReadOnly,
+                  child: SmartCheckbox(
+                    label: 'Visible sur le document final',
+                    value: true,
+                    onChanged: (v) {},
+                  ),
+                ),
+                SizedBox(height: 8),
+                SmartTextInput(
+                  label: 'Notes',
+                  initialValue: _notes,
+                  maxLines: 3,
+                  onChanged: widget.isReadOnly ? null : (v) => setState(() => _notes = v),
+                ),
+                SizedBox(height: 16),
+                SmartTextInput(
+                  label: 'Conditions Générales',
+                  initialValue: _conditions,
+                  maxLines: 3,
+                  onChanged: widget.isReadOnly ? null : (v) => setState(() => _conditions = v),
+                ),
               ],
             ),
           ),
@@ -312,41 +496,5 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
       ],
     );
   }
-
-  Widget _buildArticleItem(int index, ReceivingVoucherItem item) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 8),
-      padding: EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: BlocBuilder<ProductsBloc, ProductsState>(
-              builder: (context, state) {
-                final products = state is ProductsLoaded ? state.products : <Product>[];
-                final p = products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', name: 'Inconnu', code: '', purchasePrice: 0, sellingPrice: 0));
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(p.name, style: TextStyle(fontWeight: FontWeight.w600)),
-                    SizedBox(height: 4),
-                    Text('Attendue: ${item.quantityExpected.toStringAsFixed(0)} | Reçue: ${item.quantityReceived.toStringAsFixed(0)}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                  ],
-                );
-              },
-            ),
-          ),
-          if (!widget.isReadOnly)
-            IconButton(
-              icon: Icon(Icons.delete_outline, color: AppColors.error),
-              onPressed: () => setState(() => _items.removeAt(index)),
-            ),
-        ],
-      ),
-    );
-  }
 }
+

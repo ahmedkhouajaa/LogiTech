@@ -28,7 +28,7 @@ class RetenueSourceVente {
               : DateTime.parse(map['payment_date'].toString()))
           : DateTime.now(),
       amount: (map['amount'] as num?)?.toDouble() ?? 0,
-      status: map['status'] == 'paid' ? 'Payé' : (map['status'] == 'cancelled' ? 'Annulé' : 'En attente'),
+      status: (map['status'] == 'paid' || map['status'] == 'payee') ? 'Payé' : (map['status'] == 'cancelled' ? 'Annulé' : 'En attente'),
     );
   }
 

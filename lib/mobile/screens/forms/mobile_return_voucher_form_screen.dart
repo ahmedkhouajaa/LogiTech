@@ -18,6 +18,8 @@ import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
+import '../../../../screens/customers_screen.dart';
+import '../../../../widgets/searchable_dropdown_field.dart';
 import 'mobile_product_form_screen.dart';
 
 class MobileReturnVoucherFormScreen extends StatefulWidget {
@@ -245,12 +247,23 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
                 BlocBuilder<CustomersBloc, CustomersState>(
                   builder: (context, state) {
                     final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                    return SmartDropdown<String>(
-                      label: 'Client',
-                      value: _selectedCustomerId,
-                      items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: TextStyle(fontSize: 16)))).toList(),
-                      onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedCustomerId = v); },
-                      hint: 'Rechercher des clients...',
+                    return AbsorbPointer(
+                      absorbing: widget.isReadOnly,
+                      child: SmartSearchableSelector(
+                        label: 'Client',
+                        hint: 'Rechercher des clients...',
+                        selectedText: _selectedCustomerId != null
+                            ? (customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                ? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)!.companyName!
+                                : customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.name)
+                            : null,
+                        onTap: () async {
+                          final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
+                          if (res != null && mounted && !widget.isReadOnly) {
+                            setState(() => _selectedCustomerId = res);
+                          }
+                        },
+                      ),
                     );
                   },
                 ),

@@ -413,8 +413,8 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                             child: Tooltip(
                               message: 'Créer un nouveau fournisseur',
                               child: ElevatedButton(
-                                onPressed: () {
-                                  showDialog(
+                                onPressed: () async {
+                                  final newId = await showDialog<String>(
                                     context: context,
                                     barrierDismissible: false,
                                     builder: (_) => BlocProvider.value(

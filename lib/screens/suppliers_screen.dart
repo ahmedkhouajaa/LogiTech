@@ -1302,6 +1302,6 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
     } else {
       context.read<SuppliersBloc>().add(UpdateSupplier(supplier));
     }
-    Navigator.pop(context);
+    Navigator.pop(context, supplier.id);
   }
 }

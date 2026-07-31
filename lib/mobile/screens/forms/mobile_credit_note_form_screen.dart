@@ -17,6 +17,7 @@ import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import 'mobile_product_form_screen.dart';
+import '../../../../widgets/searchable_dropdown_field.dart';
 
 class MobileCreditNoteFormScreen extends StatefulWidget {
   final CreditNote? existing;
@@ -208,12 +209,20 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
                     final customers = state is CustomersLoaded ? state.customers : <Customer>[];
                     return AbsorbPointer(
                       absorbing: widget.isReadOnly,
-                      child: SmartDropdown<String>(
+                      child: SmartSearchableSelector(
                         label: 'Client *',
-                        value: _selectedCustomerId,
-                        items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: TextStyle(fontSize: 16)))).toList(),
-                        onChanged: (v) => setState(() => _selectedCustomerId = v),
                         hint: 'Sélectionner un client',
+                        selectedText: _selectedCustomerId != null
+                            ? (customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                ? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)!.companyName!
+                                : customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.name)
+                            : null,
+                        onTap: () async {
+                          final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
+                          if (res != null && mounted) {
+                            setState(() => _selectedCustomerId = res);
+                          }
+                        },
                       ),
                     );
                   },

@@ -4,6 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import '../../blocs/suppliers/suppliers_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
+import '../../blocs/payments/payments_bloc.dart';
+import '../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
+import '../../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 
 import '../../models/receiving_voucher.dart';
 import '../../models/document_wrapper.dart';
@@ -25,6 +28,7 @@ import '../../database/database_helper.dart';
 
 import '../../screens/document_preview_screen.dart';
 import 'forms/mobile_receiving_voucher_form_screen.dart';
+import '../../widgets/receiving_voucher_payment_dialog.dart';
 
 class MobileReceivingVoucherDetailScreen extends StatefulWidget {
   final ReceivingVoucher voucher;
@@ -160,22 +164,58 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Produit: ${item.productId}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)), // Assuming no product name fetched here easily, could be improved
+                              Text(item.productName ?? 'Produit: ${item.productId}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                               SizedBox(height: 4),
                               Row(
                                 children: [
-                                  Text('Reçu: ${item.quantityReceived} ', style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.bold)),
-                                  if (item.quantityExpected != null)
-                                    Text('(Attendu: ${item.quantityExpected})', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                  Text('${item.quantityReceived} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                  Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
                                 ],
                               ),
+                              if (item.quantityExpected != null && item.quantityExpected != item.quantityReceived) ...[
+                                SizedBox(height: 4),
+                                Text('Attendu: ${item.quantityExpected}', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                              ],
+                              if (item.discountPercent > 0) ...[
+                                SizedBox(height: 4),
+                                Text('Remise: ${item.discountPercent}%', style: TextStyle(color: AppColors.error, fontSize: 12)),
+                              ]
                             ],
                           ),
                         ),
+                        Text(formatCurrencyDT(item.computedTotalHT), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
                       ],
                     ),
                   ),
                 )),
+              SizedBox(height: 16),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                color: AppColors.surfaceAlt,
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      _buildInfoRow('Total HT', formatCurrencyDT(currentVoucher.computedTotalHT)),
+                      SizedBox(height: 8),
+                      _buildInfoRow('Total TVA', formatCurrencyDT(currentVoucher.computedTotalTvaAfterDiscount)),
+                      if (currentVoucher.timbreFiscal > 0) ...[
+                        SizedBox(height: 8),
+                        _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentVoucher.timbreFiscal)),
+                      ],
+                      Divider(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(formatCurrencyDT(currentVoucher.computedTotalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               if (currentVoucher.notes != null && currentVoucher.notes!.isNotEmpty) ...[
                 SizedBox(height: 16),
                 Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
@@ -209,9 +249,13 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
   }
 
   Color _getStatusColor(String status) {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'draft': return AppColors.info;
-      case 'validated': return AppColors.success;
+      case 'validated': 
+      case 'paid':
+      case 'payee':
+      case 'payée':
+        return AppColors.success;
       case 'cancelled': return AppColors.error;
       default: return AppColors.textSecondary;
     }
@@ -242,6 +286,11 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
     items.add(const PopupMenuDivider(height: 1));
     items.add(_buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'));
     items.add(const PopupMenuDivider(height: 1));
+
+    if (voucher.status != 'payee' && voucher.status != 'cancelled') {
+      items.add(_buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'));
+      items.add(const PopupMenuDivider(height: 1));
+    }
 
     if (voucher.isConvertedToPurchaseInvoice) {
       items.add(_buildMenuItem('view_invoice_created', Icons.visibility_outlined, AppColors.textSecondary, 'Voir la facture créée'));
@@ -346,6 +395,9 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
         break;
       case 'status':
         _showChangeStatusDialog(context, voucher);
+        break;
+      case 'add_payment':
+        _showAddPaymentDialog(context, voucher);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
@@ -544,5 +596,27 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Bon de réception transformé en bon de retour avec succès")),
     );
+  }
+
+  void _showAddPaymentDialog(BuildContext context, ReceivingVoucher voucher) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (dialogCtx) => MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: context.read<PaymentsBloc>()),
+          BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+          BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+          BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
+          BlocProvider.value(value: context.read<ProductsBloc>()),
+        ],
+        child: ReceivingVoucherPaymentDialog(receivingVoucher: voucher),
+      ),
+    ).then((created) {
+      if (created == true && mounted) {
+        _loadFullVoucher();
+        context.read<ReceivingVouchersBloc>().add(LoadReceivingVouchers());
+      }
+    });
   }
 }

@@ -108,7 +108,7 @@ class _MobileRetenueSourceVentesListState extends State<MobileRetenueSourceVente
           isEmpty = state.retenues.isEmpty;
           count = state.totalCount;
 
-          cards = state.retenues.map((retenue) {
+          cards = state.retenues.map<Widget>((retenue) {
             return MobileRetenueSourceVenteCard(
               retenue: retenue,
               isSales: widget.isSales,

@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../database/database_helper.dart';
 import '../../models/supplier.dart';
 import '../../services/firestore_pagination_service.dart';
@@ -119,13 +120,29 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
   }
 
   Future<void> _onLoad(LoadSuppliers event, Emitter<SuppliersState> emit) async {
-    emit(SuppliersLoading());
     try {
-      final suppliers = await DatabaseHelper.instance.getSuppliers();
-      emit(SuppliersLoaded(suppliers, totalCount: suppliers.length, hasMore: false));
+      final localSuppliers = await DatabaseHelper.instance.getSuppliers();
+      emit(SuppliersLoaded(localSuppliers, totalCount: localSuppliers.length, hasMore: false));
     } catch (e) {
-      emit(SuppliersError(e.toString()));
+      emit(SuppliersLoading());
     }
+    FirebaseFirestore.instance
+        .collection('fournisseurs')
+        .where('is_deleted', isEqualTo: 0)
+        .get()
+        .then((snapshot) async {
+          final List<Supplier> firestoreSuppliers = snapshot.docs.map((doc) => Supplier.fromMap(doc.data())).toList();
+          for (var supplier in firestoreSuppliers) {
+            await DatabaseHelper.instance.insertSupplier(supplier);
+          }
+          final suppliers = await DatabaseHelper.instance.getSuppliers();
+          if (!emit.isDone) {
+            emit(SuppliersLoaded(suppliers, totalCount: suppliers.length, hasMore: false));
+          }
+        })
+        .catchError((e) {
+          print("Failed to fetch/save suppliers from Firestore: $e");
+        });
   }
 
   Future<void> _onLoadFirstSuppliers(LoadFirstSuppliers event, Emitter<SuppliersState> emit) async {
@@ -203,29 +220,62 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
   }
 
   Future<void> _onAdd(AddSupplier event, Emitter<SuppliersState> emit) async {
-    try {
-      await DatabaseHelper.instance.insertSupplier(event.supplier);
-      add(const ResetSuppliersPagination());
-    } catch (e) {
-      emit(SuppliersError(e.toString()));
+    final currentState = state;
+    List<Supplier> currentList = [];
+    if (currentState is SuppliersLoaded) {
+      currentList = List<Supplier>.from(currentState.suppliers);
     }
+    currentList.removeWhere((s) => s.id == event.supplier.id);
+    currentList.insert(0, event.supplier);
+    emit(SuppliersLoaded(currentList, totalCount: currentList.length, hasMore: false));
+
+    DatabaseHelper.instance.insertSupplier(event.supplier).catchError((e) {
+      print("Failed to save supplier to SQLite: $e");
+    });
+    FirebaseFirestore.instance
+        .collection('fournisseurs')
+        .doc(event.supplier.id)
+        .set(event.supplier.toMap(), SetOptions(merge: true))
+        .catchError((e) => print("Failed to add supplier to Firestore: $e"));
   }
 
   Future<void> _onUpdate(UpdateSupplier event, Emitter<SuppliersState> emit) async {
-    try {
-      await DatabaseHelper.instance.updateSupplier(event.supplier);
-      add(const ResetSuppliersPagination());
-    } catch (e) {
-      emit(SuppliersError(e.toString()));
+    final currentState = state;
+    if (currentState is SuppliersLoaded) {
+      final currentList = List<Supplier>.from(currentState.suppliers);
+      final idx = currentList.indexWhere((s) => s.id == event.supplier.id);
+      if (idx != -1) {
+        currentList[idx] = event.supplier;
+      } else {
+        currentList.insert(0, event.supplier);
+      }
+      emit(SuppliersLoaded(currentList, totalCount: currentList.length, hasMore: false));
     }
+
+    DatabaseHelper.instance.updateSupplier(event.supplier).catchError((e) {
+      print("Failed to update supplier in SQLite: $e");
+    });
+    FirebaseFirestore.instance
+        .collection('fournisseurs')
+        .doc(event.supplier.id)
+        .set(event.supplier.toMap(), SetOptions(merge: true))
+        .catchError((e) => print("Failed to update supplier in Firestore: $e"));
   }
 
   Future<void> _onDelete(DeleteSupplier event, Emitter<SuppliersState> emit) async {
-    try {
-      await DatabaseHelper.instance.deleteSupplier(event.id);
-      add(const ResetSuppliersPagination());
-    } catch (e) {
-      emit(SuppliersError(e.toString()));
+    final currentState = state;
+    if (currentState is SuppliersLoaded) {
+      final currentList = List<Supplier>.from(currentState.suppliers)..removeWhere((s) => s.id == event.id);
+      emit(SuppliersLoaded(currentList, totalCount: currentList.length, hasMore: false));
     }
+
+    DatabaseHelper.instance.deleteSupplier(event.id).catchError((e) {
+      print("Failed to delete supplier in SQLite: $e");
+    });
+    FirebaseFirestore.instance
+        .collection('fournisseurs')
+        .doc(event.id)
+        .update({'is_deleted': 1})
+        .catchError((e) => print("Failed to delete supplier in Firestore: $e"));
   }
 }

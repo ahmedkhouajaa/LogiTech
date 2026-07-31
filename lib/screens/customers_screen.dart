@@ -1928,7 +1928,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
     } else {
       context.read<CustomersBloc>().add(UpdateCustomer(customer));
     }
-    Navigator.pop(context);
+    Navigator.pop(context, customer.id);
   }
 }
 

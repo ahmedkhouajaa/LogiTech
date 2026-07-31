@@ -14,11 +14,11 @@ import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../../screens/suppliers_screen.dart';
+import '../../../../widgets/searchable_dropdown_field.dart';
 import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
-import 'mobile_product_form_screen.dart';
 
 class MobileSupplierOrderFormScreen extends StatefulWidget {
   final SupplierOrder? existing;
@@ -268,12 +268,23 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                       child: BlocBuilder<SuppliersBloc, SuppliersState>(
                         builder: (context, state) {
                           final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
-                          return SmartDropdown<String>(
-                            label: 'Fournisseur',
-                            value: _selectedSupplierId,
-                            items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: TextStyle(fontSize: 16)))).toList(),
-                            onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedSupplierId = v); },
-                            hint: 'Rechercher des fournisseurs...',
+                          return AbsorbPointer(
+                            absorbing: widget.isReadOnly,
+                            child: SmartSearchableSelector(
+                              label: 'Fournisseur',
+                              hint: 'Rechercher des fournisseurs...',
+                              selectedText: _selectedSupplierId != null
+                                  ? (suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                      ? suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)!.companyName!
+                                      : suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)?.name)
+                                  : null,
+                              onTap: () async {
+                                final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedSupplierId);
+                                if (res != null && mounted && !widget.isReadOnly) {
+                                  setState(() => _selectedSupplierId = res);
+                                }
+                              },
+                            ),
                           );
                         },
                       ),
@@ -281,19 +292,23 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                     if (!widget.isReadOnly) ...[
                       SizedBox(width: 8),
                       Container(
-                        height: 56,
-                        margin: EdgeInsets.only(bottom: 2),
+                        height: 50,
                         child: ElevatedButton(
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (_) => BlocProvider.value(
-                                value: context.read<SuppliersBloc>(),
-                                child: SupplierDialog(existing: null),
-                              ),
-                            );
-                          },
+                          onPressed: () async {
+                             final newId = await showDialog<String>(
+                               context: context,
+                               barrierDismissible: false,
+                               builder: (_) => BlocProvider.value(
+                                 value: context.read<SuppliersBloc>(),
+                                 child: SupplierDialog(existing: null),
+                               ),
+                             );
+                             if (newId != null && mounted) {
+                               setState(() {
+                                 _selectedSupplierId = newId;
+                               });
+                             }
+                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary.withOpacity(0.1),
                             foregroundColor: AppColors.primary,

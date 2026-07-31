@@ -118,8 +118,9 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Veuillez selectionner un client'),
-            backgroundColor: AppColors.error),
+          content: Text('Veuillez selectionner un client'),
+          backgroundColor: AppColors.error,
+        ),
       );
       return;
     }
@@ -134,11 +135,24 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
       number = generateDocNumber('DV', seq);
     }
 
+    final custState = context.read<CustomersBloc>().state;
+    String? custName;
+    if (custState is CustomersLoaded) {
+      final found = custState.customers.firstWhere(
+        (c) => c.id == _selectedCustomerId,
+        orElse: () => Customer(id: '', code: '', name: 'Client Inconnu'),
+      );
+      custName = found.companyName?.isNotEmpty == true
+          ? found.companyName
+          : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
+    }
+
     final quoteId = widget.existing?.id ?? _uuid.v4();
     final quote = Quote(
       id: quoteId,
       number: number,
       customerId: _selectedCustomerId!,
+      customerName: custName,
       projectId: _selectedProjectId,
       date: _date,
       validityDate: _validityDate,
@@ -475,8 +489,8 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                           child: Tooltip(
                             message: 'Créer un nouveau client',
                             child: ElevatedButton(
-                              onPressed: () {
-                                showDialog(
+                              onPressed: () async {
+                                final newId = await showDialog<String>(
                                   context: context,
                                   barrierDismissible: false,
                                   builder: (_) => BlocProvider.value(
@@ -484,6 +498,9 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                                     child: const CustomerDialog(existing: null),
                                   ),
                                 );
+                                if (newId != null && mounted) {
+                                  setState(() => _selectedCustomerId = newId);
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary.withValues(alpha: 0.1),

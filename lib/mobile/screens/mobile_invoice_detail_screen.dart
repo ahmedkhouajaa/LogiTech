@@ -7,6 +7,8 @@ import '../../blocs/customers/customers_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
 import '../../blocs/payments/payments_bloc.dart';
 import '../../blocs/credit_notes/credit_notes_bloc.dart';
+import '../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
+import '../../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 
 import '../../models/invoice.dart';
 import '../../models/payment_model.dart';
@@ -20,6 +22,7 @@ import '../../services/auth_service.dart';
 import '../../database/database_helper.dart';
 
 import '../../screens/document_preview_screen.dart';
+import '../../widgets/invoice_payment_dialog.dart';
 import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_invoice_form_screen.dart';
 import 'forms/mobile_credit_note_form_screen.dart';
@@ -414,110 +417,27 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
   }
 
   void _showAddPaymentDialog(BuildContext context, Invoice inv) {
-    final amountCtrl = TextEditingController(text: (inv.totalTTC + inv.timbreFiscal - inv.amountPaid).toStringAsFixed(3));
-    final methodNotifier = ValueNotifier<String>('especes');
-    
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Ajouter un paiement pour la facture ${inv.number}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: amountCtrl,
-              decoration: InputDecoration(
-                labelText: 'Montant (DT)',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            ),
-            SizedBox(height: 16),
-            ValueListenableBuilder<String>(
-              valueListenable: methodNotifier,
-              builder: (context, val, child) => DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                value: val,
-                decoration: InputDecoration(
-                  labelText: 'Méthode de paiement',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'especes', child: Text('Espèces')),
-                  DropdownMenuItem(value: 'cheque', child: Text('Chèque')),
-                  DropdownMenuItem(value: 'virement', child: Text('Virement')),
-                  DropdownMenuItem(value: 'carte', child: Text('Carte')),
-                ],
-                onChanged: (v) {
-                  if (v != null) methodNotifier.value = v;
-                },
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-            onPressed: () async {
-              final amountStr = amountCtrl.text.replaceAll(',', '.');
-              final amount = double.tryParse(amountStr) ?? 0.0;
-              if (amount > 0) {
-                final payment = Payment(
-                  id: const Uuid().v4(),
-                  paymentNumber: 'PAI-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch % 1000000}'.padRight(6, '0'),
-                  direction: 'encaissement',
-                  contactId: inv.customerId,
-                  contactType: 'customer',
-                  contactName: inv.customerName,
-                  amount: amount,
-                  method: methodNotifier.value,
-                  reference: inv.number,
-                  paymentDate: DateTime.now(),
-                  status: 'paid',
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                );
-                
-                try {
-                  context.read<PaymentsBloc>().add(AddPayment(payment));
-                } catch (e) {
-                  await DatabaseHelper.instance.insertPayment(payment);
-                }
-                
-                // On mobile we don't automatically update the invoice total paid here for simplicity,
-                // but doing it is better:
-                final updatedInvoice = inv.copyWith(
-                  amountPaid: inv.amountPaid + amount,
-                  status: (inv.amountPaid + amount) >= (inv.totalTTC + inv.timbreFiscal) ? InvoiceStatus.paid : InvoiceStatus.partial,
-                );
-                context.read<InvoicesBloc>().add(UpdateInvoice(updatedInvoice));
-                
-                if (context.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Paiement ajouté avec succès'),
-                    backgroundColor: AppColors.success,
-                  ));
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Veuillez entrer un montant valide'),
-                  backgroundColor: AppColors.error,
-                ));
-              }
-            },
-            child: Text('Enregistrer'),
-          ),
+      useSafeArea: false,
+      builder: (_) => MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: context.read<PaymentsBloc>()),
+          BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+          BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+          BlocProvider.value(value: context.read<InvoicesBloc>()),
         ],
+        child: InvoicePaymentDialog(invoice: inv),
       ),
-    );
+    ).then((created) {
+      if (created == true && context.mounted) {
+        context.read<InvoicesBloc>().add(LoadInvoices());
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Paiement ajouté avec succès', style: TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.success,
+        ));
+      }
+    });
   }
 
   void _createCreditNoteFromInvoice(BuildContext context, Invoice inv) {

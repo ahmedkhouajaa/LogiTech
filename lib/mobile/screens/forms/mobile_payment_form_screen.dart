@@ -12,6 +12,7 @@ import '../../../../utils/helpers.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
+import '../../../../widgets/searchable_dropdown_field.dart';
 
 class MobilePaymentFormScreen extends StatefulWidget {
   final Payment? existing;
@@ -190,12 +191,20 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                       final customers = state is CustomersLoaded ? state.customers : <Customer>[];
                       return AbsorbPointer(
                         absorbing: widget.isReadOnly,
-                        child: SmartDropdown<String>(
+                        child: SmartSearchableSelector(
                           label: 'Client *',
-                          value: _selectedContactId,
-                          items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                          onChanged: (v) => setState(() => _selectedContactId = v),
                           hint: 'Sélectionner un client',
+                          selectedText: _selectedContactId != null
+                              ? (customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedContactId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                  ? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedContactId, orElse: () => null)!.companyName!
+                                  : customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedContactId, orElse: () => null)?.name)
+                              : null,
+                          onTap: () async {
+                            final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedContactId);
+                            if (res != null && mounted) {
+                              setState(() => _selectedContactId = res);
+                            }
+                          },
                         ),
                       );
                     },
@@ -206,12 +215,20 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                       final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
                       return AbsorbPointer(
                         absorbing: widget.isReadOnly,
-                        child: SmartDropdown<String>(
+                        child: SmartSearchableSelector(
                           label: 'Fournisseur *',
-                          value: _selectedContactId,
-                          items: suppliers.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                          onChanged: (v) => setState(() => _selectedContactId = v),
                           hint: 'Sélectionner un fournisseur',
+                          selectedText: _selectedContactId != null
+                              ? (suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedContactId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                  ? suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedContactId, orElse: () => null)!.companyName!
+                                  : suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedContactId, orElse: () => null)?.name)
+                              : null,
+                          onTap: () async {
+                            final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedContactId);
+                            if (res != null && mounted) {
+                              setState(() => _selectedContactId = res);
+                            }
+                          },
                         ),
                       );
                     },

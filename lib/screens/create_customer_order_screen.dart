@@ -142,11 +142,24 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
       number = generateDocNumber('CC', seq);
     }
 
+    final custState = context.read<CustomersBloc>().state;
+    String? custName;
+    if (custState is CustomersLoaded) {
+      final found = custState.customers.firstWhere(
+        (c) => c.id == _selectedCustomerId,
+        orElse: () => Customer(id: '', code: '', name: 'Client Inconnu'),
+      );
+      custName = found.companyName?.isNotEmpty == true
+          ? found.companyName
+          : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
+    }
+
     final orderId = widget.existing?.id ?? _uuid.v4();
     final order = CustomerOrder(
       id: orderId,
       number: number,
       customerId: _selectedCustomerId!,
+      customerName: custName,
       projectId: _selectedProjectId,
       date: _date,
       status: _status.name,
@@ -425,8 +438,8 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                           child: Tooltip(
                             message: 'Créer un nouveau client',
                             child: ElevatedButton(
-                              onPressed: () {
-                                showDialog(
+                              onPressed: () async {
+                                final newId = await showDialog<String>(
                                   context: context,
                                   barrierDismissible: false,
                                   builder: (_) => BlocProvider.value(
@@ -434,6 +447,9 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                                     child: const CustomerDialog(existing: null),
                                   ),
                                 );
+                                if (newId != null && mounted) {
+                                  setState(() => _selectedCustomerId = newId);
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary.withValues(alpha: 0.1),

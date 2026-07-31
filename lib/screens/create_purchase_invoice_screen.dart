@@ -337,8 +337,8 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                             child: Tooltip(
                               message: 'Créer un nouveau fournisseur',
                               child: ElevatedButton(
-                                onPressed: () {
-                                  showDialog(
+                                onPressed: () async {
+                                  final newId = await showDialog<String>(
                                     context: context,
                                     barrierDismissible: false,
                                     builder: (_) => BlocProvider.value(
@@ -346,6 +346,16 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                                       child: const SupplierDialog(existing: null),
                                     ),
                                   );
+                                  if (newId != null && mounted) {
+                                    final suppState = context.read<SuppliersBloc>().state;
+                                    if (suppState is SuppliersLoaded) {
+                                      final found = suppState.suppliers.firstWhere(
+                                        (s) => s.id == newId,
+                                        orElse: () => Supplier(id: newId, code: '', name: ''),
+                                      );
+                                      setState(() => _selectedSupplier = found);
+                                    }
+                                  }
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary.withValues(alpha: 0.1),

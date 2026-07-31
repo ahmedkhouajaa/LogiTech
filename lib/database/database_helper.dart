@@ -4277,7 +4277,7 @@ class DatabaseHelper {
         whereArgs: [map['id']],
       );
       final items = itemsMap.map((m) => PurchaseInvoiceItem.fromMap(m)).toList();
-      invoices.add(PurchaseInvoice.fromMap(map).copyWith(items: items));
+      invoices.add(PurchaseInvoice.fromMap(map, items));
     }
     return invoices;
   }
@@ -4293,11 +4293,12 @@ class DatabaseHelper {
 
     if (maps.isEmpty) return null;
 
-    final itemsMap = await db.query(
-      'purchase_invoice_items',
-      where: 'invoice_id = ?',
-      whereArgs: [id],
-    );
+    final itemsMap = await db.rawQuery('''
+      SELECT pii.*, p.name as product_name
+      FROM purchase_invoice_items pii
+      LEFT JOIN products p ON pii.product_id = p.id
+      WHERE pii.invoice_id = ?
+    ''', [id]);
     final items = itemsMap.map((m) => PurchaseInvoiceItem.fromMap(m)).toList();
     
     return PurchaseInvoice.fromMap(maps.first).copyWith(items: items);
@@ -4547,11 +4548,12 @@ class DatabaseHelper {
     ''');
     final vouchers = <ReceivingVoucher>[];
     for (final map in maps) {
-      final itemsMap = await db.query(
-        'receiving_voucher_items',
-        where: 'voucher_id = ?',
-        whereArgs: [map['id']],
-      );
+      final itemsMap = await db.rawQuery('''
+        SELECT rvi.*, p.name as product_name
+        FROM receiving_voucher_items rvi
+        LEFT JOIN products p ON rvi.product_id = p.id
+        WHERE rvi.voucher_id = ?
+      ''', [map['id']]);
       final items = itemsMap.map((m) => ReceivingVoucherItem.fromMap(m)).toList();
       vouchers.add(ReceivingVoucher.fromMap(map, items));
     }
@@ -4613,11 +4615,12 @@ class DatabaseHelper {
     final maps = await db.rawQuery(query, whereArgs);
     final vouchers = <ReceivingVoucher>[];
     for (final map in maps) {
-      final itemsMap = await db.query(
-        'receiving_voucher_items',
-        where: 'voucher_id = ?',
-        whereArgs: [map['id']],
-      );
+      final itemsMap = await db.rawQuery('''
+        SELECT rvi.*, p.name as product_name
+        FROM receiving_voucher_items rvi
+        LEFT JOIN products p ON rvi.product_id = p.id
+        WHERE rvi.voucher_id = ?
+      ''', [map['id']]);
       final items = itemsMap.map((m) => ReceivingVoucherItem.fromMap(m)).toList();
       vouchers.add(ReceivingVoucher.fromMap(map, items));
     }
@@ -4681,11 +4684,12 @@ class DatabaseHelper {
       whereArgs: [id],
     );
     if (rvResult.isEmpty) return null;
-    final itemsResult = await db.query(
-      'receiving_voucher_items',
-      where: 'voucher_id = ?',
-      whereArgs: [id],
-    );
+    final itemsResult = await db.rawQuery('''
+      SELECT rvi.*, p.name as product_name
+      FROM receiving_voucher_items rvi
+      LEFT JOIN products p ON rvi.product_id = p.id
+      WHERE rvi.voucher_id = ?
+    ''', [id]);
     final data = Map<String, dynamic>.from(rvResult.first);
     data['items'] = itemsResult;
     return data;

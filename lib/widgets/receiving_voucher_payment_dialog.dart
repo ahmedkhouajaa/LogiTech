@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/receiving_voucher.dart';
 import '../models/product.dart';
 import '../blocs/products/products_bloc.dart';
@@ -14,6 +15,7 @@ import '../models/treasury_account.dart';
 import '../models/treasury_transaction.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../database/database_helper.dart';
 import '../widgets/searchable_dropdown_field.dart';
 
 class ReceivingVoucherPaymentDialog extends StatefulWidget {
@@ -101,7 +103,39 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _pushToFirestore(String collection, String id, Map<String, dynamic> data) async {
+    try {
+      final Map<String, dynamic> firestoreData = Map.from(data);
+      firestoreData['updated_at'] = DateTime.now().toUtc().toIso8601String();
+      await FirebaseFirestore.instance.collection(collection).doc(id).set(firestoreData, SetOptions(merge: true));
+    } catch (e) {
+      print("Error pushing directly to Firestore: $e");
+    }
+  }
+
+  Future<String> _getOrCreateRSAccount(String accountName) async {
+    final db = await DatabaseHelper.instance.database;
+    final existing = await db.query('payment_accounts', where: "name = ?", whereArgs: [accountName]);
+    if (existing.isNotEmpty) {
+      return existing.first['id'] as String;
+    } else {
+      final id = const Uuid().v4();
+      final accountData = {
+        'id': id,
+        'name': accountName,
+        'type': 'bank',
+        'balance': 0.0,
+        'is_default': 0,
+        'created_at': DateTime.now().millisecondsSinceEpoch,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      };
+      await db.insert('payment_accounts', accountData);
+      await _pushToFirestore('payment_accounts', id, accountData);
+      return id;
+    }
+  }
+
+  void _save() async {
     if (_selectedAccountId == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
       return;
@@ -114,12 +148,18 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
     final now = DateTime.now();
     final paymentNumber = 'PAI-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
 
+    // Determine the account ID for withholding tax
+    String rsAccountId = _selectedAccountId!;
+    if (_applyWithholdingTax) {
+      rsAccountId = await _getOrCreateRSAccount('RS Achat');
+    }
+
     final payment = Payment(
       id: const Uuid().v4(),
       paymentNumber: paymentNumber,
-      direction: 'encaissement',
+      direction: 'decaissement',
       contactId: widget.receivingVoucher.supplierId,
-      contactType: 'customer',
+      contactType: 'supplier',
       contactName: widget.receivingVoucher.supplierName,
       amount: parsedAmount,
       method: _paymentMethod,
@@ -127,29 +167,31 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
       reference: _referenceCtrl.text.isNotEmpty ? _referenceCtrl.text : null,
       paymentDate: _paymentDate,
       notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
-      status: 'payee',
+      status: 'paid',
       
       createdAt: now,
       updatedAt: now,
     );
 
     db.add(AddPayment(payment));
+    await _pushToFirestore('payments', payment.id, payment.toMap());
 
-    // Create TreasuryTransaction to increase caisse
+    // Create TreasuryTransaction to decrease caisse (expense)
     final treasuryTx = TreasuryTransaction(
       id: const Uuid().v4(),
       transactionNumber: 'TR-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0'),
       accountId: _selectedAccountId!,
       amount: parsedAmount,
-      type: 'income',
-      category: 'Paiement Client',
+      type: 'expense',
+      category: 'Paiement Fournisseur',
       dateTransaction: _paymentDate,
-      description: 'Paiement de la facture ${widget.receivingVoucher.number}',
+      description: 'Paiement du bon de réception ${widget.receivingVoucher.number}',
       paymentId: payment.id,
       createdAt: now,
       updatedAt: now,
     );
     context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(treasuryTx));
+    await _pushToFirestore('treasury_transactions', treasuryTx.id, treasuryTx.toMap());
 
     // Update ReceivingVoucher status and amount paid
     double taxAmount = _applyWithholdingTax ? (_calculatedTotalTTC * _withholdingTaxRate) / 100 : 0;
@@ -160,33 +202,34 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
       final rsPayment = Payment(
         id: const Uuid().v4(),
         paymentNumber: rsPaymentNumber,
-        direction: 'encaissement',
+        direction: 'decaissement',
         contactId: widget.receivingVoucher.supplierId,
-        contactType: 'customer',
+        contactType: 'supplier',
         contactName: widget.receivingVoucher.supplierName,
         amount: taxAmount,
         method: 'retenue_source',
-        accountId: _selectedAccountId,
+        accountId: rsAccountId,
         reference: widget.receivingVoucher.number,
         paymentDate: _withholdingTaxDate,
         notes: 'Retenue à la source ($_withholdingTaxRate%)',
-        status: 'payee',
+        status: 'paid',
         
         createdAt: now.add(const Duration(seconds: 1)),
         updatedAt: now.add(const Duration(seconds: 1)),
       );
       
       db.add(AddPayment(rsPayment));
+      await _pushToFirestore('payments', rsPayment.id, rsPayment.toMap());
 
       final rsTreasuryTx = TreasuryTransaction(
         id: const Uuid().v4(),
         transactionNumber: 'TR-RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0'),
-        accountId: _selectedAccountId!,
+        accountId: rsAccountId,
         amount: taxAmount,
-        type: 'income',
-        category: 'Retenue à la source (Ventes)',
+        type: 'expense',
+        category: 'Retenue à la source (Achats)',
         dateTransaction: _withholdingTaxDate,
-        description: 'Retenue à la source ($_withholdingTaxRate%) pour la facture ${widget.receivingVoucher.number}',
+        description: 'Retenue à la source ($_withholdingTaxRate%) pour le bon de réception ${widget.receivingVoucher.number}',
         paymentId: rsPayment.id,
         withholdingTax: taxAmount,
         withholdingTaxRate: _withholdingTaxRate,
@@ -194,6 +237,7 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
         updatedAt: now.add(const Duration(seconds: 1)),
       );
       context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(rsTreasuryTx));
+      await _pushToFirestore('treasury_transactions', rsTreasuryTx.id, rsTreasuryTx.toMap());
     }
 
     double newAmountPaid = 0.0 + parsedAmount + taxAmount;
@@ -209,33 +253,36 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
       status: newStatus,
     );
     context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedReceivingVoucher));
+    await _pushToFirestore('receiving_vouchers', updatedReceivingVoucher.id, updatedReceivingVoucher.toMap());
 
     Navigator.pop(context, true);
   }
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
     double remainingAmount = _calculatedTotalTTC - 0.0;
     double taxAmount = _applyWithholdingTax ? (_calculatedTotalTTC * _withholdingTaxRate) / 100 : 0;
     double netAmount = remainingAmount - taxAmount;
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+      insetPadding: isMobile ? EdgeInsets.zero : EdgeInsets.symmetric(horizontal: 40, vertical: 24),
       child: Container(
-        width: 800,
+        width: isMobile ? double.infinity : 800,
+        height: isMobile ? double.infinity : null,
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
+          borderRadius: isMobile ? BorderRadius.zero : BorderRadius.circular(AppRadius.lg),
         ),
         child: Column(
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(isMobile ? 12 : 20),
               child: Row(
                 children: [
-                  const Text('Paiement', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('Paiement', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(width: 8),
                   const Icon(Icons.play_circle_filled, color: Colors.red, size: 24),
                   const Spacer(),
@@ -243,13 +290,19 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close, size: 16),
                     label: const Text('Annuler'),
+                    style: OutlinedButton.styleFrom(
+                      padding: isMobile ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4) : null,
+                    ),
                   ),
-                  SizedBox(width: 12),
+                  SizedBox(width: isMobile ? 8 : 12),
                   ElevatedButton.icon(
                     onPressed: _save,
                     icon: Icon(Icons.save, size: 16, color: Colors.white),
                     label: Text('Créer', style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: isMobile ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4) : null,
+                    ),
                   ),
                 ],
               ),
@@ -257,7 +310,7 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
             const Divider(height: 1),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(24),
+                padding: EdgeInsets.all(isMobile ? 12 : 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -271,33 +324,65 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                       ),
                       child: Column(
                         children: [
-                          Row(
-                            children: [
-                              Expanded(child: Text('Réf: ${widget.receivingVoucher.number}', style: const TextStyle(fontWeight: FontWeight.w500))),
-                              Expanded(child: Text('Date: ${formatDateTime(widget.receivingVoucher.date)}')),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(child: Text('Contact: ${widget.receivingVoucher.supplierName ?? '—'}')),
-                              Expanded(child: Text('Statut: ${widget.receivingVoucher.status}')),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(child: Text('Montant total: ${formatCurrencyDT(_calculatedTotalTTC)}', style: const TextStyle(fontWeight: FontWeight.w600))),
-                              Expanded(
-                                child: Row(
+                          isMobile
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Montant restant: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                                    Text(formatCurrencyDT(remainingAmount), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange)),
+                                    Text('Réf: ${widget.receivingVoucher.number}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                                    const SizedBox(height: 8),
+                                    Text('Date: ${formatDateTime(widget.receivingVoucher.date)}'),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Expanded(child: Text('Réf: ${widget.receivingVoucher.number}', style: const TextStyle(fontWeight: FontWeight.w500))),
+                                    Expanded(child: Text('Date: ${formatDateTime(widget.receivingVoucher.date)}')),
                                   ],
                                 ),
-                              ),
-                            ],
-                          ),
+                          const SizedBox(height: 12),
+                          isMobile
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Contact: ${widget.receivingVoucher.supplierName ?? '—'}'),
+                                    const SizedBox(height: 8),
+                                    Text('Statut: ${widget.receivingVoucher.status}'),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Expanded(child: Text('Contact: ${widget.receivingVoucher.supplierName ?? '—'}')),
+                                    Expanded(child: Text('Statut: ${widget.receivingVoucher.status}')),
+                                  ],
+                                ),
+                          const SizedBox(height: 12),
+                          isMobile
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Montant total: ${formatCurrencyDT(_calculatedTotalTTC)}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        const Text('Montant restant: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                                        Text(formatCurrencyDT(remainingAmount), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange)),
+                                      ],
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Expanded(child: Text('Montant total: ${formatCurrencyDT(_calculatedTotalTTC)}', style: const TextStyle(fontWeight: FontWeight.w600))),
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          const Text('Montant restant: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                                          Text(formatCurrencyDT(remainingAmount), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         ],
                       ),
                     ),
@@ -313,8 +398,8 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                       child: Row(
                         children: [
                           _buildTab(0, 'Nouveau paiement'),
-                          _buildTab(1, 'Paiement existant 1'),
-                          _buildTab(2, 'Avoir 1'),
+                          _buildTab(1, isMobile ? 'Existant' : 'Paiement existant 1'),
+                          _buildTab(2, isMobile ? 'Avoir' : 'Avoir 1'),
                         ],
                       ),
                     ),
@@ -326,7 +411,7 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                       Row(
                         children: [
                           Text('Retenue à la source', style: TextStyle(fontWeight: FontWeight.w500)),
-                          SizedBox(width: 24),
+                          SizedBox(width: isMobile ? 12 : 24),
                           Container(
                             decoration: BoxDecoration(
                               border: Border.all(color: AppColors.border),
@@ -344,91 +429,180 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                       
                       if (_applyWithholdingTax) ...[
                         const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        isMobile
+                            ? Column(
                                 children: [
-                                  Text('Statut: ${widget.receivingVoucher.status}', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
-                                  const SizedBox(height: 6),
-                                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                    value: _withholdingTaxRate,
-                                    isExpanded: true,
-                                    decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-                                    items: _taxRates.map((t) {
-                                      return DropdownMenuItem<double>(
-                                        value: t['rate'],
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                                              child: Text('${t['rate']}%', style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Statut: ${widget.receivingVoucher.status}', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                                      const SizedBox(height: 6),
+                                      DropdownButtonFormField(
+                                        dropdownColor: AppColors.surfaceAlt,
+                                        borderRadius: BorderRadius.circular(AppRadius.md),
+                                        style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                        value: _withholdingTaxRate,
+                                        isExpanded: true,
+                                        decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                                        items: _taxRates.map((t) {
+                                          return DropdownMenuItem<double>(
+                                            value: t['rate'],
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                                  child: Text('${t['rate']}%', style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(child: Text(t['label'], overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
+                                              ],
                                             ),
-                                            const SizedBox(width: 8),
-                                            Expanded(child: Text(t['label'], overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
-                                          ],
+                                          );
+                                        }).toList(),
+                                        onChanged: (v) {
+                                          if (v != null) {
+                                            setState(() {
+                                              _withholdingTaxRate = v;
+                                              _updateAmountField();
+                                            });
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Date de la création de la retenue', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                      const SizedBox(height: 6),
+                                      InkWell(
+                                        onTap: () async {
+                                          final d = await showDatePicker(context: context, initialDate: _withholdingTaxDate, firstDate: DateTime(2020), lastDate: DateTime(2030));
+                                          if (d != null) setState(() => _withholdingTaxDate = d);
+                                        },
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                          decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_withholdingTaxDate)),
+                                              Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                                            ],
+                                          ),
                                         ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (v) {
-                                      if (v != null) {
-                                        setState(() {
-                                          _withholdingTaxRate = v;
-                                          _updateAmountField();
-                                        });
-                                      }
-                                    },
+                                      ),
+                                    ],
                                   ),
                                 ],
-                              ),
-                            ),
-                            SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              )
+                            : Row(
                                 children: [
-                                  Text('Date de la création de la retenue', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                  const SizedBox(height: 6),
-                                  InkWell(
-                                    onTap: () async {
-                                      final d = await showDatePicker(context: context, initialDate: _withholdingTaxDate, firstDate: DateTime(2020), lastDate: DateTime(2030));
-                                      if (d != null) setState(() => _withholdingTaxDate = d);
-                                    },
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                      decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_withholdingTaxDate)),
-                                          Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
-                                        ],
-                                      ),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Statut: ${widget.receivingVoucher.status}', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                                        const SizedBox(height: 6),
+                                        DropdownButtonFormField(
+                                          dropdownColor: AppColors.surfaceAlt,
+                                          borderRadius: BorderRadius.circular(AppRadius.md),
+                                          style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                          value: _withholdingTaxRate,
+                                          isExpanded: true,
+                                          decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                                          items: _taxRates.map((t) {
+                                            return DropdownMenuItem<double>(
+                                              value: t['rate'],
+                                              child: Row(
+                                                children: [
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                                    child: Text('${t['rate']}%', style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(child: Text(t['label'], overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
+                                                ],
+                                              ),
+                                            );
+                                          }).toList(),
+                                          onChanged: (v) {
+                                            if (v != null) {
+                                              setState(() {
+                                                _withholdingTaxRate = v;
+                                                _updateAmountField();
+                                              });
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Date de la création de la retenue', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                        const SizedBox(height: 6),
+                                        InkWell(
+                                          onTap: () async {
+                                            final d = await showDatePicker(context: context, initialDate: _withholdingTaxDate, firstDate: DateTime(2020), lastDate: DateTime(2030));
+                                            if (d != null) setState(() => _withholdingTaxDate = d);
+                                          },
+                                          child: Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                            decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.md)),
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_withholdingTaxDate)),
+                                                Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
                         SizedBox(height: 16),
                         Container(
                           padding: EdgeInsets.all(16),
                           decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md), border: Border.all(color: AppColors.border)),
-                          child: Row(
-                            children: [
-                              Text('Retenue à la source: ', style: TextStyle(color: AppColors.textSecondary)),
-                              Text('-${formatCurrencyDT(taxAmount)}', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
-                              Spacer(),
-                              Text('Montant: ', style: TextStyle(color: AppColors.textSecondary)),
-                              Text(formatCurrencyDT(netAmount), style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
+                          child: isMobile
+                              ? Column(
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text('Retenue à la source: ', style: TextStyle(color: AppColors.textSecondary)),
+                                        Text('-${formatCurrencyDT(taxAmount)}', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text('Montant: ', style: TextStyle(color: AppColors.textSecondary)),
+                                        Text(formatCurrencyDT(netAmount), style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Text('Retenue à la source: ', style: TextStyle(color: AppColors.textSecondary)),
+                                    Text('-${formatCurrencyDT(taxAmount)}', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                                    Spacer(),
+                                    Text('Montant: ', style: TextStyle(color: AppColors.textSecondary)),
+                                    Text(formatCurrencyDT(netAmount), style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
                         ),
                       ],
                       SizedBox(height: 24),
@@ -463,36 +637,60 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                             ),
                             const Divider(height: 1),
                             Padding(
-                              padding: const EdgeInsets.all(20),
+                              padding: EdgeInsets.all(isMobile ? 12 : 20),
                               child: Column(
                                 children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _buildFormField('Méthode de paiement', DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                          value: _paymentMethod,
-                                          decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
-                                          items: const [
-                                            DropdownMenuItem(value: 'especes', child: Text('Espèces')),
-                                            DropdownMenuItem(value: 'cheque', child: Text('Chèque')),
-                                            DropdownMenuItem(value: 'virement', child: Text('Virement')),
-                                            DropdownMenuItem(value: 'carte', child: Text('Carte')),
+                                  isMobile
+                                      ? Column(
+                                          children: [
+                                            _buildFormField('Méthode de paiement', DropdownButtonFormField(
+                                              dropdownColor: AppColors.surfaceAlt,
+                                              borderRadius: BorderRadius.circular(AppRadius.md),
+                                              style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                              value: _paymentMethod,
+                                              decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
+                                              items: const [
+                                                DropdownMenuItem(value: 'especes', child: Text('Espèces')),
+                                                DropdownMenuItem(value: 'cheque', child: Text('Chèque')),
+                                                DropdownMenuItem(value: 'virement', child: Text('Virement')),
+                                                DropdownMenuItem(value: 'carte', child: Text('Carte')),
+                                              ],
+                                              onChanged: (v) => setState(() => _paymentMethod = v!),
+                                            )),
+                                            const SizedBox(height: 16),
+                                            _buildFormField('Montant', TextField(
+                                              controller: _amountCtrl,
+                                              decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12), suffixText: 'DT'),
+                                            )),
                                           ],
-                                          onChanged: (v) => setState(() => _paymentMethod = v!),
-                                        )),
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: _buildFormField('Montant', TextField(
-                                          controller: _amountCtrl,
-                                          decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12), suffixText: 'DT'),
-                                        )),
-                                      ),
-                                    ],
-                                  ),
+                                        )
+                                      : Row(
+                                          children: [
+                                            Expanded(
+                                              child: _buildFormField('Méthode de paiement', DropdownButtonFormField(
+                                                dropdownColor: AppColors.surfaceAlt,
+                                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                                style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                                value: _paymentMethod,
+                                                decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
+                                                items: const [
+                                                  DropdownMenuItem(value: 'especes', child: Text('Espèces')),
+                                                  DropdownMenuItem(value: 'cheque', child: Text('Chèque')),
+                                                  DropdownMenuItem(value: 'virement', child: Text('Virement')),
+                                                  DropdownMenuItem(value: 'carte', child: Text('Carte')),
+                                                ],
+                                                onChanged: (v) => setState(() => _paymentMethod = v!),
+                                              )),
+                                            ),
+                                            const SizedBox(width: 16),
+                                            Expanded(
+                                              child: _buildFormField('Montant', TextField(
+                                                controller: _amountCtrl,
+                                                decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12), suffixText: 'DT'),
+                                              )),
+                                            ),
+                                          ],
+                                        ),
                                   const SizedBox(height: 16),
                                   Row(
                                     children: [

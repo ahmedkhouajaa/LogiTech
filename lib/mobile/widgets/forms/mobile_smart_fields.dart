@@ -143,17 +143,27 @@ class SmartDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final List<DropdownMenuItem<T>> dropdownItems = List.from(items);
+    final hasSelected = dropdownItems.any((item) => item.value == value);
+    if (value != null && !hasSelected) {
+      dropdownItems.add(DropdownMenuItem<T>(
+        value: value,
+        child: Text('Sélectionner...', style: const TextStyle(fontSize: 16)),
+      ));
+    }
+    final dropdownKey = ValueKey('${dropdownItems.length}_${dropdownItems.fold("", (prev, item) => "${prev}_${item.value}")}');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
         SizedBox(height: 8),
         DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          key: dropdownKey,
+          dropdownColor: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
           value: value,
-          items: items,
+          items: dropdownItems,
           onChanged: onChanged,
           isExpanded: true,
           decoration: InputDecoration(
@@ -178,6 +188,70 @@ class SmartDropdown<T> extends StatelessWidget {
           ),
           icon: Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondary),
         ),
+      ],
+    );
+  }
+}
+
+class SmartSearchableSelector extends StatelessWidget {
+  final String label;
+  final String hint;
+  final String? selectedText;
+  final VoidCallback onTap;
+  final bool hasError;
+  final String? errorText;
+
+  const SmartSearchableSelector({
+    super.key,
+    required this.label,
+    required this.hint,
+    required this.selectedText,
+    required this.onTap,
+    this.hasError = false,
+    this.errorText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        SizedBox(height: 8),
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: AbsorbPointer(
+            child: TextFormField(
+              controller: TextEditingController(text: selectedText ?? hint),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppColors.surfaceAlt,
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                suffixIcon: Icon(Icons.arrow_drop_down_rounded, size: 24, color: AppColors.primary),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  borderSide: BorderSide(color: hasError ? AppColors.error : AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  borderSide: BorderSide(color: hasError ? AppColors.error : AppColors.border),
+                ),
+              ),
+              style: TextStyle(
+                fontSize: 13,
+                color: selectedText != null ? AppColors.textPrimary : AppColors.textTertiary,
+              ),
+            ),
+          ),
+        ),
+        if (hasError && errorText != null) ...[
+          SizedBox(height: 4),
+          Padding(
+            padding: EdgeInsets.only(left: 4),
+            child: Text(errorText!, style: TextStyle(color: AppColors.error, fontSize: 11)),
+          ),
+        ],
       ],
     );
   }

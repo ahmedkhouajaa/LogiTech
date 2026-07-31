@@ -10,6 +10,8 @@ import '../../blocs/projects/projects_bloc.dart';
 import '../../blocs/payments/payments_bloc.dart';
 import '../../blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
 import '../../blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
+import '../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
+import '../../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 
 import '../../models/purchase_invoice.dart';
 import '../../models/document_wrapper.dart';
@@ -22,6 +24,7 @@ import '../../services/pdf_service.dart';
 import '../../database/database_helper.dart';
 
 import '../../screens/document_preview_screen.dart';
+import '../../widgets/purchase_invoice_payment_dialog.dart';
 import 'forms/mobile_purchase_invoice_form_screen.dart';
 import 'forms/mobile_supplier_credit_note_form_screen.dart';
 
@@ -62,7 +65,7 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
             final updatedInvoice = state.purchaseInvoices.firstWhere((q) => q.id == currentInvoice.id);
             if (updatedInvoice.id == currentInvoice.id && mounted) {
               setState(() {
-                currentInvoice = updatedInvoice.copyWith(items: currentInvoice.items);
+                currentInvoice = updatedInvoice.items.isNotEmpty ? updatedInvoice : updatedInvoice.copyWith(items: currentInvoice.items);
               });
             }
           } catch (_) {
@@ -161,7 +164,12 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(item.productName ?? 'Article sans nom', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              Text(
+                                (item.productName != null && item.productName!.isNotEmpty) 
+                                    ? item.productName! 
+                                    : ((item.description != null && item.description!.isNotEmpty) ? item.description! : 'Article sans nom'), 
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)
+                              ),
                               SizedBox(height: 4),
                               Row(
                                 children: [
@@ -176,7 +184,7 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
                             ],
                           ),
                         ),
-                        Text(formatCurrencyDT(item.computedTotalHT * (1 + item.tvaRate / 100)), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        Text(formatCurrencyDT(item.computedTotalHT), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
                       ],
                     ),
                   ),
@@ -429,102 +437,27 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
   }
 
   void _showAddPaymentDialog(BuildContext context, PurchaseInvoice invoice) {
-    final amountCtrl = TextEditingController(text: invoice.totalTTC.toStringAsFixed(3));
-    final methodNotifier = ValueNotifier<String>('especes');
-    
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Ajouter un paiement pour FA ${invoice.number}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: amountCtrl,
-              decoration: InputDecoration(
-                labelText: 'Montant (DT)',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            ),
-            SizedBox(height: 16),
-            ValueListenableBuilder<String>(
-              valueListenable: methodNotifier,
-              builder: (context, val, child) => DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                value: val,
-                decoration: InputDecoration(
-                  labelText: 'Méthode de paiement',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'especes', child: Text('Espèces')),
-                  DropdownMenuItem(value: 'cheque', child: Text('Chèque')),
-                  DropdownMenuItem(value: 'virement', child: Text('Virement')),
-                  DropdownMenuItem(value: 'carte', child: Text('Carte')),
-                ],
-                onChanged: (v) {
-                  if (v != null) methodNotifier.value = v;
-                },
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-            onPressed: () async {
-              final amountStr = amountCtrl.text.replaceAll(',', '.');
-              final amount = double.tryParse(amountStr) ?? 0.0;
-              if (amount > 0) {
-                final payment = Payment(
-                  id: const Uuid().v4(),
-                  paymentNumber: 'PAI-${DateTime.now().year}-${DateTime.now().millisecondsSinceEpoch % 1000000}'.padRight(6, '0'),
-                  direction: 'decaissement',
-                  contactId: invoice.supplierId,
-                  contactType: 'supplier',
-                  contactName: invoice.supplierName,
-                  amount: amount,
-                  method: methodNotifier.value,
-                  reference: invoice.number,
-                  paymentDate: DateTime.now(),
-                  status: 'paid',
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                );
-                
-                try {
-                  context.read<PaymentsBloc>().add(AddPayment(payment));
-                } catch (e) {
-                  await DatabaseHelper.instance.insertPayment(payment);
-                }
-                
-                if (context.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Paiement ajouté avec succès'),
-                    backgroundColor: AppColors.success,
-                  ));
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Veuillez entrer un montant valide'),
-                  backgroundColor: AppColors.error,
-                ));
-              }
-            },
-            child: Text('Enregistrer'),
-          ),
+      useSafeArea: false,
+      builder: (_) => MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: context.read<PaymentsBloc>()),
+          BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+          BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+          BlocProvider.value(value: context.read<PurchaseInvoicesBloc>()),
         ],
+        child: PurchaseInvoicePaymentDialog(purchaseInvoice: invoice),
       ),
-    );
+    ).then((created) {
+      if (created == true && context.mounted) {
+        context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Paiement ajouté avec succès', style: TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.success,
+        ));
+      }
+    });
   }
 
   void _createCreditNoteFromInvoice(BuildContext context, PurchaseInvoice invoice) {
