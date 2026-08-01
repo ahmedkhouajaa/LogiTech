@@ -139,7 +139,7 @@ class DatabaseHelper {
     final path = p.join(dir.path, 'business_manager_pro.db');
     return await openDatabase(
       path,
-      version: 50,
+      version: 51,
       onConfigure: (db) async {
         await db.rawQuery('PRAGMA busy_timeout = 30000;');
       },
@@ -197,6 +197,12 @@ class DatabaseHelper {
           await db.execute(sql);
         } catch (_) {}
       }
+    }
+
+    if (oldVersion < 51) {
+      try {
+        await db.execute("ALTER TABLE bons_sortie ADD COLUMN created_by TEXT");
+      } catch (_) {}
     }
 
     if (oldVersion < 49) {
@@ -1695,6 +1701,7 @@ class DatabaseHelper {
         timbre_fiscal REAL DEFAULT 0,
         vehicle_registration TEXT,
         driver_name TEXT,
+        created_by TEXT,
         warehouse_id TEXT,
         notes TEXT,
         conditions TEXT,

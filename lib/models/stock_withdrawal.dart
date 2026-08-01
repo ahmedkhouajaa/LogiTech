@@ -18,6 +18,7 @@ class StockWithdrawal {
   final String? driverName;
   final String? notes;
   final String? conditionsGenerales;
+  final String? createdBy;
   final String? warehouseId;
   final String? firebaseUid;
   final bool isDeleted;
@@ -43,6 +44,7 @@ class StockWithdrawal {
     this.driverName,
     this.notes,
     this.conditionsGenerales,
+    this.createdBy,
     this.warehouseId,
     this.firebaseUid,
     this.isDeleted = false,
@@ -151,6 +153,7 @@ class StockWithdrawal {
       driverName: driverName ?? this.driverName,
       notes: notes ?? this.notes,
       conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
+      createdBy: createdBy ?? this.createdBy,
       warehouseId: warehouseId ?? this.warehouseId,
       firebaseUid: firebaseUid ?? this.firebaseUid,
       isDeleted: isDeleted ?? this.isDeleted,
@@ -173,6 +176,7 @@ class StockWithdrawal {
         'timbre_fiscal': timbreFiscal,
         'vehicle_registration': vehicleRegistration,
         'driver_name': driverName,
+        'created_by': createdBy,
         'warehouse_id': warehouseId,
         'notes': notes,
         'conditions': conditionsGenerales,
@@ -200,25 +204,26 @@ class StockWithdrawal {
       customerCompany: map['customer_company']?.toString(),
       projectId: map['project_id']?.toString(),
       projectName: map['project_name']?.toString(),
-      date: map['date'] != null ? DateTime.tryParse(map['date'].toString()) ?? DateTime.now() : DateTime.now(),
+      date: map['date'] != null ? (map['date'] is DateTime ? map['date'] as DateTime : DateTime.parse(map['date'].toString())) : DateTime.now(),
       status: map['status']?.toString() ?? 'draft',
       pricingMode: map['pricing_mode']?.toString() ?? 'ht',
-      globalDiscountPercent: double.tryParse(map['global_discount_percent']?.toString() ?? '0') ?? 0.0,
-      globalDiscountAmount: double.tryParse(map['global_discount_amount']?.toString() ?? '0') ?? 0.0,
-      timbreFiscal: double.tryParse(map['timbre_fiscal']?.toString() ?? '0') ?? 0.0,
+      globalDiscountPercent: (map['global_discount_percent'] as num?)?.toDouble() ?? 0.0,
+      globalDiscountAmount: (map['global_discount_amount'] as num?)?.toDouble() ?? 0.0,
+      timbreFiscal: (map['timbre_fiscal'] as num?)?.toDouble() ?? 0.0,
       vehicleRegistration: map['vehicle_registration']?.toString(),
       driverName: map['driver_name']?.toString(),
       notes: map['notes']?.toString(),
-      conditionsGenerales: map['conditions']?.toString(),
-      warehouseId: map['warehouse_id']?.toString(),
+      conditionsGenerales: map['conditions']?.toString() ?? map['conditions_generales']?.toString(),
+      createdBy: map['created_by']?.toString() ?? map['createdBy']?.toString(),
+      warehouseId: map['warehouse_id']?.toString() ?? map['warehouseId']?.toString(),
       firebaseUid: map['firebase_uid']?.toString(),
-      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
-      createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
-      updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
+      createdAt: map['created_at'] != null ? (map['created_at'] is DateTime ? map['created_at'] as DateTime : DateTime.parse(map['created_at'].toString())) : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? (map['updated_at'] is DateTime ? map['updated_at'] as DateTime : DateTime.parse(map['updated_at'].toString())) : DateTime.now(),
       items: parsedItems,
-      dbTotalHT: double.tryParse(map['total_ht']?.toString() ?? ''),
-      dbTotalTVA: double.tryParse(map['total_tva']?.toString() ?? ''),
-      dbTotalTTC: double.tryParse(map['total_ttc']?.toString() ?? ''),
+      dbTotalHT: (map['total_ht'] as num?)?.toDouble(),
+      dbTotalTVA: (map['total_tva'] as num?)?.toDouble(),
+      dbTotalTTC: (map['total_ttc'] as num?)?.toDouble(),
     );
   }
 }

@@ -41,7 +41,6 @@ import 'screens/mobile_reports_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/company_info_screen.dart';
 import '../screens/document_templates_screen.dart';
-import '../screens/warehouses_screen.dart';
 import '../screens/product_settings_screen.dart';
 import '../screens/stock_entries_screen.dart';
 import '../screens/stock_withdrawals_screen.dart';
@@ -146,8 +145,9 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.warehouses:
         return const MobileWarehousesScreen();
       case AppModule.exitVouchers:
-      case AppModule.stockWithdrawal:
         return MobileStockWithdrawalsScreen(activeModule: _activeModule);
+      case AppModule.stockWithdrawal:
+        return const StockWithdrawalsScreen();
       case AppModule.stockTransfer:
         return const StockTransfersScreen();
       case AppModule.inventorySheet:

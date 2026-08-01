@@ -16,7 +16,6 @@ import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
-import 'mobile_product_form_screen.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 
 class MobileCreditNoteFormScreen extends StatefulWidget {
@@ -149,40 +148,35 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
   }
 
   void _addOrEditItem({CreditNoteItem? item, int? index}) async {
-    final result = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => MobileArticleForm(
-        initialData: item != null ? MobileArticleFormResult(
-          productId: item.productId,
-          productName: 'Article',
-          description: '',
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          tvaRate: item.tvaRate,
-          discountPercent: 0,
-        ) : null,
-        onSave: (result) {
-          final newItem = CreditNoteItem(
-            id: item?.id ?? _uuid.v4(),
-            productId: result.productId,
-            quantity: result.quantity,
-            unitPrice: result.unitPrice,
-            tvaRate: result.tvaRate,
-            totalHT: result.computedTotalHT,
-          );
+    final initialData = item != null ? MobileArticleFormResult(
+      productId: item.productId,
+      productName: 'Article',
+      description: '',
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      tvaRate: item.tvaRate,
+      discountPercent: 0,
+    ) : null;
 
-          setState(() {
-            if (index != null) {
-              _items[index] = newItem;
-            } else {
-              _items.add(newItem);
-            }
-          });
-        },
-      ),
-    );
+    final result = await MobileArticleForm.show(context, initialData: initialData, isPurchase: false);
+    if (result != null) {
+      final newItem = CreditNoteItem(
+        id: item?.id ?? _uuid.v4(),
+        productId: result.productId,
+        quantity: result.quantity,
+        unitPrice: result.unitPrice,
+        tvaRate: result.tvaRate,
+        totalHT: result.computedTotalHT,
+      );
+
+      setState(() {
+        if (index != null) {
+          _items[index] = newItem;
+        } else {
+          _items.add(newItem);
+        }
+      });
+    }
   }
 
   @override

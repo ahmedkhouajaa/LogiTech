@@ -295,16 +295,22 @@ class _MobileStockTransferCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Expanded(
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
                     child: Text(
-                      transfer.number,
+                      transfer.number.isNotEmpty ? transfer.number : 'BT-${transfer.date.year}-00000',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
+                  Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(

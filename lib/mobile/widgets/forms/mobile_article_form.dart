@@ -6,7 +6,6 @@ import '../../../blocs/products/products_bloc.dart';
 import '../../../utils/constants.dart';
 import '../../../utils/helpers.dart';
 import 'mobile_smart_fields.dart';
-import '../../screens/forms/mobile_product_form_screen.dart';
 
 class MobileArticleFormResult {
   final String productId;
@@ -65,7 +64,6 @@ class MobileArticleForm extends StatefulWidget {
 class _MobileArticleFormState extends State<MobileArticleForm> {
   final _uuid = const Uuid();
   
-  Product? _selectedProduct;
   String _productId = '';
   String _productName = '';
   String _description = '';
@@ -75,6 +73,8 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
   double _discountPercent = 0;
   bool _showDescription = false;
   bool _applyDiscount = false;
+
+  late final TextEditingController _unitPriceController;
 
   @override
   void initState() {
@@ -94,6 +94,16 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
       _showDescription = _description != _productName && _description.isNotEmpty;
       _applyDiscount = _discountPercent > 0;
     }
+
+    _unitPriceController = TextEditingController(
+      text: _unitPrice > 0 ? _unitPrice.toStringAsFixed(3) : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _unitPriceController.dispose();
+    super.dispose();
   }
 
   double get _computedTotalHT => (_quantity * _unitPrice) * (1 - (_discountPercent / 100));
@@ -248,13 +258,14 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                                 );
                               },
                               onSelected: (Product selection) {
+                                final price = widget.isPurchase ? selection.purchasePrice : selection.sellingPrice;
                                 setState(() {
-                                  _selectedProduct = selection;
                                   _productId = selection.id;
                                   _productName = selection.name;
                                   _description = selection.name;
-                                  _unitPrice = widget.isPurchase ? selection.purchasePrice : selection.sellingPrice;
+                                  _unitPrice = price;
                                   _tvaRate = selection.tvaRate;
+                                  _unitPriceController.text = price.toStringAsFixed(3);
                                 });
                               },
                             );
@@ -313,7 +324,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                       Expanded(
                         child: SmartTextInput(
                           label: 'P.U HT',
-                          initialValue: _unitPrice > 0 ? _unitPrice.toStringAsFixed(3) : '',
+                          controller: _unitPriceController,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           suffixText: 'TND',
                           onChanged: (v) => setState(() => _unitPrice = double.tryParse(v) ?? 0),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../blocs/stock/stock_bloc.dart';
 import '../../../../blocs/stock_transfers/stock_transfers_bloc.dart';
 import '../../../../blocs/products/products_bloc.dart';
 import '../../../../models/stock_transfer.dart';
@@ -9,7 +10,6 @@ import '../../../../models/product.dart';
 import '../../../../models/stock_movement.dart';
 import '../../../../database/database_helper.dart';
 import '../../../../utils/constants.dart';
-import '../../../../utils/helpers.dart';
 
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
@@ -44,6 +44,9 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
     super.initState();
     if (context.read<ProductsBloc>().state is! ProductsLoaded) {
       context.read<ProductsBloc>().add(LoadProducts());
+    }
+    if (context.read<StockBloc>().state is! StockLoaded) {
+      context.read<StockBloc>().add(LoadStock());
     }
     _loadWarehouses();
 
@@ -157,6 +160,9 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
       backgroundColor: Colors.transparent,
       builder: (context) {
         return _AddTransferArticleSheet(
+          sourceWarehouseId: _sourceWarehouseId,
+          destWarehouseId: _destWarehouseId,
+          warehouses: _warehouses,
           onAdd: (item) {
             setState(() {
               _items.add(item);
@@ -230,72 +236,212 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
           icon: Icons.inventory_2_outlined,
           child: Padding(
             padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_items.isEmpty)
-                  Container(
-                    padding: EdgeInsets.symmetric(vertical: 32),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
-                    child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
-                  )
-                else
-                  ..._items.asMap().entries.map((e) {
-                    final index = e.key;
-                    final item = e.value;
-                    return Card(
-                      elevation: 0,
-                      margin: EdgeInsets.only(bottom: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                      color: AppColors.surface,
-                      child: Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                              child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(item.productName ?? 'Article', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                  if (item.productSku != null && item.productSku!.isNotEmpty) ...[
-                                    SizedBox(height: 2),
-                                    Text(item.productSku!, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+            child: BlocBuilder<StockBloc, StockState>(
+              builder: (context, stockState) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_items.isEmpty)
+                      Container(
+                        padding: EdgeInsets.symmetric(vertical: 32),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(AppRadius.md)),
+                        child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textTertiary)),
+                      )
+                    else
+                      ..._items.asMap().entries.map((e) {
+                        final index = e.key;
+                        final item = e.value;
+
+                        double sourceStock = 0.0;
+                        double destStock = 0.0;
+                        if (stockState is StockLoaded) {
+                          bool sourceIsDefault = false;
+                          bool destIsDefault = false;
+                          try {
+                            sourceIsDefault = _warehouses.firstWhere((w) => w.id == _sourceWarehouseId).isDefault;
+                          } catch (_) {}
+                          try {
+                            destIsDefault = _warehouses.firstWhere((w) => w.id == _destWarehouseId).isDefault;
+                          } catch (_) {}
+
+                          for (var m in stockState.movements) {
+                            if (m.productId == item.productId) {
+                              final isSourceMatch = m.warehouseId == _sourceWarehouseId || (m.warehouseId == 'default_warehouse' && sourceIsDefault);
+                              final isDestMatch = m.warehouseId == _destWarehouseId || (m.warehouseId == 'default_warehouse' && destIsDefault);
+
+                              if (isSourceMatch) {
+                                if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
+                                  sourceStock += m.quantity;
+                                } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
+                                  sourceStock -= m.quantity;
+                                }
+                              }
+                              if (isDestMatch) {
+                                if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
+                                  destStock += m.quantity;
+                                } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
+                                  destStock -= m.quantity;
+                                }
+                              }
+                            }
+                          }
+                        }
+
+                        final finalSourceStock = sourceStock - item.quantityToTransfer;
+                        final finalDestStock = destStock + item.quantityToTransfer;
+
+                        return Card(
+                          elevation: 0,
+                          margin: EdgeInsets.only(bottom: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                          color: AppColors.surface,
+                          child: Padding(
+                            padding: EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
+                                      child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 18),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(item.productName ?? 'Article', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                          if (item.productSku != null && item.productSku!.isNotEmpty)
+                                            Text(item.productSku!, style: TextStyle(color: AppColors.textTertiary, fontSize: 11)),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                                      onPressed: () => setState(() => _items.removeAt(index)),
+                                    ),
                                   ],
-                                  SizedBox(height: 4),
-                                  Text('Qté à transférer: ${item.quantityToTransfer}', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
-                                ],
-                              ),
+                                ),
+                                Divider(height: 16, color: AppColors.border),
+
+                                // Source Stock metrics
+                                Text('Stock Source', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                        decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Qté stock src', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                                            SizedBox(height: 2),
+                                            Text('${sourceStock.toInt() == sourceStock ? sourceStock.toInt() : sourceStock.toStringAsFixed(2)}',
+                                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.success)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(6)),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Qté à transfér.', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                                            SizedBox(height: 2),
+                                            Text('${item.quantityToTransfer.toInt() == item.quantityToTransfer ? item.quantityToTransfer.toInt() : item.quantityToTransfer.toStringAsFixed(2)}',
+                                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                        decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Qté fin. src', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                                            SizedBox(height: 2),
+                                            Text('${finalSourceStock.toInt() == finalSourceStock ? finalSourceStock.toInt() : finalSourceStock.toStringAsFixed(2)}',
+                                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: finalSourceStock < 0 ? AppColors.error : AppColors.success)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 8),
+
+                                // Destination Stock metrics
+                                Text('Stock Destination', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                        decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Qté stock dest.', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                                            SizedBox(height: 2),
+                                            Text('${destStock.toInt() == destStock ? destStock.toInt() : destStock.toStringAsFixed(2)}',
+                                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(6)),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Qté fin. dest.', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+                                            SizedBox(height: 2),
+                                            Text('${finalDestStock.toInt() == finalDestStock ? finalDestStock.toInt() : finalDestStock.toStringAsFixed(2)}',
+                                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.success)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                            IconButton(
-                              icon: Icon(Icons.delete_outline, color: AppColors.error),
-                              onPressed: () => setState(() => _items.removeAt(index)),
-                            ),
-                          ],
-                        ),
+                          ),
+                        );
+                      }),
+                    SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: _showAddArticleDialog,
+                      icon: Icon(Icons.add_rounded),
+                      label: Text('Ajouter un article'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: BorderSide(color: AppColors.primary),
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                       ),
-                    );
-                  }),
-                SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: _showAddArticleDialog,
-                  icon: Icon(Icons.add_rounded),
-                  label: Text('Ajouter un article'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    side: BorderSide(color: AppColors.primary),
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                  ),
-                ),
-              ],
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -305,9 +451,17 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
 }
 
 class _AddTransferArticleSheet extends StatefulWidget {
+  final String? sourceWarehouseId;
+  final String? destWarehouseId;
+  final List<Warehouse> warehouses;
   final Function(StockTransferItem) onAdd;
 
-  const _AddTransferArticleSheet({required this.onAdd});
+  const _AddTransferArticleSheet({
+    required this.sourceWarehouseId,
+    required this.destWarehouseId,
+    required this.warehouses,
+    required this.onAdd,
+  });
 
   @override
   State<_AddTransferArticleSheet> createState() => _AddTransferArticleSheetState();
@@ -378,6 +532,96 @@ class _AddTransferArticleSheetState extends State<_AddTransferArticleSheet> {
             },
           ),
           SizedBox(height: 16),
+
+          if (_selectedProduct != null)
+            BlocBuilder<StockBloc, StockState>(
+              builder: (context, stockState) {
+                double sourceStock = 0.0;
+                double destStock = 0.0;
+
+                if (stockState is StockLoaded) {
+                  bool sourceIsDefault = false;
+                  bool destIsDefault = false;
+                  try {
+                    sourceIsDefault = widget.warehouses.firstWhere((w) => w.id == widget.sourceWarehouseId).isDefault;
+                  } catch (_) {}
+                  try {
+                    destIsDefault = widget.warehouses.firstWhere((w) => w.id == widget.destWarehouseId).isDefault;
+                  } catch (_) {}
+
+                  for (var m in stockState.movements) {
+                    if (m.productId == _selectedProduct!.id) {
+                      final isSourceMatch = m.warehouseId == widget.sourceWarehouseId || (m.warehouseId == 'default_warehouse' && sourceIsDefault);
+                      final isDestMatch = m.warehouseId == widget.destWarehouseId || (m.warehouseId == 'default_warehouse' && destIsDefault);
+
+                      if (isSourceMatch) {
+                        if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
+                          sourceStock += m.quantity;
+                        } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
+                          sourceStock -= m.quantity;
+                        }
+                      }
+                      if (isDestMatch) {
+                        if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
+                          destStock += m.quantity;
+                        } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
+                          destStock -= m.quantity;
+                        }
+                      }
+                    }
+                  }
+                }
+
+                final finalSourceStock = sourceStock - _quantity;
+                final finalDestStock = destStock + _quantity;
+
+                return Container(
+                  margin: EdgeInsets.only(bottom: 16),
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceAlt,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Qté stock source:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          Text('${sourceStock.toInt() == sourceStock ? sourceStock.toInt() : sourceStock.toStringAsFixed(2)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.success)),
+                        ],
+                      ),
+                      SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Qté finale source:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          Text('${finalSourceStock.toInt() == finalSourceStock ? finalSourceStock.toInt() : finalSourceStock.toStringAsFixed(2)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: finalSourceStock < 0 ? AppColors.error : AppColors.success)),
+                        ],
+                      ),
+                      Divider(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Qté stock dest.:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          Text('${destStock.toInt() == destStock ? destStock.toInt() : destStock.toStringAsFixed(2)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                        ],
+                      ),
+                      SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Qté finale dest.:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          Text('${finalDestStock.toInt() == finalDestStock ? finalDestStock.toInt() : finalDestStock.toStringAsFixed(2)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.success)),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
           SmartTextInput(
             label: 'Quantité à transférer',
             initialValue: '1',

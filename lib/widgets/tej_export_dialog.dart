@@ -24,19 +24,13 @@ class TejExportDialog extends StatefulWidget {
 class _TejExportDialogState extends State<TejExportDialog> {
   DateTime _selectedDate = DateTime.now();
   String _searchQuery = '';
-  Set<String> _selectedPaymentIds = {};
   bool _isExporting = false;
 
-  @override
-  void initState() {
-    super.initState();
-    // Pre-select all payment IDs initially for the default month
-    _updateInitialSelection();
-  }
-
-  void _updateInitialSelection() {
-    final initialFiltered = _getFilteredPayments();
-    _selectedPaymentIds = initialFiltered.map((p) => p.id).toSet();
+  bool get _isMonthClosed {
+    final now = DateTime.now();
+    if (_selectedDate.year < now.year) return true;
+    if (_selectedDate.year == now.year && _selectedDate.month < now.month) return true;
+    return false;
   }
 
   List<Payment> _getFilteredPayments() {
@@ -70,8 +64,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
   @override
   Widget build(BuildContext context) {
     final filteredPayments = _getFilteredPayments();
-    final allSelected = filteredPayments.isNotEmpty &&
-        filteredPayments.every((p) => _selectedPaymentIds.contains(p.id));
+    final isClosed = _isMonthClosed;
 
     return Dialog(
       shape: RoundedRectangleBorder(
@@ -112,6 +105,45 @@ class _TejExportDialogState extends State<TejExportDialog> {
             Divider(height: 1, color: AppColors.border),
             SizedBox(height: AppSpacing.md),
 
+            // Closed month alert banner
+            Container(
+              padding: EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: isClosed
+                    ? AppColors.success.withValues(alpha: 0.1)
+                    : AppColors.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: isClosed
+                      ? AppColors.success.withValues(alpha: 0.3)
+                      : AppColors.warning.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isClosed ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded,
+                    color: isClosed ? AppColors.success : AppColors.warning,
+                    size: 20,
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      isClosed
+                          ? 'Mois clôturé. L\'exportation TEJ est disponible.'
+                          : 'L\'exportation TEJ est uniquement disponible pour les mois clôturés (terminés).',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isClosed ? AppColors.success : AppColors.warning,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: AppSpacing.md),
+
             // Filters Section inside mini-interface
             Row(
               children: [
@@ -147,7 +179,6 @@ class _TejExportDialogState extends State<TejExportDialog> {
                               onSelected: (month) {
                                 setState(() {
                                   _selectedDate = DateTime(_selectedDate.year, month);
-                                  _updateInitialSelection();
                                 });
                               },
                               itemBuilder: (context) {
@@ -228,7 +259,6 @@ class _TejExportDialogState extends State<TejExportDialog> {
                               onSelected: (year) {
                                 setState(() {
                                   _selectedDate = DateTime(year, _selectedDate.month);
-                                  _updateInitialSelection();
                                 });
                               },
                               itemBuilder: (context) => List.generate(10, (i) => 2022 + i).map((y) {
@@ -295,7 +325,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Recherche (Facture / Réf / Fournisseur)',
+                        'Recherche (Facture / Réf / ${widget.isSales ? "Client" : "Fournisseur"})',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -314,7 +344,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                           style: TextStyle(
                               fontSize: 13, color: AppColors.textPrimary),
                           decoration: InputDecoration(
-                            hintText: 'Rechercher par ref. ou fournisseur...',
+                            hintText: 'Rechercher par ref. ou contact...',
                             hintStyle: TextStyle(
                                 color: AppColors.textTertiary, fontSize: 13),
                             prefixIcon: Icon(Icons.search_rounded,
@@ -347,7 +377,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
 
             // Table Header / List
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
                 color: AppColors.surfaceAlt,
                 borderRadius: BorderRadius.only(
@@ -357,22 +387,6 @@ class _TejExportDialogState extends State<TejExportDialog> {
               ),
               child: Row(
                 children: [
-                  Checkbox(
-                    value: allSelected,
-                    activeColor: AppColors.primary,
-                    onChanged: (val) {
-                      setState(() {
-                        if (val == true) {
-                          _selectedPaymentIds
-                              .addAll(filteredPayments.map((p) => p.id));
-                        } else {
-                          for (var p in filteredPayments) {
-                            _selectedPaymentIds.remove(p.id);
-                          }
-                        }
-                      });
-                    },
-                  ),
                   Expanded(
                     flex: 3,
                     child: Text(
@@ -446,82 +460,55 @@ class _TejExportDialogState extends State<TejExportDialog> {
                             Divider(height: 1, color: AppColors.border),
                         itemBuilder: (context, index) {
                           final payment = filteredPayments[index];
-                          final isSelected =
-                              _selectedPaymentIds.contains(payment.id);
 
-                          return InkWell(
-                            onTap: () {
-                              setState(() {
-                                if (isSelected) {
-                                  _selectedPaymentIds.remove(payment.id);
-                                } else {
-                                  _selectedPaymentIds.add(payment.id);
-                                }
-                              });
-                            },
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              child: Row(
-                                children: [
-                                  Checkbox(
-                                    value: isSelected,
-                                    activeColor: AppColors.primary,
-                                    onChanged: (val) {
-                                      setState(() {
-                                        if (val == true) {
-                                          _selectedPaymentIds.add(payment.id);
-                                        } else {
-                                          _selectedPaymentIds
-                                              .remove(payment.id);
-                                        }
-                                      });
-                                    },
+                          return Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(
+                                    payment.reference ?? payment.paymentNumber,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
+                                    ),
                                   ),
-                                  Expanded(
-                                    flex: 3,
-                                    child: Text(
-                                      payment.reference ?? payment.paymentNumber,
-                                      style: TextStyle(
+                                ),
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(
+                                    payment.contactName ?? '—',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    formatDate(payment.paymentDate),
+                                    style: TextStyle(
                                         fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.primary,
-                                      ),
+                                        color: AppColors.textSecondary),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    '${formatCurrency(payment.amount, symbol: '')} DT',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
                                     ),
                                   ),
-                                  Expanded(
-                                    flex: 3,
-                                    child: Text(
-                                      payment.contactName ?? '—',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      formatDate(payment.paymentDate),
-                                      style: TextStyle(
-                                          fontSize: 13,
-                                          color: AppColors.textSecondary),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      '${formatCurrency(payment.amount, symbol: '')} DT',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -535,7 +522,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${_selectedPaymentIds.intersection(filteredPayments.map((p) => p.id).toSet()).length} élément(s) sélectionné(s)',
+                  '${filteredPayments.length} facture(s) incluse(s)',
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -559,34 +546,27 @@ class _TejExportDialogState extends State<TejExportDialog> {
                     ),
                     SizedBox(width: 12),
                     ElevatedButton.icon(
-                      onPressed: _isExporting ||
-                              _selectedPaymentIds
-                                  .intersection(filteredPayments
-                                      .map((p) => p.id)
-                                      .toSet())
-                                  .isEmpty
+                      onPressed: (_isExporting || !isClosed || filteredPayments.isEmpty)
                           ? null
                           : () async {
                               setState(() {
                                 _isExporting = true;
                               });
 
-                              final toExport = filteredPayments
-                                  .where(
-                                      (p) => _selectedPaymentIds.contains(p.id))
-                                  .toList();
+                              final navigator = Navigator.of(context);
+                              final messenger = ScaffoldMessenger.of(context);
 
                               try {
                                 final path = await TejExportService.exportAchats(
-                                  toExport,
+                                  filteredPayments,
                                   _selectedDate.year,
                                   _selectedDate.month,
                                 );
 
                                 if (mounted) {
-                                  Navigator.of(context).pop();
+                                  navigator.pop();
                                   if (path != null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    messenger.showSnackBar(
                                       SnackBar(
                                         behavior: SnackBarBehavior.floating,
                                         margin: EdgeInsets.all(AppSpacing.lg),
@@ -644,9 +624,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                                   } else {
                                                     await OpenFilex.open(path);
                                                   }
-                                                } catch (e) {
-                                                  print('Error opening file location: $e');
-                                                }
+                                                } catch (_) {}
                                               },
                                               icon: Icon(Icons.folder_open_rounded, size: 16, color: Colors.white),
                                               label: Text(
@@ -667,7 +645,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                       ),
                                     );
                                   } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    messenger.showSnackBar(
                                       SnackBar(
                                         behavior: SnackBarBehavior.floating,
                                         margin: EdgeInsets.all(AppSpacing.lg),
@@ -685,7 +663,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                   setState(() {
                                     _isExporting = false;
                                   });
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     SnackBar(
                                       behavior: SnackBarBehavior.floating,
                                       margin: EdgeInsets.all(AppSpacing.lg),
@@ -715,6 +693,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
+                        disabledBackgroundColor: AppColors.border,
                         padding: EdgeInsets.symmetric(
                             horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(

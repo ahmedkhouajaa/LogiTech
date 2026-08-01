@@ -44,6 +44,32 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
     super.dispose();
   }
 
+  double _getWarehouseStockForProduct(Product product, StockState stockState) {
+    if (_selectedWarehouseId == null) return product.stockQty;
+    if (stockState is! StockLoaded) return product.stockQty;
+    
+    double stock = 0.0;
+    bool isWarehouseDefault = false;
+    try {
+      final warehouses = stockState.warehouses;
+      isWarehouseDefault = warehouses.firstWhere((w) => w.id == _selectedWarehouseId).isDefault;
+    } catch (_) {}
+
+    for (var m in stockState.movements) {
+      if (m.productId == product.id) {
+        final isWarehouseMatch = m.warehouseId == _selectedWarehouseId || (m.warehouseId == 'default_warehouse' && isWarehouseDefault);
+        if (isWarehouseMatch) {
+          if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
+            stock += m.quantity;
+          } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
+            stock -= m.quantity;
+          }
+        }
+      }
+    }
+    return stock;
+  }
+
   void _save() {
     if (_selectedProduct == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -71,12 +97,13 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
       final stockState = context.read<StockBloc>().state;
       if (stockState is! StockLoaded) return;
 
+      final currentStock = _getWarehouseStockForProduct(_selectedProduct!, stockState);
       final qtyInput = double.parse(qtyText);
       double qtyToRegister = 0;
       MovementType type = MovementType.adjustment;
 
       if (_adjustmentAction == 'correct') {
-        final diff = qtyInput - _selectedProduct!.stockQty;
+        final diff = qtyInput - currentStock;
         qtyToRegister = diff;
         type = MovementType.adjustment;
       } else if (_adjustmentAction == 'add') {
@@ -143,144 +170,149 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
           icon: Icons.inventory_2_outlined,
           child: Padding(
             padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                BlocBuilder<ProductsBloc, ProductsState>(
-                  builder: (context, pState) {
-                    if (pState is! ProductsLoaded) {
-                      return Center(child: CircularProgressIndicator());
-                    }
-                    return Autocomplete<Product>(
-                      displayStringForOption: (p) => p.name,
-                      optionsBuilder: (textEditingValue) {
-                        if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
-                        return pState.products.where((p) =>
-                            p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) ||
-                            p.code.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-                      },
-                      onSelected: (p) {
-                        setState(() {
-                          _selectedProduct = p;
-                          if (_adjustmentAction == 'correct') {
-                            _quantityCtrl.text = p.stockQty.toString();
-                          }
-                        });
-                      },
-                      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                        return TextFormField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          decoration: InputDecoration(
-                            hintText: 'Rechercher un article par nom ou code...',
-                            hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 14),
-                            prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
-                            filled: true,
-                            fillColor: AppColors.background,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              borderSide: BorderSide(color: AppColors.border),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              borderSide: BorderSide(color: AppColors.border),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
-                            ),
-                          ),
+            child: BlocBuilder<StockBloc, StockState>(
+              builder: (context, stockState) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    BlocBuilder<ProductsBloc, ProductsState>(
+                      builder: (context, pState) {
+                        if (pState is! ProductsLoaded) {
+                          return Center(child: CircularProgressIndicator());
+                        }
+                        return Autocomplete<Product>(
+                          displayStringForOption: (p) => p.name,
+                          optionsBuilder: (textEditingValue) {
+                            if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
+                            return pState.products.where((p) =>
+                                p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) ||
+                                p.code.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                          },
+                          onSelected: (p) {
+                            setState(() {
+                              _selectedProduct = p;
+                              if (_adjustmentAction == 'correct') {
+                                _quantityCtrl.text = _getWarehouseStockForProduct(p, stockState).toStringAsFixed(0);
+                              }
+                            });
+                          },
+                          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                            return TextFormField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              decoration: InputDecoration(
+                                hintText: 'Rechercher un article par nom ou code...',
+                                hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 14),
+                                prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
+                                filled: true,
+                                fillColor: AppColors.background,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  borderSide: BorderSide(color: AppColors.border),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  borderSide: BorderSide(color: AppColors.border),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                                ),
+                              ),
+                            );
+                          },
+                          optionsViewBuilder: (context, onSelected, options) {
+                            return Align(
+                              alignment: Alignment.topLeft,
+                              child: Material(
+                                elevation: 4,
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxHeight: 200,
+                                    maxWidth: MediaQuery.of(context).size.width - 64,
+                                  ),
+                                  child: ListView.builder(
+                                    padding: EdgeInsets.zero,
+                                    shrinkWrap: true,
+                                    itemCount: options.length,
+                                    itemBuilder: (context, i) {
+                                      final option = options.elementAt(i);
+                                      final optStock = _getWarehouseStockForProduct(option, stockState);
+                                      return ListTile(
+                                        leading: Container(
+                                          padding: EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.primary),
+                                        ),
+                                        title: Text(option.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                        subtitle: Text(
+                                          'Code: ${option.code} • Stock: ${formatQuantity(optStock)} ${option.unit}',
+                                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                        ),
+                                        onTap: () => onSelected(option),
+                                        dense: true,
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         );
                       },
-                      optionsViewBuilder: (context, onSelected, options) {
-                        return Align(
-                          alignment: Alignment.topLeft,
-                          child: Material(
-                            elevation: 4,
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxHeight: 200,
-                                maxWidth: MediaQuery.of(context).size.width - 64,
+                    ),
+                    if (_selectedProduct != null) ...[
+                      SizedBox(height: 12),
+                      Container(
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppColors.primary.withValues(alpha: 0.08), AppColors.primary.withValues(alpha: 0.03)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              child: ListView.builder(
-                                padding: EdgeInsets.zero,
-                                shrinkWrap: true,
-                                itemCount: options.length,
-                                itemBuilder: (context, i) {
-                                  final option = options.elementAt(i);
-                                  return ListTile(
-                                    leading: Container(
-                                      padding: EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.primary),
-                                    ),
-                                    title: Text(option.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                                    subtitle: Text(
-                                      'Code: ${option.code} • Stock: ${formatQuantity(option.stockQty)} ${option.unit}',
-                                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                    ),
-                                    onTap: () => onSelected(option),
-                                    dense: true,
-                                  );
-                                },
+                              child: Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.primary),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _selectedProduct!.name,
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Stock actuel: ${formatQuantity(_getWarehouseStockForProduct(_selectedProduct!, stockState))} ${_selectedProduct!.unit}',
+                                    style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-                if (_selectedProduct != null) ...[
-                  SizedBox(height: 12),
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [AppColors.primary.withValues(alpha: 0.08), AppColors.primary.withValues(alpha: 0.03)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                          ],
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.primary),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _selectedProduct!.name,
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                'Stock actuel: ${formatQuantity(_selectedProduct!.stockQty)} ${_selectedProduct!.unit}',
-                                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
+                    ],
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -289,6 +321,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
         MobileFormSection(
           title: 'Entrepôt & Action',
           icon: Icons.warehouse_rounded,
+          isInitiallyExpanded: true,
           child: Padding(
             padding: EdgeInsets.all(16),
             child: BlocBuilder<StockBloc, StockState>(
@@ -313,47 +346,128 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                       label: 'Entrepôt',
                       value: _selectedWarehouseId,
                       items: stockState.warehouses.map((w) =>
-                        DropdownMenuItem(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 16))),
+                        DropdownMenuItem(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 15))),
                       ).toList(),
                       onChanged: (v) => setState(() => _selectedWarehouseId = v),
                       hint: 'Sélectionner un entrepôt',
                     ),
-                    SizedBox(height: 20),
-                    Text("Type d'action", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                    SizedBox(height: 8),
-                    _buildActionSelector(),
-                    SizedBox(height: 20),
-                    Text(
-                      _adjustmentAction == 'correct' ? 'Nouveau stock réel' : 'Quantité',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                    ),
-                    SizedBox(height: 8),
-                    TextFormField(
-                      controller: _quantityCtrl,
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      decoration: InputDecoration(
-                        hintText: '0',
-                        hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 20),
-                        filled: true,
-                        fillColor: AppColors.background,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          borderSide: BorderSide(color: AppColors.border),
+                    SizedBox(height: 16),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Type d'action", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                              SizedBox(height: 6),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: DropdownButtonFormField<String>(
+                                  value: _adjustmentAction,
+                                  dropdownColor: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  isExpanded: true,
+                                  decoration: InputDecoration(
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                  ),
+                                  items: [
+                                    DropdownMenuItem(
+                                      value: 'add',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.success),
+                                          SizedBox(width: 8),
+                                          Expanded(child: Text('Ajouter au stock', style: TextStyle(fontSize: 13, color: AppColors.success, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                                        ],
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'exit',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.remove_circle_outline_rounded, size: 18, color: AppColors.error),
+                                          SizedBox(width: 8),
+                                          Expanded(child: Text('Retirer du stock', style: TextStyle(fontSize: 13, color: AppColors.error, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                                        ],
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'correct',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.edit_note_rounded, size: 18, color: AppColors.warning),
+                                          SizedBox(width: 8),
+                                          Expanded(child: Text('Corriger (Remplacer)', style: TextStyle(fontSize: 13, color: AppColors.warning, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: (v) {
+                                    if (v != null) {
+                                      setState(() {
+                                        _adjustmentAction = v;
+                                        if (v == 'correct' && _selectedProduct != null) {
+                                          _quantityCtrl.text = _getWarehouseStockForProduct(_selectedProduct!, stockState).toStringAsFixed(0);
+                                        } else {
+                                          _quantityCtrl.clear();
+                                        }
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          borderSide: BorderSide(color: AppColors.border),
+                        SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _adjustmentAction == 'correct' ? 'Nouveau stock' : 'Quantité',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                              ),
+                              SizedBox(height: 6),
+                              TextFormField(
+                                controller: _quantityCtrl,
+                                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                decoration: InputDecoration(
+                                  hintText: '0',
+                                  hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 15),
+                                  filled: true,
+                                  fillColor: AppColors.background,
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    borderSide: BorderSide(color: AppColors.border),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    borderSide: BorderSide(color: AppColors.border),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          borderSide: BorderSide(color: AppColors.primary, width: 1.5),
-                        ),
-                        suffixText: _selectedProduct?.unit ?? '',
-                        suffixStyle: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-                      ),
+                      ],
                     ),
                   ],
                 );
@@ -362,15 +476,15 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
           ),
         ),
 
-        // ── Section 3: Notes ──
+        // ── Section 3: Notes / Motif ──
         MobileFormSection(
-          title: 'Notes / Motif',
+          title: 'Notes / Motif d\'ajustement',
           icon: Icons.notes_rounded,
-          isInitiallyExpanded: false,
+          isInitiallyExpanded: true,
           child: Padding(
             padding: EdgeInsets.all(16),
             child: SmartTextInput(
-              label: 'Notes internes, motif d\'ajustement...',
+              label: 'Ex: Inventaire du mois, produit cassé...',
               controller: _notesCtrl,
               hint: 'Ex: Inventaire du mois, produit cassé...',
               maxLines: 3,
@@ -378,70 +492,6 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildActionSelector() {
-    return Container(
-      padding: EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Row(
-        children: [
-          _buildActionChip('add', 'Ajouter', Icons.add_rounded, AppColors.success),
-          SizedBox(width: 4),
-          _buildActionChip('exit', 'Retirer', Icons.remove_rounded, AppColors.error),
-          SizedBox(width: 4),
-          _buildActionChip('correct', 'Corriger', Icons.edit_rounded, AppColors.warning),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionChip(String action, String label, IconData icon, Color color) {
-    final isSelected = _adjustmentAction == action;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _adjustmentAction = action;
-            if (action == 'correct' && _selectedProduct != null) {
-              _quantityCtrl.text = _selectedProduct!.stockQty.toString();
-            } else {
-              _quantityCtrl.clear();
-            }
-          });
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            border: isSelected ? Border.all(color: color.withValues(alpha: 0.4)) : null,
-            boxShadow: isSelected
-                ? [BoxShadow(color: color.withValues(alpha: 0.1), blurRadius: 4, offset: Offset(0, 1))]
-                : [],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 16, color: isSelected ? color : AppColors.textSecondary),
-              SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? color : AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

@@ -544,6 +544,32 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
     super.dispose();
   }
 
+  double _getWarehouseStockForProduct(Product product, StockState stockState) {
+    if (_selectedWarehouseId == null) return product.stockQty;
+    if (stockState is! StockLoaded) return product.stockQty;
+    
+    double stock = 0.0;
+    bool isWarehouseDefault = false;
+    try {
+      final warehouses = stockState.warehouses;
+      isWarehouseDefault = warehouses.firstWhere((w) => w.id == _selectedWarehouseId).isDefault;
+    } catch (_) {}
+
+    for (var m in stockState.movements) {
+      if (m.productId == product.id) {
+        final isWarehouseMatch = m.warehouseId == _selectedWarehouseId || (m.warehouseId == 'default_warehouse' && isWarehouseDefault);
+        if (isWarehouseMatch) {
+          if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
+            stock += m.quantity;
+          } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
+            stock -= m.quantity;
+          }
+        }
+      }
+    }
+    return stock;
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<StockBloc, StockState>(
@@ -554,6 +580,8 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
         if (_selectedWarehouseId == null && stockState.warehouses.isNotEmpty) {
           _selectedWarehouseId = stockState.warehouses.first.id;
         }
+
+        double currentWarehouseStock = _selectedProduct != null ? _getWarehouseStockForProduct(_selectedProduct!, stockState) : 0;
 
         return AlertDialog(
           title: const Text('Nouvel ajustement de stock', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -583,7 +611,7 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                             setState(() {
                               _selectedProduct = p;
                               if (_adjustmentAction == 'correct') {
-                                _quantityCtrl.text = p.stockQty.toString();
+                                _quantityCtrl.text = _getWarehouseStockForProduct(p, stockState).toStringAsFixed(0);
                               }
                             });
                           },
@@ -617,9 +645,10 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                                     itemCount: options.length,
                                     itemBuilder: (context, i) {
                                       final option = options.elementAt(i);
+                                      final optStock = _getWarehouseStockForProduct(option, stockState);
                                       return ListTile(
                                         title: Text(option.name, style: TextStyle(fontSize: 13)),
-                                        subtitle: Text('Stock actuel : ${option.stockQty} ${option.unit}', style: TextStyle(fontSize: 11, color: AppColors.primary)),
+                                        subtitle: Text('Stock actuel : ${optStock.toStringAsFixed(0)} ${option.unit}', style: TextStyle(fontSize: 11, color: AppColors.primary)),
                                         onTap: () => onSelected(option),
                                         dense: true,
                                       );
@@ -636,12 +665,12 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                       SizedBox(height: 6),
                       Container(
                         padding: EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
                         child: Row(
                           children: [
                             Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.primary),
                             SizedBox(width: 8),
-                            Text('Stock actuel : ${_selectedProduct!.stockQty} ${_selectedProduct!.unit}', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+                            Text('Stock actuel : ${currentWarehouseStock.toStringAsFixed(0)} ${_selectedProduct!.unit}', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
                           ],
                         ),
                       ),

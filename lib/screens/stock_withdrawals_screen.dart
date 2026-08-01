@@ -13,7 +13,6 @@ import '../models/stock_withdrawal.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'create_stock_withdrawal_screen.dart';
-import '../mobile/screens/forms/mobile_exit_voucher_form_screen.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 
@@ -65,8 +64,8 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
     if (mounted) setState(() => _warehouses = ws);
   }
 
-  String _getWarehouseName(String id) {
-    if (id == 'default_warehouse') return 'Entrepôt par défaut';
+  String _getWarehouseName(String? id) {
+    if (id == null || id.isEmpty || id == 'default_warehouse') return 'Entrepôt par défaut';
     try {
       return _warehouses.firstWhere((w) => w.id == id).name;
     } catch (_) {
@@ -89,13 +88,10 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
   }
 
   void _navigate(BuildContext context, [StockWithdrawal? entry]) {
-    final isMobile = MediaQuery.of(context).size.width < 800;
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => isMobile 
-            ? MobileExitVoucherFormScreen(existing: entry, isExitVoucher: widget.isExitVoucher)
-            : CreateStockWithdrawalScreen(existing: entry),
+        builder: (_) => CreateStockWithdrawalScreen(existing: entry, isExitVoucher: widget.isExitVoucher),
       ),
     );
   }
@@ -452,49 +448,49 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
 
   Widget _buildMobileCard(BuildContext context, StockWithdrawal entry) {
     return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.sm),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
         boxShadow: AppShadows.sm,
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           onTap: () => _navigate(context, entry),
           child: Padding(
-            padding: EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top row: Reference + Actions
+                // Top row: Ref Badge + Status Chip + Actions
                 Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         entry.number,
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.bold,
                           color: AppColors.primary,
                         ),
                       ),
                     ),
-                    Spacer(),
+                    const Spacer(),
                     _buildStatusChip(entry.status),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 4),
                     PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert, color: AppColors.textSecondary, size: 20),
+                      icon: Icon(Icons.more_vert, color: AppColors.textTertiary),
                       padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(),
+                      constraints: const BoxConstraints(),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       color: AppColors.surface,
                       onSelected: (val) {
@@ -506,24 +502,24 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                         PopupMenuItem(
                           value: 'voir',
                           child: Row(children: [
-                            Icon(Icons.visibility_outlined, size: 16, color: AppColors.textSecondary),
-                            SizedBox(width: 8),
-                            Text('Voir')
+                            Icon(Icons.visibility_rounded, size: 16, color: AppColors.textSecondary),
+                            const SizedBox(width: 8),
+                            const Text('Voir'),
                           ]),
                         ),
                         PopupMenuItem(
                           value: 'edit',
                           child: Row(children: [
                             Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
-                            SizedBox(width: 8),
-                            Text('Modifier'),
+                            const SizedBox(width: 8),
+                            const Text('Modifier'),
                           ]),
                         ),
                         PopupMenuItem(
                           value: 'delete',
                           child: Row(children: [
                             Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Text('Supprimer', style: TextStyle(color: AppColors.error)),
                           ]),
                         ),
@@ -531,50 +527,61 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: 12),
-                // Info rows
+                const SizedBox(height: 10),
+                
+                // Row 1: Date & Time
                 Row(
                   children: [
-                    _buildInfoItem(Icons.calendar_today_rounded, formatDateTimeLong(entry.date)),
-                  ],
-                ),
-                SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildInfoItem(Icons.warehouse_rounded, 'Entrepôt par défaut'),
+                    Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Text(
+                      formatDateTimeLong(entry.date),
+                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                     ),
-                    _buildArticlesDisplay(entry.items),
                   ],
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 6),
+
+                // Row 2: Warehouse + Article Count on the right
                 Row(
                   children: [
-                    _buildInfoItem(Icons.person_rounded, 'Admin'),
+                    Icon(Icons.store_rounded, size: 14, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _getWarehouseName(entry.warehouseId),
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Text(
+                      '${entry.items.length} article${entry.items.length > 1 ? 's' : ''}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
                   ],
                 ),
+                if (entry.createdBy != null && entry.createdBy!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.person_outline, size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 6),
+                      Text(
+                        entry.createdBy!,
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildInfoItem(IconData icon, String text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: AppColors.textTertiary),
-        SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            text,
-            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
     );
   }
 

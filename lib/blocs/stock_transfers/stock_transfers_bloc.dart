@@ -215,7 +215,20 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
 
   Future<void> _onAdd(AddStockTransfer event, Emitter<StockTransfersState> emit) async {
     try {
-      await _dbHelper.insertStockTransfer(event.transfer);
+      final db = await _dbHelper.database;
+      
+      String number = event.transfer.number;
+      if (number.isEmpty || number.startsWith('BT-')) {
+        final now = DateTime.now();
+        final countMap = await db.rawQuery(
+            "SELECT COUNT(*) as count FROM stock_transfers WHERE date LIKE '${now.year}-%'"
+        );
+        final count = (countMap.first['count'] as int? ?? 0) + 1;
+        number = 'BT-${now.year}-${count.toString().padLeft(5, '0')}';
+      }
+
+      final transferToInsert = event.transfer.copyWith(number: number);
+      await _dbHelper.insertStockTransfer(transferToInsert);
       add(LoadStockTransfers());
     } catch (e) {
       emit(StockTransfersError(e.toString()));

@@ -96,6 +96,14 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
         return;
       }
       seenProducts.add(item.productId);
+
+      final stock = _stockQuantities[item.productId] ?? 0.0;
+      if (item.quantity > stock) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: La quantité à retirer (${item.quantity.toInt()}) dépasse le stock disponible (${stock.toInt()})')),
+        );
+        return;
+      }
     }
 
     final entry = StockWithdrawal(
@@ -327,20 +335,26 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
       children: [
         Text('Entrepôt', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
         SizedBox(height: 8),
-        DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-          value: _warehouseId,
+        InputDecorator(
           decoration: InputDecoration(
-            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
           ),
-          items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 13)))).toList(),
-          onChanged: (val) {
-            if (val != null) setState(() => _warehouseId = val);
-          },
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              dropdownColor: AppColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+              value: _warehouses.any((w) => w.id == _warehouseId) ? _warehouseId : null,
+              isExpanded: true,
+              hint: Text('Sélectionner un entrepôt', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 13)))).toList(),
+              onChanged: (val) {
+                if (val != null) setState(() => _warehouseId = val);
+              },
+            ),
+          ),
         ),
       ],
     );
@@ -439,81 +453,86 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
           products = state.products;
         }
 
-        return Card(
-          elevation: 0,
-          color: AppColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: AppColors.border)),
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-            Text('Articles', style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-            SizedBox(height: 24),
+        return BlocBuilder<StockBloc, StockState>(
+          builder: (context, stockState) {
+            return Card(
+              elevation: 0,
+              color: AppColors.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: AppColors.border)),
+              child: Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Articles', style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                    SizedBox(height: 24),
 
-            // Items List
-            ..._items.asMap().entries.map((entry) {
-              final index = entry.key;
-              final item = entry.value;
-              return _buildItemRow(index, item, products);
-            }),
+                    // Items List
+                    ..._items.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final item = entry.value;
+                      return _buildItemRow(index, item, products, stockState);
+                    }),
 
-            SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _addEmptyItem,
-                  icon: Icon(Icons.add, size: 16),
-                  label: Text('Ajouter une ligne'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
-                    side: BorderSide(color: AppColors.border),
-                  ),
+                    SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _addEmptyItem,
+                          icon: Icon(Icons.add, size: 16),
+                          label: Text('Ajouter une ligne'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textPrimary,
+                            side: BorderSide(color: AppColors.border),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        IconButton(
+                          icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+                          tooltip: 'Créer un nouvel article',
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+                          },
+                          splashRadius: 24,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-                  tooltip: 'Créer un nouvel article',
-                  onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
-                  },
-                  splashRadius: 24,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  },
-  );
-}
-
-  
-  TextStyle _tableHeaderStyle() {
-    return TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary);
-  }
-
-  
-  InputDecoration _itemInputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-      isDense: true,
-      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
-  double _getRealCurrentStock(StockWithdrawalItem currentItem) {
+  double _getRealCurrentStock(StockWithdrawalItem currentItem, StockState stockState) {
     if (currentItem.productId.isEmpty) return 0;
-    double stock = _stockQuantities[currentItem.productId] ?? 0;
+    
+    double stock = 0.0;
+    bool isWarehouseDefault = false;
+    try {
+      isWarehouseDefault = _warehouses.firstWhere((w) => w.id == _warehouseId).isDefault;
+    } catch (_) {}
+
+    if (stockState is StockLoaded) {
+      for (var m in stockState.movements) {
+        if (m.productId == currentItem.productId) {
+          final isWarehouseMatch = m.warehouseId == _warehouseId || (m.warehouseId == 'default_warehouse' && isWarehouseDefault);
+          if (isWarehouseMatch) {
+            if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
+              stock += m.quantity;
+            } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
+              stock -= m.quantity;
+            }
+          }
+        }
+      }
+    } else {
+      stock = _stockQuantities[currentItem.productId] ?? 0;
+    }
     
     // If editing an existing withdrawal, the DB stock already has the old quantity deducted.
     // We must add it back to show the true "stock before withdrawal" preview in the UI.
@@ -530,8 +549,8 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
     return stock;
   }
 
-  Widget _buildItemRow(int index, StockWithdrawalItem item, List<Product> products) {
-    double currentStock = _getRealCurrentStock(item);
+  Widget _buildItemRow(int index, StockWithdrawalItem item, List<Product> products, StockState stockState) {
+    double currentStock = _getRealCurrentStock(item, stockState);
     double finalStock = currentStock - item.quantity;
 
     if (_isMobile) {

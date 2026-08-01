@@ -3,7 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_retenue_source_vente_card.dart';
+import '../widgets/mobile_tej_export_dialog.dart';
 import '../../blocs/retenue_source_vente/retenue_source_vente_bloc.dart';
+import '../../database/database_helper.dart';
+import '../../utils/constants.dart';
 import '../../widgets/sidebar_menu.dart';
 
 class MobileRetenueSourceVentesList extends StatefulWidget {
@@ -148,10 +151,25 @@ class _MobileRetenueSourceVentesListState extends State<MobileRetenueSourceVente
           isEmpty: isEmpty,
           emptyMessage: 'Aucune retenue à la source trouvée.',
           itemCount: count,
+          scrollController: _scrollController,
+          customFab: FloatingActionButton.extended(
+            onPressed: () async {
+              final payments = await DatabaseHelper.instance.getPayments();
+              if (context.mounted) {
+                MobileTejExportDialog.show(
+                  context,
+                  payments: payments,
+                  isSales: widget.isSales,
+                );
+              }
+            },
+            icon: const Icon(Icons.file_download_outlined, color: Colors.white),
+            label: const Text('Exporter TEJ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            backgroundColor: AppColors.primary,
+          ),
           child: Column(
             children: cards,
           ),
-          scrollController: _scrollController,
         );
       },
     );

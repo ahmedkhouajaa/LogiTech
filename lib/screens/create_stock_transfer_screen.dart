@@ -30,11 +30,11 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
   String? _destWarehouseId;
 
   List<Warehouse> _warehouses = [];
-  List<Product> _products = [];
 
   List<StockTransferItem> _items = [];
 
   bool get isEdit => widget.existing != null;
+  bool get _isMobile => MediaQuery.of(context).size.width < 800;
 
   String formatAmount(double amount, {String symbol = ''}) {
     if (amount == amount.toInt()) return amount.toInt().toString() + (symbol.isNotEmpty ? ' $symbol' : '');
@@ -160,47 +160,231 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        title: Text(
-          isEdit ? 'Modifier le bon ${widget.existing!.number}' : 'Créer un bon de transfert',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          TextButton.icon(
-            onPressed: () => Navigator.pop(context),
-            icon: Icon(Icons.arrow_back, size: 18),
-            label: Text('Retour'),
-            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
-          ),
-          SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: _save,
-            icon: Icon(Icons.check, size: 18, color: Colors.white),
-            label: Text('Valider', style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-          ),
-          SizedBox(width: 16),
-        ],
-      ),
       body: Form(
         key: _formKey,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildInformationsSection(),
-              SizedBox(height: AppSpacing.lg),
-              _buildArticlesSection(),
-            ],
-          ),
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(_isMobile ? AppSpacing.md : AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInformationsSection(),
+                    SizedBox(height: _isMobile ? AppSpacing.md : AppSpacing.lg),
+                    _buildArticlesSection(),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
+  Widget _buildHeader() {
+    return Container(
+      color: AppColors.surface,
+      padding: EdgeInsets.symmetric(horizontal: _isMobile ? AppSpacing.md : AppSpacing.lg, vertical: AppSpacing.md),
+      child: _isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.arrow_back, size: 22),
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints(),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        isEdit ? 'Modifier le bon ${widget.existing!.number}' : 'Créer un bon de transfert',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _save,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
+                      child: Text('Valider'),
+                    ),
+                  ],
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Text(
+                  isEdit ? 'Modifier' : 'Créer',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                ),
+                Spacer(),
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.arrow_back, size: 18),
+                  label: Text('Retour'),
+                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.textPrimary, side: BorderSide(color: AppColors.border)),
+                ),
+                SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: _save,
+                  icon: Icon(Icons.check, size: 18),
+                  label: Text('Valider'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+                ),
+              ],
+            ),
+    );
+  }
+
   Widget _buildInformationsSection() {
+    final dateField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Date', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        SizedBox(height: 8),
+        InkWell(
+          onTap: () async {
+            final date = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate,
+              firstDate: DateTime(2000),
+              lastDate: DateTime(2100),
+            );
+            if (date != null) setState(() => _selectedDate = date);
+          },
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(formatDateTimeLong(_selectedDate), style: TextStyle(fontSize: 14)),
+                Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+
+    final sourceField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Entrepôt Source', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        SizedBox(height: 8),
+        InputDecorator(
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.surfaceAlt,
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              dropdownColor: AppColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+              value: _warehouses.any((w) => w.id == _sourceWarehouseId) ? _sourceWarehouseId : null,
+              isExpanded: true,
+              hint: Text('Sélectionner...', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _sourceWarehouseId = newValue;
+                });
+                _onWarehouseChanged();
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+
+    final destField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Entrepôt Destination', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        SizedBox(height: 8),
+        InputDecorator(
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.surfaceAlt,
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              dropdownColor: AppColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+              value: _warehouses.any((w) => w.id == _destWarehouseId) ? _destWarehouseId : null,
+              isExpanded: true,
+              hint: Text('Sélectionner...', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _destWarehouseId = newValue;
+                });
+                _onWarehouseChanged();
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+
+    final reasonField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Raison (optionnel)', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        SizedBox(height: 8),
+        TextFormField(
+          controller: _reasonController,
+          decoration: InputDecoration(
+            hintText: 'Raison de l\'opération...',
+            filled: true,
+            fillColor: AppColors.surfaceAlt,
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+          ),
+          maxLines: 2,
+        ),
+      ],
+    );
+
+    final notesField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Notes (optionnel)', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        SizedBox(height: 8),
+        TextFormField(
+          controller: _notesController,
+          decoration: InputDecoration(
+            hintText: 'Notes additionnelles...',
+            filled: true,
+            fillColor: AppColors.surfaceAlt,
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+          ),
+          maxLines: 2,
+        ),
+      ],
+    );
+
     return Card(
       color: AppColors.surface,
       elevation: 0,
@@ -209,154 +393,41 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
         side: BorderSide(color: AppColors.border),
       ),
       child: Padding(
-        padding: EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.all(_isMobile ? 16.0 : AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Informations', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Date', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                      SizedBox(height: 8),
-                      InkWell(
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: _selectedDate,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                          );
-                          if (date != null) setState(() => _selectedDate = date);
-                        },
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(formatDateTimeLong(_selectedDate), style: TextStyle(fontSize: 14)),
-                              Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Entrepôt Source', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                      SizedBox(height: 8),
-                      DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                        value: _sourceWarehouseId,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: AppColors.surfaceAlt,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-                        ),
-                        items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _sourceWarehouseId = newValue;
-                          });
-                          _onWarehouseChanged();
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Entrepôt Destination', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                      SizedBox(height: 8),
-                      DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                        value: _destWarehouseId,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: AppColors.surfaceAlt,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-                        ),
-                        items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _destWarehouseId = newValue;
-                          });
-                          _onWarehouseChanged();
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Raison (optionnel)', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                      SizedBox(height: 8),
-                      TextFormField(
-                        controller: _reasonController,
-                        decoration: InputDecoration(
-                          hintText: 'Raison de l\'opération...',
-                          filled: true,
-                          fillColor: AppColors.surfaceAlt,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-                        ),
-                        maxLines: 2,
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Notes (optionnel)', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                      SizedBox(height: 8),
-                      TextFormField(
-                        controller: _notesController,
-                        decoration: InputDecoration(
-                          hintText: 'Notes additionnelles...',
-                          filled: true,
-                          fillColor: AppColors.surfaceAlt,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-                        ),
-                        maxLines: 2,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            if (_isMobile) ...[
+              dateField,
+              SizedBox(height: 16),
+              sourceField,
+              SizedBox(height: 16),
+              destField,
+              SizedBox(height: 16),
+              reasonField,
+              SizedBox(height: 16),
+              notesField,
+            ] else ...[
+              Row(
+                children: [
+                  Expanded(child: dateField),
+                  SizedBox(width: 16),
+                  Expanded(child: sourceField),
+                  SizedBox(width: 16),
+                  Expanded(child: destField),
+                ],
+              ),
+              SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(child: reasonField),
+                  SizedBox(width: 16),
+                  Expanded(child: notesField),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -374,96 +445,93 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
         return BlocBuilder<StockBloc, StockState>(
           builder: (context, stockState) {
             return Card(
-          color: AppColors.surface,
-          elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        side: BorderSide(color: AppColors.border),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Articles', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            SizedBox(height: 16),
-            
-            // Header Row
-            Row(
-              children: [
-                Expanded(flex: 3, child: Text('Produit', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                SizedBox(width: 8),
-                Expanded(flex: 1, child: Text('Qté en stock source', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                SizedBox(width: 8),
-                Expanded(flex: 1, child: Text('Qté à transférer', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                SizedBox(width: 8),
-                Expanded(flex: 1, child: Text('Qté finale source', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                SizedBox(width: 8),
-                Expanded(flex: 1, child: Text('Qté en stock dest.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                SizedBox(width: 8),
-                Expanded(flex: 1, child: Text('Qté finale dest.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
-                SizedBox(width: 40),
-              ],
-            ),
-            SizedBox(height: 8),
-            
-            // Items List
-            ..._items.asMap().entries.map((entry) {
-              final index = entry.key;
-              final item = entry.value;
-              
-              double sourceStock = 0.0;
-              double destStock = 0.0;
-              if (stockState is StockLoaded) {
-                bool sourceIsDefault = false;
-                bool destIsDefault = false;
-                try {
-                  sourceIsDefault = _warehouses.firstWhere((w) => w.id == _sourceWarehouseId).isDefault;
-                } catch (_) {}
-                try {
-                  destIsDefault = _warehouses.firstWhere((w) => w.id == _destWarehouseId).isDefault;
-                } catch (_) {}
-
-                for (var m in stockState.movements) {
-                  if (m.productId == item.productId) {
-                    final isSourceMatch = m.warehouseId == _sourceWarehouseId || (m.warehouseId == 'default_warehouse' && sourceIsDefault);
-                    final isDestMatch = m.warehouseId == _destWarehouseId || (m.warehouseId == 'default_warehouse' && destIsDefault);
-                    
-                    if (isSourceMatch) {
-                      if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) sourceStock += m.quantity;
-                      else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) sourceStock -= m.quantity;
-                    }
-                    if (isDestMatch) {
-                      if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) destStock += m.quantity;
-                      else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) destStock -= m.quantity;
-                    }
-                  }
-                }
-              }
-              
-              final finalSourceStock = sourceStock - item.quantityToTransfer;
-              final finalDestStock = destStock + item.quantityToTransfer;
-              final isDuplicate = item.productId.isNotEmpty && _items.where((i) => i.productId == item.productId).length > 1;
-              
-              return Padding(
-                padding: EdgeInsets.only(bottom: 8.0),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              color: AppColors.surface,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                side: BorderSide(color: AppColors.border),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(_isMobile ? 16.0 : AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Product Selection
-                    Expanded(
-                      flex: 3,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                    Text('Articles', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                    SizedBox(height: 16),
+                    
+                    if (!_isMobile) ...[
+                      // Desktop Header Row
+                      Row(
                         children: [
-                          Container(
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceAlt,
-                              borderRadius: BorderRadius.circular(AppRadius.sm),
-                              border: isDuplicate ? Border.all(color: AppColors.error) : null,
-                            ),
-                            child: Autocomplete<Product>(
+                          Expanded(flex: 3, child: Text('Produit', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+                          SizedBox(width: 8),
+                          Expanded(flex: 1, child: Text('Qté en stock source', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+                          SizedBox(width: 8),
+                          Expanded(flex: 1, child: Text('Qté à transférer', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+                          SizedBox(width: 8),
+                          Expanded(flex: 1, child: Text('Qté finale source', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+                          SizedBox(width: 8),
+                          Expanded(flex: 1, child: Text('Qté en stock dest.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+                          SizedBox(width: 8),
+                          Expanded(flex: 1, child: Text('Qté finale dest.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+                          SizedBox(width: 40),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                    ],
+                    
+                    // Items List
+                    ..._items.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final item = entry.value;
+                      
+                      double sourceStock = 0.0;
+                      double destStock = 0.0;
+                      if (stockState is StockLoaded) {
+                        bool sourceIsDefault = false;
+                        bool destIsDefault = false;
+                        try {
+                          sourceIsDefault = _warehouses.firstWhere((w) => w.id == _sourceWarehouseId).isDefault;
+                        } catch (_) {}
+                        try {
+                          destIsDefault = _warehouses.firstWhere((w) => w.id == _destWarehouseId).isDefault;
+                        } catch (_) {}
+
+                        for (var m in stockState.movements) {
+                          if (m.productId == item.productId) {
+                            final isSourceMatch = m.warehouseId == _sourceWarehouseId || (m.warehouseId == 'default_warehouse' && sourceIsDefault);
+                            final isDestMatch = m.warehouseId == _destWarehouseId || (m.warehouseId == 'default_warehouse' && destIsDefault);
+                            
+                            if (isSourceMatch) {
+                              if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
+                                sourceStock += m.quantity;
+                              } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
+                                sourceStock -= m.quantity;
+                              }
+                            }
+                            if (isDestMatch) {
+                              if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
+                                destStock += m.quantity;
+                              } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
+                                destStock -= m.quantity;
+                              }
+                            }
+                          }
+                        }
+                      }
+                      
+                      final finalSourceStock = sourceStock - item.quantityToTransfer;
+                      final finalDestStock = destStock + item.quantityToTransfer;
+                      final isDuplicate = item.productId.isNotEmpty && _items.where((i) => i.productId == item.productId).length > 1;
+
+                      final autocompleteWidget = Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceAlt,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          border: isDuplicate ? Border.all(color: AppColors.error) : null,
+                        ),
+                        child: Autocomplete<Product>(
                           initialValue: TextEditingValue(
                             text: item.productName ?? '',
                           ),
@@ -528,148 +596,299 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                             });
                           },
                         ),
+                      );
+
+                      if (_isMobile) {
+                        return Container(
+                          margin: EdgeInsets.only(bottom: 12),
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceAlt.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(color: AppColors.border),
                           ),
-                          if (isDuplicate)
-                            Padding(
-                              padding: EdgeInsets.only(top: 4, left: 4),
-                              child: Text(
-                                'Produit déjà ajouté',
-                                style: TextStyle(color: AppColors.error, fontSize: 11),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text('Produit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                  Spacer(),
+                                  IconButton(
+                                    icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                                    padding: EdgeInsets.zero,
+                                    constraints: BoxConstraints(),
+                                    onPressed: () => setState(() => _items.removeAt(index)),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 6),
+                              autocompleteWidget,
+                              if (isDuplicate)
+                                Padding(
+                                  padding: EdgeInsets.only(top: 4, left: 4),
+                                  child: Text('Produit déjà ajouté', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                                ),
+                              SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('En stock src', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                        SizedBox(height: 4),
+                                        Container(
+                                          padding: EdgeInsets.all(10),
+                                          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(AppRadius.sm), border: Border.all(color: AppColors.border)),
+                                          child: Center(child: Text(formatAmount(sourceStock, symbol: ''), style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 12))),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Qté à transfér.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                        SizedBox(height: 4),
+                                        TextFormField(
+                                          initialValue: item.quantityToTransfer > 0 ? formatAmount(item.quantityToTransfer, symbol: '') : '',
+                                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(fontSize: 12),
+                                          decoration: InputDecoration(
+                                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                                            filled: true,
+                                            fillColor: AppColors.surface,
+                                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide(color: AppColors.border)),
+                                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide(color: AppColors.border)),
+                                          ),
+                                          onChanged: (val) {
+                                            final qty = double.tryParse(val.replaceAll(',', '.')) ?? 0;
+                                            setState(() {
+                                              _items[index] = StockTransferItem(
+                                                id: item.id, transferId: item.transferId, productId: item.productId, 
+                                                productName: item.productName, productSku: item.productSku, 
+                                                quantityToTransfer: qty,
+                                              );
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Qté fin. src', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                        SizedBox(height: 4),
+                                        Container(
+                                          padding: EdgeInsets.all(10),
+                                          decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(AppRadius.sm), border: Border.all(color: AppColors.border)),
+                                          child: Center(child: Text(formatAmount(finalSourceStock, symbol: ''), style: TextStyle(color: finalSourceStock < 0 ? AppColors.error : AppColors.success, fontWeight: FontWeight.bold, fontSize: 12))),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('En stock dest.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                        SizedBox(height: 4),
+                                        Container(
+                                          padding: EdgeInsets.all(10),
+                                          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(AppRadius.sm), border: Border.all(color: AppColors.border)),
+                                          child: Center(child: Text(formatAmount(destStock, symbol: ''), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 12))),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Qté fin. dest.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                        SizedBox(height: 4),
+                                        Container(
+                                          padding: EdgeInsets.all(10),
+                                          decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(AppRadius.sm), border: Border.all(color: AppColors.border)),
+                                          child: Center(child: Text(formatAmount(finalDestStock, symbol: ''), style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 12))),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Spacer(),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Product Selection
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  autocompleteWidget,
+                                  if (isDuplicate)
+                                    Padding(
+                                      padding: EdgeInsets.only(top: 4, left: 4),
+                                      child: Text(
+                                        'Produit déjà ajouté',
+                                        style: TextStyle(color: AppColors.error, fontSize: 11),
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    
-                    // Stock Source
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        padding: EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.sm)),
-                        child: Text(
-                          formatAmount(sourceStock, symbol: ''),
-                          textAlign: TextAlign.right,
-                          style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold),
+                            SizedBox(width: 8),
+                            
+                            // Stock Source
+                            Expanded(
+                              flex: 1,
+                              child: Container(
+                                padding: EdgeInsets.all(12),
+                                decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                child: Text(
+                                  formatAmount(sourceStock, symbol: ''),
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            
+                            // Qty to Transfer
+                            Expanded(
+                              flex: 1,
+                              child: TextFormField(
+                                initialValue: item.quantityToTransfer > 0 ? formatAmount(item.quantityToTransfer, symbol: '') : '',
+                                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                textAlign: TextAlign.right,
+                                decoration: InputDecoration(
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide(color: AppColors.border)),
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide(color: AppColors.border)),
+                                ),
+                                onChanged: (val) {
+                                  final qty = double.tryParse(val.replaceAll(',', '.')) ?? 0;
+                                  setState(() {
+                                    _items[index] = StockTransferItem(
+                                      id: item.id, transferId: item.transferId, productId: item.productId, 
+                                      productName: item.productName, productSku: item.productSku, 
+                                      quantityToTransfer: qty,
+                                    );
+                                  });
+                                },
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            
+                            // Final Stock Source
+                            Expanded(
+                              flex: 1,
+                              child: Container(
+                                padding: EdgeInsets.all(12),
+                                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                child: Text(
+                                  formatAmount(finalSourceStock, symbol: ''),
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(color: finalSourceStock < 0 ? AppColors.error : AppColors.success, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            
+                            // Stock Dest
+                            Expanded(
+                              flex: 1,
+                              child: Container(
+                                padding: EdgeInsets.all(12),
+                                decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                child: Text(
+                                  formatAmount(destStock, symbol: ''),
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            
+                            // Final Stock Dest
+                            Expanded(
+                              flex: 1,
+                              child: Container(
+                                padding: EdgeInsets.all(12),
+                                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                child: Text(
+                                  formatAmount(finalDestStock, symbol: ''),
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            
+                            // Delete Button
+                            IconButton(
+                              icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                              onPressed: () => setState(() => _items.removeAt(index)),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-                    SizedBox(width: 8),
+                      );
+                    }),
                     
-                    // Qty to Transfer
-                    Expanded(
-                      flex: 1,
-                      child: TextFormField(
-                        initialValue: item.quantityToTransfer > 0 ? formatAmount(item.quantityToTransfer, symbol: '') : '',
-                        keyboardType: TextInputType.numberWithOptions(decimal: true),
-                        textAlign: TextAlign.right,
-                        decoration: InputDecoration(
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide(color: AppColors.border)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide(color: AppColors.border)),
+                    SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _items.add(StockTransferItem(transferId: '', productId: '', quantityToTransfer: 0));
+                            });
+                          },
+                          icon: Icon(Icons.add, size: 16),
+                          label: Text('Ajouter une ligne'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textPrimary,
+                            side: BorderSide(color: AppColors.border),
+                          ),
                         ),
-                        onChanged: (val) {
-                          final qty = double.tryParse(val.replaceAll(',', '.')) ?? 0;
-                          setState(() {
-                            _items[index] = StockTransferItem(
-                              id: item.id, transferId: item.transferId, productId: item.productId, 
-                              productName: item.productName, productSku: item.productSku, 
-                              quantityToTransfer: qty,
-                            );
-                          });
-                        },
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    
-                    // Final Stock Source
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        padding: EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(AppRadius.sm)),
-                        child: Text(
-                          formatAmount(finalSourceStock, symbol: ''),
-                          textAlign: TextAlign.right,
-                          style: TextStyle(color: finalSourceStock < 0 ? AppColors.error : AppColors.success, fontWeight: FontWeight.bold),
+                        SizedBox(width: 8),
+                        IconButton(
+                          icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+                          tooltip: 'Créer un nouvel article',
+                          onPressed: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+                          },
+                          splashRadius: 24,
                         ),
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    
-                    // Stock Dest
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        padding: EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(AppRadius.sm)),
-                        child: Text(
-                          formatAmount(destStock, symbol: ''),
-                          textAlign: TextAlign.right,
-                          style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    
-                    // Final Stock Dest
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        padding: EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(AppRadius.sm)),
-                        child: Text(
-                          formatAmount(finalDestStock, symbol: ''),
-                          textAlign: TextAlign.right,
-                          style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    
-                    // Delete Button
-                    IconButton(
-                      icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
-                      onPressed: () => setState(() => _items.removeAt(index)),
+                      ],
                     ),
                   ],
                 ),
-              );
-            }),
-            
-            SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _items.add(StockTransferItem(transferId: '', productId: '', quantityToTransfer: 0));
-                    });
-                  },
-                  icon: Icon(Icons.add, size: 16),
-                  label: Text('Ajouter une ligne'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
-                    side: BorderSide(color: AppColors.border),
-                  ),
-                ),
-                SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
-                  tooltip: 'Créer un nouvel article',
-                  onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
-                  },
-                  splashRadius: 24,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+              ),
+            );
           },
         );
       },
