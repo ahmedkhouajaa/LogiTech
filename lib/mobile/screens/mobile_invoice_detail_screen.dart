@@ -11,6 +11,7 @@ import '../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 
 import '../../models/invoice.dart';
+import '../../models/product.dart';
 import '../../models/payment_model.dart';
 import '../../models/credit_note.dart';
 import '../../models/document_wrapper.dart';
@@ -39,12 +40,38 @@ class MobileInvoiceDetailScreen extends StatefulWidget {
 class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
   late Invoice currentInvoice;
   bool _isPopping = false;
+  Map<String, Product> _dbProducts = {};
 
   @override
   void initState() {
     super.initState();
     currentInvoice = widget.invoice;
     _loadFullInvoice();
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    try {
+      final products = await DatabaseHelper.instance.getProducts();
+      if (mounted) {
+        setState(() {
+          _dbProducts = {for (var p in products) p.id: p};
+        });
+      }
+    } catch (_) {}
+  }
+
+  Product? _getProduct(String id) {
+    if (_dbProducts.containsKey(id)) {
+      return _dbProducts[id];
+    }
+    final state = context.read<ProductsBloc>().state;
+    if (state is ProductsLoaded) {
+      try {
+        return state.products.firstWhere((p) => p.id == id);
+      } catch (_) {}
+    }
+    return null;
   }
 
   Future<void> _loadFullInvoice() async {
@@ -171,38 +198,47 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
               if (currentInvoice.items.isNotEmpty) ...[
                 Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 SizedBox(height: 8),
-                ...currentInvoice.items.map((item) => Card(
-                  elevation: 1,
-                  margin: EdgeInsets.only(bottom: 8),
-                  color: AppColors.surface,
-                  surfaceTintColor: AppColors.surface,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border.withOpacity(0.5))),
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(item.productName ?? item.description ?? 'Produit Inconnu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
-                        if (item.description != null && item.description!.isNotEmpty && item.productName != null) ...[
-                          SizedBox(height: 4),
-                          Text(item.description!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                        ],
-                        SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
-                              child: Text('${item.quantity} x ${formatCurrencyDT(item.unitPrice)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
-                            ),
-                            Text(formatCurrencyDT(item.totalHT), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
+                ...currentInvoice.items.map((item) {
+                  final product = _getProduct(item.productId);
+                  final productName = product?.name ?? item.productName ?? item.description ?? 'Produit Inconnu';
+                  final refCode = product?.reference ?? product?.code;
+                  final subtitleText = (refCode != null && refCode.isNotEmpty)
+                      ? refCode
+                      : ((item.description != null && item.description!.isNotEmpty && item.description != productName) ? item.description! : null);
+
+                  return Card(
+                    elevation: 1,
+                    margin: EdgeInsets.only(bottom: 8),
+                    color: AppColors.surface,
+                    surfaceTintColor: AppColors.surface,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border.withOpacity(0.5))),
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(productName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
+                          if (subtitleText != null) ...[
+                            SizedBox(height: 4),
+                            Text(subtitleText, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                           ],
-                        ),
-                      ],
+                          SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
+                                child: Text('${item.quantity} x ${formatCurrencyDT(item.unitPrice)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                              ),
+                              Text(formatCurrencyDT(item.totalHT), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                )),
+                  );
+                }),
                 SizedBox(height: 16),
               ],
               Card(

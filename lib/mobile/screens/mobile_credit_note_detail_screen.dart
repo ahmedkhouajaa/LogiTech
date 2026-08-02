@@ -6,6 +6,7 @@ import '../../blocs/customers/customers_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
 
 import '../../models/credit_note.dart';
+import '../../models/product.dart';
 import '../../models/document_wrapper.dart';
 
 import '../../utils/constants.dart';
@@ -27,12 +28,38 @@ class MobileCreditNoteDetailScreen extends StatefulWidget {
 
 class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScreen> {
   late CreditNote currentCreditNote;
+  Map<String, Product> _dbProducts = {};
+  String? _customerName;
 
   @override
   void initState() {
     super.initState();
     currentCreditNote = widget.creditNote;
     _loadFullCreditNote();
+    _loadProducts();
+    _loadCustomerName();
+  }
+
+  Future<void> _loadProducts() async {
+    try {
+      final products = await DatabaseHelper.instance.getProducts();
+      if (mounted) {
+        setState(() {
+          _dbProducts = {for (var p in products) p.id: p};
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadCustomerName() async {
+    try {
+      final customer = await DatabaseHelper.instance.getCustomer(currentCreditNote.customerId);
+      if (customer != null && mounted) {
+        setState(() {
+          _customerName = customer.name;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadFullCreditNote() async {
@@ -41,7 +68,21 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
       setState(() {
         currentCreditNote = fullCreditNote;
       });
+      _loadCustomerName();
     }
+  }
+
+  Product? _getProduct(String id) {
+    if (_dbProducts.containsKey(id)) {
+      return _dbProducts[id];
+    }
+    final state = context.read<ProductsBloc>().state;
+    if (state is ProductsLoaded) {
+      try {
+        return state.products.firstWhere((p) => p.id == id);
+      } catch (_) {}
+    }
+    return null;
   }
 
   @override
@@ -118,11 +159,7 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
                       SizedBox(height: 16),
                       _buildInfoRow('Date', formatDateTimeLong(currentCreditNote.date)),
                       SizedBox(height: 8),
-                      _buildInfoRow('Client', currentCreditNote.customerName ?? 'Non spécifié'),
-                      if (currentCreditNote.invoiceId.isNotEmpty) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('Facture liée', currentCreditNote.invoiceId),
-                      ],
+                      _buildInfoRow('Client', _customerName ?? (currentCreditNote.customerName != null && currentCreditNote.customerName!.isNotEmpty ? currentCreditNote.customerName! : 'Non spécifié')),
                     ],
                   ),
                 ),
@@ -141,43 +178,52 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
                   ),
                 )
               else
-                ...currentCreditNote.items.map((item) => Card(
-                  elevation: 0,
-                  margin: EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                          child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Article', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)), // Fallback since creditNoteItem doesn't hold description directly
-                              SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Text('${item.quantity} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                  Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-                                ],
-                              ),
-                            ],
+                ...currentCreditNote.items.map((item) {
+                  final product = _getProduct(item.productId);
+                  final productName = product?.name ?? item.productName ?? item.description ?? 'Article non spécifié';
+                  final refCode = product?.reference ?? product?.code;
+                  return Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                    color: AppColors.surface,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
+                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                           ),
-                        ),
-                        Text(formatCurrencyDT(item.totalHT * (1 + item.tvaRate / 100)), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                      ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(productName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                if (refCode != null && refCode.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                ],
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text('${item.quantity} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                    Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(formatCurrencyDT(item.totalHT * (1 + item.tvaRate / 100)), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        ],
+                      ),
                     ),
-                  ),
-                )),
+                  );
+                }),
               SizedBox(height: 16),
               Card(
                 elevation: 0,

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../models/payment_model.dart';
+import '../../models/supplier.dart';
 import '../../utils/constants.dart';
+import '../../database/database_helper.dart';
 
-class MobilePaymentCard extends StatelessWidget {
+class MobilePaymentCard extends StatefulWidget {
   final Payment payment;
   final VoidCallback onTap;
 
@@ -11,6 +13,65 @@ class MobilePaymentCard extends StatelessWidget {
     required this.payment,
     required this.onTap,
   });
+
+  @override
+  State<MobilePaymentCard> createState() => _MobilePaymentCardState();
+}
+
+class _MobilePaymentCardState extends State<MobilePaymentCard> {
+  String? _contactName;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContactName();
+  }
+
+  @override
+  void didUpdateWidget(covariant MobilePaymentCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.payment.id != widget.payment.id ||
+        oldWidget.payment.contactId != widget.payment.contactId ||
+        oldWidget.payment.contactName != widget.payment.contactName) {
+      _loadContactName();
+    }
+  }
+
+  Future<void> _loadContactName() async {
+    final rawName = widget.payment.contactName;
+    if (rawName != null && rawName.isNotEmpty && rawName != widget.payment.contactId) {
+      if (mounted) setState(() => _contactName = rawName);
+      return;
+    }
+
+    final cid = widget.payment.contactId;
+    if (cid.isEmpty) {
+      if (mounted) setState(() => _contactName = 'Contact non spécifié');
+      return;
+    }
+
+    try {
+      if (widget.payment.contactType == 'customer' || widget.payment.direction == 'encaissement') {
+        final cust = await DatabaseHelper.instance.getCustomer(cid);
+        if (cust != null && mounted) {
+          final resolved = (cust.companyName != null && cust.companyName!.isNotEmpty) ? cust.companyName! : cust.name;
+          setState(() => _contactName = resolved);
+          return;
+        }
+      }
+      final suppliers = await DatabaseHelper.instance.getSuppliers();
+      final supp = suppliers.firstWhere((s) => s.id == cid, orElse: () => Supplier(id: '', code: '', name: '', country: ''));
+      if (supp.id.isNotEmpty && mounted) {
+        final resolved = (supp.companyName != null && supp.companyName!.isNotEmpty) ? supp.companyName! : supp.name;
+        setState(() => _contactName = resolved);
+        return;
+      }
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() => _contactName = widget.payment.contactName ?? widget.payment.contactId);
+    }
+  }
 
   String _getMethodLabel(String m) {
     switch (m.toLowerCase()) {
@@ -79,6 +140,7 @@ class MobilePaymentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final payment = widget.payment;
     final isEncaissement = payment.direction == 'encaissement';
     final amountColor = isEncaissement ? AppColors.success : AppColors.error;
     final amountPrefix = isEncaissement ? '+' : '-';
@@ -87,6 +149,7 @@ class MobilePaymentCard extends StatelessWidget {
     final statusLabel = _getStatusLabel(payment.status);
 
     final dateStr = '${payment.paymentDate.day.toString().padLeft(2, '0')}/${payment.paymentDate.month.toString().padLeft(2, '0')}/${payment.paymentDate.year} ${payment.paymentDate.hour.toString().padLeft(2, '0')}:${payment.paymentDate.minute.toString().padLeft(2, '0')}';
+    final displayName = _contactName ?? payment.contactName ?? payment.contactId;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -100,7 +163,7 @@ class MobilePaymentCard extends StatelessWidget {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         child: InkWell(
-          onTap: onTap,
+          onTap: widget.onTap,
           borderRadius: BorderRadius.circular(AppRadius.lg),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -162,7 +225,7 @@ class MobilePaymentCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        payment.contactName ?? payment.contactId,
+                        displayName,
                         style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                         overflow: TextOverflow.ellipsis,
                       ),

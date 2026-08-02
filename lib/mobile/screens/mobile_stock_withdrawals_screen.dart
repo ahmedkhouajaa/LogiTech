@@ -229,7 +229,7 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => MobileStockWithdrawalDetailScreen(withdrawal: item)),
+            MaterialPageRoute(builder: (_) => MobileStockWithdrawalDetailScreen(withdrawal: item, isExitVoucher: _isExitVoucher)),
           ).then((_) {
             _fetchFilteredWithdrawals();
           });

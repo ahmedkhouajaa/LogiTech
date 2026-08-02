@@ -14,6 +14,8 @@ import '../utils/constants.dart';
 
 import '../models/stock_movement.dart' show Warehouse;
 import 'create_article_screen.dart';
+import '../mobile/screens/forms/mobile_product_form_screen.dart';
+import '../widgets/article_selection_modal.dart';
 class CreateStockEntryScreen extends StatefulWidget {
   final StockEntry? existing;
   const CreateStockEntryScreen({super.key, this.existing});
@@ -104,7 +106,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
       date: _date,
       reason: _reasonController.text,
       notes: _notesController.text,
-      status: 'draft',
+      status: 'validated',
       items: validItems,
     );
 
@@ -180,25 +182,28 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(_isMobile ? AppSpacing.md : AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInfoSection(),
-                    SizedBox(height: 24),
-                    _buildArticlesSection(),
-                  ],
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(_isMobile ? AppSpacing.md : AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildInfoSection(),
+                      SizedBox(height: 24),
+                      _buildArticlesSection(),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              _buildBottomActions(),
+            ],
+          ),
         ),
       ),
     );
@@ -206,64 +211,91 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
 
   Widget _buildHeader() {
     return Container(
-      color: AppColors.surface,
       padding: EdgeInsets.symmetric(horizontal: _isMobile ? AppSpacing.md : AppSpacing.lg, vertical: AppSpacing.md),
-      child: _isMobile
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.arrow_back, size: 22),
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        widget.existing == null ? "Créer un bon d'entrée" : "Modifier le bon d'entrée",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _save,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      ),
-                      child: Text('Valider'),
-                    ),
-                  ],
-                ),
-              ],
-            )
-          : Row(
-              children: [
-                Text(
-                  widget.existing == null ? 'Créer' : 'Modifier',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                ),
-                Spacer(),
-                OutlinedButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.arrow_back, size: 18),
-                  label: Text('Retour'),
-                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.textPrimary, side: BorderSide(color: AppColors.border)),
-                ),
-                SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: _save,
-                  icon: Icon(Icons.check, size: 18),
-                  label: Text('Valider'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
-                ),
-              ],
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: Icon(Icons.arrow_back, size: 22, color: AppColors.textPrimary),
+            padding: EdgeInsets.zero,
+            constraints: BoxConstraints(),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              widget.existing == null ? "Créer un bon d'entrée" : "Modifier le bon d'entrée",
+              style: TextStyle(
+                fontSize: _isMobile ? 18 : 22,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
+          ),
+          SizedBox(width: 8),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.successLight,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Validé',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.success),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomActions() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            offset: Offset(0, -2),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                side: BorderSide(color: AppColors.border),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              ),
+              child: Text('Annuler', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+            ),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton(
+              onPressed: _save,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                elevation: 0,
+              ),
+              child: Text('Valider', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -448,7 +480,25 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         OutlinedButton.icon(
-                          onPressed: _addEmptyItem,
+                          onPressed: () async {
+                            if (_isMobile) {
+                              final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId);
+                              if (selectedProduct != null) {
+                                setState(() {
+                                  _items.add(StockEntryItem(
+                                    id: _uuid.v4(),
+                                    entryId: widget.existing?.id ?? '',
+                                    productId: selectedProduct.id,
+                                    quantity: 0,
+                                    unitPrice: selectedProduct.purchasePrice,
+                                  ));
+                                  _stockQuantities[selectedProduct.id] = selectedProduct.stockQty;
+                                });
+                              }
+                            } else {
+                              _addEmptyItem();
+                            }
+                          },
                           icon: Icon(Icons.add, size: 16),
                           label: Text('Ajouter une ligne'),
                           style: OutlinedButton.styleFrom(
@@ -461,7 +511,11 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
                           tooltip: 'Créer un nouvel article',
                           onPressed: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+                            if (_isMobile) {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
+                            } else {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+                            }
                           },
                           splashRadius: 24,
                         ),
@@ -562,71 +616,41 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Autocomplete<Product>(
-                    initialValue: TextEditingValue(
-                      text: item.productId.isNotEmpty ? products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', code: '', name: '', sellingPrice: 0, purchasePrice: 0, tvaRate: 0, unit: '', productType: '')).name : '',
-                    ),
-                    optionsBuilder: (TextEditingValue textEditingValue) {
-                      if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
-                      final search = textEditingValue.text.toLowerCase();
-                      return products.where((Product p) => 
-                        p.name.toLowerCase().contains(search) || 
-                        p.code.toLowerCase().contains(search) ||
-                        (p.reference?.toLowerCase().contains(search) ?? false)
-                      ).toList();
-                    },
-                    displayStringForOption: (Product option) => option.name,
-                    fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                      return TextFormField(
-                        controller: textEditingController,
-                        focusNode: focusNode,
-                        decoration: InputDecoration(
-                          hintText: 'Sélectionner un article',
-                          hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        ),
-                        style: TextStyle(fontSize: 13),
-                      );
-                    },
-                    optionsViewBuilder: (context, onSelected, options) {
-                      return Align(
-                        alignment: Alignment.topLeft,
-                        child: Material(
-                          elevation: 4,
+                    InkWell(
+                      onTap: () async {
+                        final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId);
+                        if (selectedProduct != null) {
+                          _updateItemProduct(index, selectedProduct);
+                        }
+                      },
+                      child: Container(
+                        height: 40,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(4),
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(maxHeight: 250, maxWidth: MediaQuery.of(context).size.width - 80),
-                            child: ListView.builder(
-                              padding: EdgeInsets.zero,
-                              shrinkWrap: true,
-                              itemCount: options.length,
-                              itemBuilder: (context, i) {
-                                final option = options.elementAt(i);
-                                return ListTile(
-                                  leading: Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textSecondary),
-                                  title: Text(option.name, style: TextStyle(fontSize: 13)),
-                                  onTap: () => onSelected(option),
-                                  dense: true,
-                                );
-                              },
-                            ),
-                          ),
+                          border: Border.all(color: AppColors.border),
                         ),
-                      );
-                    },
-                    onSelected: (Product selection) {
-                      _updateItemProduct(index, selection);
-                    },
-                  ),
-                ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.productId.isNotEmpty
+                                    ? products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', code: '', name: '', sellingPrice: 0, purchasePrice: 0, tvaRate: 0, unit: '', productType: '')).name
+                                    : 'Sélectionner un article',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: item.productId.isNotEmpty ? AppColors.textPrimary : AppColors.textSecondary,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Icon(Icons.arrow_drop_down, color: AppColors.textSecondary, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
                 if (_items.where((i) => i.productId == item.productId && i.productId.isNotEmpty).length > 1)
                   Padding(
                     padding: EdgeInsets.only(top: 4.0),

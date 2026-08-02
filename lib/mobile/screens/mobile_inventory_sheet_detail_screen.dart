@@ -4,7 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../blocs/inventory_sheets/inventory_sheets_bloc.dart';
 import '../../blocs/inventory_sheets/inventory_sheets_state.dart';
 import '../../blocs/inventory_sheets/inventory_sheets_event.dart';
+import '../../blocs/products/products_bloc.dart';
 import '../../models/inventory_sheet.dart';
+import '../../models/product.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../database/database_helper.dart';
@@ -25,11 +27,54 @@ class MobileInventorySheetDetailScreen extends StatefulWidget {
 
 class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetDetailScreen> {
   late InventorySheet currentSheet;
+  Map<String, Product> _dbProducts = {};
+  String? _warehouseName;
 
   @override
   void initState() {
     super.initState();
     currentSheet = widget.sheet;
+    _loadProducts();
+    _loadWarehouseName();
+  }
+
+  Future<void> _loadProducts() async {
+    try {
+      final products = await DatabaseHelper.instance.getProducts();
+      if (mounted) {
+        setState(() {
+          _dbProducts = {for (var p in products) p.id: p};
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadWarehouseName() async {
+    try {
+      final warehouses = await DatabaseHelper.instance.getWarehouses();
+      final match = warehouses.firstWhere(
+        (w) => w.id == currentSheet.warehouseId,
+        orElse: () => warehouses.firstWhere((w) => w.isDefault, orElse: () => warehouses.first),
+      );
+      if (mounted) {
+        setState(() {
+          _warehouseName = match.name;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Product? _getProduct(String id) {
+    if (_dbProducts.containsKey(id)) {
+      return _dbProducts[id];
+    }
+    final state = context.read<ProductsBloc>().state;
+    if (state is ProductsLoaded) {
+      try {
+        return state.products.firstWhere((p) => p.id == id);
+      } catch (_) {}
+    }
+    return null;
   }
 
   void _handleAction(BuildContext context, String action, InventorySheet sheet) {
@@ -41,7 +86,7 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
         ),
       ).then((_) {
         if (mounted) {
-          context.read<InventorySheetsBloc>().add(InventorySheetsLoadRequested());
+          context.read<InventorySheetsBloc>().add(LoadFirstInventorySheets());
         }
       });
     } else if (action == 'delete') {
@@ -128,20 +173,25 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                           Container(
                             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: _getStatusColor(currentSheet.status).withOpacity(0.1),
+                              color: AppColors.success.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(translateStatus(currentSheet.status), style: TextStyle(color: _getStatusColor(currentSheet.status), fontWeight: FontWeight.bold, fontSize: 12)),
+                            child: Text('Validé', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 12)),
                           ),
                         ],
                       ),
-                      SizedBox(height: 16),
-                      _buildDetailRow('Date', formatDate(currentSheet.date)),
-                      _buildDetailRow('Statut', translateStatus(currentSheet.status)),
-                      if (currentSheet.reason != null && currentSheet.reason!.isNotEmpty)
-                        _buildDetailRow('Motif', currentSheet.reason!),
-                      if (currentSheet.notes != null && currentSheet.notes!.isNotEmpty)
-                        _buildDetailRow('Notes', currentSheet.notes!),
+                      const SizedBox(height: 16),
+                      _buildInfoRow('Date', formatDateTimeLong(currentSheet.date)),
+                      const SizedBox(height: 8),
+                      _buildInfoRow('Entrepôt', _warehouseName ?? 'Entrepôt par défaut'),
+                      if (currentSheet.reason != null && currentSheet.reason!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        _buildInfoRow('Motif', currentSheet.reason!),
+                      ],
+                      if (currentSheet.notes != null && currentSheet.notes!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        _buildInfoRow('Notes', currentSheet.notes!),
+                      ],
                     ],
                   ),
                 ),
@@ -160,42 +210,47 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                   ),
                 )
               else
-                ...currentSheet.items.map((item) => Card(
-                  elevation: 0,
-                  margin: EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                          child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item.productName ?? 'Article inconnu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              if (item.productSku != null && item.productSku!.isNotEmpty) ...[
-                                SizedBox(height: 2),
-                                Text(item.productSku!, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                              ],
-                              SizedBox(height: 4),
-                              Text('Qté Théorique: ${item.theoreticalQty}', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                              Text('Qté Physique: ${item.actualQty}', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                            ],
+                ...currentSheet.items.map((item) {
+                  final product = _getProduct(item.productId);
+                  final productName = product?.name ?? item.productName ?? 'Article inconnu';
+                  final refCode = product?.reference ?? product?.code ?? item.productSku;
+                  final unit = product?.unit ?? 'pièces';
+                  final actualQtyText = '${item.actualQty % 1 == 0 ? item.actualQty.toInt() : item.actualQty} $unit';
+                  return Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                    color: AppColors.surface,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
+                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(productName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                if (refCode != null && refCode.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                ],
+                                const SizedBox(height: 4),
+                                Text(actualQtyText, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                )),
+                  );
+                }),
             ],
           ),
         ),
@@ -215,48 +270,26 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
   }
 
   Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Brouillon':
+    switch (status.toLowerCase()) {
+      case 'brouillon':
       case 'draft':
-        return AppColors.warning;
-      case 'Finalisée':
+      case 'finalisée':
       case 'validated':
         return AppColors.success;
       case 'cancelled':
         return AppColors.error;
       default:
-        return AppColors.textTertiary;
+        return AppColors.success;
     }
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ],
-      ),
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
+      ],
     );
   }
 }

@@ -19,8 +19,13 @@ import 'forms/mobile_exit_voucher_form_screen.dart';
 
 class MobileStockWithdrawalDetailScreen extends StatefulWidget {
   final StockWithdrawal withdrawal;
+  final bool isExitVoucher;
 
-  const MobileStockWithdrawalDetailScreen({super.key, required this.withdrawal});
+  const MobileStockWithdrawalDetailScreen({
+    super.key,
+    required this.withdrawal,
+    this.isExitVoucher = false,
+  });
 
   @override
   State<MobileStockWithdrawalDetailScreen> createState() => _MobileStockWithdrawalDetailScreenState();
@@ -28,12 +33,42 @@ class MobileStockWithdrawalDetailScreen extends StatefulWidget {
 
 class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawalDetailScreen> {
   late StockWithdrawal currentWithdrawal;
+  Map<String, Product> _dbProducts = {};
+  String? _warehouseName;
 
   @override
   void initState() {
     super.initState();
     currentWithdrawal = widget.withdrawal;
     _loadFullWithdrawal();
+    _loadProducts();
+    _loadWarehouseName();
+  }
+
+  Future<void> _loadWarehouseName() async {
+    try {
+      final warehouses = await DatabaseHelper.instance.getWarehouses();
+      final match = warehouses.firstWhere(
+        (w) => w.id == currentWithdrawal.warehouseId,
+        orElse: () => warehouses.firstWhere((w) => w.isDefault, orElse: () => warehouses.first),
+      );
+      if (mounted) {
+        setState(() {
+          _warehouseName = match.name;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadProducts() async {
+    try {
+      final products = await DatabaseHelper.instance.getProducts();
+      if (mounted) {
+        setState(() {
+          _dbProducts = {for (var p in products) p.id: p};
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadFullWithdrawal() async {
@@ -46,6 +81,9 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
   }
 
   Product? _getProduct(String id) {
+    if (_dbProducts.containsKey(id)) {
+      return _dbProducts[id];
+    }
     final state = context.read<ProductsBloc>().state;
     if (state is ProductsLoaded) {
       try {
@@ -168,7 +206,7 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                       SizedBox(height: 16),
                       _buildInfoRow('Date', formatDateTimeLong(currentWithdrawal.date)),
                       SizedBox(height: 8),
-                      _buildInfoRow('Client', currentWithdrawal.customerName ?? currentWithdrawal.customerCompany ?? 'Non spécifié'),
+                      _buildInfoRow('Entrepôt', _warehouseName ?? 'Entrepôt par défaut'),
                       if (currentWithdrawal.projectName != null) ...[
                         SizedBox(height: 8),
                         _buildInfoRow('Projet', currentWithdrawal.projectName!),
@@ -191,73 +229,95 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                   ),
                 )
               else
-                ...currentWithdrawal.items.map((item) => Card(
-                  elevation: 0,
-                  margin: EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                          child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item.description ?? 'Article', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Text('${item.quantity} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                  Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-                                  if (item.discountPercent > 0)
-                                    Text(' (-${item.discountPercent}%)', style: TextStyle(color: AppColors.success, fontSize: 12)),
-                                ],
-                              ),
-                            ],
+                ...currentWithdrawal.items.map((item) {
+                  final product = _getProduct(item.productId);
+                  final productName = product?.name ?? item.description ?? 'Article non spécifié';
+                  final unit = product?.unit ?? 'pièces';
+                  final qtyText = widget.isExitVoucher
+                      ? '${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity} x ${formatCurrencyDT(item.unitPrice)}'
+                      : '${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity} $unit';
+                  return Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                    color: AppColors.surface,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
+                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                           ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(productName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                if (product?.reference != null && product!.reference!.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(product.reference!, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                ] else if (product?.code != null && product!.code.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(product.code, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                ],
+                                const SizedBox(height: 4),
+                                if (widget.isExitVoucher)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
+                                    child: Text(qtyText, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                                  )
+                                else
+                                  Text(qtyText, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                          if (widget.isExitVoucher)
+                            Text(
+                              formatCurrencyDT(item.totalHT),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              if (widget.isExitVoucher) ...[
+                const SizedBox(height: 16),
+                // Totals
+                Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                  color: AppColors.surfaceAlt,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        _buildInfoRow('Total HT', formatCurrencyDT(currentWithdrawal.subTotalHT)),
+                        const SizedBox(height: 8),
+                        _buildInfoRow('Total TVA', formatCurrencyDT(currentWithdrawal.totalTVA)),
+                        if (currentWithdrawal.timbreFiscal > 0) ...[
+                          const SizedBox(height: 8),
+                          _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentWithdrawal.timbreFiscal)),
+                        ],
+                        const Divider(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary)),
+                            Text(formatCurrencyDT(currentWithdrawal.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
+                          ],
                         ),
-                        Text(formatCurrencyDT(item.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
                       ],
                     ),
                   ),
-                )),
-              SizedBox(height: 16),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surfaceAlt,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _buildInfoRow('Total HT', formatCurrencyDT(currentWithdrawal.totalHTAfterDiscount)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Total TVA', formatCurrencyDT(currentWithdrawal.totalTVA)),
-                      if ((currentWithdrawal.totalTTC - currentWithdrawal.totalHTAfterDiscount - currentWithdrawal.totalTVA) > 0.01) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentWithdrawal.totalTTC - currentWithdrawal.totalHTAfterDiscount - currentWithdrawal.totalTVA)),
-                      ],
-                      Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentWithdrawal.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
-                        ],
-                      ),
-                    ],
-                  ),
                 ),
-              ),
+              ],
               if (currentWithdrawal.notes != null && currentWithdrawal.notes!.isNotEmpty) ...[
                 SizedBox(height: 16),
                 Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),

@@ -8,6 +8,7 @@ import '../../blocs/customers/customers_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
 
 import '../../models/return_note.dart';
+import '../../models/product.dart';
 import '../../models/document_wrapper.dart';
 
 import '../../utils/constants.dart';
@@ -29,12 +30,38 @@ class MobileReturnNoteDetailScreen extends StatefulWidget {
 
 class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScreen> {
   late ReturnNote currentReturnNote;
+  Map<String, Product> _dbProducts = {};
 
   @override
   void initState() {
     super.initState();
     currentReturnNote = widget.returnNote;
     _loadFullReturnNote();
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    try {
+      final products = await DatabaseHelper.instance.getProducts();
+      if (mounted) {
+        setState(() {
+          _dbProducts = {for (var p in products) p.id: p};
+        });
+      }
+    } catch (_) {}
+  }
+
+  Product? _getProduct(String id) {
+    if (_dbProducts.containsKey(id)) {
+      return _dbProducts[id];
+    }
+    final state = context.read<ProductsBloc>().state;
+    if (state is ProductsLoaded) {
+      try {
+        return state.products.firstWhere((p) => p.id == id);
+      } catch (_) {}
+    }
+    return null;
   }
 
   Future<void> _loadFullReturnNote() async {
@@ -133,10 +160,6 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                       _buildInfoRow('Date', formatDateTimeLong(currentReturnNote.dateEmission)),
                       SizedBox(height: 8),
                       _buildInfoRow('Client', currentReturnNote.customerName ?? currentReturnNote.customerCompany ?? 'Non spécifié'),
-                      if (currentReturnNote.deliveryNoteId != null) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('BL lié', currentReturnNote.deliveryNoteId!),
-                      ],
                     ],
                   ),
                 ),
@@ -155,47 +178,56 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                   ),
                 )
               else
-                ...currentReturnNote.items.map((item) => Card(
-                  elevation: 0,
-                  margin: EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                          child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item.designation, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Text('${item.quantity.abs()} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                  Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-                                ],
-                              ),
-                              if (item.reason != null) ...[
-                                SizedBox(height: 4),
-                                Text(item.reason!, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                              ]
-                            ],
+                ...currentReturnNote.items.map((item) {
+                  final product = item.productId != null ? _getProduct(item.productId!) : null;
+                  final productName = item.designation.isNotEmpty ? item.designation : (product?.name ?? 'Article non spécifié');
+                  final refCode = product?.reference ?? product?.code;
+                  return Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                    color: AppColors.surface,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
+                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                           ),
-                        ),
-                        Text(formatCurrencyDT(item.totalHT * (1 + item.tvaRate / 100)), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                      ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(productName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                if (refCode != null && refCode.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                ],
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text('${item.quantity.abs()} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                    Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+                                  ],
+                                ),
+                                if (item.reason != null && item.reason!.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(item.reason!, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                                ]
+                              ],
+                            ),
+                          ),
+                          Text(formatCurrencyDT(item.totalHT), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        ],
+                      ),
                     ),
-                  ),
-                )),
+                  );
+                }),
               SizedBox(height: 16),
               Card(
                 elevation: 0,

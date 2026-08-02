@@ -9,6 +9,7 @@ import '../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 
 import '../../models/receiving_voucher.dart';
+import '../../models/product.dart';
 import '../../models/document_wrapper.dart';
 import '../../models/purchase_invoice.dart';
 import '../../models/supplier_return.dart';
@@ -41,12 +42,38 @@ class MobileReceivingVoucherDetailScreen extends StatefulWidget {
 
 class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVoucherDetailScreen> {
   late ReceivingVoucher currentVoucher;
+  Map<String, Product> _dbProducts = {};
 
   @override
   void initState() {
     super.initState();
     currentVoucher = widget.voucher;
     _loadFullVoucher();
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    try {
+      final products = await DatabaseHelper.instance.getProducts();
+      if (mounted) {
+        setState(() {
+          _dbProducts = {for (var p in products) p.id: p};
+        });
+      }
+    } catch (_) {}
+  }
+
+  Product? _getProduct(String id) {
+    if (_dbProducts.containsKey(id)) {
+      return _dbProducts[id];
+    }
+    final state = context.read<ProductsBloc>().state;
+    if (state is ProductsLoaded) {
+      try {
+        return state.products.firstWhere((p) => p.id == id);
+      } catch (_) {}
+    }
+    return null;
   }
 
   Future<void> _loadFullVoucher() async {
@@ -143,51 +170,57 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
                   ),
                 )
               else
-                ...currentVoucher.items.map((item) => Card(
-                  elevation: 0,
-                  margin: EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                          child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item.productName ?? 'Produit: ${item.productId}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Text('${item.quantityReceived} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                  Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-                                ],
-                              ),
-                              if (item.quantityExpected != null && item.quantityExpected != item.quantityReceived) ...[
-                                SizedBox(height: 4),
-                                Text('Attendu: ${item.quantityExpected}', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                              ],
-                              if (item.discountPercent > 0) ...[
-                                SizedBox(height: 4),
-                                Text('Remise: ${item.discountPercent}%', style: TextStyle(color: AppColors.error, fontSize: 12)),
-                              ]
-                            ],
+                ...currentVoucher.items.map((item) {
+                  final product = _getProduct(item.productId);
+                  final productName = product?.name ?? item.productName ?? 'Article non spécifié';
+                  final refCode = product?.reference ?? product?.code;
+
+                  return Card(
+                    elevation: 0,
+                    margin: EdgeInsets.only(bottom: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                    color: AppColors.surface,
+                    child: Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
+                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                           ),
-                        ),
-                        Text(formatCurrencyDT(item.computedTotalHT), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                      ],
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(productName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                if (refCode != null && refCode.isNotEmpty) ...[
+                                  SizedBox(height: 2),
+                                  Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                ],
+                                SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text('${item.quantityReceived} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                    Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+                                  ],
+                                ),
+                                if (item.discountPercent > 0) ...[
+                                  SizedBox(height: 4),
+                                  Text('Remise: ${item.discountPercent}%', style: TextStyle(color: AppColors.error, fontSize: 12)),
+                                ]
+                              ],
+                            ),
+                          ),
+                          Text(formatCurrencyDT(item.computedTotalHT), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        ],
+                      ),
                     ),
-                  ),
-                )),
+                  );
+                }),
               SizedBox(height: 16),
               Card(
                 elevation: 0,

@@ -13,6 +13,7 @@ class MobileStatusColors {
 
     // 2. Validé / Accepté / Livré / Payé / Reçu / Confirmé / Delivered / Paid / Validated (Emerald Green - #10B981)
     if ((lower.contains('valid') ||
+            lower.contains('valide') ||
             lower.contains('accep') ||
             lower.contains('livr') ||
             lower.contains('pay') ||

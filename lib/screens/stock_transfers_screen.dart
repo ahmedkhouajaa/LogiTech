@@ -7,6 +7,8 @@ import '../utils/helpers.dart';
 import 'create_stock_transfer_screen.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import '../mobile/screens/mobile_stock_transfer_detail_screen.dart';
+import '../blocs/products/products_bloc.dart';
 import '../models/stock_movement.dart';
 import '../database/database_helper.dart';
 import '../widgets/custom_date_range_picker.dart';
@@ -417,7 +419,20 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          onTap: () => _navigate(context, transfer),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider.value(value: context.read<StockTransfersBloc>()),
+                    BlocProvider.value(value: context.read<ProductsBloc>()),
+                  ],
+                  child: MobileStockTransferDetailScreen(transfer: transfer),
+                ),
+              ),
+            );
+          },
           child: Padding(
             padding: EdgeInsets.all(14),
             child: Column(
@@ -443,44 +458,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                     Spacer(),
                     _buildStatusChip(transfer.status),
                     SizedBox(width: 4),
-                    PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert, color: AppColors.textSecondary, size: 20),
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      color: AppColors.surface,
-                      onSelected: (val) {
-                        if (val == 'voir') _previewDocument(transfer);
-                        if (val == 'edit') _navigate(context, transfer);
-                        if (val == 'delete') _confirmDelete(transfer);
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                          value: 'voir',
-                          child: Row(children: [
-                            Icon(Icons.visibility_outlined, size: 16, color: AppColors.textSecondary),
-                            SizedBox(width: 8),
-                            Text('Voir')
-                          ]),
-                        ),
-                        PopupMenuItem(
-                          value: 'edit',
-                          child: Row(children: [
-                            Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
-                            SizedBox(width: 8),
-                            Text('Modifier'),
-                          ]),
-                        ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(children: [
-                            Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
-                            SizedBox(width: 8),
-                            Text('Supprimer', style: TextStyle(color: AppColors.error)),
-                          ]),
-                        ),
-                      ],
-                    ),
+                    Icon(Icons.chevron_right, size: 18, color: AppColors.textTertiary),
                   ],
                 ),
                 SizedBox(height: 12),

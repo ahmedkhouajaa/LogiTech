@@ -14,6 +14,8 @@ import '../../../models/product.dart';
 import '../../../models/stock_movement.dart'; // Contains Warehouse
 import '../../../database/database_helper.dart';
 import '../../../utils/constants.dart';
+import '../../../widgets/article_selection_modal.dart';
+import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
@@ -132,78 +134,33 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
     }
   }
 
-  void _addItem() {
-    setState(() {
-      _items.add(InventorySheetItem(
-        id: _uuid.v4(),
-        inventoryId: widget.existing?.id ?? '', // Will be updated on save if empty
-        productId: '',
-        theoreticalQty: 0,
-        actualQty: 0,
-      ));
-    });
+  Future<void> _addItem() async {
+    final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _selectedWarehouseId);
+    if (selectedProduct != null) {
+      setState(() {
+        _items.add(InventorySheetItem(
+          id: _uuid.v4(),
+          inventoryId: widget.existing?.id ?? '',
+          productId: selectedProduct.id,
+          theoreticalQty: selectedProduct.stockQty,
+          actualQty: selectedProduct.stockQty,
+        ));
+      });
+    }
   }
 
-  void _showProductPicker(int index) {
-    if (_products.isEmpty) {
-      final productsState = context.read<ProductsBloc>().state;
-      if (productsState is ProductsLoaded) {
-        _products = productsState.products.where((p) => !p.isDeleted).toList();
-      }
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Sélectionner un article', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    IconButton(icon: Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _products.length,
-                  itemBuilder: (context, i) {
-                    final p = _products[i];
-                    return ListTile(
-                      title: Text(p.name),
-                      subtitle: Text(p.code),
-                      onTap: () {
-                        setState(() {
-                          // Copy current item to maintain ID, update product details
-                          final oldItem = _items[index];
-                          _items[index] = oldItem.copyWith(
-                            productId: p.id,
-                            theoreticalQty: p.stockQty,
-                            actualQty: p.stockQty, // Default actual to theoretical
-                          );
-                        });
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+  Future<void> _showProductPicker(int index) async {
+    final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _selectedWarehouseId);
+    if (selectedProduct != null) {
+      setState(() {
+        final oldItem = _items[index];
+        _items[index] = oldItem.copyWith(
+          productId: selectedProduct.id,
+          theoreticalQty: selectedProduct.stockQty,
+          actualQty: selectedProduct.stockQty,
         );
-      },
-    );
+      });
+    }
   }
 
   @override
@@ -276,145 +233,187 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: _addItem,
-                      icon: Icon(Icons.add_rounded, size: 18),
-                      label: Text('Ajouter un article'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.primary,
+                  if (_items.isEmpty)
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Center(
+                        child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textSecondary)),
                       ),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-              if (_items.isEmpty)
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Center(
-                    child: Text('Aucun article ajouté', style: TextStyle(color: AppColors.textSecondary)),
-                  ),
-                )
-              else
-                ...List.generate(_items.length, (index) {
-                  final item = _items[index];
-                  // Find product name for display
-                  String productName = item.productId.isNotEmpty ? 'Produit sélectionné' : 'Sélectionner un produit';
-                  if (_products.isNotEmpty && item.productId.isNotEmpty) {
-                    try {
-                      productName = _products.firstWhere((p) => p.id == item.productId).name;
-                    } catch (_) {}
-                  }
+                    )
+                  else
+                    ...List.generate(_items.length, (index) {
+                      final item = _items[index];
+                      String productName = item.productId.isNotEmpty ? 'Produit sélectionné' : 'Sélectionner un produit';
+                      if (_products.isNotEmpty && item.productId.isNotEmpty) {
+                        try {
+                          productName = _products.firstWhere((p) => p.id == item.productId).name;
+                        } catch (_) {}
+                      }
 
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 12),
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
+                      final diff = item.actualQty - item.theoreticalQty;
+                      final surplus = diff > 0 ? diff : 0.0;
+                      final missing = diff < 0 ? diff.abs() : 0.0;
+
+                      return Container(
+                        margin: EdgeInsets.only(bottom: 12),
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceAlt.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: InkWell(
-                                onTap: () => _showProductPicker(index),
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surface,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: AppColors.border),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.textSecondary),
-                                      SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          productName,
-                                          style: TextStyle(
-                                            color: item.productId.isEmpty ? AppColors.textSecondary : AppColors.textPrimary,
-                                            fontWeight: item.productId.isEmpty ? FontWeight.normal : FontWeight.w600,
-                                          ),
+                            Row(
+                              children: [
+                                Text('Produit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                Spacer(),
+                                IconButton(
+                                  icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                                  padding: EdgeInsets.zero,
+                                  constraints: BoxConstraints(),
+                                  onPressed: () {
+                                    setState(() {
+                                      _items.removeAt(index);
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 6),
+                            InkWell(
+                              onTap: () => _showProductPicker(index),
+                              child: Container(
+                                height: 40,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        item.productId.isNotEmpty ? productName : 'Sélectionner un article',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: item.productId.isNotEmpty ? AppColors.textPrimary : AppColors.textSecondary,
                                         ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      Icon(Icons.arrow_drop_down_rounded, color: AppColors.textSecondary),
+                                    ),
+                                    Icon(Icons.arrow_drop_down, color: AppColors.textSecondary, size: 20),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Théorique', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                      SizedBox(height: 4),
+                                      Container(
+                                        padding: EdgeInsets.all(10),
+                                        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(AppRadius.sm), border: Border.all(color: AppColors.border)),
+                                        child: Center(child: Text(item.theoreticalQty.toInt().toString(), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 12))),
+                                      ),
                                     ],
                                   ),
                                 ),
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.delete_outline, color: AppColors.error),
-                              onPressed: () {
-                                setState(() {
-                                  _items.removeAt(index);
-                                });
-                              },
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Réel', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                      SizedBox(height: 4),
+                                      TextFormField(
+                                        initialValue: item.actualQty > 0 ? item.actualQty.toInt().toString() : '',
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        textAlign: TextAlign.center,
+                                        decoration: InputDecoration(
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide(color: AppColors.border)),
+                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide(color: AppColors.border)),
+                                        ),
+                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                        onChanged: (v) {
+                                          final qty = double.tryParse(v) ?? 0;
+                                          setState(() {
+                                            _items[index] = item.copyWith(actualQty: qty);
+                                          });
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Surplus', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                      SizedBox(height: 4),
+                                      Container(
+                                        padding: EdgeInsets.all(10),
+                                        decoration: BoxDecoration(color: surplus > 0 ? AppColors.successLight : AppColors.surface, borderRadius: BorderRadius.circular(AppRadius.sm), border: Border.all(color: AppColors.border)),
+                                        child: Center(child: Text(surplus > 0 ? surplus.toInt().toString() : '—', style: TextStyle(color: surplus > 0 ? AppColors.success : AppColors.textTertiary, fontWeight: FontWeight.bold, fontSize: 12))),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Manquant', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                      SizedBox(height: 4),
+                                      Container(
+                                        padding: EdgeInsets.all(10),
+                                        decoration: BoxDecoration(color: missing > 0 ? AppColors.errorLight : AppColors.surface, borderRadius: BorderRadius.circular(AppRadius.sm), border: Border.all(color: AppColors.border)),
+                                        child: Center(child: Text(missing > 0 ? missing.toInt().toString() : '—', style: TextStyle(color: missing > 0 ? AppColors.error : AppColors.textTertiary, fontWeight: FontWeight.bold, fontSize: 12))),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-
-                        if (item.productId.isNotEmpty) ...[
-                          SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Qté théorique', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                    SizedBox(height: 4),
-                                    Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                      width: double.infinity,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surfaceAlt,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        item.theoreticalQty.toString(),
-                                        style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Qté physique', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                    SizedBox(height: 4),
-                                    TextFormField(
-                                      initialValue: item.actualQty.toString(),
-                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                      decoration: InputDecoration(
-                                        isDense: true,
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                      ),
-                                      onChanged: (v) {
-                                        final qty = double.tryParse(v) ?? 0;
-                                        setState(() {
-                                          _items[index] = item.copyWith(actualQty: qty);
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  );
-                }),
+                      );
+                    }),
+                  SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _addItem,
+                        icon: Icon(Icons.add, size: 16),
+                        label: Text('Ajouter une ligne'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          side: BorderSide(color: AppColors.border),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      IconButton(
+                        icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+                        tooltip: 'Créer un nouvel article',
+                        onPressed: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
+                        },
+                        splashRadius: 24,
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),

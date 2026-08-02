@@ -11,9 +11,12 @@ import '../../blocs/warehouses/warehouses_event.dart';
 import '../../blocs/warehouses/warehouses_state.dart';
 import '../../models/inventory_sheet.dart';
 import '../../models/inventory_sheet_item.dart';
-import '../../models/stock_movement.dart'; // Contains Warehouse
 import '../../models/product.dart';
+import '../../models/stock_movement.dart' show Warehouse;
 import '../../utils/constants.dart';
+import '../mobile/screens/forms/mobile_product_form_screen.dart';
+import '../widgets/article_selection_modal.dart';
+import 'create_article_screen.dart';
 
 class CreateInventorySheetScreen extends StatefulWidget {
   final InventorySheet? sheet;
@@ -128,7 +131,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
       countedBy: _countedByController.text,
       reason: _reasonController.text,
       notes: _notesController.text,
-      status: isDraft ? 'Brouillon' : 'Finalisée',
+      status: 'validated',
       items: _items,
       createdAt: widget.sheet?.createdAt,
     );
@@ -150,51 +153,111 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(widget.isViewOnly ? 'Fiche d\'inventaire' : (widget.sheet == null ? 'Créer une fiche d\'inventaire' : 'Modifier la fiche d\'inventaire')),
+        titleSpacing: 0,
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          widget.isViewOnly ? 'Fiche d\'inventaire' : (widget.sheet == null ? 'Créer une fiche d\'inventaire' : 'Modifier la fiche d\'inventaire'),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+        ),
         actions: [
-          if (!widget.isViewOnly)
-            Padding(
-              padding: EdgeInsets.only(right: 16.0),
-              child: Row(
-                children: [
-                  OutlinedButton(
-                    onPressed: () => _save(true),
-                    child: Text('Brouillon'),
-                  ),
-                  SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: () => _save(false),
-                    icon: Icon(Icons.check, size: 18),
-                    label: Text('Valider'),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
-                  ),
-                ],
+          Padding(
+            padding: EdgeInsets.only(right: 16.0),
+            child: Center(
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Validé',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.success),
+                ),
               ),
             ),
+          ),
         ],
       ),
-      body: BlocListener<WarehousesBloc, WarehousesState>(
-        listener: (context, state) {
-          if (state is WarehousesLoaded) {
-            setState(() {
-              _warehouses = state.warehouses;
-              if (_warehouseId == null && _warehouses.isNotEmpty) {
-                _warehouseId = _warehouses.firstWhere((w) => w.isDefault, orElse: () => _warehouses.first).id;
-              }
-            });
-          }
-        },
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeaderSection(),
-              SizedBox(height: 24),
-              _buildItemsSection(),
-            ],
-          ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: BlocListener<WarehousesBloc, WarehousesState>(
+                listener: (context, state) {
+                  if (state is WarehousesLoaded) {
+                    setState(() {
+                      _warehouses = state.warehouses;
+                      if (_warehouseId == null && _warehouses.isNotEmpty) {
+                        _warehouseId = _warehouses.firstWhere((w) => w.isDefault, orElse: () => _warehouses.first).id;
+                      }
+                    });
+                  }
+                },
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeaderSection(),
+                      SizedBox(height: 16),
+                      _buildItemsSection(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (!widget.isViewOnly)
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      offset: Offset(0, -2),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        ),
+                        child: Text('Annuler', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _save(false),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                          elevation: 0,
+                        ),
+                        child: Text('Valider', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -208,133 +271,226 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
   }
 
   Widget _buildHeaderSection() {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Informations', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Date', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      SizedBox(height: 4),
-                      TextFormField(
-                        initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(_date),
-                        readOnly: true,
-                        enabled: !widget.isViewOnly,
-                        decoration: InputDecoration(
-                          suffixIcon: Icon(Icons.calendar_today, size: 16),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                      ),
-                    ],
+            if (isMobile) ...[
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Date', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  SizedBox(height: 4),
+                  TextFormField(
+                    initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(_date),
+                    readOnly: true,
+                    enabled: !widget.isViewOnly,
+                    decoration: InputDecoration(
+                      suffixIcon: Icon(Icons.calendar_today, size: 16),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
                   ),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Entrepôt', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      SizedBox(height: 4),
-                        DropdownButtonFormField<String>(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                        value: _warehouseId,
-                        items: _warehouses.map((Warehouse w) => DropdownMenuItem<String>(value: w.id, child: Text(w.name))).toList(),
-                        onChanged: widget.isViewOnly ? null : (v) {
-                          setState(() => _warehouseId = v);
-                        },
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                      ),
-                    ],
+                  SizedBox(height: 16),
+                  Text('Entrepôt', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  SizedBox(height: 4),
+                  DropdownButtonFormField<String>(
+                    dropdownColor: AppColors.surfaceAlt,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                    value: _warehouseId,
+                    items: _warehouses.map((Warehouse w) => DropdownMenuItem<String>(value: w.id, child: Text(w.name))).toList(),
+                    onChanged: widget.isViewOnly ? null : (v) {
+                      setState(() => _warehouseId = v);
+                    },
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Date d\'inventaire', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      SizedBox(height: 4),
-                      InkWell(
-                        onTap: widget.isViewOnly ? null : () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: _inventoryDate,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                          );
-                          if (picked != null) {
-                            setState(() => _inventoryDate = picked);
-                          }
-                        },
-                        child: InputDecorator(
+                ],
+              ),
+            ] else ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Date', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        SizedBox(height: 4),
+                        TextFormField(
+                          initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(_date),
+                          readOnly: true,
+                          enabled: !widget.isViewOnly,
                           decoration: InputDecoration(
                             suffixIcon: Icon(Icons.calendar_today, size: 16),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
                             contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           ),
-                          child: Text(DateFormat('dd MMMM yyyy', 'fr_FR').format(_inventoryDate)),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Date de saisie', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      SizedBox(height: 4),
-                      TextFormField(
-                        initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(widget.sheet?.createdAt ?? DateTime.now()),
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Entrepôt', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        SizedBox(height: 4),
+                        DropdownButtonFormField<String>(
+                          dropdownColor: AppColors.surfaceAlt,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                          value: _warehouseId,
+                          items: _warehouses.map((Warehouse w) => DropdownMenuItem<String>(value: w.id, child: Text(w.name))).toList(),
+                          onChanged: widget.isViewOnly ? null : (v) {
+                            setState(() => _warehouseId = v);
+                          },
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Compté par', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      SizedBox(height: 4),
-                      TextFormField(
-                        controller: _countedByController,
-                        readOnly: widget.isViewOnly,
-                        decoration: InputDecoration(
-                          hintText: 'Nom du responsable',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ],
+              ),
+            ],
+            SizedBox(height: 16),
+            if (isMobile) ...[
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Date d\'inventaire', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  SizedBox(height: 4),
+                  InkWell(
+                    onTap: widget.isViewOnly ? null : () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _inventoryDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setState(() => _inventoryDate = picked);
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        suffixIcon: Icon(Icons.calendar_today, size: 16),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      child: Text(DateFormat('dd MMMM yyyy', 'fr_FR').format(_inventoryDate)),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Text('Date de saisie', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  SizedBox(height: 4),
+                  TextFormField(
+                    initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(widget.sheet?.createdAt ?? DateTime.now()),
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Text('Compté par', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  SizedBox(height: 4),
+                  TextFormField(
+                    controller: _countedByController,
+                    readOnly: widget.isViewOnly,
+                    decoration: InputDecoration(
+                      hintText: 'Nom du responsable',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Date d\'inventaire', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        SizedBox(height: 4),
+                        InkWell(
+                          onTap: widget.isViewOnly ? null : () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _inventoryDate,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) {
+                              setState(() => _inventoryDate = picked);
+                            }
+                          },
+                          child: InputDecorator(
+                            decoration: InputDecoration(
+                              suffixIcon: Icon(Icons.calendar_today, size: 16),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            ),
+                            child: Text(DateFormat('dd MMMM yyyy', 'fr_FR').format(_inventoryDate)),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Date de saisie', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        SizedBox(height: 4),
+                        TextFormField(
+                          initialValue: DateFormat('dd MMMM yyyy', 'fr_FR').format(widget.sheet?.createdAt ?? DateTime.now()),
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Compté par', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                        SizedBox(height: 4),
+                        TextFormField(
+                          controller: _countedByController,
+                          readOnly: widget.isViewOnly,
+                          decoration: InputDecoration(
+                            hintText: 'Nom du responsable',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
             SizedBox(height: 16),
             Row(
               children: [
@@ -386,31 +542,35 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
   }
 
   Widget _buildItemsSection() {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Articles', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             SizedBox(height: 16),
             
-            // Header
-            Row(
-              children: [
-                Expanded(flex: 3, child: Text('Produit', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold))),
-                SizedBox(width: 8),
-                Expanded(flex: 1, child: Text('Théorique', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                SizedBox(width: 8),
-                Expanded(flex: 1, child: Text('Réel', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                SizedBox(width: 8),
-                Expanded(flex: 1, child: Text('Surplus', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                SizedBox(width: 8),
-                Expanded(flex: 1, child: Text('Manquant', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
-                if (!widget.isViewOnly) SizedBox(width: 40),
-              ],
-            ),
-            Divider(),
+            if (!isMobile) ...[
+              // Desktop Header
+              Row(
+                children: [
+                  Expanded(flex: 3, child: Text('Produit', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold))),
+                  SizedBox(width: 8),
+                  Expanded(flex: 1, child: Text('Théorique', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                  SizedBox(width: 8),
+                  Expanded(flex: 1, child: Text('Réel', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                  SizedBox(width: 8),
+                  Expanded(flex: 1, child: Text('Surplus', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                  SizedBox(width: 8),
+                  Expanded(flex: 1, child: Text('Manquant', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right)),
+                  if (!widget.isViewOnly) SizedBox(width: 40),
+                ],
+              ),
+              Divider(),
+            ],
             
             // Items
             BlocBuilder<ProductsBloc, ProductsState>(
@@ -445,7 +605,6 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                               }
                             }
                           }
-                          // Only update if changed to avoid unnecessary rebuilds
                           if (item.theoreticalQty != theoreticalStock) {
                             WidgetsBinding.instance.addPostFrameCallback((_) {
                               setState(() {
@@ -461,6 +620,163 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                         bool isDuplicate = false;
                         if (!widget.isViewOnly && item.productId.isNotEmpty) {
                           isDuplicate = _items.where((i) => i.productId == item.productId).length > 1;
+                        }
+
+                        if (isMobile) {
+                          // Mobile Card matching image 3 (transfer / withdrawal style)
+                          return Container(
+                            margin: EdgeInsets.only(bottom: 12),
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceAlt.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text('Produit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                    Spacer(),
+                                    if (!widget.isViewOnly)
+                                      IconButton(
+                                        icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                                        padding: EdgeInsets.zero,
+                                        constraints: BoxConstraints(),
+                                        onPressed: () => setState(() => _items.removeAt(index)),
+                                      ),
+                                  ],
+                                ),
+                                SizedBox(height: 6),
+                                InkWell(
+                                  onTap: widget.isViewOnly ? null : () async {
+                                    final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId);
+                                    if (selectedProduct != null) {
+                                      setState(() {
+                                        _items[index] = item.copyWith(
+                                          productId: selectedProduct.id,
+                                          productName: selectedProduct.name,
+                                          productSku: selectedProduct.reference,
+                                          actualQty: 0,
+                                        );
+                                      });
+                                    }
+                                  },
+                                  child: Container(
+                                    height: 40,
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surface,
+                                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                                      border: Border.all(color: isDuplicate ? AppColors.error : AppColors.border),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            (item.productName != null && item.productName!.isNotEmpty)
+                                                ? item.productName!
+                                                : 'Sélectionner un article',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: (item.productName != null && item.productName!.isNotEmpty) ? AppColors.textPrimary : AppColors.textSecondary,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (!widget.isViewOnly)
+                                          Icon(Icons.arrow_drop_down, color: AppColors.textSecondary, size: 20),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                if (isDuplicate)
+                                  Padding(
+                                    padding: EdgeInsets.only(top: 4, left: 4),
+                                    child: Text('Article déjà sélectionné', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                                  ),
+                                SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Théorique', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                          SizedBox(height: 4),
+                                          Container(
+                                            padding: EdgeInsets.all(10),
+                                            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(AppRadius.sm), border: Border.all(color: AppColors.border)),
+                                            child: Center(child: Text(formatAmount(theoreticalStock, symbol: ''), style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 12))),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Réel', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                          SizedBox(height: 4),
+                                          TextFormField(
+                                            initialValue: item.actualQty > 0 ? formatAmount(item.actualQty, symbol: '') : '',
+                                            readOnly: widget.isViewOnly,
+                                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                            textAlign: TextAlign.center,
+                                            decoration: InputDecoration(
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide(color: AppColors.border)),
+                                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide(color: AppColors.border)),
+                                            ),
+                                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                            onChanged: (val) {
+                                              final qty = double.tryParse(val.replaceAll(',', '.')) ?? 0;
+                                              setState(() {
+                                                _items[index] = item.copyWith(actualQty: qty);
+                                              });
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Surplus', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                          SizedBox(height: 4),
+                                          Container(
+                                            padding: EdgeInsets.all(10),
+                                            decoration: BoxDecoration(color: surplus > 0 ? AppColors.successLight : AppColors.surface, borderRadius: BorderRadius.circular(AppRadius.sm), border: Border.all(color: AppColors.border)),
+                                            child: Center(child: Text(surplus > 0 ? formatAmount(surplus, symbol: '') : '—', style: TextStyle(color: surplus > 0 ? AppColors.success : AppColors.textTertiary, fontWeight: FontWeight.bold, fontSize: 12))),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Manquant', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                          SizedBox(height: 4),
+                                          Container(
+                                            padding: EdgeInsets.all(10),
+                                            decoration: BoxDecoration(color: missing > 0 ? AppColors.errorLight : AppColors.surface, borderRadius: BorderRadius.circular(AppRadius.sm), border: Border.all(color: AppColors.border)),
+                                            child: Center(child: Text(missing > 0 ? formatAmount(missing, symbol: '') : '—', style: TextStyle(color: missing > 0 ? AppColors.error : AppColors.textTertiary, fontWeight: FontWeight.bold, fontSize: 12))),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
                         }
 
                         return Padding(
@@ -628,14 +944,47 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _items.add(InventorySheetItem(id: _uuid.v4(), inventoryId: _id, productId: '', theoreticalQty: 0, actualQty: 0));
-                      });
+                    onPressed: () async {
+                      if (isMobile) {
+                        final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId);
+                        if (selectedProduct != null) {
+                          setState(() {
+                            _items.add(InventorySheetItem(
+                              id: _uuid.v4(),
+                              inventoryId: _id,
+                              productId: selectedProduct.id,
+                              productName: selectedProduct.name,
+                              productSku: selectedProduct.reference,
+                              theoreticalQty: selectedProduct.stockQty,
+                              actualQty: 0,
+                            ));
+                          });
+                        }
+                      } else {
+                        setState(() {
+                          _items.add(InventorySheetItem(id: _uuid.v4(), inventoryId: _id, productId: '', theoreticalQty: 0, actualQty: 0));
+                        });
+                      }
                     },
                     icon: Icon(Icons.add, size: 16),
                     label: Text('Ajouter une ligne'),
-                    style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.border)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.textPrimary,
+                      side: BorderSide(color: AppColors.border),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  IconButton(
+                    icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+                    tooltip: 'Créer un nouvel article',
+                    onPressed: () {
+                      if (isMobile) {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
+                      } else {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+                      }
+                    },
+                    splashRadius: 24,
                   ),
                 ],
               ),

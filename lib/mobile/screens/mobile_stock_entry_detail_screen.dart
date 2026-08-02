@@ -1,50 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../blocs/stock_transfers/stock_transfers_bloc.dart';
+import '../../blocs/stock_entries/stock_entries_bloc.dart';
+import '../../blocs/stock_entries/stock_entries_state.dart';
+import '../../blocs/stock_entries/stock_entries_event.dart';
 import '../../blocs/products/products_bloc.dart';
-import '../../models/stock_transfer.dart';
+import '../../models/stock_entry.dart';
 import '../../models/product.dart';
+import '../../models/document_wrapper.dart';
+
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../database/database_helper.dart';
 
-import 'forms/mobile_stock_transfer_form_screen.dart';
+import '../../screens/create_stock_entry_screen.dart';
+import '../../screens/document_preview_screen.dart';
 
-class MobileStockTransferDetailScreen extends StatefulWidget {
-  final StockTransfer transfer;
+class MobileStockEntryDetailScreen extends StatefulWidget {
+  final StockEntry entry;
 
-  const MobileStockTransferDetailScreen({super.key, required this.transfer});
+  const MobileStockEntryDetailScreen({super.key, required this.entry});
 
   @override
-  State<MobileStockTransferDetailScreen> createState() => _MobileStockTransferDetailScreenState();
+  State<MobileStockEntryDetailScreen> createState() => _MobileStockEntryDetailScreenState();
 }
 
-class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDetailScreen> {
-  late StockTransfer currentTransfer;
+class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScreen> {
+  late StockEntry currentEntry;
+  String? _warehouseName;
+
   Map<String, Product> _dbProducts = {};
-  String? _sourceWarehouseName;
-  String? _destWarehouseName;
 
   @override
   void initState() {
     super.initState();
-    currentTransfer = widget.transfer;
+    currentEntry = widget.entry;
+    _loadWarehouseName();
     _loadProducts();
-    _loadWarehouseNames();
-  }
-
-  Future<void> _loadWarehouseNames() async {
-    try {
-      final warehouses = await DatabaseHelper.instance.getWarehouses();
-      final srcMatch = warehouses.firstWhere((w) => w.id == currentTransfer.sourceWarehouseId, orElse: () => warehouses.first);
-      final destMatch = warehouses.firstWhere((w) => w.id == currentTransfer.destinationWarehouseId, orElse: () => warehouses.first);
-      if (mounted) {
-        setState(() {
-          _sourceWarehouseName = srcMatch.name;
-          _destWarehouseName = destMatch.name;
-        });
-      }
-    } catch (_) {}
   }
 
   Future<void> _loadProducts() async {
@@ -53,6 +44,18 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
       if (mounted) {
         setState(() {
           _dbProducts = {for (var p in products) p.id: p};
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadWarehouseName() async {
+    try {
+      final warehouses = await DatabaseHelper.instance.getWarehouses();
+      final match = warehouses.firstWhere((w) => w.id == currentEntry.warehouseId);
+      if (mounted) {
+        setState(() {
+          _warehouseName = match.name;
         });
       }
     } catch (_) {}
@@ -71,16 +74,51 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
     return null;
   }
 
+  DocumentWrapper _createDocumentWrapper(StockEntry entry) {
+    return DocumentWrapper(
+      id: entry.id,
+      number: entry.number,
+      documentTitle: "BON D'ENTRÉE",
+      date: entry.date,
+      totalHT: entry.items.fold(0.0, (sum, i) => sum + (i.quantity * i.unitPrice)),
+      totalTva: 0.0,
+      totalTTC: entry.items.fold(0.0, (sum, i) => sum + (i.quantity * i.unitPrice)),
+      notes: entry.notes,
+      items: entry.items.map((item) {
+        final product = _getProduct(item.productId);
+        return DocumentItemWrapper(
+          productName: product?.name ?? 'Article Inconnu',
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          tvaRate: 0.0,
+          discountPercent: 0.0,
+          totalHT: item.quantity * item.unitPrice,
+          customFields: {
+            'code': (product?.reference != null && product!.reference!.isNotEmpty) 
+                ? product.reference 
+                : (product?.code ?? ''),
+            'unit': product?.unit ?? 'pièce',
+          },
+        );
+      }).toList(),
+      customData: {
+        'warehouseId': entry.warehouseId,
+        'warehouseName': _warehouseName ?? 'Entrepôt par défaut',
+        'reason': entry.reason,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocListener<StockTransfersBloc, StockTransfersState>(
+    return BlocListener<StockEntriesBloc, StockEntriesState>(
       listener: (context, state) {
-        if (state is StockTransfersLoaded) {
+        if (state is StockEntriesLoaded) {
           try {
-            final updatedTransfer = state.transfers.firstWhere((q) => q.id == currentTransfer.id);
-            if (updatedTransfer.id == currentTransfer.id && mounted) {
+            final updatedEntry = state.entries.firstWhere((e) => e.id == currentEntry.id);
+            if (mounted) {
               setState(() {
-                currentTransfer = updatedTransfer;
+                currentEntry = updatedEntry;
               });
             }
           } catch (_) {
@@ -93,23 +131,25 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('Bon de transfert ${currentTransfer.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('BE ${currentEntry.number}', style: const TextStyle(color: Colors.white, fontSize: 18)),
           backgroundColor: AppColors.primary,
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
-              onSelected: (val) => _handleAction(context, val, currentTransfer),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
+              onSelected: (val) => _handleAction(context, val, currentEntry),
               itemBuilder: (_) => [
                 _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
               ],
             ),
           ],
         ),
         body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -118,54 +158,58 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                 color: AppColors.surface,
                 child: Padding(
-                  padding: EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Réf: ${currentTransfer.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Réf: ${currentEntry.number}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: _getStatusColor(currentTransfer.status).withValues(alpha: 0.1),
+                              color: AppColors.successLight,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(translateStatus(currentTransfer.status), style: TextStyle(color: _getStatusColor(currentTransfer.status), fontWeight: FontWeight.bold, fontSize: 12)),
+                            child: Text(
+                              'Validé',
+                              style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 12),
+                            ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 16),
-                      _buildInfoRow('Date', formatDateTimeLong(currentTransfer.date)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Source', _sourceWarehouseName ?? 'Entrepôt source'),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Destination', _destWarehouseName ?? 'Entrepôt destination'),
+                      const SizedBox(height: 16),
+                      _buildInfoRow('Date', formatDateTimeLong(currentEntry.date)),
+                      const SizedBox(height: 8),
+                      _buildInfoRow('Entrepôt', _warehouseName ?? 'Entrepôt par défaut'),
+                      if (currentEntry.reason != null && currentEntry.reason!.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        _buildInfoRow('Motif', currentEntry.reason!),
+                      ],
                     ],
                   ),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              if (currentTransfer.items.isEmpty)
+              const SizedBox(height: 8),
+              if (currentEntry.items.isEmpty)
                 Card(
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                   color: AppColors.surface,
                   child: Padding(
-                    padding: EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(16.0),
                     child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
                   ),
                 )
               else
-                ...currentTransfer.items.map((item) {
+                ...currentEntry.items.map((item) {
                   final product = _getProduct(item.productId);
-                  final productName = product?.name ?? item.productName ?? 'Article inconnu';
-                  final refCode = product?.reference ?? product?.code ?? item.productSku;
+                  final productName = product?.name ?? 'Article non spécifié';
                   final unit = product?.unit ?? 'pièces';
-                  final qtyText = '${item.quantityToTransfer % 1 == 0 ? item.quantityToTransfer.toInt() : item.quantityToTransfer} $unit';
+                  final qtyText = '${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity} $unit';
                   return Card(
                     elevation: 0,
                     margin: const EdgeInsets.only(bottom: 8),
@@ -187,9 +231,12 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(productName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                if (refCode != null && refCode.isNotEmpty) ...[
+                                if (product?.reference != null && product!.reference!.isNotEmpty) ...[
                                   const SizedBox(height: 2),
-                                  Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                  Text(product.reference!, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                ] else if (product?.code != null && product!.code.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(product.code, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
                                 ],
                                 const SizedBox(height: 4),
                                 Text(qtyText, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
@@ -201,35 +248,21 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
                     ),
                   );
                 }),
-              if (currentTransfer.reason != null && currentTransfer.reason!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Raison', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentTransfer.reason!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                  ),
-                ),
-              ],
-              if (currentTransfer.notes != null && currentTransfer.notes!.isNotEmpty) ...[
-                SizedBox(height: 16),
+              if (currentEntry.notes != null && currentEntry.notes!.isNotEmpty) ...[
+                const SizedBox(height: 16),
                 Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Card(
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
                   color: AppColors.surface,
                   child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentTransfer.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(currentEntry.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                   ),
                 ),
               ],
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
             ],
           ),
         ),
@@ -253,26 +286,15 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Color(0xFF64748B)),
-          SizedBox(width: 12),
+          Icon(icon, size: 18, color: const Color(0xFF64748B)),
+          const SizedBox(width: 12),
           Text(text, style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
         ],
       ),
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'validated':
-        return AppColors.success;
-      case 'cancelled':
-        return AppColors.error;
-      default:
-        return AppColors.textTertiary;
-    }
-  }
-
-  void _handleAction(BuildContext context, String action, StockTransfer transfer) {
+  void _handleAction(BuildContext context, String action, StockEntry entry) {
     switch (action) {
       case 'edit':
         Navigator.push(
@@ -280,32 +302,44 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
           MaterialPageRoute(
             builder: (_) => MultiBlocProvider(
               providers: [
-                BlocProvider.value(value: context.read<StockTransfersBloc>()),
+                BlocProvider.value(value: context.read<StockEntriesBloc>()),
+                BlocProvider.value(value: context.read<ProductsBloc>()),
               ],
-              child: MobileStockTransferFormScreen(existing: transfer),
+              child: CreateStockEntryScreen(existing: entry),
             ),
           ),
-        );
+        ).then((_) {
+          if (mounted) {
+            context.read<StockEntriesBloc>().add(LoadFirstStockEntries());
+          }
+        });
         break;
       case 'delete':
         showDialog(
           context: context,
           builder: (dialogCtx) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer ce bon de transfert ?'),
+            title: const Text('Confirmer la suppression'),
+            content: const Text('Voulez-vous vraiment supprimer ce bon d\'entrée ?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogCtx);
-                  context.read<StockTransfersBloc>().add(DeleteStockTransfer(transfer.id));
+                  context.read<StockEntriesBloc>().add(DeleteStockEntry(entry.id));
+                  if (mounted) {
+                    Navigator.pop(context);
+                  }
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
+                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
         );
+        break;
+      case 'print':
+        final doc = _createDocumentWrapper(entry);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));

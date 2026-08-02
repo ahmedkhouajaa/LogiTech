@@ -14,11 +14,12 @@ import '../database/database_helper.dart';
 import '../models/document_wrapper.dart';
 import 'create_stock_entry_screen.dart';
 import 'document_preview_screen.dart';
+import '../mobile/screens/mobile_stock_entry_detail_screen.dart';
 
 enum StockEntryStatus {
   draft('Brouillon'),
-  validated('Valide'),
-  cancelled('Annule');
+  validated('Validé'),
+  cancelled('Annulé');
 
   final String label;
   const StockEntryStatus(this.label);
@@ -26,7 +27,7 @@ enum StockEntryStatus {
   Color get color {
     switch (this) {
       case draft: return AppColors.warning;
-      case validated: return AppColors.primary;
+      case validated: return AppColors.success;
       case cancelled: return AppColors.error;
     }
   }
@@ -460,13 +461,26 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          onTap: () => _navigate(context, entry),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider.value(value: context.read<StockEntriesBloc>()),
+                    BlocProvider.value(value: context.read<ProductsBloc>()),
+                  ],
+                  child: MobileStockEntryDetailScreen(entry: entry),
+                ),
+              ),
+            );
+          },
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top row: Ref Badge + Status Chip + Actions
+                // Top row: Ref Badge + Status Chip + Chevron + Actions
                 Row(
                   children: [
                     Container(
@@ -487,44 +501,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                     const Spacer(),
                     _buildStatusChip(entry.status),
                     const SizedBox(width: 4),
-                    PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert, color: AppColors.textTertiary),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      color: AppColors.surface,
-                      onSelected: (val) {
-                        if (val == 'voir') _previewDocument(entry);
-                        if (val == 'edit') _navigate(context, entry);
-                        if (val == 'delete') _confirmDelete(entry);
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                          value: 'voir',
-                          child: Row(children: [
-                            Icon(Icons.visibility_rounded, size: 16, color: AppColors.textSecondary),
-                            const SizedBox(width: 8),
-                            const Text('Voir'),
-                          ]),
-                        ),
-                        PopupMenuItem(
-                          value: 'edit',
-                          child: Row(children: [
-                            Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
-                            const SizedBox(width: 8),
-                            const Text('Modifier'),
-                          ]),
-                        ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(children: [
-                            Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
-                            const SizedBox(width: 8),
-                            Text('Supprimer', style: TextStyle(color: AppColors.error)),
-                          ]),
-                        ),
-                      ],
-                    ),
+                    Icon(Icons.chevron_right, size: 18, color: AppColors.textTertiary),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -603,10 +580,11 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: entryStatus.color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: entryStatus.color.withValues(alpha: 0.2)),
       ),
       child: Text(
         entryStatus.label,

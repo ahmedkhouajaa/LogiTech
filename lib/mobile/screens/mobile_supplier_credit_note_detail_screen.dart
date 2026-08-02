@@ -8,6 +8,7 @@ import '../../blocs/suppliers/suppliers_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
 
 import '../../models/supplier_credit_note.dart';
+import '../../models/product.dart';
 import '../../models/document_wrapper.dart';
 
 import '../../utils/constants.dart';
@@ -29,12 +30,62 @@ class MobileSupplierCreditNoteDetailScreen extends StatefulWidget {
 
 class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCreditNoteDetailScreen> {
   late SupplierCreditNote currentNote;
+  String? _supplierName;
+  Map<String, Product> _dbProducts = {};
 
   @override
   void initState() {
     super.initState();
     currentNote = widget.note;
     _loadFullNote();
+    _loadSupplierName();
+    _loadProducts();
+  }
+
+  Future<void> _loadSupplierName() async {
+    if (currentNote.supplierId != null && currentNote.supplierId!.isNotEmpty) {
+      try {
+        final suppliersState = context.read<SuppliersBloc>().state;
+        if (suppliersState is SuppliersLoaded) {
+          final s = suppliersState.suppliers.firstWhere((sup) => sup.id == currentNote.supplierId);
+          setState(() {
+            _supplierName = (s.companyName != null && s.companyName!.isNotEmpty) ? s.companyName! : s.name;
+          });
+          return;
+        }
+        final suppliers = await DatabaseHelper.instance.getSuppliers();
+        final s = suppliers.firstWhere((sup) => sup.id == currentNote.supplierId);
+        if (mounted) {
+          setState(() {
+            _supplierName = (s.companyName != null && s.companyName!.isNotEmpty) ? s.companyName! : s.name;
+          });
+        }
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _loadProducts() async {
+    try {
+      final products = await DatabaseHelper.instance.getProducts();
+      if (mounted) {
+        setState(() {
+          _dbProducts = {for (var p in products) p.id: p};
+        });
+      }
+    } catch (_) {}
+  }
+
+  Product? _getProduct(String id) {
+    if (_dbProducts.containsKey(id)) {
+      return _dbProducts[id];
+    }
+    final state = context.read<ProductsBloc>().state;
+    if (state is ProductsLoaded) {
+      try {
+        return state.products.firstWhere((p) => p.id == id);
+      } catch (_) {}
+    }
+    return null;
   }
 
   Future<void> _loadFullNote() async {
@@ -110,7 +161,7 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
                       SizedBox(height: 16),
                       _buildInfoRow('Date', formatDateTimeLong(currentNote.date)),
                       SizedBox(height: 8),
-                      _buildInfoRow('Fournisseur', currentNote.supplierId ?? 'Non spécifié'),
+                      _buildInfoRow('Fournisseur', _supplierName ?? currentNote.supplierId ?? 'Non spécifié'),
                     ],
                   ),
                 ),
@@ -129,43 +180,53 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
                   ),
                 )
               else
-                ...currentNote.items.map((item) => Card(
-                  elevation: 0,
-                  margin: EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                          child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Produit: ${item.productId}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Text('${item.quantity} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                  Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-                                ],
-                              ),
-                            ],
+                ...currentNote.items.map((item) {
+                  final product = _getProduct(item.productId);
+                  final productName = product?.name ?? 'Article non spécifié';
+                  final refCode = product?.reference ?? product?.code;
+
+                  return Card(
+                    elevation: 0,
+                    margin: EdgeInsets.only(bottom: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                    color: AppColors.surface,
+                    child: Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
+                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
                           ),
-                        ),
-                        Text(formatCurrencyDT(item.totalHT * (1 + item.tvaRate / 100)), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                      ],
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(productName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                if (refCode != null && refCode.isNotEmpty) ...[
+                                  SizedBox(height: 2),
+                                  Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                ],
+                                SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text('${item.quantity} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                    Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(formatCurrencyDT(item.totalHT), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        ],
+                      ),
                     ),
-                  ),
-                )),
+                  );
+                }),
               SizedBox(height: 16),
               Card(
                 elevation: 0,
@@ -178,6 +239,10 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
                       _buildInfoRow('Total HT', formatCurrencyDT(currentNote.totalHT)),
                       SizedBox(height: 8),
                       _buildInfoRow('Total TVA', formatCurrencyDT(currentNote.totalTVA)),
+                      if ((currentNote.totalTTC.abs() - currentNote.totalHT.abs() - currentNote.totalTVA.abs()).abs() > 0.01) ...[
+                        SizedBox(height: 8),
+                        _buildInfoRow('Timbre fiscal', formatCurrencyDT((currentNote.totalTTC.abs() - currentNote.totalHT.abs() - currentNote.totalTVA.abs()).abs())),
+                      ],
                       Divider(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -203,7 +268,15 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }

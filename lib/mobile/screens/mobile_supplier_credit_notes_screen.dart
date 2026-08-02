@@ -10,6 +10,7 @@ import '../../blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
 import '../../blocs/supplier_credit_notes/supplier_credit_notes_state.dart';
 import '../../blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
 import '../../blocs/suppliers/suppliers_bloc.dart';
+import '../../blocs/products/products_bloc.dart';
 import '../../models/supplier.dart';
 import 'forms/mobile_supplier_credit_note_form_screen.dart';
 import 'mobile_supplier_credit_note_detail_screen.dart';
@@ -184,10 +185,8 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
                 (s) => s.id == item.supplierId,
                 orElse: () => Supplier(id: '', code: '', name: 'Fournisseur Inconnu', country: ''),
               );
-              if (found.name != 'Fournisseur Inconnu') {
-                name = found.name;
-              } else if (found.companyName?.isNotEmpty == true) {
-                name = found.companyName!;
+              if (found.id.isNotEmpty) {
+                name = (found.companyName != null && found.companyName!.isNotEmpty) ? found.companyName! : found.name;
               }
             }
 
@@ -200,7 +199,16 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobileSupplierCreditNoteDetailScreen(note: item)),
+                  MaterialPageRoute(
+                    builder: (_) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider.value(value: context.read<SuppliersBloc>()),
+                        BlocProvider.value(value: context.read<ProductsBloc>()),
+                        BlocProvider.value(value: context.read<SupplierCreditNotesBloc>()),
+                      ],
+                      child: MobileSupplierCreditNoteDetailScreen(note: item),
+                    ),
+                  ),
                 ).then((_) {
                   _fetchFilteredCreditNotes();
                 });

@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/payment_model.dart';
+import '../../models/supplier.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
+import '../../database/database_helper.dart';
 import '../../blocs/payments/payments_bloc.dart';
 import 'forms/mobile_payment_form_screen.dart';
 
@@ -19,11 +21,42 @@ class MobilePaymentDetailScreen extends StatefulWidget {
 
 class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
   late Payment currentPayment;
+  String? _contactName;
 
   @override
   void initState() {
     super.initState();
     currentPayment = widget.payment;
+    _loadContactName();
+  }
+
+  Future<void> _loadContactName() async {
+    final rawName = currentPayment.contactName;
+    if (rawName != null && rawName.isNotEmpty && rawName != currentPayment.contactId) {
+      if (mounted) setState(() => _contactName = rawName);
+      return;
+    }
+
+    final cid = currentPayment.contactId;
+    if (cid.isEmpty) return;
+
+    try {
+      if (currentPayment.contactType == 'customer' || currentPayment.direction == 'encaissement') {
+        final cust = await DatabaseHelper.instance.getCustomer(cid);
+        if (cust != null && mounted) {
+          final resolved = (cust.companyName != null && cust.companyName!.isNotEmpty) ? cust.companyName! : cust.name;
+          setState(() => _contactName = resolved);
+          return;
+        }
+      }
+      final suppliers = await DatabaseHelper.instance.getSuppliers();
+      final supp = suppliers.firstWhere((s) => s.id == cid, orElse: () => Supplier(id: '', code: '', name: '', country: ''));
+      if (supp.id.isNotEmpty && mounted) {
+        final resolved = (supp.companyName != null && supp.companyName!.isNotEmpty) ? supp.companyName! : supp.name;
+        setState(() => _contactName = resolved);
+        return;
+      }
+    } catch (_) {}
   }
 
   void _handleAction(String val) {
@@ -126,13 +159,14 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
                         children: [
                           Text(
                             currentPayment.paymentNumber,
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textPrimary),
                           ),
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: _getStatusColor(currentPayment.status).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4),
+                              color: _getStatusColor(currentPayment.status).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: _getStatusColor(currentPayment.status).withValues(alpha: 0.25)),
                             ),
                             child: Text(
                               translateStatus(currentPayment.status),
@@ -148,9 +182,9 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
                       SizedBox(height: 16),
                       _buildDetailRow('Date et heure', DateFormat('dd MMM yyyy - HH:mm').format(currentPayment.paymentDate)),
                       Divider(height: 24),
-                      _buildDetailRow('Contact', currentPayment.contactName ?? currentPayment.contactId),
+                      _buildDetailRow('Contact', _contactName ?? currentPayment.contactName ?? currentPayment.contactId),
                       SizedBox(height: 12),
-                      _buildDetailRow('Montant', formatCurrency(currentPayment.amount)),
+                      _buildDetailRow('Montant', formatCurrency(currentPayment.amount), isHighlight: true),
                       SizedBox(height: 12),
                       _buildDetailRow('Méthode', _translatePaymentMethod(currentPayment.method)),
                       SizedBox(height: 12),
@@ -178,9 +212,9 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
                      child: Column(
                        crossAxisAlignment: CrossAxisAlignment.start,
                        children: [
-                         Text('Notes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textSecondary)),
+                         Text('Notes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
                          SizedBox(height: 8),
-                         Text(currentPayment.notes!, style: TextStyle(fontSize: 16)),
+                         Text(currentPayment.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                        ],
                      ),
                    ),
@@ -193,7 +227,10 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, String value, {bool isHighlight = false}) {
+    final isEncaissement = currentPayment.direction == 'encaissement';
+    final amountColor = isEncaissement ? AppColors.success : AppColors.error;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -208,7 +245,11 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
           flex: 3,
           child: Text(
             value,
-            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+            style: TextStyle(
+              fontWeight: isHighlight ? FontWeight.bold : FontWeight.w600,
+              fontSize: isHighlight ? 15 : 14,
+              color: isHighlight ? amountColor : AppColors.textPrimary,
+            ),
             textAlign: TextAlign.right,
           ),
         ),
