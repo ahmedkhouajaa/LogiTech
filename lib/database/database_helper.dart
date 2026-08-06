@@ -1,6 +1,8 @@
 import 'dart:convert';
 import '../services/sync_service.dart';
+import '../services/enterprise_service.dart';
 import '../models/document_template.dart';
+import '../models/enterprise.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common/sqlite_api.dart';
 import 'package:sqflite/sqflite.dart';
@@ -137,18 +139,138 @@ class DatabaseHelper {
   Future<Database> _initDB() async {
     final dir = await getApplicationDocumentsDirectory();
     final path = p.join(dir.path, 'business_manager_pro.db');
-    return await openDatabase(
+    final db = await openDatabase(
       path,
-      version: 51,
+      version: 52,
       onConfigure: (db) async {
         await db.rawQuery('PRAGMA busy_timeout = 30000;');
       },
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
+    await _ensureAllColumnsExist(db);
+    return db;
+  }
+
+  Future<void> _ensureAllColumnsExist(Database db) async {
+    final customerCols = {
+      'customer_type': "TEXT DEFAULT 'entreprise'",
+      'company_name': "TEXT",
+      'responsible_name': "TEXT",
+      'cin_number': "TEXT",
+      'birth_date': "TEXT",
+      'reference_code': "TEXT",
+      'street_address': "TEXT",
+      'postal_code': "TEXT",
+      'country': "TEXT DEFAULT 'Tunisia'",
+      'delivery_street': "TEXT",
+      'delivery_city': "TEXT",
+      'delivery_postal_code': "TEXT",
+      'delivery_country': "TEXT DEFAULT 'Tunisia'",
+      'delivery_same_as_billing': "INTEGER DEFAULT 1",
+      'bank_account': "TEXT",
+      'tva_suspension': "INTEGER DEFAULT 0",
+      'tva_attestation': "TEXT",
+      'tva_start_date': "TEXT",
+      'tva_end_date': "TEXT",
+      'price_list': "TEXT DEFAULT 'default'",
+      'private_note': "TEXT",
+      'enterprise_id': "TEXT",
+    };
+
+    try {
+      final info = await db.rawQuery('PRAGMA table_info(customers)');
+      final existingCols = info.map((e) => e['name'] as String).toSet();
+      for (final entry in customerCols.entries) {
+        if (!existingCols.contains(entry.key)) {
+          await db.execute('ALTER TABLE customers ADD COLUMN ${entry.key} ${entry.value}');
+        }
+      }
+    } catch (_) {}
+
+    final supplierCols = {
+      'postal_code': "TEXT",
+      'country': "TEXT DEFAULT 'Tunisia'",
+      'delivery_street': "TEXT",
+      'delivery_city': "TEXT",
+      'delivery_postal_code': "TEXT",
+      'delivery_country': "TEXT DEFAULT 'Tunisia'",
+      'delivery_same_as_billing': "INTEGER DEFAULT 1",
+      'bank_account': "TEXT",
+      'supplier_type': "TEXT DEFAULT 'entreprise'",
+      'company_name': "TEXT",
+      'responsible_name': "TEXT",
+      'cin_number': "TEXT",
+      'birth_date': "TEXT",
+      'reference_code': "TEXT",
+      'enterprise_id': "TEXT",
+    };
+
+    try {
+      final info = await db.rawQuery('PRAGMA table_info(suppliers)');
+      final existingCols = info.map((e) => e['name'] as String).toSet();
+      for (final entry in supplierCols.entries) {
+        if (!existingCols.contains(entry.key)) {
+          await db.execute('ALTER TABLE suppliers ADD COLUMN ${entry.key} ${entry.value}');
+        }
+      }
+    } catch (_) {}
+
+    final tablesToEnsureEnterprise = [
+      'products', 'quotes', 'customer_orders', 'delivery_notes', 'invoices',
+      'bons_sortie', 'return_notes', 'supplier_orders', 'receiving_vouchers',
+      'purchase_invoices', 'supplier_returns', 'supplier_credit_notes',
+      'credit_notes', 'stock_entries', 'stock_transfers', 'inventory_sheets',
+      'stock_movements', 'projects', 'transactions', 'checks_traites',
+      'treasury_accounts', 'treasury_transactions', 'product_families',
+      'warehouses', 'payments', 'company_settings', 'document_templates'
+    ];
+
+    for (final table in tablesToEnsureEnterprise) {
+      try {
+        final info = await db.rawQuery('PRAGMA table_info($table)');
+        final existingCols = info.map((e) => e['name'] as String).toSet();
+        if (!existingCols.contains('enterprise_id')) {
+          await db.execute('ALTER TABLE $table ADD COLUMN enterprise_id TEXT');
+        }
+      } catch (_) {}
+    }
+
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 52) {
+      // Create enterprises local table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS enterprises (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT,
+          owner_id TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+
+      // Add enterprise_id column to all entity tables
+      final tablesToAlter = [
+        'customers', 'suppliers', 'products', 'quotes', 'customer_orders',
+        'delivery_notes', 'invoices', 'bons_sortie', 'return_notes',
+        'supplier_orders', 'receiving_vouchers', 'purchase_invoices',
+        'supplier_returns', 'supplier_credit_notes', 'credit_notes',
+        'stock_entries', 'stock_transfers', 'inventory_sheets',
+        'stock_movements', 'projects', 'transactions', 'checks_traites',
+        'treasury_accounts', 'treasury_transactions', 'product_families',
+        'warehouses', 'payments', 'company_settings', 'document_templates'
+      ];
+
+      for (final table in tablesToAlter) {
+        try {
+          await db.execute('ALTER TABLE $table ADD COLUMN enterprise_id TEXT');
+        } catch (_) {}
+      }
+    }
+
     if (oldVersion < 50) {
       await db.execute('DROP TABLE IF EXISTS inventory_sheet_items');
       await db.execute('DROP TABLE IF EXISTS inventory_sheets');
@@ -2491,6 +2613,10 @@ class DatabaseHelper {
   // ─── Generic Operations ─────────────────────────────────────────
   Future<int> insert(String table, Map<String, dynamic> data) async {
     final db = await database;
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId != null && data['enterprise_id'] == null) {
+      data['enterprise_id'] = currentEntId;
+    }
     await _addToSyncQueue(table, data['id'] as String, 'INSERT', data);
     final sqliteData = Map<String, dynamic>.from(data)..remove('items');
     return await db.insert(table, sqliteData, conflictAlgorithm: ConflictAlgorithm.replace);
@@ -2498,6 +2624,10 @@ class DatabaseHelper {
 
   Future<int> update(String table, Map<String, dynamic> data, String id) async {
     final db = await database;
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId != null && data['enterprise_id'] == null) {
+      data['enterprise_id'] = currentEntId;
+    }
     data['updated_at'] = DateTime.now().toIso8601String();
     await _addToSyncQueue(table, id, 'UPDATE', data);
     final sqliteData = Map<String, dynamic>.from(data)..remove('items');
@@ -2513,6 +2643,24 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getAll(String table, {String? orderBy}) async {
     final db = await database;
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId != null && currentEntId.isNotEmpty) {
+      if (EnterpriseService.instance.isDefaultEnterprise) {
+        return await db.query(
+          table,
+          where: 'is_deleted = 0 AND (enterprise_id = ? OR enterprise_id IS NULL)',
+          whereArgs: [currentEntId],
+          orderBy: orderBy ?? 'created_at DESC',
+        );
+      } else {
+        return await db.query(
+          table,
+          where: 'is_deleted = 0 AND enterprise_id = ?',
+          whereArgs: [currentEntId],
+          orderBy: orderBy ?? 'created_at DESC',
+        );
+      }
+    }
     return await db.query(table, where: 'is_deleted = 0', orderBy: orderBy ?? 'created_at DESC');
   }
 
@@ -2574,7 +2722,7 @@ class DatabaseHelper {
     String? searchQuery,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['is_deleted = 0'];
+    List<String> whereClauses = ['is_deleted = 0', _entWhereClause()];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -2601,7 +2749,7 @@ class DatabaseHelper {
     String? searchQuery,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['is_deleted = 0'];
+    List<String> whereClauses = ['is_deleted = 0', _entWhereClause()];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -2640,7 +2788,16 @@ class DatabaseHelper {
 
   Future<int> getCustomerCount() async {
     final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) as count FROM customers WHERE is_deleted = 0');
+    final entId = EnterpriseService.instance.currentEnterpriseId;
+    List<Map<String, dynamic>> result;
+    if (entId != null && entId.isNotEmpty) {
+      result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM customers WHERE is_deleted = 0 AND (enterprise_id = ? OR enterprise_id IS NULL)',
+        [entId],
+      );
+    } else {
+      result = await db.rawQuery('SELECT COUNT(*) as count FROM customers WHERE is_deleted = 0');
+    }
     return result.first['count'] as int;
   }
 
@@ -2668,7 +2825,7 @@ class DatabaseHelper {
     String? searchQuery,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['is_deleted = 0'];
+    List<String> whereClauses = ['is_deleted = 0', _entWhereClause()];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -2695,7 +2852,7 @@ class DatabaseHelper {
     String? searchQuery,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['is_deleted = 0'];
+    List<String> whereClauses = ['is_deleted = 0', _entWhereClause()];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -2740,16 +2897,18 @@ class DatabaseHelper {
 
   Future<List<Product>> getLowStockProducts() async {
     final db = await database;
+    final filter = _entFilter();
     final maps = await db.rawQuery(
-      'SELECT * FROM products WHERE is_deleted = 0 AND is_active = 1 AND stock_qty <= min_stock_qty AND min_stock_qty > 0 ORDER BY stock_qty ASC',
+      'SELECT * FROM products WHERE is_deleted = 0 AND is_active = 1 AND stock_qty <= min_stock_qty AND min_stock_qty > 0 $filter ORDER BY stock_qty ASC',
     );
     return maps.map((m) => Product.fromMap(m)).toList();
   }
 
   Future<double> getTotalStockValue() async {
     final db = await database;
+    final filter = _entFilter();
     final result = await db.rawQuery(
-      'SELECT COALESCE(SUM(stock_qty * purchase_price), 0) as total FROM products WHERE is_deleted = 0',
+      'SELECT COALESCE(SUM(stock_qty * purchase_price), 0) as total FROM products WHERE is_deleted = 0 $filter',
     );
     return (result.first['total'] as num?)?.toDouble() ?? 0;
   }
@@ -2757,12 +2916,13 @@ class DatabaseHelper {
   // ─── Invoices ───────────────────────────────────────────────────
   Future<List<Invoice>> getInvoices() async {
     final db = await database;
+    final filter = _entFilter('i');
     final maps = await db.rawQuery('''
       SELECT i.*, c.name as customer_name, p.name as project_name
       FROM invoices i 
       LEFT JOIN customers c ON i.customer_id = c.id 
       LEFT JOIN projects p ON i.project_id = p.id
-      WHERE i.is_deleted = 0 
+      WHERE i.is_deleted = 0 $filter
       ORDER BY i.created_at DESC
     ''');
     List<Invoice> invoices = [];
@@ -2784,7 +2944,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['i.is_deleted = 0'];
+    List<String> whereClauses = ['i.is_deleted = 0', _entWhereClause('i')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -2843,7 +3003,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['i.is_deleted = 0'];
+    List<String> whereClauses = ['i.is_deleted = 0', _entWhereClause('i')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -2929,18 +3089,20 @@ class DatabaseHelper {
 
   Future<int> getNextInvoiceNumber() async {
     final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) + 1 as next FROM invoices');
+    final filter = _entFilter();
+    final result = await db.rawQuery('SELECT COUNT(*) + 1 as next FROM invoices WHERE 1=1 $filter');
     return result.first['next'] as int;
   }
 
   // ─── Credit Notes ────────────────────────────────────────────────
   Future<List<CreditNote>> getCreditNotes() async {
     final db = await database;
+    final filter = _entFilter('cn');
     final maps = await db.rawQuery('''
       SELECT cn.*, c.name as customer_name
       FROM credit_notes cn
       LEFT JOIN customers c ON cn.customer_id = c.id
-      WHERE cn.is_deleted = 0
+      WHERE cn.is_deleted = 0 $filter
       ORDER BY cn.created_at DESC
     ''');
     
@@ -2967,7 +3129,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['cn.is_deleted = 0'];
+    List<String> whereClauses = ['cn.is_deleted = 0', _entWhereClause('cn')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -3030,7 +3192,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['cn.is_deleted = 0'];
+    List<String> whereClauses = ['cn.is_deleted = 0', _entWhereClause('cn')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -3091,8 +3253,13 @@ class DatabaseHelper {
 
   Future<void> insertCreditNote(CreditNote cn) async {
     final db = await database;
+    final data = cn.toMap();
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId != null && data['enterprise_id'] == null) {
+      data['enterprise_id'] = currentEntId;
+    }
     await db.transaction((txn) async {
-      await txn.insert('credit_notes', Map<String, dynamic>.from(cn.toMap())..remove('items'));
+      await txn.insert('credit_notes', Map<String, dynamic>.from(data)..remove('items'));
       for (final item in cn.items) {
         await txn.insert('credit_note_items', item.toMap(cn.id));
       }
@@ -3136,61 +3303,90 @@ class DatabaseHelper {
 
   Future<int> getNextCreditNoteNumber() async {
     final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) + 1 as next FROM credit_notes');
+    final filter = _entFilter();
+    final result = await db.rawQuery('SELECT COUNT(*) + 1 as next FROM credit_notes WHERE 1=1 $filter');
     return result.first['next'] as int;
   }
 
   // ─── Dashboard Aggregates ──────────────────────────────────────
+  String _entWhereClause([String tablePrefix = '']) {
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId == null || currentEntId.isEmpty) return '1=1';
+    final col = tablePrefix.isNotEmpty ? '$tablePrefix.enterprise_id' : 'enterprise_id';
+    if (EnterpriseService.instance.isDefaultEnterprise) {
+      return "($col = '$currentEntId' OR $col IS NULL)";
+    } else {
+      return "$col = '$currentEntId'";
+    }
+  }
+
+  String _entFilter([String tablePrefix = '']) {
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId == null || currentEntId.isEmpty) return '';
+    final col = tablePrefix.isNotEmpty ? '$tablePrefix.enterprise_id' : 'enterprise_id';
+    if (EnterpriseService.instance.isDefaultEnterprise) {
+      return " AND ($col = '$currentEntId' OR $col IS NULL)";
+    } else {
+      return " AND $col = '$currentEntId'";
+    }
+  }
+
   Future<double> getTotalInvoiced() async {
     final db = await database;
+    final filter = _entFilter();
     final result = await db.rawQuery(
-      "SELECT COALESCE(SUM(total_ttc), 0) as total FROM invoices WHERE is_deleted = 0 AND status != 'cancelled'",
+      "SELECT COALESCE(SUM(total_ttc), 0) as total FROM invoices WHERE is_deleted = 0 AND status != 'cancelled'$filter",
     );
     return (result.first['total'] as num?)?.toDouble() ?? 0;
   }
 
   Future<double> getTotalPaid() async {
     final db = await database;
+    final filter = _entFilter();
     final result = await db.rawQuery(
-      "SELECT COALESCE(SUM(amount_paid), 0) as total FROM invoices WHERE is_deleted = 0 AND status != 'cancelled'",
+      "SELECT COALESCE(SUM(amount_paid), 0) as total FROM invoices WHERE is_deleted = 0 AND status != 'cancelled'$filter",
     );
     return (result.first['total'] as num?)?.toDouble() ?? 0;
   }
 
   Future<double> getTotalDeliveryNotes() async {
     final db = await database;
+    final filter = _entFilter();
     final result = await db.rawQuery(
-      "SELECT COUNT(*) as total FROM delivery_notes WHERE is_deleted = 0",
+      "SELECT COUNT(*) as total FROM delivery_notes WHERE is_deleted = 0$filter",
     );
     return (result.first['total'] as num?)?.toDouble() ?? 0;
   }
 
   Future<double> getTotalTvaCollected() async {
     final db = await database;
+    final filter = _entFilter();
     final result = await db.rawQuery(
-      "SELECT COALESCE(SUM(total_tva), 0) as total FROM invoices WHERE is_deleted = 0 AND status != 'cancelled'",
+      "SELECT COALESCE(SUM(total_tva), 0) as total FROM invoices WHERE is_deleted = 0 AND status != 'cancelled'$filter",
     );
     return (result.first['total'] as num?)?.toDouble() ?? 0;
   }
 
   Future<double> getTotalTvaDeductible() async {
     final db = await database;
+    final filter = _entFilter();
     final result = await db.rawQuery(
-      "SELECT COALESCE(SUM(total_tva), 0) as total FROM purchase_invoices WHERE is_deleted = 0 AND status != 'cancelled'",
+      "SELECT COALESCE(SUM(total_tva), 0) as total FROM purchase_invoices WHERE is_deleted = 0 AND status != 'cancelled'$filter",
     );
     return (result.first['total'] as num?)?.toDouble() ?? 0;
   }
 
   Future<Map<String, double>> getInvoiceStatusBreakdown() async {
     final db = await database;
+    final filter = _entFilter();
     final total = await getTotalInvoiced();
     if (total == 0) return {'paid': 0, 'partial': 0, 'unpaid': 0};
 
     final paidResult = await db.rawQuery(
-      "SELECT COALESCE(SUM(total_ttc), 0) as total FROM invoices WHERE is_deleted = 0 AND status = 'paid'",
+      "SELECT COALESCE(SUM(total_ttc), 0) as total FROM invoices WHERE is_deleted = 0 AND status = 'paid'$filter",
     );
     final partialResult = await db.rawQuery(
-      "SELECT COALESCE(SUM(total_ttc), 0) as total FROM invoices WHERE is_deleted = 0 AND status = 'partial'",
+      "SELECT COALESCE(SUM(total_ttc), 0) as total FROM invoices WHERE is_deleted = 0 AND status = 'partial'$filter",
     );
 
     final paid = (paidResult.first['total'] as num?)?.toDouble() ?? 0;
@@ -3206,11 +3402,12 @@ class DatabaseHelper {
 
   Future<List<Invoice>> getRecentInvoices({int limit = 5}) async {
     final db = await database;
+    final filter = _entFilter('i');
     final maps = await db.rawQuery('''
       SELECT i.*, c.name as customer_name 
       FROM invoices i 
       LEFT JOIN customers c ON i.customer_id = c.id 
-      WHERE i.is_deleted = 0 
+      WHERE i.is_deleted = 0 $filter
       ORDER BY i.created_at DESC 
       LIMIT ?
     ''', [limit]);
@@ -3220,12 +3417,13 @@ class DatabaseHelper {
   // ─── Quotes ─────────────────────────────────────────────────────
   Future<List<Quote>> getQuotes() async {
     final db = await database;
+    final filter = _entFilter('q');
     final maps = await db.rawQuery('''
       SELECT q.*, c.name as customer_name, p.name as project_name 
       FROM quotes q 
       LEFT JOIN customers c ON q.customer_id = c.id 
       LEFT JOIN projects p ON q.project_id = p.id 
-      WHERE q.is_deleted = 0 
+      WHERE q.is_deleted = 0 $filter
       ORDER BY q.created_at DESC
     ''');
     
@@ -3248,7 +3446,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['q.is_deleted = 0'];
+    List<String> whereClauses = ['q.is_deleted = 0', _entWhereClause('q')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -3307,7 +3505,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['q.is_deleted = 0'];
+    List<String> whereClauses = ['q.is_deleted = 0', _entWhereClause('q')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -3401,6 +3599,7 @@ class DatabaseHelper {
     DateTime? endDate,
   }) async {
     final db = await database;
+    final filter = _entFilter('dn');
     String query = '''
       SELECT dn.*,
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
@@ -3409,7 +3608,7 @@ class DatabaseHelper {
       FROM delivery_notes dn
       LEFT JOIN customers c ON dn.customer_id = c.id
       LEFT JOIN projects p ON dn.project_id = p.id
-      WHERE dn.is_deleted = 0
+      WHERE dn.is_deleted = 0 $filter
     ''';
     final args = <dynamic>[];
 
@@ -3452,7 +3651,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['dn.is_deleted = 0'];
+    List<String> whereClauses = ['dn.is_deleted = 0', _entWhereClause('dn')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -3520,7 +3719,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['dn.is_deleted = 0'];
+    List<String> whereClauses = ['dn.is_deleted = 0', _entWhereClause('dn')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -3587,6 +3786,10 @@ class DatabaseHelper {
   Future<void> insertDeliveryNote(DeliveryNote note) async {
     final db = await database;
     final data = note.toMap();
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId != null && data['enterprise_id'] == null) {
+      data['enterprise_id'] = currentEntId;
+    }
     await db.transaction((txn) async {
       await txn.insert('delivery_notes', Map<String, dynamic>.from(data)..remove('items'));
       for (var item in note.items) {
@@ -3622,8 +3825,9 @@ class DatabaseHelper {
   Future<int> getNextDeliveryNoteSequence() async {
     final db = await database;
     final year = DateTime.now().year;
+    final filter = _entFilter();
     final result = await db.rawQuery(
-      'SELECT COUNT(*) + 1 AS next FROM delivery_notes WHERE number LIKE ?',
+      'SELECT COUNT(*) + 1 AS next FROM delivery_notes WHERE number LIKE ? $filter',
       ['BL-$year-%'],
     );
     return result.first['next'] as int? ?? 1;
@@ -3636,13 +3840,14 @@ class DatabaseHelper {
     DateTime? endDate,
   }) async {
     final db = await database;
+    final filter = _entFilter('rn');
     String query = '''
       SELECT rn.*,
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_name
       FROM return_notes rn
       LEFT JOIN customers c ON rn.customer_id = c.id
-      WHERE 1=1
+      WHERE 1=1 $filter
     ''';
     final args = <dynamic>[];
 
@@ -3685,7 +3890,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['1=1'];
+    List<String> whereClauses = ['1=1', _entWhereClause('rn')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -3751,7 +3956,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['1=1'];
+    List<String> whereClauses = ['1=1', _entWhereClause('rn')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -3815,6 +4020,10 @@ class DatabaseHelper {
   Future<void> insertReturnNote(ReturnNote note) async {
     final db = await database;
     final data = note.toMap();
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId != null && data['enterprise_id'] == null) {
+      data['enterprise_id'] = currentEntId;
+    }
     await db.transaction((txn) async {
       await txn.insert('return_notes', Map<String, dynamic>.from(data)..remove('items'));
       for (var item in note.items) {
@@ -3866,6 +4075,7 @@ class DatabaseHelper {
     DateTime? endDate,
   }) async {
     final db = await database;
+    final filter = _entFilter('sw');
     String query = '''
       SELECT sw.*,
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
@@ -3874,7 +4084,7 @@ class DatabaseHelper {
       FROM bons_sortie sw
       LEFT JOIN customers c ON sw.customer_id = c.id
       LEFT JOIN projects p ON sw.project_id = p.id
-      WHERE sw.is_deleted = 0
+      WHERE sw.is_deleted = 0 $filter
     ''';
     final args = <dynamic>[];
 
@@ -3918,7 +4128,7 @@ class DatabaseHelper {
     String? numberPrefix,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['sw.is_deleted = 0'];
+    List<String> whereClauses = ['sw.is_deleted = 0', _entWhereClause('sw')];
     List<dynamic> whereArgs = [];
 
     if (numberPrefix != null && numberPrefix.isNotEmpty) {
@@ -3992,7 +4202,7 @@ class DatabaseHelper {
     String? numberPrefix,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['sw.is_deleted = 0'];
+    List<String> whereClauses = ['sw.is_deleted = 0', _entWhereClause('sw')];
     List<dynamic> whereArgs = [];
 
     if (numberPrefix != null && numberPrefix.isNotEmpty) {
@@ -4064,6 +4274,10 @@ class DatabaseHelper {
   Future<void> insertStockWithdrawal(StockWithdrawal sw) async {
     final db = await database;
     final data = sw.toMap();
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId != null && data['enterprise_id'] == null) {
+      data['enterprise_id'] = currentEntId;
+    }
     await db.transaction((txn) async {
       await txn.insert('bons_sortie', Map<String, dynamic>.from(data)..remove('items'));
       for (var item in sw.items) {
@@ -4153,11 +4367,12 @@ class DatabaseHelper {
   // ─── Transactions ──────────────────────────────────────────────
   Future<List<TransactionModel>> getTransactions() async {
     final db = await database;
+    final filter = _entFilter('t');
     final maps = await db.rawQuery('''
       SELECT t.*, a.name as account_name 
       FROM transactions t 
       LEFT JOIN accounts a ON t.account_id = a.id 
-      WHERE t.is_deleted = 0 
+      WHERE t.is_deleted = 0 $filter
       ORDER BY t.date DESC
     ''');
     return maps.map((m) => TransactionModel.fromMap(m)).toList();
@@ -4187,6 +4402,7 @@ class DatabaseHelper {
   // ─── Stock Movements ───────────────────────────────────────────
   Future<List<StockMovement>> getStockMovements() async {
     final db = await database;
+    final filter = _entFilter('sm');
     final maps = await db.rawQuery('''
       SELECT sm.*, p.name as product_name, 
              CASE 
@@ -4202,7 +4418,7 @@ class DatabaseHelper {
       FROM stock_movements sm
       LEFT JOIN products p ON sm.product_id = p.id
       LEFT JOIN warehouses w ON sm.warehouse_id = w.id
-      WHERE sm.is_deleted = 0
+      WHERE sm.is_deleted = 0 $filter
       ORDER BY sm.date DESC
     ''');
     return maps.map((m) => StockMovement.fromMap(m)).toList();
@@ -4247,11 +4463,12 @@ class DatabaseHelper {
   // ─── Projects ───────────────────────────────────────────────────
   Future<List<Project>> getProjects() async {
     final db = await database;
+    final filter = _entFilter('p');
     final maps = await db.rawQuery('''
       SELECT p.*, c.name as customer_name
       FROM projects p
       LEFT JOIN customers c ON p.customer_id = c.id
-      WHERE p.is_deleted = 0
+      WHERE p.is_deleted = 0 $filter
       ORDER BY p.created_at DESC
     ''');
     return maps.map((m) => Project.fromMap(m)).toList();
@@ -4268,11 +4485,12 @@ class DatabaseHelper {
   // ─── Purchase Invoices ──────────────────────────────────────────
   Future<List<PurchaseInvoice>> getPurchaseInvoices() async {
     final db = await database;
+    final filter = _entFilter('pi');
     final maps = await db.rawQuery('''
       SELECT pi.*, s.name as supplier_name
       FROM purchase_invoices pi
       LEFT JOIN suppliers s ON pi.supplier_id = s.id
-      WHERE pi.is_deleted = 0
+      WHERE pi.is_deleted = 0 $filter
       ORDER BY pi.created_at DESC
     ''');
     
@@ -4352,7 +4570,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['pi.is_deleted = 0'];
+    List<String> whereClauses = ['pi.is_deleted = 0', _entWhereClause('pi')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -4414,7 +4632,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['pi.is_deleted = 0'];
+    List<String> whereClauses = ['pi.is_deleted = 0', _entWhereClause('pi')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -4477,10 +4695,21 @@ class DatabaseHelper {
   // ─── Families ───────────────────────────────────────────────────
   Future<List<ProductFamily>> getProductFamilies() async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'product_families',
-      orderBy: 'name ASC',
-    );
+    final entId = EnterpriseService.instance.currentEnterpriseId;
+    List<Map<String, dynamic>> maps;
+    if (entId != null && entId.isNotEmpty) {
+      maps = await db.query(
+        'product_families',
+        where: 'enterprise_id = ? OR enterprise_id IS NULL',
+        whereArgs: [entId],
+        orderBy: 'name ASC',
+      );
+    } else {
+      maps = await db.query(
+        'product_families',
+        orderBy: 'name ASC',
+      );
+    }
     return maps.map((m) => ProductFamily.fromMap(m)).toList();
   }
 
@@ -4511,9 +4740,33 @@ class DatabaseHelper {
   // ─── Company Settings ──────────────────────────────────────────
   Future<CompanySettings> getCompanySettings() async {
     final db = await database;
-    final maps = await db.query('company_settings');
-    if (maps.isEmpty) return CompanySettings();
-    return CompanySettings.fromMap(maps.first);
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    List<Map<String, dynamic>> maps = [];
+    if (currentEntId != null && currentEntId.isNotEmpty) {
+      maps = await db.query('company_settings', where: 'enterprise_id = ?', whereArgs: [currentEntId]);
+    } else if (EnterpriseService.instance.isDefaultEnterprise) {
+      maps = await db.query('company_settings', where: 'id = ? OR enterprise_id = ? OR enterprise_id IS NULL', whereArgs: ['1', currentEntId ?? '1']);
+    }
+    if (maps.isNotEmpty) {
+      return CompanySettings.fromMap(maps.first);
+    }
+
+    final currentEnt = EnterpriseService.instance.enterprises.firstWhere(
+      (e) => e.id == currentEntId,
+      orElse: () => Enterprise(id: '1', name: 'Mon Entreprise', ownerId: ''),
+    );
+
+    return CompanySettings(
+      id: currentEnt.id,
+      name: currentEnt.name,
+      phone: currentEnt.phone,
+      email: currentEnt.email,
+      website: currentEnt.website,
+      taxId: currentEnt.taxId,
+      rcNumber: currentEnt.rcNumber,
+      address: currentEnt.address,
+      rib: currentEnt.rib,
+    );
   }
 
   Future<void> updateCompanySettings(CompanySettings settings) async {
@@ -4546,11 +4799,12 @@ class DatabaseHelper {
   // ─── Receiving Vouchers ──────────────────────────────────────────
   Future<List<ReceivingVoucher>> getReceivingVouchers() async {
     final db = await database;
+    final filter = _entFilter('rv');
     final maps = await db.rawQuery('''
       SELECT rv.*,
         (SELECT name FROM suppliers WHERE id = rv.supplier_id AND is_deleted = 0 LIMIT 1) as supplier_name
       FROM receiving_vouchers rv
-      WHERE rv.is_deleted = 0
+      WHERE rv.is_deleted = 0 $filter
       ORDER BY rv.created_at DESC
     ''');
     final vouchers = <ReceivingVoucher>[];
@@ -4577,7 +4831,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['rv.is_deleted = 0'];
+    List<String> whereClauses = ['rv.is_deleted = 0', _entWhereClause('rv')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -4642,7 +4896,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['rv.is_deleted = 0'];
+    List<String> whereClauses = ['rv.is_deleted = 0', _entWhereClause('rv')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -4704,6 +4958,10 @@ class DatabaseHelper {
 
   Future<void> insertReceivingVoucher(Map<String, dynamic> voucherMap, List<Map<String, dynamic>> itemsMap) async {
     final db = await database;
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId != null && voucherMap['enterprise_id'] == null) {
+      voucherMap['enterprise_id'] = currentEntId;
+    }
     await db.transaction((txn) async {
       await txn.insert('receiving_vouchers', Map<String, dynamic>.from(voucherMap)..remove('items'));
       for (var item in itemsMap) {
@@ -4753,11 +5011,12 @@ class DatabaseHelper {
       }
     }
 
+    final filter = _entFilter('sr');
     final maps = await db.rawQuery('''
       SELECT sr.*, s.name as supplier_name 
       FROM supplier_returns sr
       LEFT JOIN suppliers s ON sr.supplier_id = s.id
-      WHERE sr.is_deleted = 0
+      WHERE sr.is_deleted = 0 $filter
       ORDER BY sr.date DESC
     ''');
 
@@ -4784,7 +5043,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['sr.is_deleted = 0'];
+    List<String> whereClauses = ['sr.is_deleted = 0', _entWhereClause('sr')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -4847,7 +5106,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['sr.is_deleted = 0'];
+    List<String> whereClauses = ['sr.is_deleted = 0', _entWhereClause('sr')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -4911,8 +5170,13 @@ class DatabaseHelper {
 
   Future<void> insertSupplierReturn(SupplierReturn sr) async {
     final db = await database;
+    final data = sr.toMap();
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId != null && data['enterprise_id'] == null) {
+      data['enterprise_id'] = currentEntId;
+    }
     await db.transaction((txn) async {
-      await txn.insert('supplier_returns', Map<String, dynamic>.from(sr.toMap()..remove('items')), conflictAlgorithm: ConflictAlgorithm.replace);
+      await txn.insert('supplier_returns', Map<String, dynamic>.from(data..remove('items')), conflictAlgorithm: ConflictAlgorithm.replace);
       for (var item in sr.items) {
         await txn.insert('supplier_return_items', item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
       }
@@ -4979,6 +5243,7 @@ class DatabaseHelper {
   // ─── Payments ──────────────────────────────────────────────────
   Future<List<Payment>> getPayments() async {
     final db = await database;
+    final filter = _entFilter('p');
     final maps = await db.rawQuery('''
       SELECT p.*,
         COALESCE(
@@ -4988,7 +5253,7 @@ class DatabaseHelper {
         pa.name as account_name
       FROM payments p
       LEFT JOIN payment_accounts pa ON p.account_id = pa.id
-      WHERE p.is_deleted = 0
+      WHERE p.is_deleted = 0 $filter
       ORDER BY p.created_at DESC
     ''');
     return maps.map((m) => Payment.fromMap(m)).toList();
@@ -5001,7 +5266,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['p.is_deleted = 0'];
+    List<String> whereClauses = ['p.is_deleted = 0', _entWhereClause('p')];
     List<dynamic> whereArgs = [];
 
     if (status != null && status.isNotEmpty) {
@@ -5045,7 +5310,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['p.is_deleted = 0'];
+    List<String> whereClauses = ['p.is_deleted = 0', _entWhereClause('p')];
     List<dynamic> whereArgs = [];
 
     if (status != null && status.isNotEmpty) {
@@ -5178,6 +5443,7 @@ class DatabaseHelper {
   // ─── Customer Orders ─────────────────────────────────────────
   Future<List<CustomerOrder>> getCustomerOrders({String? status, DateTime? startDate, DateTime? endDate}) async {
     final db = await database;
+    final filter = _entFilter('o');
     String query = '''
       SELECT o.*,
              COALESCE(c.company_name, c.name, c.responsible_name) AS customer_company,
@@ -5186,7 +5452,7 @@ class DatabaseHelper {
       FROM customer_orders o
       LEFT JOIN customers c ON o.customer_id = c.id
       LEFT JOIN projects p ON o.project_id = p.id
-      WHERE o.is_deleted = 0
+      WHERE o.is_deleted = 0 $filter
     ''';
     final args = <dynamic>[];
 
@@ -5230,7 +5496,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['o.is_deleted = 0'];
+    List<String> whereClauses = ['o.is_deleted = 0', _entWhereClause('o')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -5298,7 +5564,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['o.is_deleted = 0'];
+    List<String> whereClauses = ['o.is_deleted = 0', _entWhereClause('o')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -5350,7 +5616,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['e.is_deleted = 0'];
+    List<String> whereClauses = ['e.is_deleted = 0', _entWhereClause('e')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -5413,7 +5679,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['e.is_deleted = 0'];
+    List<String> whereClauses = ['e.is_deleted = 0', _entWhereClause('e')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -5482,6 +5748,10 @@ class DatabaseHelper {
   Future<void> insertCustomerOrder(CustomerOrder order) async {
     final db = await database;
     final data = order.toMap();
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId != null && data['enterprise_id'] == null) {
+      data['enterprise_id'] = currentEntId;
+    }
     await db.transaction((txn) async {
       await txn.insert('customer_orders', Map<String, dynamic>.from(data)..remove('items'));
       for (var item in order.items) {
@@ -5532,8 +5802,9 @@ class DatabaseHelper {
   Future<int> getNextCustomerOrderSequence() async {
     final db = await database;
     final year = DateTime.now().year;
+    final filter = _entFilter();
     final result = await db.rawQuery(
-      'SELECT COUNT(*) + 1 as next FROM customer_orders WHERE number LIKE ?',
+      'SELECT COUNT(*) + 1 as next FROM customer_orders WHERE number LIKE ? $filter',
       ['CC-$year-%'],
     );
     return result.first['next'] as int? ?? 1;
@@ -5542,8 +5813,9 @@ class DatabaseHelper {
   Future<int> getNextQuoteSequence() async {
     final db = await database;
     final year = DateTime.now().year;
+    final filter = _entFilter();
     final result = await db.rawQuery(
-      'SELECT COUNT(*) + 1 as next FROM quotes WHERE number LIKE ?',
+      'SELECT COUNT(*) + 1 as next FROM quotes WHERE number LIKE ? $filter',
       ['DV-$year-%'],
     );
     return result.first['next'] as int? ?? 1;
@@ -5554,7 +5826,8 @@ class DatabaseHelper {
   Future<List<SupplierOrder>> getSupplierOrders({String? status, DateTime? startDate, DateTime? endDate}) async {
     final db = await database;
     
-    String where = 'so.is_deleted = 0';
+    final filter = _entFilter('so');
+    String where = 'so.is_deleted = 0 $filter';
     List<dynamic> whereArgs = [];
 
     if (status != null && status != 'Tous') {
@@ -5604,7 +5877,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['so.is_deleted = 0'];
+    List<String> whereClauses = ['so.is_deleted = 0', _entWhereClause('so')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -5672,7 +5945,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['so.is_deleted = 0'];
+    List<String> whereClauses = ['so.is_deleted = 0', _entWhereClause('so')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -5741,6 +6014,10 @@ class DatabaseHelper {
   Future<void> insertSupplierOrder(SupplierOrder order) async {
     final db = await database;
     final data = order.toMap();
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId != null && data['enterprise_id'] == null) {
+      data['enterprise_id'] = currentEntId;
+    }
     await db.transaction((txn) async {
       await txn.insert('supplier_orders', Map<String, dynamic>.from(data)..remove('items'));
       for (var item in order.items) {
@@ -5792,8 +6069,9 @@ class DatabaseHelper {
   Future<int> getNextSupplierOrderSequence() async {
     final db = await database;
     final year = DateTime.now().year;
+    final filter = _entFilter();
     final result = await db.rawQuery(
-      'SELECT COUNT(*) + 1 as next FROM supplier_orders WHERE number LIKE ?',
+      'SELECT COUNT(*) + 1 as next FROM supplier_orders WHERE number LIKE ? $filter',
       ['CF-$year-%'],
     );
     return result.first['next'] as int? ?? 1;
@@ -5802,8 +6080,9 @@ class DatabaseHelper {
   Future<int> getNextReceivingVoucherSequence() async {
     final db = await database;
     final year = DateTime.now().year;
+    final filter = _entFilter();
     final result = await db.rawQuery(
-      'SELECT COUNT(*) + 1 as next FROM receiving_vouchers WHERE number LIKE ? OR number LIKE ? OR number LIKE ?',
+      'SELECT COUNT(*) + 1 as next FROM receiving_vouchers WHERE (number LIKE ? OR number LIKE ? OR number LIKE ?) $filter',
       ['BR-$year-%', 'BRec-$year-%', 'BC-%'],
     );
     return result.first['next'] as int? ?? 1;
@@ -5821,6 +6100,10 @@ class DatabaseHelper {
         WHERE account_id = treasury_accounts.id
       ), 0.0)
     ''');
+    final entId = EnterpriseService.instance.currentEnterpriseId;
+    if (entId != null && entId.isNotEmpty) {
+      return await db.query('treasury_accounts', where: 'enterprise_id = ?', whereArgs: [entId], orderBy: 'is_default DESC, name ASC');
+    }
     return await db.query('treasury_accounts', orderBy: 'is_default DESC, name ASC');
   }
 
@@ -5841,17 +6124,25 @@ class DatabaseHelper {
       ), 0.0)
     ''');
 
-    String where = '';
+    List<String> conditions = [];
     List<dynamic> whereArgs = [];
 
+    final entId = EnterpriseService.instance.currentEnterpriseId;
+    if (entId != null && entId.isNotEmpty) {
+      conditions.add('enterprise_id = ?');
+      whereArgs.add(entId);
+    }
+
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
-      where = 'name LIKE ?';
+      conditions.add('name LIKE ?');
       whereArgs.add('%${searchQuery.trim()}%');
     }
 
+    final where = conditions.isEmpty ? null : conditions.join(' AND ');
+
     return await db.query(
       'treasury_accounts',
-      where: where.isEmpty ? null : where,
+      where: where,
       whereArgs: whereArgs.isEmpty ? null : whereArgs,
       orderBy: 'is_default DESC, name ASC',
       limit: limit,
@@ -5861,15 +6152,21 @@ class DatabaseHelper {
 
   Future<int> getTreasuryAccountsCount({String? searchQuery}) async {
     final db = await database;
-    String where = '';
+    List<String> conditions = [];
     List<dynamic> whereArgs = [];
 
+    final entId = EnterpriseService.instance.currentEnterpriseId;
+    if (entId != null && entId.isNotEmpty) {
+      conditions.add('enterprise_id = ?');
+      whereArgs.add(entId);
+    }
+
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
-      where = 'name LIKE ?';
+      conditions.add('name LIKE ?');
       whereArgs.add('%${searchQuery.trim()}%');
     }
 
-    final queryStr = 'SELECT COUNT(*) as count FROM treasury_accounts ' + (where.isEmpty ? '' : 'WHERE $where');
+    final queryStr = 'SELECT COUNT(*) as count FROM treasury_accounts' + (conditions.isEmpty ? '' : ' WHERE ${conditions.join(' AND ')}');
     final result = await db.rawQuery(
       queryStr,
       whereArgs.isEmpty ? null : whereArgs,
@@ -5900,20 +6197,28 @@ class DatabaseHelper {
   // ─── Treasury Transactions ───────────────────────────────────────────
   Future<List<Map<String, dynamic>>> getTreasuryTransactions({DateTime? startDate, DateTime? endDate}) async {
     final db = await database;
-    String where = '';
+    List<String> conditions = [];
     List<dynamic> whereArgs = [];
+
+    final entId = EnterpriseService.instance.currentEnterpriseId;
+    if (entId != null && entId.isNotEmpty) {
+      conditions.add('t.enterprise_id = ?');
+      whereArgs.add(entId);
+    }
     
     if (startDate != null && endDate != null) {
-      where = 'date_transaction >= ? AND date_transaction <= ?';
-      whereArgs = [startDate.millisecondsSinceEpoch, endDate.millisecondsSinceEpoch];
+      conditions.add('t.date_transaction >= ?');
+      conditions.add('t.date_transaction <= ?');
+      whereArgs.addAll([startDate.millisecondsSinceEpoch, endDate.millisecondsSinceEpoch]);
     }
 
+    final whereClause = conditions.isEmpty ? '' : 'WHERE ${conditions.join(' AND ')}';
     final query = '''
       SELECT t.*, a.name AS account_name, p.name AS project_name
       FROM treasury_transactions t
       LEFT JOIN treasury_accounts a ON t.account_id = a.id
       LEFT JOIN projects p ON t.project_id = p.id
-      ${where.isNotEmpty ? 'WHERE $where' : ''}
+      $whereClause
       ORDER BY t.date_transaction DESC, t.created_at DESC
     ''';
     return await db.rawQuery(query, whereArgs);
@@ -5925,6 +6230,12 @@ class DatabaseHelper {
     String whereClause = '';
     List<dynamic> whereArgs = [];
     List<String> conditions = [];
+
+    final entId = EnterpriseService.instance.currentEnterpriseId;
+    if (entId != null && entId.isNotEmpty) {
+      conditions.add('t.enterprise_id = ?');
+      whereArgs.add(entId);
+    }
     
     if (searchQuery.isNotEmpty) {
       conditions.add('(t.transaction_number LIKE ? OR a.name LIKE ? OR t.description LIKE ?)');
@@ -5964,6 +6275,12 @@ class DatabaseHelper {
     String whereClause = '';
     List<dynamic> whereArgs = [];
     List<String> conditions = [];
+
+    final entId = EnterpriseService.instance.currentEnterpriseId;
+    if (entId != null && entId.isNotEmpty) {
+      conditions.add('t.enterprise_id = ?');
+      whereArgs.add(entId);
+    }
     
     if (searchQuery.isNotEmpty) {
       conditions.add('(t.transaction_number LIKE ? OR a.name LIKE ? OR t.description LIKE ?)');
@@ -6065,17 +6382,26 @@ class DatabaseHelper {
 
   Future<int> getNextSupplierCreditNoteSequence() async {
     final db = await database;
+    final filter = _entFilter();
     final result = await db.rawQuery(
-        "SELECT COUNT(*) as count FROM supplier_credit_notes WHERE date LIKE ?",
+        "SELECT COUNT(*) as count FROM supplier_credit_notes WHERE date LIKE ? $filter",
         ['${DateTime.now().year}-%']);
     return (((result.first['count'] ?? 0) as int) ?? 0) + 1;
   }
 
   Future<List<SupplierCreditNote>> getSupplierCreditNotes() async {
     final db = await database;
+    final entId = EnterpriseService.instance.currentEnterpriseId;
+    String where = 'is_deleted = 0';
+    List<dynamic> whereArgs = [];
+    if (entId != null && entId.isNotEmpty) {
+      where += ' AND enterprise_id = ?';
+      whereArgs.add(entId);
+    }
     final List<Map<String, dynamic>> maps = await db.query(
       'supplier_credit_notes',
-      where: 'is_deleted = 0',
+      where: where,
+      whereArgs: whereArgs.isEmpty ? null : whereArgs,
       orderBy: 'date DESC',
     );
     
@@ -6097,7 +6423,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['scn.is_deleted = 0'];
+    List<String> whereClauses = ['scn.is_deleted = 0', _entWhereClause('scn')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -6155,7 +6481,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['scn.is_deleted = 0'];
+    List<String> whereClauses = ['scn.is_deleted = 0', _entWhereClause('scn')];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -6223,8 +6549,13 @@ class DatabaseHelper {
 
   Future<void> insertSupplierCreditNote(SupplierCreditNote note) async {
     final db = await database;
+    final data = note.toMap();
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId != null && data['enterprise_id'] == null) {
+      data['enterprise_id'] = currentEntId;
+    }
     await db.transaction((txn) async {
-      await txn.insert('supplier_credit_notes', Map<String, dynamic>.from(note.toMap())..remove('items'));
+      await txn.insert('supplier_credit_notes', Map<String, dynamic>.from(data)..remove('items'));
       for (var item in note.items) {
         await txn.insert('supplier_credit_note_items', item.toMap());
       }
@@ -6338,11 +6669,22 @@ class DatabaseHelper {
   // ─── Stock Transfers CRUD ─────────────────────────────────────
   Future<List<StockTransfer>> getStockTransfers() async {
     final db = await database;
-    final maps = await db.query(
-      'stock_transfers',
-      where: 'is_deleted = 0',
-      orderBy: 'date DESC',
-    );
+    final entId = EnterpriseService.instance.currentEnterpriseId;
+    List<Map<String, dynamic>> maps;
+    if (entId != null && entId.isNotEmpty) {
+      maps = await db.query(
+        'stock_transfers',
+        where: 'is_deleted = 0 AND enterprise_id = ?',
+        whereArgs: [entId],
+        orderBy: 'date DESC',
+      );
+    } else {
+      maps = await db.query(
+        'stock_transfers',
+        where: 'is_deleted = 0',
+        orderBy: 'date DESC',
+      );
+    }
     List<StockTransfer> transfers = [];
     for (var map in maps) {
       final itemMaps = await db.query(
@@ -6366,7 +6708,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['is_deleted = 0'];
+    List<String> whereClauses = ['is_deleted = 0', _entWhereClause()];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -6428,7 +6770,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['is_deleted = 0'];
+    List<String> whereClauses = ['is_deleted = 0', _entWhereClause()];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -6470,8 +6812,12 @@ class DatabaseHelper {
 
   Future<void> insertStockTransfer(StockTransfer transfer) async {
     final db = await database;
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
     await db.transaction((txn) async {
       final transferMap = transfer.toMap();
+      if (currentEntId != null && currentEntId.isNotEmpty) {
+        transferMap['enterprise_id'] = currentEntId;
+      }
       transferMap.remove('items');
       await txn.insert('stock_transfers', transferMap, conflictAlgorithm: ConflictAlgorithm.replace);
       for (var item in transfer.items) {
@@ -6489,6 +6835,7 @@ class DatabaseHelper {
           'reference_id': transfer.id,
           'notes': 'Transfert sortant',
           'firebase_uid': transfer.firebaseUid,
+          'enterprise_id': currentEntId,
           'is_deleted': 0,
           'created_at': DateTime.now().toIso8601String(),
         });
@@ -6505,12 +6852,17 @@ class DatabaseHelper {
           'reference_id': transfer.id,
           'notes': 'Transfert entrant',
           'firebase_uid': transfer.firebaseUid,
+          'enterprise_id': currentEntId,
           'is_deleted': 0,
           'created_at': DateTime.now().toIso8601String(),
         });
       }
     });
-    await _addToSyncQueue('stock_transfers', transfer.id, 'INSERT', transfer.toMap());
+    final syncMap = transfer.toMap();
+    if (currentEntId != null && currentEntId.isNotEmpty) {
+      syncMap['enterprise_id'] = currentEntId;
+    }
+    await _addToSyncQueue('stock_transfers', transfer.id, 'INSERT', syncMap);
   }
 
   Future<void> updateStockTransfer(StockTransfer transfer) async {
@@ -6590,11 +6942,22 @@ class DatabaseHelper {
   // ─── Inventory Sheets CRUD ─────────────────────────────────────
   Future<List<InventorySheet>> getInventorySheets() async {
     final db = await database;
-    final maps = await db.query(
-      'inventory_sheets',
-      where: 'is_deleted = 0',
-      orderBy: 'date DESC',
-    );
+    final entId = EnterpriseService.instance.currentEnterpriseId;
+    List<Map<String, dynamic>> maps;
+    if (entId != null && entId.isNotEmpty) {
+      maps = await db.query(
+        'inventory_sheets',
+        where: 'is_deleted = 0 AND enterprise_id = ?',
+        whereArgs: [entId],
+        orderBy: 'date DESC',
+      );
+    } else {
+      maps = await db.query(
+        'inventory_sheets',
+        where: 'is_deleted = 0',
+        orderBy: 'date DESC',
+      );
+    }
     List<InventorySheet> sheets = [];
     for (var map in maps) {
       final itemMaps = await db.query(
@@ -6628,7 +6991,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['is_deleted = 0'];
+    List<String> whereClauses = ['is_deleted = 0', _entWhereClause()];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -6700,7 +7063,7 @@ class DatabaseHelper {
     String? status,
   }) async {
     final db = await database;
-    List<String> whereClauses = ['is_deleted = 0'];
+    List<String> whereClauses = ['is_deleted = 0', _entWhereClause()];
     List<dynamic> whereArgs = [];
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -6742,8 +7105,12 @@ class DatabaseHelper {
 
   Future<void> insertInventorySheet(InventorySheet sheet) async {
     final db = await database;
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
     await db.transaction((txn) async {
       final sheetMap = sheet.toMap();
+      if (currentEntId != null && currentEntId.isNotEmpty) {
+        sheetMap['enterprise_id'] = currentEntId;
+      }
       sheetMap.remove('items');
       await txn.insert('inventory_sheets', sheetMap, conflictAlgorithm: ConflictAlgorithm.replace);
       for (var item in sheet.items) {
@@ -6766,6 +7133,7 @@ class DatabaseHelper {
               'reference_id': sheet.id,
               'notes': 'Inventaire: ${sheet.number}',
               'firebase_uid': sheet.firebaseUid,
+              'enterprise_id': currentEntId,
               'is_deleted': 0,
               'created_at': DateTime.now().toIso8601String(),
             });
@@ -6773,7 +7141,11 @@ class DatabaseHelper {
         }
       }
     });
-    await _addToSyncQueue('inventory_sheets', sheet.id, 'INSERT', sheet.toMap());
+    final syncMap = sheet.toMap();
+    if (currentEntId != null && currentEntId.isNotEmpty) {
+      syncMap['enterprise_id'] = currentEntId;
+    }
+    await _addToSyncQueue('inventory_sheets', sheet.id, 'INSERT', syncMap);
   }
 
   Future<void> updateInventorySheet(InventorySheet sheet) async {

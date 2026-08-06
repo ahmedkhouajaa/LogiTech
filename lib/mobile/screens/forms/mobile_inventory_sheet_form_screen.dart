@@ -14,6 +14,7 @@ import '../../../models/product.dart';
 import '../../../models/stock_movement.dart'; // Contains Warehouse
 import '../../../database/database_helper.dart';
 import '../../../utils/constants.dart';
+import '../../../services/enterprise_service.dart';
 import '../../../widgets/article_selection_modal.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
@@ -101,6 +102,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
     try {
       final number = widget.existing?.number ?? 'FI-${DateTime.now().year}-${_uuid.v4().substring(0, 6).toUpperCase()}';
 
+      final currentEntId = EnterpriseService.instance.currentEnterpriseId;
       final sheet = InventorySheet(
         id: widget.existing?.id ?? _uuid.v4(),
         number: number,
@@ -111,6 +113,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
         reason: _reasonCtrl.text.trim(),
         notes: _notesCtrl.text.trim(),
         status: widget.existing?.status ?? 'draft',
+        enterpriseId: currentEntId,
         items: _items,
         firebaseUid: widget.existing?.firebaseUid,
         createdAt: widget.existing?.createdAt,

@@ -5,7 +5,6 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'blocs/auth/auth_bloc.dart';
 import 'blocs/customers/customers_bloc.dart';
@@ -34,6 +33,8 @@ import 'blocs/reports/reports_bloc.dart';
 import 'blocs/retenue_source_vente/retenue_source_vente_bloc.dart';
 import 'blocs/checks_traites/checks_traites_bloc.dart';
 import 'blocs/return_notes/return_notes_bloc.dart';
+import 'blocs/return_notes/return_notes_event.dart';
+import 'blocs/stock_entries/stock_entries_event.dart';
 import 'blocs/supplier_returns/supplier_returns_bloc.dart';
 import 'blocs/supplier_returns/supplier_returns_event.dart';
 import 'blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
@@ -45,9 +46,10 @@ import 'blocs/warehouses/warehouses_bloc.dart';
 import 'blocs/warehouses/warehouses_event.dart';
 import 'blocs/inventory_sheets/inventory_sheets_bloc.dart';
 import 'blocs/inventory_sheets/inventory_sheets_event.dart';
-import 'blocs/reports/reports_bloc.dart';
+import 'blocs/enterprise/enterprise_bloc.dart';
 import 'blocs/theme/theme_cubit.dart';
 import 'services/auth_service.dart';
+import 'services/enterprise_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_service.dart';
 import 'database/database_helper.dart';
@@ -89,11 +91,16 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-    print('DEBUG: CLEARED SHARED PREFERENCES!');
   } catch (e, stack) {
     print('FIREBASE INIT ERROR: $e');
+    print(stack);
+  }
+
+  // Initialize enterprise service (loads cached enterprise from SharedPreferences)
+  try {
+    await EnterpriseService.instance.initialize();
+  } catch (e, stack) {
+    print('ENTERPRISE SERVICE INIT ERROR: $e');
     print(stack);
   }
 
@@ -132,6 +139,7 @@ class BusinessManagerApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => AuthBloc(authService: AuthService.instance)..add(AuthCheckRequested())),
+        BlocProvider(create: (_) => EnterpriseBloc()),
         BlocProvider(create: (_) => DashboardBloc()),
         BlocProvider(create: (_) => CustomersBloc()),
         BlocProvider(create: (_) => SuppliersBloc()),
@@ -299,8 +307,8 @@ class _AppGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, state) {
-        if (state is AuthLoading || state is AuthInitial) {
+      builder: (context, authState) {
+        if (authState is AuthLoading || authState is AuthInitial) {
           return Scaffold(
             backgroundColor: AppColors.sidebarBg,
             body: Center(
@@ -315,10 +323,132 @@ class _AppGate extends StatelessWidget {
             ),
           );
         }
-        if (state is AuthAuthenticated) {
-          return PlatformUtils.isAndroid ? const MobileShellScreen() : const AppShellScreen();
+        if (authState is AuthAuthenticated) {
+          return const _EnterpriseGate();
         }
         return PlatformUtils.isAndroid ? const MobileLoginScreen() : const LoginScreen();
+      },
+    );
+  }
+}
+
+/// Gate that loads enterprises after authentication, then shows the app shell.
+/// Uses a [KeyedSubtree] keyed on the enterprise ID so switching enterprises
+/// rebuilds the entire widget tree (recreating all blocs with fresh data).
+class _EnterpriseGate extends StatefulWidget {
+  const _EnterpriseGate();
+
+  @override
+  State<_EnterpriseGate> createState() => _EnterpriseGateState();
+}
+
+class _EnterpriseGateState extends State<_EnterpriseGate> {
+  @override
+  void initState() {
+    super.initState();
+    // Trigger enterprise load when this widget first appears
+    context.read<EnterpriseBloc>().add(LoadEnterprises());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<EnterpriseBloc, EnterpriseState>(
+      listener: (context, state) {
+        if (state is EnterpriseLoaded && state.currentEnterpriseId != null) {
+          // Re-fetch enterprise-scoped data across ALL BLoCs
+          context.read<DashboardBloc>().add(DashboardRefreshRequested());
+          context.read<InvoicesBloc>().add(LoadInvoices());
+          context.read<CustomersBloc>().add(LoadCustomers());
+          context.read<SuppliersBloc>().add(LoadSuppliers());
+          context.read<ProductsBloc>().add(LoadProducts());
+          context.read<QuotesBloc>().add(LoadQuotes());
+          context.read<CustomerOrdersBloc>().add(LoadCustomerOrders());
+          context.read<DeliveryNotesBloc>().add(LoadDeliveryNotes());
+          context.read<SupplierOrdersBloc>().add(LoadSupplierOrders());
+          context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
+          context.read<ReceivingVouchersBloc>().add(LoadReceivingVouchers());
+          context.read<StockWithdrawalsBloc>().add(LoadStockWithdrawals());
+          context.read<ExitVouchersBloc>().add(LoadExitVouchers());
+          context.read<CreditNotesBloc>().add(LoadCreditNotes());
+          context.read<ReturnNotesBloc>().add(LoadReturnNotes());
+          context.read<SupplierReturnsBloc>().add(LoadSupplierReturns());
+          context.read<SupplierCreditNotesBloc>().add(LoadSupplierCreditNotes());
+          context.read<PaymentsBloc>().add(LoadPayments());
+          context.read<TransactionsBloc>().add(LoadTransactions());
+          context.read<ProjectsBloc>().add(LoadProjects());
+          context.read<StockBloc>().add(LoadStock());
+          context.read<StockTransfersBloc>().add(LoadStockTransfers());
+          context.read<StockEntriesBloc>().add(LoadStockEntries());
+          context.read<ChecksTraitesBloc>().add(LoadChecksTraites());
+          context.read<TreasuryAccountsBloc>().add(LoadTreasuryAccounts());
+          context.read<TreasuryTransactionsBloc>().add(const LoadTreasuryTransactions());
+          context.read<WarehousesBloc>().add(LoadWarehouses());
+          context.read<InventorySheetsBloc>().add(InventorySheetsLoadRequested());
+          context.read<ProductSettingsBloc>().add(LoadFamilies());
+          context.read<ReportsBloc>().add(ReportsRefreshRequested(dateRange: 'Cette Année'));
+        }
+      },
+      builder: (context, state) {
+        if (state is EnterpriseLoading || state is EnterpriseInitial) {
+          return Scaffold(
+            backgroundColor: AppColors.sidebarBg,
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: AppColors.primary),
+                  SizedBox(height: 16),
+                  Text('Chargement de l\'entreprise...', style: TextStyle(color: Colors.white60, fontSize: 14)),
+                ],
+              ),
+            ),
+          );
+        }
+        if (state is EnterpriseSwitching) {
+          return Scaffold(
+            backgroundColor: AppColors.sidebarBg,
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: AppColors.primary),
+                  SizedBox(height: 16),
+                  Text('Changement d\'entreprise...', style: TextStyle(color: Colors.white60, fontSize: 14)),
+                ],
+              ),
+            ),
+          );
+        }
+        if (state is EnterpriseLoaded && state.currentEnterpriseId != null) {
+          // KeyedSubtree: changing the key forces a full rebuild of the UI shell
+          return KeyedSubtree(
+            key: ValueKey(state.currentEnterpriseId),
+            child: PlatformUtils.isAndroid ? const MobileShellScreen() : const AppShellScreen(),
+          );
+        }
+        // Error or no enterprise — show error with retry
+        return Scaffold(
+          backgroundColor: AppColors.sidebarBg,
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.business_rounded, color: Colors.white38, size: 48),
+                SizedBox(height: 16),
+                Text(
+                  state is EnterpriseError ? state.message : 'Aucune entreprise trouvée',
+                  style: TextStyle(color: Colors.white60, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => context.read<EnterpriseBloc>().add(LoadEnterprises()),
+                  child: Text('Réessayer'),
+                ),
+              ],
+            ),
+          ),
+        );
       },
     );
   }

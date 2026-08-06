@@ -6,6 +6,7 @@ import '../../utils/constants.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/sync_service.dart';
+import '../../services/enterprise_service.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
 abstract class ExitVouchersEvent {}
@@ -266,6 +267,10 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
       final List<StockWithdrawalItem> savedItems = [];
       await db.transaction((txn) async {
         final data = newWithdrawal.toMap();
+        final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+        if (currentEntId != null && data['enterprise_id'] == null) {
+          data['enterprise_id'] = currentEntId;
+        }
         data.remove('items');
         await txn.insert('bons_sortie', data);
 
@@ -296,6 +301,10 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
       });
 
       final newWithdrawalMap = newWithdrawal.toMap();
+      final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+      if (currentEntId != null && newWithdrawalMap['enterprise_id'] == null) {
+        newWithdrawalMap['enterprise_id'] = currentEntId;
+      }
       newWithdrawalMap['items'] = savedItems.map((i) => i.toMap()).toList();
       await _dbHelper.addToSyncQueue('bons_sortie', newWithdrawal.id, 'INSERT', newWithdrawalMap);
       

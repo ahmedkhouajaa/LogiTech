@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../database/database_helper.dart';
 import '../../models/supplier.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/enterprise_service.dart';
 
 abstract class SuppliersEvent extends Equatable {
   const SuppliersEvent();
@@ -126,12 +127,13 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
     } catch (e) {
       emit(SuppliersLoading());
     }
-    FirebaseFirestore.instance
-        .collection('fournisseurs')
-        .where('is_deleted', isEqualTo: 0)
-        .get()
-        .then((snapshot) async {
-          final List<Supplier> firestoreSuppliers = snapshot.docs.map((doc) => Supplier.fromMap(doc.data())).toList();
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    Query query = FirebaseFirestore.instance.collection('fournisseurs').where('is_deleted', isEqualTo: 0);
+    if (currentEntId != null && currentEntId.isNotEmpty) {
+      query = query.where('enterprise_id', isEqualTo: currentEntId);
+    }
+    query.get().then((snapshot) async {
+          final List<Supplier> firestoreSuppliers = snapshot.docs.map((doc) => Supplier.fromMap(doc.data() as Map<String, dynamic>)).toList();
           for (var supplier in firestoreSuppliers) {
             await DatabaseHelper.instance.insertSupplier(supplier);
           }

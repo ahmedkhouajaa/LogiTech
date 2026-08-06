@@ -39,6 +39,8 @@ class Customer {
   final String priceList;
   final String? privateNote;
 
+  final String? enterpriseId;
+
   Customer({
     required this.id,
     required this.code,
@@ -53,6 +55,7 @@ class Customer {
     this.creditLimit = 0,
     this.notes,
     this.firebaseUid,
+    this.enterpriseId,
     this.isDeleted = false,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -94,6 +97,7 @@ class Customer {
         'credit_limit': creditLimit,
         'notes': notes,
         'firebase_uid': firebaseUid,
+        'enterprise_id': enterpriseId,
         'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
@@ -134,6 +138,7 @@ class Customer {
         creditLimit: (map['credit_limit'] as num?)?.toDouble() ?? 0,
         notes: map['notes'] as String?,
         firebaseUid: map['firebase_uid'] as String?,
+        enterpriseId: map['enterprise_id'] as String?,
         isDeleted: map['is_deleted'] == 1,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
@@ -174,6 +179,7 @@ class Customer {
     double? creditLimit,
     String? notes,
     String? firebaseUid,
+    String? enterpriseId,
     bool? isDeleted,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -213,6 +219,7 @@ class Customer {
         creditLimit: creditLimit ?? this.creditLimit,
         notes: notes ?? this.notes,
         firebaseUid: firebaseUid ?? this.firebaseUid,
+        enterpriseId: enterpriseId ?? this.enterpriseId,
         isDeleted: isDeleted ?? this.isDeleted,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,

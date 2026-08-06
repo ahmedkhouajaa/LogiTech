@@ -32,6 +32,8 @@ class Invoice {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  final String? enterpriseId;
+
   Invoice({
     required this.id,
     required this.number,
@@ -58,6 +60,7 @@ class Invoice {
     this.conditionsGenerales,
     this.items = const [],
     this.firebaseUid,
+    this.enterpriseId,
     this.creditNoteId,
     this.isDeleted = false,
     DateTime? createdAt,
@@ -82,6 +85,7 @@ class Invoice {
         'notes': notes,
         'conditions': conditionsGenerales,
         'firebase_uid': firebaseUid,
+        'enterprise_id': enterpriseId,
         'credit_note_id': creditNoteId,
         'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
@@ -121,6 +125,7 @@ class Invoice {
         notes: map['notes']?.toString(),
         conditionsGenerales: map['conditions']?.toString(),
         firebaseUid: map['firebase_uid']?.toString(),
+        enterpriseId: map['enterprise_id']?.toString(),
         creditNoteId: map['credit_note_id']?.toString(),
         isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
         createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
@@ -139,7 +144,7 @@ class Invoice {
     double? globalDiscountPercent, double? globalDiscountAmount,
     String? pricingMode, String? notes, String? conditionsGenerales,
     List<InvoiceItem>? items,
-    String? firebaseUid, String? creditNoteId, bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
+    String? firebaseUid, String? enterpriseId, String? creditNoteId, bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
   }) => Invoice(
         id: id ?? this.id, number: number ?? this.number,
         customerId: customerId ?? this.customerId,
@@ -159,7 +164,7 @@ class Invoice {
         pricingMode: pricingMode ?? this.pricingMode,
         notes: notes ?? this.notes, conditionsGenerales: conditionsGenerales ?? this.conditionsGenerales,
         items: items ?? this.items,
-        firebaseUid: firebaseUid ?? this.firebaseUid, creditNoteId: creditNoteId ?? this.creditNoteId,
+        firebaseUid: firebaseUid ?? this.firebaseUid, enterpriseId: enterpriseId ?? this.enterpriseId, creditNoteId: creditNoteId ?? this.creditNoteId,
         isDeleted: isDeleted ?? this.isDeleted,
         createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
       );

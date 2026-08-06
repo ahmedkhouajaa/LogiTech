@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../database/database_helper.dart';
 import '../../models/customer.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/enterprise_service.dart';
 
 // Events
 abstract class CustomersEvent extends Equatable {
@@ -128,12 +129,13 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
     } catch (e) {
       emit(CustomersLoading());
     }
-    FirebaseFirestore.instance
-        .collection('clients')
-        .where('is_deleted', isEqualTo: 0)
-        .get()
-        .then((snapshot) async {
-          final List<Customer> firestoreCustomers = snapshot.docs.map((doc) => Customer.fromMap(doc.data())).toList();
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    Query query = FirebaseFirestore.instance.collection('clients').where('is_deleted', isEqualTo: 0);
+    if (currentEntId != null && currentEntId.isNotEmpty) {
+      query = query.where('enterprise_id', isEqualTo: currentEntId);
+    }
+    query.get().then((snapshot) async {
+          final List<Customer> firestoreCustomers = snapshot.docs.map((doc) => Customer.fromMap(doc.data() as Map<String, dynamic>)).toList();
           for (var customer in firestoreCustomers) {
             await DatabaseHelper.instance.insertCustomer(customer);
           }

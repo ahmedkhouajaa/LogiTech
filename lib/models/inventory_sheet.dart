@@ -12,6 +12,7 @@ class InventorySheet {
   final String? reason;
   final String? notes;
   final String? firebaseUid;
+  final String? enterpriseId;
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -28,6 +29,7 @@ class InventorySheet {
     this.reason,
     this.notes,
     this.firebaseUid,
+    this.enterpriseId,
     this.isDeleted = false,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -46,6 +48,7 @@ class InventorySheet {
         'reason': reason,
         'notes': notes,
         'firebase_uid': firebaseUid,
+        'enterprise_id': enterpriseId,
         'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
@@ -59,10 +62,11 @@ class InventorySheet {
         inventoryDate: DateTime.parse(map['inventory_date'] as String),
         warehouseId: map['warehouse_id'] as String,
         countedBy: map['counted_by'] as String?,
-        status: map['status'] as String,
+        status: map['status'] as String? ?? 'draft',
         reason: map['reason'] as String?,
         notes: map['notes'] as String?,
         firebaseUid: map['firebase_uid'] as String?,
+        enterpriseId: map['enterprise_id'] as String?,
         isDeleted: map['is_deleted'] == 1,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),

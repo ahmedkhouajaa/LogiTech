@@ -5,6 +5,7 @@ import '../../models/stock_movement.dart';
 import '../../utils/constants.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/enterprise_service.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
 abstract class StockWithdrawalsEvent {}
@@ -75,11 +76,17 @@ class DeleteStockWithdrawal extends StockWithdrawalsEvent {
 }
 
 class FilterStockWithdrawals extends StockWithdrawalsEvent {
-  final String? clientId;
+  final String? customerId;
   final DateTime? dateFrom;
   final DateTime? dateTo;
   final String? status;
-  FilterStockWithdrawals({this.clientId, this.dateFrom, this.dateTo, this.status});
+
+  FilterStockWithdrawals({
+    this.customerId,
+    this.dateFrom,
+    this.dateTo,
+    this.status,
+  });
 }
 
 // ─── States ──────────────────────────────────────────────────────
@@ -94,20 +101,12 @@ class StockWithdrawalsLoaded extends StockWithdrawalsState {
   final int totalCount;
   final bool hasMore;
   final bool isLoadingMore;
-  final String? clientFilter;
-  final DateTime? dateFromFilter;
-  final DateTime? dateToFilter;
-  final String? statusFilter;
 
   StockWithdrawalsLoaded(
     this.withdrawals, {
     this.totalCount = 0,
-    this.hasMore = true,
+    this.hasMore = false,
     this.isLoadingMore = false,
-    this.clientFilter,
-    this.dateFromFilter,
-    this.dateToFilter,
-    this.statusFilter,
   });
 
   StockWithdrawalsLoaded copyWith({
@@ -115,20 +114,12 @@ class StockWithdrawalsLoaded extends StockWithdrawalsState {
     int? totalCount,
     bool? hasMore,
     bool? isLoadingMore,
-    String? clientFilter,
-    DateTime? dateFromFilter,
-    DateTime? dateToFilter,
-    String? statusFilter,
   }) {
     return StockWithdrawalsLoaded(
       withdrawals ?? this.withdrawals,
       totalCount: totalCount ?? this.totalCount,
       hasMore: hasMore ?? this.hasMore,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
-      clientFilter: clientFilter ?? this.clientFilter,
-      dateFromFilter: dateFromFilter ?? this.dateFromFilter,
-      dateToFilter: dateToFilter ?? this.dateToFilter,
-      statusFilter: statusFilter ?? this.statusFilter,
     );
   }
 }
@@ -246,12 +237,21 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
   Future<void> _onAdd(AddStockWithdrawal event, Emitter<StockWithdrawalsState> emit) async {
     try {
       final db = await _dbHelper.database;
+      final currentEntId = EnterpriseService.instance.currentEnterpriseId;
       
       String number = event.withdrawal.number;
       if (number.isEmpty || number.startsWith('BP-') || number.startsWith('BS-') || number.startsWith('BL-')) {
         final now = DateTime.now();
+        String countWhere = "date LIKE '${now.year}-%'";
+        if (currentEntId != null && currentEntId.isNotEmpty) {
+          if (EnterpriseService.instance.isDefaultEnterprise) {
+            countWhere += " AND (enterprise_id = '$currentEntId' OR enterprise_id IS NULL)";
+          } else {
+            countWhere += " AND enterprise_id = '$currentEntId'";
+          }
+        }
         final countMap = await db.rawQuery(
-            "SELECT COUNT(*) as count FROM bons_sortie WHERE date LIKE '${now.year}-%'"
+            "SELECT COUNT(*) as count FROM bons_sortie WHERE $countWhere"
         );
         final count = (countMap.first['count'] as int? ?? 0) + 1;
         number = 'BP-${now.year}-${count.toString().padLeft(5, '0')}';
@@ -263,6 +263,9 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
       final List<StockWithdrawalItem> savedItems = [];
       await db.transaction((txn) async {
         final data = newWithdrawal.toMap();
+        if (currentEntId != null && currentEntId.isNotEmpty) {
+          data['enterprise_id'] = currentEntId;
+        }
         data.remove('items');
         await txn.insert('bons_sortie', data);
 
@@ -281,6 +284,7 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
             referenceId: newWithdrawal.id,
             date: newWithdrawal.date,
             notes: newWithdrawal.conditionsGenerales,
+            enterpriseId: currentEntId,
           );
           movements.add(movement);
           await txn.insert('stock_movements', movement.toMap());
@@ -293,6 +297,9 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
       });
 
       final newWithdrawalMap = newWithdrawal.toMap();
+      if (currentEntId != null && currentEntId.isNotEmpty) {
+        newWithdrawalMap['enterprise_id'] = currentEntId;
+      }
       newWithdrawalMap['items'] = savedItems.map((i) => i.toMap()).toList();
       await _dbHelper.addToSyncQueue('bons_sortie', newWithdrawal.id, 'INSERT', newWithdrawalMap);
       
@@ -495,18 +502,15 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
 
       final filtered = allWithdrawals.where((w) {
         if (!w.number.startsWith('BP-')) return false;
-        if (event.clientId != null && event.clientId!.isNotEmpty && event.clientId != 'all') {
-          return w.customerId == event.clientId;
+        if (event.customerId != null && event.customerId!.isNotEmpty && event.customerId != 'all') {
+          return w.customerId == event.customerId;
         }
         return true;
       }).toList();
 
       emit(StockWithdrawalsLoaded(
         filtered,
-        clientFilter: event.clientId,
-        dateFromFilter: event.dateFrom,
-        dateToFilter: event.dateTo,
-        statusFilter: event.status,
+        totalCount: filtered.length,
       ));
     } catch (e) {
       emit(StockWithdrawalsError(e.toString()));

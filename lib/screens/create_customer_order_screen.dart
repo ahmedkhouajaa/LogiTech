@@ -14,6 +14,7 @@ import '../utils/helpers.dart';
 import 'customers_screen.dart';
 import 'create_article_screen.dart';
 import '../database/database_helper.dart';
+import '../services/enterprise_service.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/searchable_dropdown_field.dart';
 
@@ -155,6 +156,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
     }
 
     final orderId = widget.existing?.id ?? _uuid.v4();
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
     final order = CustomerOrder(
       id: orderId,
       number: number,
@@ -167,6 +169,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
       globalDiscountPercent: _withGlobalDiscount ? _globalDiscountPercent : 0,
       globalDiscountAmount: _globalDiscountAmount,
       timbreFiscal: _timbreFiscal,
+      enterpriseId: currentEntId,
       notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
       conditionsGenerales:
           _conditionsCtrl.text.isNotEmpty ? _conditionsCtrl.text : null,

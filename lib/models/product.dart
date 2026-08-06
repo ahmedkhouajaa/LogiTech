@@ -30,6 +30,8 @@ class Product {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  final String? enterpriseId;
+
   Product({
     required this.id,
     required this.code,
@@ -58,6 +60,7 @@ class Product {
     this.privateNotes,
     this.isActive = true,
     this.firebaseUid,
+    this.enterpriseId,
     this.isDeleted = false,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -85,6 +88,7 @@ class Product {
         'default_warehouse_id': defaultWarehouseId,
         'barcode': barcode, 'private_notes': privateNotes,
         'is_active': isActive ? 1 : 0, 'firebase_uid': firebaseUid,
+        'enterprise_id': enterpriseId,
         'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
@@ -112,6 +116,7 @@ class Product {
         defaultWarehouseId: map['default_warehouse_id'] as String?,
         barcode: map['barcode'] as String?, privateNotes: map['private_notes'] as String?,
         isActive: map['is_active'] != 0, firebaseUid: map['firebase_uid'] as String?,
+        enterpriseId: map['enterprise_id'] as String?,
         isDeleted: map['is_deleted'] == 1,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
@@ -125,6 +130,7 @@ class Product {
     bool? allowNegativeStock, bool? lowStockAlert, double? lowStockThreshold,
     bool? highStockAlert, double? highStockThreshold, String? defaultWarehouseId,
     String? barcode, String? privateNotes, bool? isActive, String? firebaseUid,
+    String? enterpriseId,
     bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
   }) => Product(
         id: id ?? this.id, code: code ?? this.code, name: name ?? this.name,
@@ -141,6 +147,7 @@ class Product {
         defaultWarehouseId: defaultWarehouseId ?? this.defaultWarehouseId,
         barcode: barcode ?? this.barcode, privateNotes: privateNotes ?? this.privateNotes,
         isActive: isActive ?? this.isActive, firebaseUid: firebaseUid ?? this.firebaseUid,
+        enterpriseId: enterpriseId ?? this.enterpriseId,
         isDeleted: isDeleted ?? this.isDeleted,
         createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
       );

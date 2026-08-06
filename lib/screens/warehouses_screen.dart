@@ -22,6 +22,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    context.read<WarehousesBloc>().add(LoadWarehouses());
   }
 
   @override

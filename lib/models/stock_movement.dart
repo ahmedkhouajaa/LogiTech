@@ -13,6 +13,7 @@ class StockMovement {
   final DateTime date;
   final String? notes;
   final String? firebaseUid;
+  final String? enterpriseId;
   final bool isDeleted;
   final DateTime createdAt;
 
@@ -20,7 +21,7 @@ class StockMovement {
     required this.id, required this.productId, this.productName,
     required this.warehouseId, this.warehouseName, required this.type,
     required this.quantity, this.referenceType, this.referenceId,
-    required this.date, this.notes, this.firebaseUid,
+    required this.date, this.notes, this.firebaseUid, this.enterpriseId,
     this.isDeleted = false, DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -29,7 +30,7 @@ class StockMovement {
         'type': type.name, 'quantity': quantity,
         'reference_type': referenceType, 'reference_id': referenceId,
         'date': date.toIso8601String(), 'notes': notes,
-        'firebase_uid': firebaseUid, 'is_deleted': isDeleted ? 1 : 0,
+        'firebase_uid': firebaseUid, 'enterprise_id': enterpriseId, 'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
       };
 
@@ -46,6 +47,7 @@ class StockMovement {
         date: DateTime.parse(map['date'] as String),
         notes: map['notes'] as String?,
         firebaseUid: map['firebase_uid'] as String?,
+        enterpriseId: map['enterprise_id'] as String?,
         isDeleted: map['is_deleted'] == 1,
         createdAt: DateTime.parse(map['created_at'] as String),
       );
@@ -62,6 +64,7 @@ class Warehouse {
   final bool isActive;
   final bool isDefault;
   final String? firebaseUid;
+  final String? enterpriseId;
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -69,7 +72,7 @@ class Warehouse {
   Warehouse({
     required this.id, required this.name, this.reference, this.address,
     this.postalCode, this.city, this.country, this.isActive = true,
-    this.isDefault = false, this.firebaseUid, this.isDeleted = false,
+    this.isDefault = false, this.firebaseUid, this.enterpriseId, this.isDeleted = false,
     DateTime? createdAt, DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
@@ -78,7 +81,7 @@ class Warehouse {
         'id': id, 'name': name, 'reference': reference, 'address': address,
         'postal_code': postalCode, 'city': city, 'country': country,
         'is_active': isActive ? 1 : 0, 'is_default': isDefault ? 1 : 0,
-        'firebase_uid': firebaseUid,
+        'firebase_uid': firebaseUid, 'enterprise_id': enterpriseId,
         'is_deleted': isDeleted ? 1 : 0, 'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
@@ -90,6 +93,7 @@ class Warehouse {
         country: map['country'] as String?, isActive: map['is_active'] != 0,
         isDefault: map['is_default'] == 1,
         firebaseUid: map['firebase_uid'] as String?,
+        enterpriseId: map['enterprise_id'] as String?,
         isDeleted: map['is_deleted'] == 1,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
@@ -98,13 +102,13 @@ class Warehouse {
   Warehouse copyWith({
     String? id, String? name, String? reference, String? address,
     String? postalCode, String? city, String? country, bool? isActive, bool? isDefault,
-    String? firebaseUid, bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
+    String? firebaseUid, String? enterpriseId, bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
   }) => Warehouse(
         id: id ?? this.id, name: name ?? this.name, reference: reference ?? this.reference,
         address: address ?? this.address, postalCode: postalCode ?? this.postalCode,
         city: city ?? this.city, country: country ?? this.country,
         isActive: isActive ?? this.isActive, isDefault: isDefault ?? this.isDefault,
-        firebaseUid: firebaseUid ?? this.firebaseUid,
+        firebaseUid: firebaseUid ?? this.firebaseUid, enterpriseId: enterpriseId ?? this.enterpriseId,
         isDeleted: isDeleted ?? this.isDeleted,
         createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
       );

@@ -22,6 +22,15 @@ import '../models/treasury_transaction.dart';
 import '../models/retenue_source_vente.dart';
 import '../models/product.dart';
 import '../database/database_helper.dart';
+import 'enterprise_service.dart';
+
+Query _applyEnterpriseFilter(Query query) {
+  final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+  if (currentEntId != null && currentEntId.isNotEmpty) {
+    return query.where('enterprise_id', isEqualTo: currentEntId);
+  }
+  return query;
+}
 
 class FirestorePaginationService {
   static final FirestorePaginationService instance = FirestorePaginationService._();
@@ -74,7 +83,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('quotes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('quotes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -148,7 +157,7 @@ class FirestorePaginationService {
     try {
       if (_lastDevisSnapshot == null) return [];
 
-      Query query = _firestore.collection('quotes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('quotes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -212,7 +221,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('quotes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('quotes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -270,7 +279,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('invoices');
+      Query query = _applyEnterpriseFilter(_firestore.collection('invoices'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -344,7 +353,7 @@ class FirestorePaginationService {
     try {
       if (_lastInvoiceSnapshot == null) return [];
 
-      Query query = _firestore.collection('invoices');
+      Query query = _applyEnterpriseFilter(_firestore.collection('invoices'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -408,7 +417,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('invoices');
+      Query query = _applyEnterpriseFilter(_firestore.collection('invoices'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -464,7 +473,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('purchase_invoices');
+      Query query = _applyEnterpriseFilter(_firestore.collection('purchase_invoices'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -538,7 +547,7 @@ class FirestorePaginationService {
     try {
       if (_lastPurchaseInvoiceSnapshot == null) return [];
 
-      Query query = _firestore.collection('purchase_invoices');
+      Query query = _applyEnterpriseFilter(_firestore.collection('purchase_invoices'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -602,7 +611,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('purchase_invoices');
+      Query query = _applyEnterpriseFilter(_firestore.collection('purchase_invoices'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -650,7 +659,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('clients');
+      Query query = _applyEnterpriseFilter(_firestore.collection('clients'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -717,7 +726,7 @@ class FirestorePaginationService {
     try {
       if (_lastCustomerSnapshot == null) return [];
 
-      Query query = _firestore.collection('clients');
+      Query query = _applyEnterpriseFilter(_firestore.collection('clients'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -774,7 +783,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('clients');
+      Query query = _applyEnterpriseFilter(_firestore.collection('clients'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -810,7 +819,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('fournisseurs');
+      Query query = _applyEnterpriseFilter(_firestore.collection('fournisseurs'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -877,7 +886,7 @@ class FirestorePaginationService {
     try {
       if (_lastSupplierSnapshot == null) return [];
 
-      Query query = _firestore.collection('fournisseurs');
+      Query query = _applyEnterpriseFilter(_firestore.collection('fournisseurs'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -934,7 +943,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('fournisseurs');
+      Query query = _applyEnterpriseFilter(_firestore.collection('fournisseurs'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -972,7 +981,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('paiements');
+      Query query = _applyEnterpriseFilter(_firestore.collection('paiements'));
 
       if (status != null && status.isNotEmpty) {
         query = query.where('status', isEqualTo: status);
@@ -1041,7 +1050,7 @@ class FirestorePaginationService {
     try {
       if (_lastPaymentSnapshot == null) return [];
 
-      Query query = _firestore.collection('paiements');
+      Query query = _applyEnterpriseFilter(_firestore.collection('paiements'));
 
       if (status != null && status.isNotEmpty) {
         query = query.where('status', isEqualTo: status);
@@ -1100,7 +1109,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('paiements');
+      Query query = _applyEnterpriseFilter(_firestore.collection('paiements'));
 
       if (status != null && status.isNotEmpty) {
         query = query.where('status', isEqualTo: status);
@@ -1138,7 +1147,7 @@ class FirestorePaginationService {
 
     // ── Try Firestore first (always up-to-date) ──
     try {
-      Query query = _firestore.collection('customer_orders');
+      Query query = _applyEnterpriseFilter(_firestore.collection('customer_orders'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1200,7 +1209,7 @@ class FirestorePaginationService {
         throw Exception('No pagination cursor');
       }
 
-      Query query = _firestore.collection('customer_orders');
+      Query query = _applyEnterpriseFilter(_firestore.collection('customer_orders'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1263,7 +1272,7 @@ class FirestorePaginationService {
   }) async {
     // ── Try Firestore count().get() (1 read only) ──
     try {
-      Query query = _firestore.collection('customer_orders');
+      Query query = _applyEnterpriseFilter(_firestore.collection('customer_orders'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1331,7 +1340,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('stock_entries');
+      Query query = _applyEnterpriseFilter(_firestore.collection('stock_entries'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1405,7 +1414,7 @@ class FirestorePaginationService {
     try {
       if (_lastStockEntrySnapshot == null) return [];
 
-      Query query = _firestore.collection('stock_entries');
+      Query query = _applyEnterpriseFilter(_firestore.collection('stock_entries'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1469,7 +1478,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('stock_entries');
+      Query query = _applyEnterpriseFilter(_firestore.collection('stock_entries'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1527,7 +1536,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('delivery_notes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('delivery_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1601,7 +1610,7 @@ class FirestorePaginationService {
     try {
       if (_lastDeliveryNoteSnapshot == null) return [];
 
-      Query query = _firestore.collection('delivery_notes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('delivery_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1665,7 +1674,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('delivery_notes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('delivery_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1723,7 +1732,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('supplier_orders');
+      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_orders'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1797,7 +1806,7 @@ class FirestorePaginationService {
     try {
       if (_lastSupplierOrderSnapshot == null) return [];
 
-      Query query = _firestore.collection('supplier_orders');
+      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_orders'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1861,7 +1870,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('supplier_orders');
+      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_orders'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1919,7 +1928,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('receiving_vouchers');
+      Query query = _applyEnterpriseFilter(_firestore.collection('receiving_vouchers'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1993,7 +2002,7 @@ class FirestorePaginationService {
     try {
       if (_lastReceivingVoucherSnapshot == null) return [];
 
-      Query query = _firestore.collection('receiving_vouchers');
+      Query query = _applyEnterpriseFilter(_firestore.collection('receiving_vouchers'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2057,7 +2066,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('receiving_vouchers');
+      Query query = _applyEnterpriseFilter(_firestore.collection('receiving_vouchers'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2103,7 +2112,7 @@ class FirestorePaginationService {
 
     // ── Try Firestore first (primary source, always up-to-date) ──
     try {
-      Query query = _firestore.collection('bons_sortie');
+      Query query = _applyEnterpriseFilter(_firestore.collection('bons_sortie'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2168,7 +2177,7 @@ class FirestorePaginationService {
         throw Exception('No pagination cursor');
       }
 
-      Query query = _firestore.collection('bons_sortie');
+      Query query = _applyEnterpriseFilter(_firestore.collection('bons_sortie'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2231,7 +2240,7 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      Query query = _firestore.collection('bons_sortie');
+      Query query = _applyEnterpriseFilter(_firestore.collection('bons_sortie'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2301,7 +2310,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('bons_sortie');
+      Query query = _applyEnterpriseFilter(_firestore.collection('bons_sortie'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2381,7 +2390,7 @@ class FirestorePaginationService {
     try {
       if (_lastStockWithdrawalSnapshot == null) return [];
 
-      Query query = _firestore.collection('bons_sortie');
+      Query query = _applyEnterpriseFilter(_firestore.collection('bons_sortie'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2439,7 +2448,7 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      Query query = _firestore.collection('bons_sortie');
+      Query query = _applyEnterpriseFilter(_firestore.collection('bons_sortie'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2508,7 +2517,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('credit_notes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('credit_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2582,7 +2591,7 @@ class FirestorePaginationService {
     try {
       if (_lastCreditNoteSnapshot == null) return [];
 
-      Query query = _firestore.collection('credit_notes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('credit_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2646,7 +2655,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('credit_notes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('credit_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2704,7 +2713,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('supplier_credit_notes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_credit_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2778,7 +2787,7 @@ class FirestorePaginationService {
     try {
       if (_lastSupplierCreditNoteSnapshot == null) return [];
 
-      Query query = _firestore.collection('supplier_credit_notes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_credit_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2842,7 +2851,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('supplier_credit_notes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_credit_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2900,7 +2909,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('return_notes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('return_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2974,7 +2983,7 @@ class FirestorePaginationService {
     try {
       if (_lastReturnNoteSnapshot == null) return [];
 
-      Query query = _firestore.collection('return_notes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('return_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3038,7 +3047,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('return_notes');
+      Query query = _applyEnterpriseFilter(_firestore.collection('return_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3096,7 +3105,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('supplier_returns');
+      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_returns'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3170,7 +3179,7 @@ class FirestorePaginationService {
     try {
       if (_lastSupplierReturnSnapshot == null) return [];
 
-      Query query = _firestore.collection('supplier_returns');
+      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_returns'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3234,7 +3243,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('supplier_returns');
+      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_returns'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3292,7 +3301,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('inventory_sheets');
+      Query query = _applyEnterpriseFilter(_firestore.collection('inventory_sheets'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3366,7 +3375,7 @@ class FirestorePaginationService {
     try {
       if (_lastInventorySheetSnapshot == null) return [];
 
-      Query query = _firestore.collection('inventory_sheets');
+      Query query = _applyEnterpriseFilter(_firestore.collection('inventory_sheets'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3430,7 +3439,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('inventory_sheets');
+      Query query = _applyEnterpriseFilter(_firestore.collection('inventory_sheets'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3488,7 +3497,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('stock_transfers');
+      Query query = _applyEnterpriseFilter(_firestore.collection('stock_transfers'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3562,7 +3571,7 @@ class FirestorePaginationService {
     try {
       if (_lastStockTransferSnapshot == null) return [];
 
-      Query query = _firestore.collection('stock_transfers');
+      Query query = _applyEnterpriseFilter(_firestore.collection('stock_transfers'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3626,7 +3635,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('stock_transfers');
+      Query query = _applyEnterpriseFilter(_firestore.collection('stock_transfers'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3678,7 +3687,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('treasury_accounts');
+      Query query = _applyEnterpriseFilter(_firestore.collection('treasury_accounts'));
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
         query = query
@@ -3730,7 +3739,7 @@ class FirestorePaginationService {
     try {
       if (_lastTreasuryAccountSnapshot == null) return [];
 
-      Query query = _firestore.collection('treasury_accounts');
+      Query query = _applyEnterpriseFilter(_firestore.collection('treasury_accounts'));
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
         query = query
@@ -3770,7 +3779,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('treasury_accounts');
+      Query query = _applyEnterpriseFilter(_firestore.collection('treasury_accounts'));
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
         query = query
@@ -3810,7 +3819,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('treasury_transactions');
+      Query query = _applyEnterpriseFilter(_firestore.collection('treasury_transactions'));
       
       if (typeFilter != 'Tous') {
         query = query.where('type', isEqualTo: typeFilter == 'Entrée' ? 'income' : 'expense');
@@ -3878,7 +3887,7 @@ class FirestorePaginationService {
     try {
       if (_lastTreasuryTransactionSnapshot == null) return [];
 
-      Query query = _firestore.collection('treasury_transactions');
+      Query query = _applyEnterpriseFilter(_firestore.collection('treasury_transactions'));
       
       if (typeFilter != 'Tous') {
         query = query.where('type', isEqualTo: typeFilter == 'Entrée' ? 'income' : 'expense');
@@ -3933,7 +3942,7 @@ class FirestorePaginationService {
     } catch (_) {}
 
     try {
-      Query query = _firestore.collection('treasury_transactions');
+      Query query = _applyEnterpriseFilter(_firestore.collection('treasury_transactions'));
       
       if (typeFilter != 'Tous') {
         query = query.where('type', isEqualTo: typeFilter == 'Entrée' ? 'income' : 'expense');
@@ -4003,7 +4012,7 @@ class FirestorePaginationService {
   }) async {
     resetRetenueSourceVentesPagination();
     try {
-      Query query = _firestore.collection('payments')
+      Query query = _applyEnterpriseFilter(_firestore.collection('payments'))
         .where('method', isEqualTo: 'retenue_source')
         .where('direction', isEqualTo: isSales ? 'encaissement' : 'decaissement')
         .orderBy('payment_date', descending: true);
@@ -4052,7 +4061,7 @@ class FirestorePaginationService {
     }
 
     try {
-      Query query = _firestore.collection('payments')
+      Query query = _applyEnterpriseFilter(_firestore.collection('payments'))
         .where('method', isEqualTo: 'retenue_source')
         .where('direction', isEqualTo: isSales ? 'encaissement' : 'decaissement')
         .orderBy('payment_date', descending: true);
@@ -4093,7 +4102,7 @@ class FirestorePaginationService {
 
   Future<int> getRetenueSourceVentesCount({String? searchQuery, String statusFilter = 'Tous', bool isSales = true}) async {
     try {
-      Query query = _firestore.collection('payments')
+      Query query = _applyEnterpriseFilter(_firestore.collection('payments'))
         .where('method', isEqualTo: 'retenue_source')
         .where('direction', isEqualTo: isSales ? 'encaissement' : 'decaissement');
       
@@ -4168,7 +4177,7 @@ class FirestorePaginationService {
   }) async {
     resetProductsPagination();
     try {
-      Query query = _firestore.collection('products').where('is_deleted', isEqualTo: false);
+      Query query = _applyEnterpriseFilter(_firestore.collection('products')).where('is_deleted', isEqualTo: false);
 
       if (stockFilter == 'En stock') {
         query = query.where('stock_qty', isGreaterThan: 0);
@@ -4211,7 +4220,7 @@ class FirestorePaginationService {
     }
 
     try {
-      Query query = _firestore.collection('products').where('is_deleted', isEqualTo: false);
+      Query query = _applyEnterpriseFilter(_firestore.collection('products')).where('is_deleted', isEqualTo: false);
 
       if (stockFilter == 'En stock') {
         query = query.where('stock_qty', isGreaterThan: 0);
@@ -4247,7 +4256,7 @@ class FirestorePaginationService {
 
   Future<int> getProductsCount({String? searchQuery, String stockFilter = 'Tous'}) async {
     try {
-      Query query = _firestore.collection('products').where('is_deleted', isEqualTo: false);
+      Query query = _applyEnterpriseFilter(_firestore.collection('products')).where('is_deleted', isEqualTo: false);
 
       if (stockFilter == 'En stock') {
         query = query.where('stock_qty', isGreaterThan: 0);

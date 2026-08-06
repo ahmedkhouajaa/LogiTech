@@ -38,7 +38,7 @@ class SettingsScreen extends StatelessWidget {
                   );
                 },
               ),
-              _buildSettingItem(Icons.language_rounded, 'Langue et region', 'Francais (Algerie), devise par defaut'),
+              _buildSettingItem(Icons.language_rounded, 'Langue et region', 'Francais , devise par defaut'),
             ],
           ),
           SizedBox(height: AppSpacing.lg),

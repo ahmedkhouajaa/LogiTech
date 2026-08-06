@@ -50,7 +50,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<ExitVouchersBloc>().add(LoadFirstExitVouchers());
+    context.read<ExitVouchersBloc>().add(LoadExitVouchers());
     context.read<CustomersBloc>().add(LoadCustomers());
   }
 

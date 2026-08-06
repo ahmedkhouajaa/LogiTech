@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../widgets/sidebar_menu.dart';
 import '../widgets/sync_indicator.dart';
+import '../widgets/enterprise_switcher.dart';
 import '../utils/constants.dart';
 import '../blocs/theme/theme_cubit.dart';
 
@@ -126,38 +127,11 @@ class _MobileDrawerState extends State<MobileDrawer> {
 
   Widget _buildHeader() {
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 20, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
       child: Row(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              gradient: AppGradients.primary,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.business_center_rounded, color: Colors.white, size: 22),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'LogiTech Pro',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Gestion d\'entreprise',
-                  style: TextStyle(color: AppColors.sidebarText, fontSize: 11),
-                ),
-              ],
-            ),
+          const Expanded(
+            child: EnterpriseSwitcherWidget(isMobile: true),
           ),
           const SyncIndicator(),
         ],

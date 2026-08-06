@@ -31,6 +31,8 @@ class Supplier {
   final String? birthDate;
   final String? referenceCode;
 
+  final String? enterpriseId;
+
   Supplier({
     required this.id,
     required this.code,
@@ -44,6 +46,7 @@ class Supplier {
     this.balance = 0,
     this.notes,
     this.firebaseUid,
+    this.enterpriseId,
     this.isDeleted = false,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -77,6 +80,7 @@ class Supplier {
         'balance': balance,
         'notes': notes,
         'firebase_uid': firebaseUid,
+        'enterprise_id': enterpriseId,
         'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
@@ -109,6 +113,7 @@ class Supplier {
         balance: (map['balance'] as num?)?.toDouble() ?? 0,
         notes: map['notes'] as String?,
         firebaseUid: map['firebase_uid'] as String?,
+        enterpriseId: map['enterprise_id'] as String?,
         isDeleted: map['is_deleted'] == 1,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
@@ -132,6 +137,7 @@ class Supplier {
     String? id, String? code, String? name, String? email,
     String? phone, String? address, String? city, String? taxId,
     String? rc, double? balance, String? notes, String? firebaseUid,
+    String? enterpriseId,
     bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
     String? postalCode, String? country, String? deliveryStreet,
     String? deliveryCity, String? deliveryPostalCode, String? deliveryCountry,
@@ -145,6 +151,7 @@ class Supplier {
         taxId: taxId ?? this.taxId, rc: rc ?? this.rc,
         balance: balance ?? this.balance, notes: notes ?? this.notes,
         firebaseUid: firebaseUid ?? this.firebaseUid,
+        enterpriseId: enterpriseId ?? this.enterpriseId,
         isDeleted: isDeleted ?? this.isDeleted,
         createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
         postalCode: postalCode ?? this.postalCode,

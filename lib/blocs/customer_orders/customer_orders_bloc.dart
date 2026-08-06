@@ -244,7 +244,7 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
     try {
       await _dbHelper.insertCustomerOrder(event.order);
       await SyncService.instance.triggerSync();
-      add(LoadFirstCustomerOrders());
+      add(LoadCustomerOrders());
     } catch (e) {
       emit(CustomerOrdersError(e.toString()));
     }
@@ -253,7 +253,7 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
   Future<void> _onUpdateCustomerOrder(UpdateCustomerOrder event, Emitter<CustomerOrdersState> emit) async {
     try {
       await _dbHelper.updateCustomerOrder(event.order);
-      add(LoadFirstCustomerOrders());
+      add(LoadCustomerOrders());
     } catch (e) {
       emit(CustomerOrdersError(e.toString()));
     }
@@ -262,7 +262,7 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
   Future<void> _onDeleteCustomerOrder(DeleteCustomerOrder event, Emitter<CustomerOrdersState> emit) async {
     try {
       await _dbHelper.softDelete('customer_orders', event.orderId);
-      add(LoadFirstCustomerOrders());
+      add(LoadCustomerOrders());
     } catch (e) {
       emit(CustomerOrdersError(e.toString()));
     }

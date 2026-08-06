@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common/sqlite_api.dart';
 import '../database/database_helper.dart';
 import 'connectivity_service.dart';
+import 'enterprise_service.dart';
 class SyncService {
   static final SyncService instance = SyncService._();
   SyncService._();
@@ -161,15 +162,21 @@ class SyncService {
         
         try {
           print("DEBUG (Sync): Querying with lastSyncStr: $lastSyncStr");
-          final snapshot = await FirebaseFirestore.instance
+          Query query = FirebaseFirestore.instance
               .collection(table)
-              .where('updated_at', isGreaterThan: lastSyncStr)
-              .get();
+              .where('updated_at', isGreaterThan: lastSyncStr);
+          
+          final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+          if (currentEntId != null) {
+            query = query.where('enterprise_id', isEqualTo: currentEntId);
+          }
+
+          final snapshot = await query.get();
               
           print("DEBUG (Sync): Snapshot received for $table, docs: ${snapshot.docs.length}");
           
           for (final doc in snapshot.docs) {
-            final data = doc.data();
+            final Map<String, dynamic> data = Map<String, dynamic>.from(doc.data() as Map);
             data['id'] = doc.id; // Ensure ID is present even for partial documents
           
           if (data.containsKey('items')) {

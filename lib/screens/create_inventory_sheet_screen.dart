@@ -14,6 +14,7 @@ import '../../models/inventory_sheet_item.dart';
 import '../../models/product.dart';
 import '../../models/stock_movement.dart' show Warehouse;
 import '../../utils/constants.dart';
+import '../../services/enterprise_service.dart';
 import '../mobile/screens/forms/mobile_product_form_screen.dart';
 import '../widgets/article_selection_modal.dart';
 import 'create_article_screen.dart';
@@ -122,6 +123,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
       return;
     }
 
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
     final newSheet = InventorySheet(
       id: _id,
       number: _number,
@@ -132,6 +134,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
       reason: _reasonController.text,
       notes: _notesController.text,
       status: 'validated',
+      enterpriseId: currentEntId,
       items: _items,
       createdAt: widget.sheet?.createdAt,
     );

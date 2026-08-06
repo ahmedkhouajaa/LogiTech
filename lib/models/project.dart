@@ -14,6 +14,7 @@ class Project {
   final double progress;
   final String? notes;
   final String? firebaseUid;
+  final String? enterpriseId;
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -23,7 +24,7 @@ class Project {
     this.customerId, this.customerName, required this.startDate,
     this.endDate, this.budget = 0, this.spent = 0,
     this.status = ProjectStatus.planning, this.progress = 0,
-    this.notes, this.firebaseUid, this.isDeleted = false,
+    this.notes, this.firebaseUid, this.enterpriseId, this.isDeleted = false,
     DateTime? createdAt, DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
@@ -36,7 +37,8 @@ class Project {
         'customer_id': customerId, 'start_date': startDate.toIso8601String(),
         'end_date': endDate?.toIso8601String(), 'budget': budget, 'spent': spent,
         'status': status.name, 'progress': progress, 'notes': notes,
-        'firebase_uid': firebaseUid, 'is_deleted': isDeleted ? 1 : 0,
+        'firebase_uid': firebaseUid, 'enterprise_id': enterpriseId,
+        'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
@@ -55,6 +57,7 @@ class Project {
         progress: (map['progress'] as num?)?.toDouble() ?? 0,
         notes: map['notes'] as String?,
         firebaseUid: map['firebase_uid'] as String?,
+        enterpriseId: map['enterprise_id'] as String?,
         isDeleted: map['is_deleted'] == 1,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
@@ -64,7 +67,7 @@ class Project {
     String? id, String? name, String? description, String? customerId,
     String? customerName, DateTime? startDate, DateTime? endDate,
     double? budget, double? spent, ProjectStatus? status, double? progress,
-    String? notes, String? firebaseUid, bool? isDeleted,
+    String? notes, String? firebaseUid, String? enterpriseId, bool? isDeleted,
     DateTime? createdAt, DateTime? updatedAt,
   }) => Project(
         id: id ?? this.id, name: name ?? this.name,
@@ -75,6 +78,7 @@ class Project {
         budget: budget ?? this.budget, spent: spent ?? this.spent,
         status: status ?? this.status, progress: progress ?? this.progress,
         notes: notes ?? this.notes, firebaseUid: firebaseUid ?? this.firebaseUid,
+        enterpriseId: enterpriseId ?? this.enterpriseId,
         isDeleted: isDeleted ?? this.isDeleted,
         createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
       );

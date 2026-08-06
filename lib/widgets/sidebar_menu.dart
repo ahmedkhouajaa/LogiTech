@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 import '../database/database_helper.dart';
 import '../services/sync_service.dart';
+import 'enterprise_switcher.dart';
 
 enum AppModule {
   dashboard,
@@ -176,35 +177,18 @@ class _SidebarMenuState extends State<SidebarMenu> {
   Widget _buildHeader() {
     return Container(
       height: 64,
-      padding: EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: AppColors.sidebarBg,
         border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
       ),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              gradient: AppGradients.primary,
-              borderRadius: BorderRadius.circular(AppRadius.md),
+          Expanded(
+            child: EnterpriseSwitcherWidget(
+              isCollapsed: widget.isCollapsed,
             ),
-            child: Icon(Icons.business_center_rounded, color: Colors.white, size: 20),
           ),
-          if (!widget.isCollapsed) ...[
-            SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('LogiTech', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                  Text('Pro', style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ),
-          ],
           IconButton(
             icon: Icon(
               widget.isCollapsed ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,

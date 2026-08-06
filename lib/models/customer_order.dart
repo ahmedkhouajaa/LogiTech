@@ -23,6 +23,7 @@ class CustomerOrder {
   final bool isConvertedToDelivery;
   final String? convertedToDeliveryId;
   final String? firebaseUid;
+  final String? enterpriseId;
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -51,6 +52,7 @@ class CustomerOrder {
     this.isConvertedToDelivery = false,
     this.convertedToDeliveryId,
     this.firebaseUid,
+    this.enterpriseId,
     this.isDeleted = false,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -196,6 +198,7 @@ class CustomerOrder {
       'is_converted_to_delivery': isConvertedToDelivery ? 1 : 0,
       'converted_to_delivery_id': convertedToDeliveryId,
       'firebase_uid': firebaseUid,
+      'enterprise_id': enterpriseId,
       'is_deleted': isDeleted ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -217,9 +220,9 @@ class CustomerOrder {
       deliveryDate: map['delivery_date'] != null ? DateTime.parse(map['delivery_date']) : null,
       status: map['status'] ?? 'draft',
       pricingMode: map['pricing_mode'] ?? 'ht',
-      globalDiscountPercent: map['global_discount_percent'] ?? 0.0,
-      globalDiscountAmount: map['global_discount_amount'] ?? 0.0,
-      timbreFiscal: map['timbre_fiscal'] ?? 1.000,
+      globalDiscountPercent: (map['global_discount_percent'] as num?)?.toDouble() ?? 0.0,
+      globalDiscountAmount: (map['global_discount_amount'] as num?)?.toDouble() ?? 0.0,
+      timbreFiscal: (map['timbre_fiscal'] as num?)?.toDouble() ?? 1.000,
       notes: map['notes'],
       conditionsGenerales: map['conditions'],
       isConvertedToInvoice: map['is_converted_to_invoice'] == 1,
@@ -227,6 +230,7 @@ class CustomerOrder {
       isConvertedToDelivery: map['is_converted_to_delivery'] == 1,
       convertedToDeliveryId: map['converted_to_delivery_id'],
       firebaseUid: map['firebase_uid'],
+      enterpriseId: map['enterprise_id'],
       isDeleted: map['is_deleted'] == 1,
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),

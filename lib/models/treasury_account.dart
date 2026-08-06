@@ -11,6 +11,7 @@ class TreasuryAccount {
   final String currency;
   final double balance;
   final bool isDefault;
+  final String? enterpriseId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -25,6 +26,7 @@ class TreasuryAccount {
     this.currency = 'TND',
     this.balance = 0.0,
     this.isDefault = false,
+    this.enterpriseId,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : id = id ?? const Uuid().v4(),
@@ -42,6 +44,7 @@ class TreasuryAccount {
     String? currency,
     double? balance,
     bool? isDefault,
+    String? enterpriseId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -56,6 +59,7 @@ class TreasuryAccount {
       currency: currency ?? this.currency,
       balance: balance ?? this.balance,
       isDefault: isDefault ?? this.isDefault,
+      enterpriseId: enterpriseId ?? this.enterpriseId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -73,6 +77,7 @@ class TreasuryAccount {
       'currency': currency,
       'balance': balance,
       'is_default': isDefault ? 1 : 0,
+      'enterprise_id': enterpriseId,
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
     };
@@ -90,6 +95,7 @@ class TreasuryAccount {
       currency: map['currency']?.toString() ?? 'TND',
       balance: double.tryParse(map['balance']?.toString() ?? '0') ?? 0.0,
       isDefault: map['is_default'] == 1 || map['is_default'] == '1' || map['is_default'] == true,
+      enterpriseId: map['enterprise_id']?.toString(),
       createdAt: map['created_at'] != null 
           ? DateTime.fromMillisecondsSinceEpoch(int.tryParse(map['created_at'].toString()) ?? DateTime.now().millisecondsSinceEpoch) 
           : DateTime.now(),

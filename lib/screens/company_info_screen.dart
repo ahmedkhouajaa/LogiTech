@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../blocs/enterprise/enterprise_bloc.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
 import '../database/database_helper.dart';
@@ -93,11 +95,17 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
       return Center(child: CircularProgressIndicator());
     }
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return BlocListener<EnterpriseBloc, EnterpriseState>(
+      listener: (context, state) {
+        if (state is EnterpriseLoaded) {
+          _loadSettings();
+        }
+      },
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -196,6 +204,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 }

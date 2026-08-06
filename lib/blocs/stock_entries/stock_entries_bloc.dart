@@ -5,6 +5,7 @@ import '../../models/stock_movement.dart';
 import '../../utils/constants.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/enterprise_service.dart';
 import 'stock_entries_event.dart';
 import 'stock_entries_state.dart';
 
@@ -60,11 +61,13 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
 
   Future<void> _onLoadNextStockEntries(LoadNextStockEntries event, Emitter<StockEntriesState> emit) async {
     final currentState = state;
-    if (currentState is! StockEntriesLoaded || currentState.isLoadingMore || !currentState.hasMore) return;
+    if (currentState is! StockEntriesLoaded || !currentState.hasMore || currentState.isLoadingMore) {
+      return;
+    }
 
     emit(currentState.copyWith(isLoadingMore: true));
     try {
-      final nextEntries = await FirestorePaginationService.instance.getNextStockEntries(
+      final nextItems = await FirestorePaginationService.instance.getNextStockEntries(
         pageSize: pageSize,
         currentOffset: currentState.entries.length,
         searchQuery: event.searchQuery,
@@ -74,15 +77,19 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
         status: event.status,
       );
 
-      if (nextEntries.isEmpty) {
+      if (nextItems.isEmpty) {
         emit(currentState.copyWith(hasMore: false, isLoadingMore: false));
       } else {
-        final updatedList = List<StockEntry>.from(currentState.entries)..addAll(nextEntries);
+        final updatedList = List<StockEntry>.from(currentState.entries)..addAll(nextItems);
         emit(StockEntriesLoaded(
           updatedList,
           totalCount: currentState.totalCount > updatedList.length ? currentState.totalCount : updatedList.length,
-          hasMore: nextEntries.length >= pageSize,
+          hasMore: nextItems.length >= pageSize,
           isLoadingMore: false,
+          supplierFilter: event.supplierId,
+          dateFromFilter: event.dateFrom,
+          dateToFilter: event.dateTo,
+          statusFilter: event.status,
         ));
       }
     } catch (e) {
@@ -105,10 +112,22 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
     emit(StockEntriesLoading());
     try {
       final db = await _dbHelper.database;
+      final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+      String whereClause = 'is_deleted = 0';
+      List<dynamic> whereArgs = [];
+      if (currentEntId != null && currentEntId.isNotEmpty) {
+        if (EnterpriseService.instance.isDefaultEnterprise) {
+          whereClause += ' AND (enterprise_id = ? OR enterprise_id IS NULL)';
+        } else {
+          whereClause += ' AND enterprise_id = ?';
+        }
+        whereArgs.add(currentEntId);
+      }
+
       final entryMaps = await db.query(
         'stock_entries',
-        where: 'is_deleted = ?',
-        whereArgs: [0],
+        where: whereClause,
+        whereArgs: whereArgs,
         orderBy: 'date DESC',
       );
 
@@ -132,13 +151,22 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
   Future<void> _onAddStockEntry(AddStockEntry event, Emitter<StockEntriesState> emit) async {
     try {
       final db = await _dbHelper.database;
+      final currentEntId = EnterpriseService.instance.currentEnterpriseId;
       
       // Auto-generate number if empty or placeholder
       String number = event.entry.number;
       if (number.isEmpty || number.startsWith('BE-')) {
         final now = DateTime.now();
+        String countWhere = "date LIKE '${now.year}-%'";
+        if (currentEntId != null && currentEntId.isNotEmpty) {
+          if (EnterpriseService.instance.isDefaultEnterprise) {
+            countWhere += " AND (enterprise_id = '$currentEntId' OR enterprise_id IS NULL)";
+          } else {
+            countWhere += " AND enterprise_id = '$currentEntId'";
+          }
+        }
         final countMap = await db.rawQuery(
-            "SELECT COUNT(*) as count FROM stock_entries WHERE date LIKE '${now.year}-%'"
+            "SELECT COUNT(*) as count FROM stock_entries WHERE $countWhere"
         );
         final count = (countMap.first['count'] as int? ?? 0) + 1;
         number = 'BE-${now.year}-${count.toString().padLeft(5, '0')}';
@@ -149,8 +177,12 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
       final List<StockMovement> movements = [];
       final List<StockEntryItem> savedItems = [];
       await db.transaction((txn) async {
-        // Insert entry
-        await txn.insert('stock_entries', newEntry.toMap());
+        // Insert entry with enterprise_id
+        final data = newEntry.toMap();
+        if (currentEntId != null && currentEntId.isNotEmpty) {
+          data['enterprise_id'] = currentEntId;
+        }
+        await txn.insert('stock_entries', data);
 
         // Insert items
         for (var item in newEntry.items) {
@@ -169,6 +201,7 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
             referenceId: newEntry.id,
             date: newEntry.date,
             notes: newEntry.reason,
+            enterpriseId: currentEntId,
           );
           movements.add(movement);
           await txn.insert('stock_movements', movement.toMap());
@@ -183,6 +216,9 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
 
       // Add to sync queue
       final newEntryMap = newEntry.toMap();
+      if (currentEntId != null && currentEntId.isNotEmpty) {
+        newEntryMap['enterprise_id'] = currentEntId;
+      }
       newEntryMap['items'] = savedItems.map((i) => i.toMap()).toList();
       await _dbHelper.addToSyncQueue('stock_entries', newEntry.id, 'INSERT', newEntryMap);
       
