@@ -87,16 +87,20 @@ class Warehouse {
       };
 
   factory Warehouse.fromMap(Map<String, dynamic> map) => Warehouse(
-        id: map['id'] as String, name: map['name'] as String,
-        reference: map['reference'] as String?, address: map['address'] as String?,
-        postalCode: map['postal_code'] as String?, city: map['city'] as String?,
-        country: map['country'] as String?, isActive: map['is_active'] != 0,
-        isDefault: map['is_default'] == 1,
+        id: (map['id'] ?? '').toString(),
+        name: (map['name'] ?? 'Entrepôt').toString(),
+        reference: map['reference'] as String?,
+        address: map['address'] as String?,
+        postalCode: map['postal_code'] as String?,
+        city: map['city'] as String?,
+        country: map['country'] as String?,
+        isActive: map['is_active'] == null || map['is_active'] == 1 || map['is_active'] == true,
+        isDefault: map['is_default'] == 1 || map['is_default'] == true,
         firebaseUid: map['firebase_uid'] as String?,
         enterpriseId: map['enterprise_id'] as String?,
-        isDeleted: map['is_deleted'] == 1,
-        createdAt: DateTime.parse(map['created_at'] as String),
-        updatedAt: DateTime.parse(map['updated_at'] as String),
+        isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
+        createdAt: map['created_at'] != null ? (DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()) : DateTime.now(),
+        updatedAt: map['updated_at'] != null ? (DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now()) : DateTime.now(),
       );
 
   Warehouse copyWith({

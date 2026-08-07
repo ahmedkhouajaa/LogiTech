@@ -14,6 +14,8 @@ import '../utils/constants.dart';
 import 'create_article_screen.dart';
 import '../mobile/screens/forms/mobile_product_form_screen.dart';
 import '../widgets/article_selection_modal.dart';
+import '../widgets/searchable_dropdown_field.dart';
+import '../mobile/widgets/forms/mobile_smart_fields.dart';
 import '../models/stock_movement.dart' show Warehouse;
 
 class CreateStockWithdrawalScreen extends StatefulWidget {
@@ -362,33 +364,19 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
       ],
     );
 
-    final warehouseField = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Entrepôt', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
-        SizedBox(height: 8),
-        InputDecorator(
-          decoration: InputDecoration(
-            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide(color: AppColors.border)),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              dropdownColor: AppColors.surfaceAlt,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-              value: _warehouses.any((w) => w.id == _warehouseId) ? _warehouseId : null,
-              isExpanded: true,
-              hint: Text('Sélectionner un entrepôt', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-              items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 13)))).toList(),
-              onChanged: (val) {
-                if (val != null) setState(() => _warehouseId = val);
-              },
-            ),
-          ),
-        ),
-      ],
+    final selectedWarehouse = _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _warehouseId, orElse: () => null);
+    final warehouseName = selectedWarehouse != null ? selectedWarehouse.name : 'Entrepôt Principal';
+
+    final warehouseField = SmartSearchableSelector(
+      label: 'Entrepôt',
+      hint: 'Sélectionner un entrepôt',
+      selectedText: warehouseName,
+      onTap: () async {
+        final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _warehouseId);
+        if (res != null && mounted) {
+          setState(() => _warehouseId = res);
+        }
+      },
     );
 
     final reasonField = Column(
@@ -610,7 +598,7 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
     if (_isMobile) {
       return _buildMobileItemCard(index, item, products, currentStock, finalStock);
     }
-    return _buildDesktopItemRow(index, item, products, currentStock, finalStock);
+    return _buildDesktopItemRow(index, item, products, currentStock, finalStock, stockState);
   }
 
   // ─── Mobile: Card-based item layout ────────────────────────────────
@@ -770,7 +758,7 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
   }
 
   // ─── Desktop: Original row-based layout ────────────────────────────
-  Widget _buildDesktopItemRow(int index, StockWithdrawalItem item, List<Product> products, double currentStock, double finalStock) {
+  Widget _buildDesktopItemRow(int index, StockWithdrawalItem item, List<Product> products, double currentStock, double finalStock, StockState stockState) {
     return Padding(
           padding: EdgeInsets.only(bottom: 16.0),
           child: Column(
@@ -796,91 +784,49 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Produit Autocompl
+                  // Produit dropdown
                   Expanded(
                     flex: 3,
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                height: 40,
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Autocomplete<Product>(
-                              initialValue: TextEditingValue(
-                                text: item.productId.isNotEmpty ? products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', code: '', name: '', sellingPrice: 0, purchasePrice: 0, tvaRate: 0, unit: '', productType: '')).name : '',
-                              ),
-                              optionsBuilder: (TextEditingValue textEditingValue) {
-                                if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
-                                final search = textEditingValue.text.toLowerCase();
-                                return products.where((Product p) => 
-                                  p.name.toLowerCase().contains(search) || 
-                                  p.code.toLowerCase().contains(search) ||
-                                  (p.reference?.toLowerCase().contains(search) ?? false)
-                                ).toList();
-                              },
-                              displayStringForOption: (Product option) => option.name,
-                              fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                                return TextFormField(
-                                  controller: textEditingController,
-                                  focusNode: focusNode,
-                                  decoration: InputDecoration(
-                                    hintText: 'Sélectionner un article',
-                                    hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                  ),
-                                  style: TextStyle(fontSize: 13),
+                        Builder(
+                          builder: (context) {
+                            final selectedProd = products.cast<Product?>().firstWhere(
+                              (p) => p?.id == item.productId,
+                              orElse: () => null,
+                            );
+                            return SearchableSelectorField(
+                              hint: 'Sélectionner un article',
+                              selectedText: selectedProd?.name,
+                              onTap: () async {
+                                final stockMap = <String, double>{};
+                                for (var p in products) {
+                                  stockMap[p.id] = _getRealCurrentStock(StockWithdrawalItem(id: '', withdrawalId: '', productId: p.id, quantity: 0, unitPrice: 0), stockState);
+                                }
+                                final res = await showProductSelectDialog(
+                                  context,
+                                  products,
+                                  selectedProductId: item.productId,
+                                  warehouseId: _warehouseId,
+                                  warehouseStockMap: stockMap,
                                 );
+                                if (res != null) {
+                                  final selectedProduct = products.firstWhere((p) => p.id == res);
+                                  _updateItemProduct(index, selectedProduct);
+                                }
                               },
-                              optionsViewBuilder: (context, onSelected, options) {
-                                return Align(
-                                  alignment: Alignment.topLeft,
-                                  child: Material(
-                                    elevation: 4,
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: ConstrainedBox(
-                                      constraints: const BoxConstraints(maxHeight: 250, maxWidth: 300),
-                                      child: ListView.builder(
-                                        padding: EdgeInsets.zero,
-                                        shrinkWrap: true,
-                                        itemCount: options.length,
-                                        itemBuilder: (context, i) {
-                                          final option = options.elementAt(i);
-                                          return ListTile(
-                                            leading: Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textSecondary),
-                                            title: Text(option.name, style: TextStyle(fontSize: 13)),
-                                            onTap: () => onSelected(option),
-                                            dense: true,
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                              onSelected: (Product selection) {
-                                _updateItemProduct(index, selection);
-                              },
-                            ),
+                            );
+                          },
+                        ),
+                        if (_items.where((i) => i.productId == item.productId && i.productId.isNotEmpty).length > 1)
+                          Padding(
+                            padding: EdgeInsets.only(top: 4.0),
+                            child: Text('Ce produit me est déjà ajouté dans une autre ligne', style: TextStyle(color: AppColors.error, fontSize: 11)),
                           ),
-                          if (_items.where((i) => i.productId == item.productId && i.productId.isNotEmpty).length > 1)
-                            Padding(
-                              padding: EdgeInsets.only(top: 4.0),
-                              child: Text('Ce produit est déjà ajouté dans une autre ligne', style: TextStyle(color: AppColors.error, fontSize: 11)),
-                            ),
-                        ],
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
                   SizedBox(width: 16),
                   
                   // Qté en stock

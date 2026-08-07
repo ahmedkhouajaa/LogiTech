@@ -747,91 +747,35 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
           Row(
             children: [
               // Designation
+              // Designation
               Expanded(
                 flex: 3,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: BlocBuilder<ProductsBloc, ProductsState>(
-                        builder: (context, state) {
-                          final products = state is ProductsLoaded ? state.products : <Product>[];
-                          return Autocomplete<Product>(
-                            initialValue: TextEditingValue(text: item.description ?? ''),
-                            optionsBuilder: (TextEditingValue textEditingValue) {
-                              if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
-                              return products.where((Product p) => 
-                                p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
-                                (p.reference?.toLowerCase().contains(textEditingValue.text.toLowerCase()) ?? false)
-                              );
-                            },
-                            displayStringForOption: (Product option) => option.name,
-                            fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                              return TextFormField(
-                                controller: textEditingController,
-                                focusNode: focusNode,
-                                decoration: _itemInputDecoration('Rechercher un article...'),
-                                style: TextStyle(fontSize: 13),
-                                onChanged: (v) {
-                                  // Update description manually if they just type
-                                  setState(() => _items[index] = ExitVoucherItemUI(
-                                    id: item.id,
-                                    productId: item.productId,
-                                    productName: item.productName,
-                                    description: v,
-                                    quantity: item.quantity,
-                                    unitPrice: item.unitPrice,
-                                    tvaRate: item.tvaRate,
-                                    discountPercent: item.discountPercent,
-                                  ));
-                                },
-                              );
-                            },
-                            optionsViewBuilder: (context, onSelected, options) {
-                              return Align(
-                                alignment: Alignment.topLeft,
-                                child: Material(
-                                  elevation: 4,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  child: ConstrainedBox(
-                                    constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
-                                    child: ListView.builder(
-                                      padding: EdgeInsets.zero,
-                                      shrinkWrap: true,
-                                      itemCount: options.length,
-                                      itemBuilder: (context, i) {
-                                        final option = options.elementAt(i);
-                                        return ListTile(
-                                          title: Text(option.name, style: TextStyle(fontSize: 13)),
-                                          subtitle: option.reference != null ? Text(option.reference!, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
-                                          trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                          onTap: () => onSelected(option),
-                                          dense: true,
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                            onSelected: (Product selection) {
-                              setState(() {
-                                _items[index] = ExitVoucherItemUI(
-                                  id: item.id,
-                                  productId: selection.id,
-                                  productName: selection.name,
-                                  description: selection.name,
-                                  unitPrice: selection.sellingPrice,
-                                  tvaRate: selection.tvaRate,
-                                  quantity: item.quantity,
-                                  discountPercent: item.discountPercent,
-                                );
-                              });
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                child: BlocBuilder<ProductsBloc, ProductsState>(
+                  builder: (context, state) {
+                    final products = state is ProductsLoaded ? state.products : <Product>[];
+                    return SearchableSelectorField(
+                      hint: 'Rechercher un article...',
+                      selectedText: item.description?.isNotEmpty == true ? item.description : null,
+                      onTap: () async {
+                        final res = await showProductSelectDialog(context, products);
+                        if (res != null && mounted) {
+                          final selection = products.firstWhere((p) => p.id == res);
+                          setState(() {
+                            _items[index] = ExitVoucherItemUI(
+                              id: item.id,
+                              productId: selection.id,
+                              productName: selection.name,
+                              description: selection.name,
+                              unitPrice: selection.sellingPrice,
+                              tvaRate: selection.tvaRate,
+                              quantity: item.quantity,
+                              discountPercent: item.discountPercent,
+                            );
+                          });
+                        }
+                      },
+                    );
+                  },
                 ),
               ),
               SizedBox(width: 8),
@@ -1042,9 +986,10 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
   InputDecoration _itemInputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle:
-          TextStyle(fontSize: 12, color: AppColors.textTertiary),
-      isDense: true,
+      hintStyle: TextStyle(
+          color: AppColors.textPrimary, fontSize: 12),
+      filled: true,
+      fillColor: AppColors.surfaceAlt,
       contentPadding:
           EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       border: OutlineInputBorder(
@@ -1092,26 +1037,37 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
           ),
         ),
         SizedBox(width: 8),
-        OutlinedButton.icon(
+        IconButton(
+          icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+          tooltip: 'Créer un nouvel article',
           onPressed: () {
-            setState(() {
-              _items.add(ExitVoucherItemUI(
-                id: _uuid.v4(),
-                productId: '',
-                productName: '',
-                quantity: 1,
-                unitPrice: 0,
-                tvaRate: 19,
-                discountPercent: 0,
-              ));
-            });
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
           },
-          icon: Icon(Icons.add_rounded, size: 16),
-          label: Text('Ajouter une ligne vide', style: TextStyle(fontWeight: FontWeight.w600)),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.primary,
-            side: BorderSide(color: AppColors.primary),
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          splashRadius: 24,
+        ),
+        SizedBox(width: 12),
+        SizedBox(
+          height: 44,
+          child: OutlinedButton(
+            onPressed: () {
+              setState(() {
+                _items.add(ExitVoucherItemUI(
+                  id: _uuid.v4(),
+                  productId: '',
+                  productName: '',
+                  quantity: 1,
+                  unitPrice: 0,
+                  tvaRate: 19,
+                  discountPercent: 0,
+                ));
+              });
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: BorderSide(color: AppColors.primary),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+            ),
+            child: Text('Ajouter une Ligne Vide', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           ),
         ),
       ],

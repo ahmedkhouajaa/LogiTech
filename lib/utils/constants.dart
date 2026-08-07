@@ -633,6 +633,12 @@ String translateStatus(String s) {
   if (s == 'overdue') return 'En retard';
   if (s == 'pending') return 'En attente';
 
+  // Projects
+  if (s == 'planning' || s == 'ProjectStatus.planning') return 'Planification';
+  if (s == 'active' || s == 'ProjectStatus.active') return 'En cours';
+  if (s == 'completed' || s == 'ProjectStatus.completed') return 'Terminé';
+  if (s == 'onHold' || s == 'ProjectStatus.onHold') return 'En pause';
+
   // Stock
   if (s == 'completed') return 'Terminé';
   if (s == 'processing') return 'En cours';

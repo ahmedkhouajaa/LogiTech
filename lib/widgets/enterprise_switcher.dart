@@ -420,7 +420,7 @@ class _CreateEnterpriseFormDialogState extends State<_CreateEnterpriseFormDialog
       ),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 780),
-        padding: const EdgeInsets.all(28),
+        padding: EdgeInsets.all(isMobile ? 18 : 28),
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
@@ -431,12 +431,16 @@ class _CreateEnterpriseFormDialogState extends State<_CreateEnterpriseFormDialog
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Créer une nouvelle entreprise',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                    Expanded(
+                      child: Text(
+                        'Créer une nouvelle entreprise',
+                        style: TextStyle(
+                          fontSize: isMobile ? 17 : 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ),
                     IconButton(
@@ -501,30 +505,56 @@ class _CreateEnterpriseFormDialogState extends State<_CreateEnterpriseFormDialog
                 const SizedBox(height: 20),
                 _buildField('Coordonnées bancaires (RIB)', _ribController, hint: 'BIAT - Agence X - RIB: 08001002003004005006'),
                 const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                if (isMobile)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: _submitForm,
+                        child: const Text('Créer l\'entreprise', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Annuler'),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Annuler'),
                       ),
-                      onPressed: _submitForm,
-                      child: const Text('Créer l\'entreprise', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
+                    ],
+                  )
+                else
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Annuler'),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: _submitForm,
+                        child: const Text('Créer l\'entreprise', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),

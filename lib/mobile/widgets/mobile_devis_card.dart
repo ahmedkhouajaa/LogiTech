@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/quote.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
+import '../utils/mobile_status_colors.dart';
 
 class MobileDevisCard extends StatelessWidget {
   final Quote quote;
@@ -124,18 +125,6 @@ class MobileDevisCard extends StatelessWidget {
   }
 
   Color _getStatusColor(DocumentStatus status) {
-    switch (status) {
-      case DocumentStatus.accepted:
-      case DocumentStatus.converted:
-        return AppColors.success;
-      case DocumentStatus.rejected:
-      case DocumentStatus.cancelled:
-        return AppColors.error;
-      case DocumentStatus.sent:
-        return AppColors.primary;
-      case DocumentStatus.draft:
-      case DocumentStatus.created:
-        return AppColors.textSecondary;
-    }
+    return MobileStatusColors.getColorForStatus(status.label);
   }
 }

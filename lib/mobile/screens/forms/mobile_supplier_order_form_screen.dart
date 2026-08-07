@@ -198,7 +198,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
     if (index != null) {
       final item = _items[index];
       initialData = MobileArticleFormResult(
-        productId: item.productId ?? '',
+        productId: item.productId,
         productName: '',
         description: item.description ?? '',
         quantity: item.quantity,
@@ -329,15 +329,19 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                 BlocBuilder<ProjectsBloc, ProjectsState>(
                   builder: (context, state) {
                     final projects = state is ProjectsLoaded ? state.projects : <Project>[];
-                    return SmartDropdown<String>(
+                    final selectedProject = projects.cast<Project?>().firstWhere((p) => p?.id == _selectedProjectId, orElse: () => null);
+                    final displayName = selectedProject != null ? selectedProject.name : 'Projet par défaut';
+                    return SmartSearchableSelector(
                       label: 'Projet',
-                      value: _selectedProjectId,
-                      items: [
-                        const DropdownMenuItem<String>(value: null, child: Text('Projet par défaut', style: TextStyle(fontSize: 16))),
-                        ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: TextStyle(fontSize: 16)))),
-                      ],
-                      onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedProjectId = v); },
                       hint: 'Projet par défaut',
+                      selectedText: displayName,
+                      onTap: () async {
+                        if (widget.isReadOnly) return;
+                        final res = await showProjectSelectDialog(context, projects, selectedProjectId: _selectedProjectId);
+                        if (res != null && mounted) {
+                          setState(() => _selectedProjectId = res == '__default__' ? null : res);
+                        }
+                      },
                     );
                   },
                 ),

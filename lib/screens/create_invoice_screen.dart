@@ -472,7 +472,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
               children: [
                 Expanded(flex: 3, child: Text('Designation', style: _tableHeaderStyle())),
                 SizedBox(width: 140, child: Text('Quantite', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
-                SizedBox(width: 130, child: Text('P.U', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
+                SizedBox(width: 130, child: Text('P.U HT', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
+                SizedBox(width: 100, child: Text('Remise %', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 100, child: Text('TVA', style: _tableHeaderStyle(), textAlign: TextAlign.center)),
                 SizedBox(width: 140, child: Text('Total HT', style: _tableHeaderStyle(), textAlign: TextAlign.right)),
                 SizedBox(width: 60),
@@ -513,61 +514,22 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 child: BlocBuilder<ProductsBloc, ProductsState>(
                   builder: (context, state) {
                     final products = state is ProductsLoaded ? state.products : <Product>[];
-                    return Autocomplete<Product>(
-                      initialValue: TextEditingValue(text: item.productName ?? ''),
-                      optionsBuilder: (TextEditingValue textEditingValue) {
-                        if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
-                        return products.where((Product p) => 
-                          p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
-                          (p.reference?.toLowerCase().contains(textEditingValue.text.toLowerCase()) ?? false)
-                        );
-                      },
-                      displayStringForOption: (Product option) => option.name,
-                      fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                        return TextFormField(
-                          controller: textEditingController,
-                          focusNode: focusNode,
-                          decoration: _itemInputDecoration('Rechercher un article...'),
-                          style: TextStyle(fontSize: 13),
-                          onChanged: (v) => setState(() => _items[index] = item.copyWith(productName: v)),
-                        );
-                      },
-                      optionsViewBuilder: (context, onSelected, options) {
-                        return Align(
-                          alignment: Alignment.topLeft,
-                          child: Material(
-                            elevation: 4,
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
-                              child: ListView.builder(
-                                padding: EdgeInsets.zero,
-                                shrinkWrap: true,
-                                itemCount: options.length,
-                                itemBuilder: (context, i) {
-                                  final option = options.elementAt(i);
-                                  return ListTile(
-                                    title: Text(option.name, style: TextStyle(fontSize: 13)),
-                                    subtitle: option.reference != null ? Text(option.reference!, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
-                                    trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                    onTap: () => onSelected(option),
-                                    dense: true,
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      onSelected: (Product selection) {
-                        setState(() {
-                          _items[index] = item.copyWith(
-                            productId: selection.id,
-                            productName: selection.name,
-                            unitPrice: selection.sellingPrice,
-                            tvaRate: selection.tvaRate,
-                          );
-                        });
+                    return SearchableSelectorField(
+                      hint: 'Rechercher un article...',
+                      selectedText: item.productName?.isNotEmpty == true ? item.productName : null,
+                      onTap: () async {
+                        final res = await showProductSelectDialog(context, products);
+                        if (res != null && mounted) {
+                          final selection = products.firstWhere((p) => p.id == res);
+                          setState(() {
+                            _items[index] = item.copyWith(
+                              productId: selection.id,
+                              productName: selection.name,
+                              unitPrice: selection.sellingPrice,
+                              tvaRate: selection.tvaRate,
+                            );
+                          });
+                        }
                       },
                     );
                   },
@@ -652,6 +614,30 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 ),
               ),
               SizedBox(width: 8),
+              // Remise %
+              SizedBox(
+                width: 100,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        key: ValueKey('remise_${item.id}_init'),
+                        initialValue: item.discountPercent > 0 ? item.discountPercent.toStringAsFixed(0) : '',
+                        decoration: _itemInputDecoration(''),
+                        style: TextStyle(fontSize: 13),
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) => setState(() => _items[index] = item.copyWith(discountPercent: double.tryParse(v) ?? 0)),
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      '%',
+                      style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 8),
               // TVA dropdown
               SizedBox(
                 width: 100,
@@ -692,113 +678,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 splashRadius: 16,
                 tooltip: 'Supprimer',
               ),
-              // Drag handle
               Icon(Icons.drag_indicator_rounded, size: 16, color: AppColors.textTertiary),
             ],
           ),
-          SizedBox(height: 6),
-          // Bottom row: show description, apply discount
-          Row(
-            children: [
-              // Show description toggle
-              InkWell(
-                onTap: () => setState(() => _items[index] = item.copyWith(showDescription: !item.showDescription)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 16, height: 16,
-                      child: Checkbox(
-                        value: item.showDescription,
-                        onChanged: (v) => setState(() => _items[index] = item.copyWith(showDescription: v)),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        side: BorderSide(color: AppColors.border),
-                      ),
-                    ),
-                    SizedBox(width: 6),
-                    Text('Afficher la description', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
-                  ],
-                ),
-              ),
-              SizedBox(width: 24),
-              // Apply discount toggle
-              InkWell(
-                onTap: () => setState(() => _items[index] = item.copyWith(showDiscount: !item.showDiscount)),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 16, height: 16,
-                      child: Checkbox(
-                        value: item.showDiscount,
-                        onChanged: (v) => setState(() => _items[index] = item.copyWith(showDiscount: v)),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        side: BorderSide(color: AppColors.border),
-                      ),
-                    ),
-                    SizedBox(width: 6),
-                    Text('Appliquer remise', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          // Description field (expandable)
-          if (item.showDescription)
-            Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: TextFormField(
-                initialValue: item.description ?? '',
-                decoration: _itemInputDecoration('Description du produit'),
-                style: TextStyle(fontSize: 12),
-                maxLines: 2,
-                onChanged: (v) => setState(() => _items[index] = item.copyWith(description: v)),
-              ),
-            ),
-          // Discount field (expandable)
-          if (item.showDiscount)
-            Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 120,
-                    child: TextFormField(
-                      initialValue: item.discountPercent > 0 ? item.discountPercent.toString() : '',
-                      decoration: _itemInputDecoration('Remise %'),
-                      style: TextStyle(fontSize: 12),
-                      keyboardType: TextInputType.number,
-                      onChanged: (v) => setState(() => _items[index] = item.copyWith(discountPercent: double.tryParse(v) ?? 0)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          // Custom Columns fields
-          if (_customColumns.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Wrap(
-                spacing: 16,
-                runSpacing: 8,
-                children: _customColumns.map((col) {
-                  final id = col['id'] as String;
-                  return SizedBox(
-                    width: 200,
-                    child: TextFormField(
-                      initialValue: item.customFields[id] ?? '',
-                      decoration: _itemInputDecoration(col['label'] as String),
-                      style: TextStyle(fontSize: 12),
-                      onChanged: (v) {
-                        final newFields = Map<String, String>.from(item.customFields);
-                        newFields[id] = v;
-                        setState(() => _items[index] = item.copyWith(customFields: newFields));
-                      },
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
         ],
       ),
     );

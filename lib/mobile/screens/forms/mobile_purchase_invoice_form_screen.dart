@@ -9,7 +9,6 @@ import '../../../../models/supplier.dart';
 import '../../../../models/project.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
-import '../../../../database/database_helper.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
@@ -19,7 +18,6 @@ import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import '../../../../screens/suppliers_screen.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
-import 'mobile_product_form_screen.dart';
 
 class MobilePurchaseInvoiceFormScreen extends StatefulWidget {
   final PurchaseInvoice? existing;
@@ -211,7 +209,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
     if (index != null) {
       final item = _items[index];
       initialData = MobileArticleFormResult(
-        productId: item.productId ?? '',
+        productId: item.productId,
         productName: item.productName ?? '',
         description: item.description ?? item.productName ?? '',
         quantity: item.quantity,
@@ -281,42 +279,87 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
                   onChanged: (v) { if (!widget.isReadOnly) setState(() => _dueDate = v); },
                 ),
                 SizedBox(height: 16),
-                BlocBuilder<SuppliersBloc, SuppliersState>(
-                  builder: (context, state) {
-                    final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
-                    return AbsorbPointer(
-                      absorbing: widget.isReadOnly,
-                      child: SmartSearchableSelector(
-                        label: 'Fournisseur',
-                        hint: 'Rechercher des fournisseurs...',
-                        selectedText: _selectedSupplierId != null
-                            ? (suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)?.companyName?.isNotEmpty == true
-                                ? suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)!.companyName!
-                                : suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)?.name)
-                            : null,
-                        onTap: () async {
-                          final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedSupplierId);
-                          if (res != null && mounted && !widget.isReadOnly) {
-                            setState(() => _selectedSupplierId = res);
-                          }
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: BlocBuilder<SuppliersBloc, SuppliersState>(
+                        builder: (context, state) {
+                          final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
+                          return AbsorbPointer(
+                            absorbing: widget.isReadOnly,
+                            child: SmartSearchableSelector(
+                              label: 'Fournisseur',
+                              hint: 'Rechercher des fournisseurs...',
+                              selectedText: _selectedSupplierId != null
+                                  ? (suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                      ? suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)!.companyName!
+                                      : suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)?.name)
+                                  : null,
+                              onTap: () async {
+                                final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedSupplierId);
+                                if (res != null && mounted && !widget.isReadOnly) {
+                                  setState(() => _selectedSupplierId = res);
+                                }
+                              },
+                            ),
+                          );
                         },
                       ),
-                    );
-                  },
+                    ),
+                    if (!widget.isReadOnly) ...[
+                      SizedBox(width: 8),
+                      Container(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final newId = await showDialog<String>(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => BlocProvider.value(
+                                value: context.read<SuppliersBloc>(),
+                                child: SupplierDialog(existing: null),
+                              ),
+                            );
+                            if (newId != null && mounted) {
+                              setState(() {
+                                _selectedSupplierId = newId;
+                              });
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary.withOpacity(0.1),
+                            foregroundColor: AppColors.primary,
+                            elevation: 0,
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                            ),
+                            side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                          ),
+                          child: Icon(Icons.person_add_alt_1_rounded),
+                        ),
+                      ),
+                    ]
+                  ],
                 ),
                 SizedBox(height: 16),
                 BlocBuilder<ProjectsBloc, ProjectsState>(
                   builder: (context, state) {
                     final projects = state is ProjectsLoaded ? state.projects : <Project>[];
-                    return SmartDropdown<String>(
+                    final selectedProject = projects.cast<Project?>().firstWhere((p) => p?.id == _selectedProjectId, orElse: () => null);
+                    final displayName = selectedProject != null ? selectedProject.name : 'Projet par défaut';
+                    return SmartSearchableSelector(
                       label: 'Projet',
-                      value: _selectedProjectId,
-                      items: [
-                        const DropdownMenuItem<String>(value: null, child: Text('Projet par défaut', style: TextStyle(fontSize: 16))),
-                        ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: TextStyle(fontSize: 16)))),
-                      ],
-                      onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedProjectId = v); },
                       hint: 'Projet par défaut',
+                      selectedText: displayName,
+                      onTap: () async {
+                        if (widget.isReadOnly) return;
+                        final res = await showProjectSelectDialog(context, projects, selectedProjectId: _selectedProjectId);
+                        if (res != null && mounted) {
+                          setState(() => _selectedProjectId = res == '__default__' ? null : res);
+                        }
+                      },
                     );
                   },
                 ),

@@ -13,6 +13,8 @@ import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
+import '../../../../screens/customers_screen.dart';
+import '../../../../screens/suppliers_screen.dart';
 
 class MobilePaymentFormScreen extends StatefulWidget {
   final Payment? existing;
@@ -145,19 +147,24 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
               children: [
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
-                  child: SmartDropdown<String>(
+                  child: SmartSearchableSelector(
                     label: 'Type de paiement',
-                    value: _direction,
-                    items: const [
-                      DropdownMenuItem(value: 'encaissement', child: Text('Encaissement (Reçu)')),
-                      DropdownMenuItem(value: 'decaissement', child: Text('Décaissement (Payé)')),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) {
+                    hint: 'Sélectionner le type',
+                    selectedText: _direction == 'encaissement' ? 'Encaissement (Reçu)' : 'Décaissement (Payé)',
+                    onTap: () async {
+                      final res = await showSimpleOptionSelectDialog(
+                        context,
+                        'Sélectionner le type de paiement',
+                        const [
+                          {'value': 'encaissement', 'label': 'Encaissement (Reçu)'},
+                          {'value': 'decaissement', 'label': 'Décaissement (Payé)'},
+                        ],
+                        selectedValue: _direction,
+                      );
+                      if (res != null && mounted) {
                         setState(() {
-                          _direction = v;
-                          // Usually encaissement = from customer, decaissement = to supplier
-                          _contactType = v == 'encaissement' ? 'customer' : 'supplier';
+                          _direction = res;
+                          _contactType = res == 'encaissement' ? 'customer' : 'supplier';
                           _selectedContactId = null;
                         });
                       }
@@ -167,17 +174,23 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                 SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
-                  child: SmartDropdown<String>(
+                  child: SmartSearchableSelector(
                     label: 'Type de contact',
-                    value: _contactType,
-                    items: const [
-                      DropdownMenuItem(value: 'customer', child: Text('Client')),
-                      DropdownMenuItem(value: 'supplier', child: Text('Fournisseur')),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) {
+                    hint: 'Sélectionner le contact',
+                    selectedText: _contactType == 'customer' ? 'Client' : 'Fournisseur',
+                    onTap: () async {
+                      final res = await showSimpleOptionSelectDialog(
+                        context,
+                        'Sélectionner le type de contact',
+                        const [
+                          {'value': 'customer', 'label': 'Client'},
+                          {'value': 'supplier', 'label': 'Fournisseur'},
+                        ],
+                        selectedValue: _contactType,
+                      );
+                      if (res != null && mounted) {
                         setState(() {
-                          _contactType = v;
+                          _contactType = res;
                           _selectedContactId = null;
                         });
                       }
@@ -189,23 +202,64 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                   BlocBuilder<CustomersBloc, CustomersState>(
                     builder: (context, state) {
                       final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                      return AbsorbPointer(
-                        absorbing: widget.isReadOnly,
-                        child: SmartSearchableSelector(
-                          label: 'Client *',
-                          hint: 'Sélectionner un client',
-                          selectedText: _selectedContactId != null
-                              ? (customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedContactId, orElse: () => null)?.companyName?.isNotEmpty == true
-                                  ? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedContactId, orElse: () => null)!.companyName!
-                                  : customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedContactId, orElse: () => null)?.name)
-                              : null,
-                          onTap: () async {
-                            final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedContactId);
-                            if (res != null && mounted) {
-                              setState(() => _selectedContactId = res);
-                            }
-                          },
-                        ),
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: AbsorbPointer(
+                              absorbing: widget.isReadOnly,
+                              child: SmartSearchableSelector(
+                                label: 'Client *',
+                                hint: 'Sélectionner un client',
+                                selectedText: _selectedContactId != null
+                                    ? (customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedContactId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                        ? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedContactId, orElse: () => null)!.companyName!
+                                        : customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedContactId, orElse: () => null)?.name)
+                                    : null,
+                                onTap: () async {
+                                  final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedContactId);
+                                  if (res != null && mounted) {
+                                    setState(() => _selectedContactId = res);
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                          if (!widget.isReadOnly) ...[
+                            SizedBox(width: 8),
+                            Container(
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  final newId = await showDialog<String>(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) => BlocProvider.value(
+                                      value: context.read<CustomersBloc>(),
+                                      child: const CustomerDialog(existing: null),
+                                    ),
+                                  );
+                                  if (newId != null && mounted) {
+                                    setState(() {
+                                      _selectedContactId = newId;
+                                    });
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                                  foregroundColor: AppColors.primary,
+                                  elevation: 0,
+                                  padding: EdgeInsets.symmetric(horizontal: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                  ),
+                                  side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                                ),
+                                child: Icon(Icons.person_add_alt_1_rounded),
+                              ),
+                            ),
+                          ]
+                        ],
                       );
                     },
                   )
@@ -213,23 +267,64 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                   BlocBuilder<SuppliersBloc, SuppliersState>(
                     builder: (context, state) {
                       final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
-                      return AbsorbPointer(
-                        absorbing: widget.isReadOnly,
-                        child: SmartSearchableSelector(
-                          label: 'Fournisseur *',
-                          hint: 'Sélectionner un fournisseur',
-                          selectedText: _selectedContactId != null
-                              ? (suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedContactId, orElse: () => null)?.companyName?.isNotEmpty == true
-                                  ? suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedContactId, orElse: () => null)!.companyName!
-                                  : suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedContactId, orElse: () => null)?.name)
-                              : null,
-                          onTap: () async {
-                            final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedContactId);
-                            if (res != null && mounted) {
-                              setState(() => _selectedContactId = res);
-                            }
-                          },
-                        ),
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: AbsorbPointer(
+                              absorbing: widget.isReadOnly,
+                              child: SmartSearchableSelector(
+                                label: 'Fournisseur *',
+                                hint: 'Sélectionner un fournisseur',
+                                selectedText: _selectedContactId != null
+                                    ? (suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedContactId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                        ? suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedContactId, orElse: () => null)!.companyName!
+                                        : suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedContactId, orElse: () => null)?.name)
+                                    : null,
+                                onTap: () async {
+                                  final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedContactId);
+                                  if (res != null && mounted) {
+                                    setState(() => _selectedContactId = res);
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                          if (!widget.isReadOnly) ...[
+                            SizedBox(width: 8),
+                            Container(
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  final newId = await showDialog<String>(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (_) => BlocProvider.value(
+                                      value: context.read<SuppliersBloc>(),
+                                      child: SupplierDialog(existing: null),
+                                    ),
+                                  );
+                                  if (newId != null && mounted) {
+                                    setState(() {
+                                      _selectedContactId = newId;
+                                    });
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                                  foregroundColor: AppColors.primary,
+                                  elevation: 0,
+                                  padding: EdgeInsets.symmetric(horizontal: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                  ),
+                                  side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                                ),
+                                child: Icon(Icons.person_add_alt_1_rounded),
+                              ),
+                            ),
+                          ]
+                        ],
                       );
                     },
                   ),
@@ -267,17 +362,29 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                 SizedBox(height: 16),
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
-                  child: SmartDropdown<String>(
+                  child: SmartSearchableSelector(
                     label: 'Méthode de paiement',
-                    value: _method,
-                    items: const [
-                      DropdownMenuItem(value: 'especes', child: Text('Espèces')),
-                      DropdownMenuItem(value: 'cheque', child: Text('Chèque')),
-                      DropdownMenuItem(value: 'virement', child: Text('Virement')),
-                      DropdownMenuItem(value: 'carte', child: Text('Carte Bancaire')),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) setState(() => _method = v);
+                    hint: 'Sélectionner la méthode',
+                    selectedText: _method == 'especes'
+                        ? 'Espèces'
+                        : (_method == 'cheque'
+                            ? 'Chèque'
+                            : (_method == 'virement' ? 'Virement' : 'Carte Bancaire')),
+                    onTap: () async {
+                      final res = await showSimpleOptionSelectDialog(
+                        context,
+                        'Sélectionner la méthode de paiement',
+                        const [
+                          {'value': 'especes', 'label': 'Espèces'},
+                          {'value': 'cheque', 'label': 'Chèque'},
+                          {'value': 'virement', 'label': 'Virement'},
+                          {'value': 'carte', 'label': 'Carte Bancaire'},
+                        ],
+                        selectedValue: _method,
+                      );
+                      if (res != null && mounted) {
+                        setState(() => _method = res);
+                      }
                     },
                   ),
                 ),
@@ -306,16 +413,26 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
               children: [
                 AbsorbPointer(
                   absorbing: widget.isReadOnly,
-                  child: SmartDropdown<String>(
+                  child: SmartSearchableSelector(
                     label: 'Statut',
-                    value: _status,
-                    items: const [
-                      DropdownMenuItem(value: 'paid', child: Text('Payé')),
-                      DropdownMenuItem(value: 'pending', child: Text('En attente')),
-                      DropdownMenuItem(value: 'cancelled', child: Text('Annulé')),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) setState(() => _status = v);
+                    hint: 'Sélectionner le statut',
+                    selectedText: _status == 'paid'
+                        ? 'Payé'
+                        : (_status == 'pending' ? 'En attente' : 'Annulé'),
+                    onTap: () async {
+                      final res = await showSimpleOptionSelectDialog(
+                        context,
+                        'Sélectionner le statut',
+                        const [
+                          {'value': 'paid', 'label': 'Payé'},
+                          {'value': 'pending', 'label': 'En attente'},
+                          {'value': 'cancelled', 'label': 'Annulé'},
+                        ],
+                        selectedValue: _status,
+                      );
+                      if (res != null && mounted) {
+                        setState(() => _status = res);
+                      }
                     },
                   ),
                 ),

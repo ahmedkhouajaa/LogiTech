@@ -9,6 +9,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/treasury_account.dart';
 import '../models/customer.dart';
 import '../models/supplier.dart';
 import '../models/product.dart';
@@ -212,6 +214,46 @@ class DatabaseHelper {
       for (final entry in supplierCols.entries) {
         if (!existingCols.contains(entry.key)) {
           await db.execute('ALTER TABLE suppliers ADD COLUMN ${entry.key} ${entry.value}');
+        }
+      }
+    } catch (_) {}
+
+    final warehouseCols = {
+      'reference': "TEXT",
+      'address': "TEXT",
+      'postal_code': "TEXT",
+      'city': "TEXT",
+      'country': "TEXT DEFAULT 'Tunisia'",
+      'is_active': "INTEGER DEFAULT 1",
+      'is_default': "INTEGER DEFAULT 0",
+      'firebase_uid': "TEXT",
+      'enterprise_id': "TEXT",
+      'is_deleted': "INTEGER DEFAULT 0",
+      'created_at': "TEXT",
+      'updated_at': "TEXT",
+    };
+
+    try {
+      final info = await db.rawQuery('PRAGMA table_info(warehouses)');
+      final existingCols = info.map((e) => e['name'] as String).toSet();
+      for (final entry in warehouseCols.entries) {
+        if (!existingCols.contains(entry.key)) {
+          await db.execute('ALTER TABLE warehouses ADD COLUMN ${entry.key} ${entry.value}');
+        }
+      }
+    } catch (_) {}
+
+    final treasuryCols = {
+      'enterprise_id': "TEXT",
+      'is_deleted': "INTEGER DEFAULT 0",
+    };
+
+    try {
+      final info = await db.rawQuery('PRAGMA table_info(treasury_accounts)');
+      final existingCols = info.map((e) => e['name'] as String).toSet();
+      for (final entry in treasuryCols.entries) {
+        if (!existingCols.contains(entry.key)) {
+          await db.execute('ALTER TABLE treasury_accounts ADD COLUMN ${entry.key} ${entry.value}');
         }
       }
     } catch (_) {}
@@ -1344,8 +1386,10 @@ class DatabaseHelper {
         currency TEXT DEFAULT 'TND',
         balance REAL DEFAULT 0,
         is_default INTEGER DEFAULT 0,
-        created_at INTEGER,
-        updated_at INTEGER
+        enterprise_id TEXT,
+        is_deleted INTEGER DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT
       )
     ''');
 
@@ -1611,9 +1655,15 @@ class DatabaseHelper {
       CREATE TABLE IF NOT EXISTS warehouses (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
+        reference TEXT,
         address TEXT,
+        postal_code TEXT,
+        city TEXT,
+        country TEXT DEFAULT 'Tunisia',
+        is_active INTEGER DEFAULT 1,
         is_default INTEGER DEFAULT 0,
         firebase_uid TEXT,
+        enterprise_id TEXT,
         is_deleted INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
@@ -3314,7 +3364,7 @@ class DatabaseHelper {
     if (currentEntId == null || currentEntId.isEmpty) return '1=1';
     final col = tablePrefix.isNotEmpty ? '$tablePrefix.enterprise_id' : 'enterprise_id';
     if (EnterpriseService.instance.isDefaultEnterprise) {
-      return "($col = '$currentEntId' OR $col IS NULL)";
+      return "($col = '$currentEntId' OR $col IS NULL OR $col = '')";
     } else {
       return "$col = '$currentEntId'";
     }
@@ -3325,7 +3375,7 @@ class DatabaseHelper {
     if (currentEntId == null || currentEntId.isEmpty) return '';
     final col = tablePrefix.isNotEmpty ? '$tablePrefix.enterprise_id' : 'enterprise_id';
     if (EnterpriseService.instance.isDefaultEnterprise) {
-      return " AND ($col = '$currentEntId' OR $col IS NULL)";
+      return " AND ($col = '$currentEntId' OR $col IS NULL OR $col = '')";
     } else {
       return " AND $col = '$currentEntId'";
     }
@@ -4438,7 +4488,13 @@ class DatabaseHelper {
 
   // ─── Warehouses ─────────────────────────────────────────────────
   Future<List<Warehouse>> getWarehouses() async {
-    final maps = await getAll('warehouses', orderBy: 'name ASC');
+    final db = await database;
+    final filter = _entFilter('w');
+    final maps = await db.rawQuery('''
+      SELECT w.* FROM warehouses w
+      WHERE (w.is_deleted = 0 OR w.is_deleted IS NULL) $filter
+      ORDER BY w.name ASC
+    ''');
     return maps.map((m) => Warehouse.fromMap(m)).toList();
   }
 
@@ -6101,10 +6157,44 @@ class DatabaseHelper {
       ), 0.0)
     ''');
     final entId = EnterpriseService.instance.currentEnterpriseId;
-    if (entId != null && entId.isNotEmpty) {
-      return await db.query('treasury_accounts', where: 'enterprise_id = ?', whereArgs: [entId], orderBy: 'is_default DESC, name ASC');
+    String whereStr = _entWhereClause();
+    if (whereStr == '1=1') whereStr = '';
+
+    var results = await db.query(
+      'treasury_accounts',
+      where: whereStr.isNotEmpty ? '$whereStr AND (is_deleted = 0 OR is_deleted IS NULL)' : '(is_deleted = 0 OR is_deleted IS NULL)',
+      orderBy: 'is_default DESC, name ASC',
+    );
+
+    if (results.isEmpty && entId != null && entId.isNotEmpty) {
+      final defaultAccount = TreasuryAccount(
+        id: const Uuid().v4(),
+        name: 'Compte principal',
+        type: 'cash',
+        currency: 'TND',
+        isDefault: true,
+        enterpriseId: entId,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await createTreasuryAccount(defaultAccount.toMap());
+      FirebaseFirestore.instance
+          .collection('treasury_accounts')
+          .doc(defaultAccount.id)
+          .set(defaultAccount.toMap(), SetOptions(merge: true))
+          .catchError((e) => print('Firestore treasury sync error: $e'));
+      FirebaseFirestore.instance
+          .collection('comptes_tresorerie')
+          .doc(defaultAccount.id)
+          .set(defaultAccount.toMap(), SetOptions(merge: true))
+          .catchError((e) => print('Firestore treasury sync error: $e'));
+      results = await db.query(
+        'treasury_accounts',
+        where: whereStr.isNotEmpty ? '$whereStr AND (is_deleted = 0 OR is_deleted IS NULL)' : '(is_deleted = 0 OR is_deleted IS NULL)',
+        orderBy: 'is_default DESC, name ASC',
+      );
     }
-    return await db.query('treasury_accounts', orderBy: 'is_default DESC, name ASC');
+    return results;
   }
 
   Future<List<Map<String, dynamic>>> getTreasuryAccountsPaginated({
@@ -6124,23 +6214,17 @@ class DatabaseHelper {
       ), 0.0)
     ''');
 
-    List<String> conditions = [];
+    List<String> conditions = ['(is_deleted = 0 OR is_deleted IS NULL)', _entWhereClause()];
     List<dynamic> whereArgs = [];
-
-    final entId = EnterpriseService.instance.currentEnterpriseId;
-    if (entId != null && entId.isNotEmpty) {
-      conditions.add('enterprise_id = ?');
-      whereArgs.add(entId);
-    }
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       conditions.add('name LIKE ?');
       whereArgs.add('%${searchQuery.trim()}%');
     }
 
-    final where = conditions.isEmpty ? null : conditions.join(' AND ');
+    final where = conditions.join(' AND ');
 
-    return await db.query(
+    var results = await db.query(
       'treasury_accounts',
       where: where,
       whereArgs: whereArgs.isEmpty ? null : whereArgs,
@@ -6148,35 +6232,73 @@ class DatabaseHelper {
       limit: limit,
       offset: offset,
     );
+
+    final entId = EnterpriseService.instance.currentEnterpriseId;
+    if (results.isEmpty && (searchQuery == null || searchQuery.trim().isEmpty) && entId != null && entId.isNotEmpty) {
+      final defaultAccount = TreasuryAccount(
+        id: const Uuid().v4(),
+        name: 'Compte principal',
+        type: 'cash',
+        currency: 'TND',
+        isDefault: true,
+        enterpriseId: entId,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await createTreasuryAccount(defaultAccount.toMap());
+      FirebaseFirestore.instance
+          .collection('treasury_accounts')
+          .doc(defaultAccount.id)
+          .set(defaultAccount.toMap(), SetOptions(merge: true))
+          .catchError((e) => print('Firestore treasury sync error: $e'));
+      FirebaseFirestore.instance
+          .collection('comptes_tresorerie')
+          .doc(defaultAccount.id)
+          .set(defaultAccount.toMap(), SetOptions(merge: true))
+          .catchError((e) => print('Firestore treasury sync error: $e'));
+      results = await db.query(
+        'treasury_accounts',
+        where: where,
+        whereArgs: whereArgs.isEmpty ? null : whereArgs,
+        orderBy: 'is_default DESC, name ASC',
+        limit: limit,
+        offset: offset,
+      );
+    }
+    return results;
   }
 
   Future<int> getTreasuryAccountsCount({String? searchQuery}) async {
     final db = await database;
-    List<String> conditions = [];
+    List<String> conditions = ['(is_deleted = 0 OR is_deleted IS NULL)', _entWhereClause()];
     List<dynamic> whereArgs = [];
-
-    final entId = EnterpriseService.instance.currentEnterpriseId;
-    if (entId != null && entId.isNotEmpty) {
-      conditions.add('enterprise_id = ?');
-      whereArgs.add(entId);
-    }
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       conditions.add('name LIKE ?');
       whereArgs.add('%${searchQuery.trim()}%');
     }
 
-    final queryStr = 'SELECT COUNT(*) as count FROM treasury_accounts' + (conditions.isEmpty ? '' : ' WHERE ${conditions.join(' AND ')}');
+    final where = conditions.join(' AND ');
+
     final result = await db.rawQuery(
-      queryStr,
+      'SELECT COUNT(*) as count FROM treasury_accounts WHERE $where',
       whereArgs.isEmpty ? null : whereArgs,
     );
-    return result.isNotEmpty ? (result.first['count'] as int? ?? 0) : 0;
+    int count = Sqflite.firstIntValue(result) ?? 0;
+    if (count == 0 && (searchQuery == null || searchQuery.trim().isEmpty)) {
+      final list = await getTreasuryAccountsPaginated(limit: 10, offset: 0);
+      count = list.length;
+    }
+    return count;
   }
 
   Future<void> createTreasuryAccount(Map<String, dynamic> data) async {
     final db = await database;
-    await db.insert('treasury_accounts', data);
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    if (currentEntId != null && data['enterprise_id'] == null) {
+      data['enterprise_id'] = currentEntId;
+    }
+    await db.insert('treasury_accounts', data, conflictAlgorithm: ConflictAlgorithm.replace);
     if (data['id'] != null) {
       await _addToSyncQueue('treasury_accounts', data['id'], 'INSERT', data);
     }

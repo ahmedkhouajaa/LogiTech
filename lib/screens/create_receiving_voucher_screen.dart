@@ -536,29 +536,45 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.border)),
-              color: AppColors.background,
+              color: AppColors.surfaceAlt,
+              border: Border(
+                top: BorderSide(color: AppColors.border),
+                bottom: BorderSide(color: AppColors.border),
+              ),
             ),
             child: Row(
               children: [
-                SizedBox(width: 32),
                 Expanded(
                     flex: 3,
-                    child: Text('Article', style: _tableHeaderStyle())),
-
-                Expanded(
-                    child: Text('Qté Reçue', style: _tableHeaderStyle())),
-                Expanded(
-                    child: Text('Prix U. HT', style: _tableHeaderStyle())),
-                Expanded(
-                    child: Text('TVA %', style: _tableHeaderStyle())),
-                Expanded(
-                    child: Text('Remise %', style: _tableHeaderStyle())),
-                Expanded(
-                    child: Text('Total HT', style: _tableHeaderStyle())),
-                SizedBox(width: 80), // Actions
+                    child: Text('Designation', style: _tableHeaderStyle())),
+                SizedBox(
+                    width: 140,
+                    child: Text('Quantite',
+                        style: _tableHeaderStyle(),
+                        textAlign: TextAlign.center)),
+                SizedBox(
+                    width: 130,
+                    child: Text('P.U HT',
+                        style: _tableHeaderStyle(),
+                        textAlign: TextAlign.center)),
+                SizedBox(
+                    width: 100,
+                    child: Text('Remise %',
+                        style: _tableHeaderStyle(),
+                        textAlign: TextAlign.center)),
+                SizedBox(
+                    width: 100,
+                    child: Text('TVA',
+                        style: _tableHeaderStyle(),
+                        textAlign: TextAlign.center)),
+                SizedBox(
+                    width: 140,
+                    child: Text('Total HT',
+                        style: _tableHeaderStyle(),
+                        textAlign: TextAlign.right)),
+                SizedBox(width: 60),
               ],
             ),
           ),
@@ -578,7 +594,6 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
     );
   }
 
-  
   TextStyle _tableHeaderStyle() {
     return TextStyle(
         fontSize: 12,
@@ -591,237 +606,197 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         border: Border(
-            bottom: BorderSide(color: AppColors.border, width: 0.5)),
-        color: index % 2 == 0 ? AppColors.surface : AppColors.background,
+            bottom: BorderSide(
+                color: AppColors.border.withValues(alpha: 0.5))),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          // Drag handle
-          SizedBox(
-            width: 32,
-            height: 40,
-            child: Icon(Icons.drag_indicator,
-                color: AppColors.textTertiary, size: 20),
-          ),
-          // Product selection
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  height: 40,
-                  child: BlocBuilder<ProductsBloc, ProductsState>(
-                    builder: (context, state) {
-                      List<Product> products = [];
-                      if (state is ProductsLoaded) {
-                        products = state.products;
-                      }
-                      return Autocomplete<Product>(
-                        initialValue: TextEditingValue(
-                          text: item.productId.isNotEmpty ? products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', code: '', name: '', sellingPrice: 0, purchasePrice: 0, tvaRate: 0)).name : '',
-                        ),
-                        optionsBuilder: (TextEditingValue textEditingValue) {
-                          if (textEditingValue.text.isEmpty) {
-                            return const Iterable<Product>.empty();
-                          }
-                          return products.where((Product option) {
-                            return option.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
-                                  (option.reference != null && option.reference!.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-                          });
-                        },
-                        onSelected: (Product product) {
+          Row(
+            children: [
+              // Designation
+              Expanded(
+                flex: 3,
+                child: BlocBuilder<ProductsBloc, ProductsState>(
+                  builder: (context, state) {
+                    final products = state is ProductsLoaded ? state.products : <Product>[];
+                    final selectedProd = products.cast<Product?>().firstWhere((p) => p?.id == item.productId, orElse: () => null);
+                    return SearchableSelectorField(
+                      hint: 'Rechercher un article...',
+                      selectedText: selectedProd?.name ?? (item.productName?.isNotEmpty == true ? item.productName : null),
+                      onTap: () async {
+                        final res = await showProductSelectDialog(context, products);
+                        if (res != null && mounted) {
+                          final selection = products.firstWhere((p) => p.id == res);
                           setState(() {
                             _items[index] = item.copyWith(
-                              productId: product.id,
-                              unitPrice: product.purchasePrice,
-                              tvaRate: product.tvaRate,
+                              productId: selection.id,
+                              productName: selection.name,
+                              unitPrice: selection.purchasePrice,
+                              tvaRate: selection.tvaRate,
                             );
                           });
-                        },
-                        displayStringForOption: (Product option) => option.name,
-                        fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                          return TextFormField(
-                            controller: textEditingController,
-                            focusNode: focusNode,
-                            decoration: InputDecoration(
-                              hintText: 'Rechercher un article...',
-                              hintStyle: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                              filled: true,
-                              fillColor: AppColors.surfaceAlt,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
-                            ),
-                            style: TextStyle(fontSize: 13),
-                          );
-                        },
-                        optionsViewBuilder: (context, onSelected, options) {
-                          return Align(
-                            alignment: Alignment.topLeft,
-                            child: Material(
-                              elevation: 4,
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
-                                child: ListView.builder(
-                                  padding: EdgeInsets.zero,
-                                  shrinkWrap: true,
-                                  itemCount: options.length,
-                                  itemBuilder: (context, i) {
-                                    final option = options.elementAt(i);
-                                    return ListTile(
-                                      title: Text(option.name, style: TextStyle(fontSize: 13)),
-                                      subtitle: option.reference != null ? Text(option.reference!, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
-                                      trailing: Text('${option.purchasePrice.toStringAsFixed(2)} DT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                      onTap: () => onSelected(option),
-                                      dense: true,
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Quantity Received
-          Expanded(
-            child: Row(
-              children: [
-                InkWell(
-                  onTap: () {
-                    final newQty = item.quantityReceived > 0 ? item.quantityReceived - 1 : 0.0;
-                    setState(() => _items[index] = item.copyWith(quantityReceived: newQty));
+                        }
+                      },
+                    );
                   },
-                  borderRadius: BorderRadius.circular(4),
-                  child: Container(
-                    width: 28, height: 28,
-                    decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
-                    child: Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
-                  ),
                 ),
-                SizedBox(width: 4),
-                Expanded(
-                  child: TextFormField(
-                    key: ValueKey('qtyRec_${item.id}_${item.quantityReceived}'),
-                    initialValue: item.quantityReceived.toString(),
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13),
-                    decoration: _itemInputDecoration(''),
-                    onChanged: (val) {
-                      final v = double.tryParse(val) ?? 0;
-                      setState(() => _items[index] = item.copyWith(quantityReceived: v));
-                    },
-                  ),
-                ),
-                SizedBox(width: 4),
-                InkWell(
-                  onTap: () {
-                    final newQty = item.quantityReceived + 1;
-                    setState(() => _items[index] = item.copyWith(quantityReceived: newQty));
-                  },
-                  borderRadius: BorderRadius.circular(4),
-                  child: Container(
-                    width: 28, height: 28,
-                    decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
-                    child: Icon(Icons.add, size: 14, color: AppColors.textSecondary),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: 8),
-          // Unit Price
-          Expanded(
-            child: TextFormField(
-              initialValue: item.unitPrice.toString(),
-              keyboardType: TextInputType.number,
-              decoration: _itemInputDecoration(''),
-              onChanged: (val) {
-                final v = double.tryParse(val) ?? 0;
-                setState(() => _items[index] = item.copyWith(unitPrice: v));
-              },
-            ),
-          ),
-          SizedBox(width: 8),
-          // TVA Rate
-          Expanded(
-            child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-              value: item.tvaRate,
-              decoration: _itemInputDecoration(''),
-              items: TvaRates.all
-                  .map((t) => DropdownMenuItem(value: t, child: Text('$t%')))
-                  .toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() => _items[index] = item.copyWith(tvaRate: val));
-                }
-              },
-            ),
-          ),
-          SizedBox(width: 8),
-          // Discount
-          Expanded(
-            child: TextFormField(
-              initialValue: item.discountPercent.toString(),
-              keyboardType: TextInputType.number,
-              decoration: _itemInputDecoration(''),
-              onChanged: (val) {
-                final v = double.tryParse(val) ?? 0;
-                setState(() => _items[index] = item.copyWith(discountPercent: v));
-              },
-            ),
-          ),
-          SizedBox(width: 8),
-          // Total HT
-          Expanded(
-            child: Container(
-              height: 40,
-              alignment: Alignment.centerRight,
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceAlt,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(color: AppColors.border),
               ),
-              child: Text(formatCurrencyDT(item.computedTotalHT),
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ),
-          SizedBox(width: 8),
-          // Actions
-          if (!widget.isReadOnly)
-            SizedBox(
-              width: 80,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  
-                  IconButton(
-                    icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
-                    onPressed: () {
-                      setState(() {
-                        _items.removeAt(index);
-                      });
-                    },
-                    tooltip: 'Supprimer',
-                  ),
-                ],
+              SizedBox(width: 8),
+              // Quantite with - / + buttons
+              SizedBox(
+                width: 140,
+                child: Row(
+                  children: [
+                    InkWell(
+                      onTap: () {
+                        if (widget.isReadOnly) return;
+                        final newQ = item.quantityReceived > 1 ? item.quantityReceived - 1 : 1.0;
+                        setState(() => _items[index] = item.copyWith(quantityReceived: newQ));
+                      },
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(4)),
+                        child: Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Expanded(
+                      child: TextFormField(
+                        key: ValueKey('qty_${item.id}_${item.quantityReceived}'),
+                        initialValue: item.quantityReceived.toString(),
+                        decoration: _itemInputDecoration(''),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 13),
+                        keyboardType: TextInputType.number,
+                        readOnly: widget.isReadOnly,
+                        onChanged: (v) => setState(() => _items[index] = item.copyWith(quantityReceived: double.tryParse(v) ?? 1)),
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    InkWell(
+                      onTap: () {
+                        if (widget.isReadOnly) return;
+                        setState(() => _items[index] = item.copyWith(quantityReceived: item.quantityReceived + 1));
+                      },
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(4)),
+                        child: Icon(Icons.add, size: 14, color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              SizedBox(width: 8),
+              // P.U
+              SizedBox(
+                width: 130,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        key: ValueKey('pu_${item.id}_${item.productId}'),
+                        initialValue: item.unitPrice > 0 ? item.unitPrice.toStringAsFixed(0) : '',
+                        decoration: _itemInputDecoration(''),
+                        style: TextStyle(fontSize: 13),
+                        keyboardType: TextInputType.number,
+                        readOnly: widget.isReadOnly,
+                        onChanged: (v) => setState(() => _items[index] = item.copyWith(unitPrice: double.tryParse(v) ?? 0)),
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      _pricingModeHT ? 'DT HT' : 'DT TTC',
+                      style: TextStyle(fontSize: 10, color: AppColors.textTertiary),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 8),
+              // Remise %
+              SizedBox(
+                width: 100,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        key: ValueKey('remise_${item.id}_init'),
+                        initialValue: item.discountPercent > 0 ? item.discountPercent.toStringAsFixed(0) : '',
+                        decoration: _itemInputDecoration(''),
+                        style: TextStyle(fontSize: 13),
+                        keyboardType: TextInputType.number,
+                        readOnly: widget.isReadOnly,
+                        onChanged: (v) => setState(() => _items[index] = item.copyWith(discountPercent: double.tryParse(v) ?? 0)),
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      '%',
+                      style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 8),
+              // TVA
+              SizedBox(
+                width: 100,
+                child: DropdownButtonFormField(
+                  dropdownColor: AppColors.surfaceAlt,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                  value: item.tvaRate,
+                  items: (TvaRates.all.contains(item.tvaRate) ? TvaRates.all : [...TvaRates.all, item.tvaRate])
+                      .map((r) => DropdownMenuItem(
+                          value: r,
+                          child: Text('${r.toInt()}%', style: TextStyle(fontSize: 13))))
+                      .toList(),
+                  onChanged: widget.isReadOnly ? null : (v) => setState(() => _items[index] = item.copyWith(tvaRate: (v as num?)?.toDouble())),
+                  decoration: _itemInputDecoration(''),
+                  isDense: true,
+                ),
+              ),
+              SizedBox(width: 8),
+              // Total HT (read-only)
+              SizedBox(
+                width: 140,
+                child: TextFormField(
+                  readOnly: true,
+                  controller: TextEditingController(text: formatCurrencyDT(item.computedTotalHT)),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: AppColors.background,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.border)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderSide: BorderSide(color: AppColors.border)),
+                  ),
+                  style: TextStyle(fontSize: 13),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+              SizedBox(width: 4),
+              if (!widget.isReadOnly)
+                IconButton(
+                  icon: Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
+                  onPressed: () => setState(() => _items.removeAt(index)),
+                  splashRadius: 16,
+                  tooltip: 'Supprimer',
+                ),
+              Icon(Icons.drag_indicator_rounded, size: 16, color: AppColors.textTertiary),
+            ],
+          ),
         ],
       ),
     );
@@ -845,6 +820,9 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                       _items.add(ReceivingVoucherItem(
                         voucherId: widget.existing?.id ?? '',
                         productId: product.id,
+                        productName: product.name,
+                        unitPrice: product.purchasePrice,
+                        tvaRate: product.tvaRate,
                       ));
                     });
                   }
@@ -854,19 +832,36 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
           ),
         ),
         SizedBox(width: 8),
-        OutlinedButton.icon(
+        IconButton(
+          icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+          tooltip: 'Créer un nouvel article',
           onPressed: () {
-            setState(() {
-              _items.add(ReceivingVoucherItem(
-                  voucherId: widget.existing?.id ?? '', productId: ''));
-            });
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
           },
-          icon: Icon(Icons.add_rounded, size: 16),
-          label: Text('Ajouter une ligne vide', style: TextStyle(fontWeight: FontWeight.w600)),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.primary,
-            side: BorderSide(color: AppColors.primary),
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          splashRadius: 24,
+        ),
+        SizedBox(width: 12),
+        SizedBox(
+          height: 44,
+          child: OutlinedButton(
+            onPressed: () {
+              setState(() {
+                _items.add(ReceivingVoucherItem(
+                  voucherId: widget.existing?.id ?? '',
+                  productId: '',
+                  quantityReceived: 1,
+                  unitPrice: 0,
+                  tvaRate: 19,
+                  discountPercent: 0,
+                ));
+              });
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: BorderSide(color: AppColors.primary),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+            ),
+            child: Text('Ajouter une Ligne Vide', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           ),
         ),
       ],

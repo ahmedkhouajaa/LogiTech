@@ -626,7 +626,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
           ),
           style: TextStyle(
             fontSize: 13,
-            color: selectedText != null ? AppColors.textPrimary : AppColors.textTertiary,
+            color: AppColors.textPrimary,
           ),
         ),
       ),
@@ -1036,79 +1036,30 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                       child: BlocBuilder<ProductsBloc, ProductsState>(
                         builder: (context, state) {
                           final products = state is ProductsLoaded ? state.products : <Product>[];
-                          return Autocomplete<Product>(
-                            initialValue: TextEditingValue(text: item.description ?? ''),
-                            optionsBuilder: (TextEditingValue textEditingValue) {
-                              if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
-                              return products.where((Product p) => 
-                                p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
-                                (p.reference?.toLowerCase().contains(textEditingValue.text.toLowerCase()) ?? false)
-                              );
-                            },
-                            displayStringForOption: (Product option) => option.name,
-                            fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                              return TextFormField(
-                                controller: textEditingController,
-                                focusNode: focusNode,
-                                decoration: _itemInputDecoration('Rechercher un article...'),
-                                style: TextStyle(fontSize: 13),
-                                onChanged: (v) {
-                                  // Update description manually if they just type
-                                  setState(() => _items[index] = QuoteItem(
+                          final currentDescription = (item.description != null && item.description!.isNotEmpty)
+                              ? item.description!
+                              : (item.productName != null && item.productName!.isNotEmpty ? item.productName! : null);
+                          return SearchableSelectorField(
+                            hint: 'Rechercher un article...',
+                            selectedText: currentDescription,
+                            onTap: () async {
+                              final res = await showProductSelectDialog(context, products);
+                              if (res != null && mounted) {
+                                final selection = products.firstWhere((p) => p.id == res);
+                                setState(() {
+                                  _items[index] = QuoteItem(
                                     id: item.id,
                                     quoteId: item.quoteId,
-                                    productId: item.productId,
-                                    productName: item.productName,
-                                    description: v,
+                                    productId: selection.id,
+                                    productName: selection.name,
+                                    description: selection.description ?? selection.name,
+                                    unitPrice: selection.sellingPrice,
+                                    tvaRate: selection.tvaRate,
                                     quantity: item.quantity,
-                                    unitPrice: item.unitPrice,
-                                    tvaRate: item.tvaRate,
                                     discountPercent: item.discountPercent,
-                                  ));
-                                },
-                              );
-                            },
-                            optionsViewBuilder: (context, onSelected, options) {
-                              return Align(
-                                alignment: Alignment.topLeft,
-                                child: Material(
-                                  elevation: 4,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  child: ConstrainedBox(
-                                    constraints: const BoxConstraints(maxHeight: 200, maxWidth: 400),
-                                    child: ListView.builder(
-                                      padding: EdgeInsets.zero,
-                                      shrinkWrap: true,
-                                      itemCount: options.length,
-                                      itemBuilder: (context, i) {
-                                        final option = options.elementAt(i);
-                                        return ListTile(
-                                          title: Text(option.name, style: TextStyle(fontSize: 13)),
-                                          subtitle: option.reference != null ? Text(option.reference!, style: TextStyle(fontSize: 11, color: AppColors.textSecondary)) : null,
-                                          trailing: Text('${option.sellingPrice.toStringAsFixed(2)} DT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                          onTap: () => onSelected(option),
-                                          dense: true,
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                            onSelected: (Product selection) {
-                              setState(() {
-                                _items[index] = QuoteItem(
-                                  id: item.id,
-                                  quoteId: item.quoteId,
-                                  productId: selection.id,
-                                  productName: selection.name,
-                                  description: selection.name,
-                                  unitPrice: selection.sellingPrice,
-                                  tvaRate: selection.tvaRate,
-                                  quantity: item.quantity,
-                                  discountPercent: item.discountPercent,
-                                );
-                              });
+                                  );
+                                });
+                              }
                             },
                           );
                         },
@@ -1375,6 +1326,15 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
               );
             },
           ),
+        ),
+        SizedBox(width: 8),
+        IconButton(
+          icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
+          tooltip: 'Créer un nouvel article',
+          onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          },
+          splashRadius: 24,
         ),
         SizedBox(width: 8),
         OutlinedButton.icon(

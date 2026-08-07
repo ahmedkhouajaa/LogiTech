@@ -13,6 +13,8 @@ import '../models/stock_movement.dart';
 import 'create_article_screen.dart';
 import '../mobile/screens/forms/mobile_product_form_screen.dart';
 import '../widgets/article_selection_modal.dart';
+import '../widgets/searchable_dropdown_field.dart';
+import '../mobile/widgets/forms/mobile_smart_fields.dart';
 
 class CreateStockTransferScreen extends StatefulWidget {
   final StockTransfer? existing;
@@ -313,70 +315,40 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
       ],
     );
 
-    final sourceField = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Entrepôt Source', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-        SizedBox(height: 8),
-        InputDecorator(
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.surfaceAlt,
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              dropdownColor: AppColors.surfaceAlt,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-              value: _warehouses.any((w) => w.id == _sourceWarehouseId) ? _sourceWarehouseId : null,
-              isExpanded: true,
-              hint: Text('Sélectionner...', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-              items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _sourceWarehouseId = newValue;
-                });
-                _onWarehouseChanged();
-              },
-            ),
-          ),
-        ),
-      ],
+    final selectedSourceWarehouse = _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _sourceWarehouseId, orElse: () => null);
+    final sourceWarehouseName = selectedSourceWarehouse != null ? selectedSourceWarehouse.name : 'Sélectionner...';
+
+    final sourceField = SmartSearchableSelector(
+      label: 'Entrepôt Source',
+      hint: 'Sélectionner...',
+      selectedText: sourceWarehouseName,
+      onTap: () async {
+        final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _sourceWarehouseId);
+        if (res != null && mounted) {
+          setState(() {
+            _sourceWarehouseId = res;
+          });
+          _onWarehouseChanged();
+        }
+      },
     );
 
-    final destField = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Entrepôt Destination', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-        SizedBox(height: 8),
-        InputDecorator(
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.surfaceAlt,
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              dropdownColor: AppColors.surfaceAlt,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-              value: _warehouses.any((w) => w.id == _destWarehouseId) ? _destWarehouseId : null,
-              isExpanded: true,
-              hint: Text('Sélectionner...', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-              items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _destWarehouseId = newValue;
-                });
-                _onWarehouseChanged();
-              },
-            ),
-          ),
-        ),
-      ],
+    final selectedDestWarehouse = _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _destWarehouseId, orElse: () => null);
+    final destWarehouseName = selectedDestWarehouse != null ? selectedDestWarehouse.name : 'Sélectionner...';
+
+    final destField = SmartSearchableSelector(
+      label: 'Entrepôt Destination',
+      hint: 'Sélectionner...',
+      selectedText: destWarehouseName,
+      onTap: () async {
+        final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _destWarehouseId);
+        if (res != null && mounted) {
+          setState(() {
+            _destWarehouseId = res;
+          });
+          _onWarehouseChanged();
+        }
+      },
     );
 
     final reasonField = Column(
@@ -556,66 +528,48 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                       final finalDestStock = destStock + item.quantityToTransfer;
                       final isDuplicate = item.productId.isNotEmpty && _items.where((i) => i.productId == item.productId).length > 1;
 
-                      final autocompleteWidget = Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceAlt,
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                          border: isDuplicate ? Border.all(color: AppColors.error) : null,
-                        ),
-                        child: Autocomplete<Product>(
-                          initialValue: TextEditingValue(
-                            text: item.productName ?? '',
-                          ),
-                          optionsBuilder: (TextEditingValue textEditingValue) {
-                            if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
-                            final search = textEditingValue.text.toLowerCase();
-                            return products.where((Product p) => 
-                              p.name.toLowerCase().contains(search) || 
-                              p.code.toLowerCase().contains(search) ||
-                              (p.reference?.toLowerCase().contains(search) ?? false)
-                            ).toList();
-                          },
-                          displayStringForOption: (Product option) => option.name,
-                          fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                            return TextFormField(
-                              controller: textEditingController,
-                              focusNode: focusNode,
-                              decoration: InputDecoration(
-                                hintText: 'Sélectionner un article',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.sm), borderSide: BorderSide.none),
-                                contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              ),
-                              style: TextStyle(fontSize: 13),
-                            );
-                          },
-                          optionsViewBuilder: (context, onSelected, options) {
-                            return Align(
-                              alignment: Alignment.topLeft,
-                              child: Material(
-                                elevation: 4,
-                                borderRadius: BorderRadius.circular(4),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(maxHeight: 250, maxWidth: MediaQuery.of(context).size.width - 80),
-                                  child: ListView.builder(
-                                    padding: EdgeInsets.zero,
-                                    shrinkWrap: true,
-                                    itemCount: options.length,
-                                    itemBuilder: (context, i) {
-                                      final option = options.elementAt(i);
-                                      return ListTile(
-                                        leading: Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textSecondary),
-                                        title: Text(option.name, style: TextStyle(fontSize: 13)),
-                                        onTap: () => onSelected(option),
-                                        dense: true,
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                          onSelected: (p) {
+                      final selectedProd = products.cast<Product?>().firstWhere(
+                        (p) => p?.id == item.productId,
+                        orElse: () => null,
+                      );
+                      final autocompleteWidget = SearchableSelectorField(
+                        hint: 'Sélectionner un article',
+                        selectedText: selectedProd?.name,
+                        hasError: isDuplicate,
+                        onTap: () async {
+                          final stockMap = <String, double>{};
+                          if (stockState is StockLoaded) {
+                            bool sourceIsDefault = false;
+                            try {
+                              sourceIsDefault = _warehouses.firstWhere((w) => w.id == _sourceWarehouseId).isDefault;
+                            } catch (_) {}
+                            for (var p in products) {
+                              double pStock = 0.0;
+                              for (var m in stockState.movements) {
+                                if (m.productId == p.id) {
+                                  final isSourceMatch = m.warehouseId == _sourceWarehouseId || (m.warehouseId == 'default_warehouse' && sourceIsDefault);
+                                  if (isSourceMatch) {
+                                    if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
+                                      pStock += m.quantity;
+                                    } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
+                                      pStock -= m.quantity;
+                                    }
+                                  }
+                                }
+                              }
+                              stockMap[p.id] = pStock;
+                            }
+                          }
+
+                          final res = await showProductSelectDialog(
+                            context,
+                            products,
+                            selectedProductId: item.productId,
+                            warehouseId: _sourceWarehouseId,
+                            warehouseStockMap: stockMap,
+                          );
+                          if (res != null) {
+                            final p = products.firstWhere((prod) => prod.id == res);
                             setState(() {
                               _items[index] = StockTransferItem(
                                 id: item.id,
@@ -626,8 +580,8 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                                 quantityToTransfer: 0,
                               );
                             });
-                          },
-                        ),
+                          }
+                        },
                       );
 
                       if (_isMobile) {

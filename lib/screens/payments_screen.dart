@@ -14,6 +14,7 @@ import '../models/treasury_account.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/dashboard_card.dart';
+import '../widgets/searchable_dropdown_field.dart';
 
 class PaymentsScreen extends StatefulWidget {
   const PaymentsScreen({super.key});
@@ -1044,161 +1045,27 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary)),
         SizedBox(height: 6),
-        TextFormField(
-          controller: _contactSearchCtrl,
-          style: TextStyle(fontSize: 14),
-          decoration: InputDecoration(
-            hintText: 'Rechercher un client ou fournisseur...',
-            hintStyle: TextStyle(
-                color: AppColors.textTertiary, fontSize: 13),
-            prefixIcon: Icon(Icons.person_rounded,
-                size: 18, color: AppColors.textTertiary),
-            suffixIcon: _selectedContactId != null
-                ? IconButton(
-                    icon: Icon(Icons.clear_rounded,
-                        size: 16, color: AppColors.textTertiary),
-                    onPressed: () => setState(() {
-                      _selectedContactId = null;
-                      _selectedContactName = null;
-                      _selectedContactType = null;
-                      _contactSearchCtrl.clear();
-                      _contactResults = [];
-                      _showContactDropdown = false;
-                    }),
-                  )
-                : null,
-          ),
-          onChanged: (v) {
-            if (_selectedContactId != null) {
+        SearchableSelectorField(
+          hint: 'Rechercher un client ou fournisseur...',
+          selectedText: _selectedContactName != null
+              ? '${_selectedContactName!} (${_selectedContactType == 'customer' ? 'Client' : 'Fournisseur'})'
+              : null,
+          onTap: () async {
+            final res = await showContactSelectDialog(
+              context,
+              customers: _customers,
+              suppliers: _suppliers,
+              selectedContactId: _selectedContactId,
+            );
+            if (res != null) {
               setState(() {
-                _selectedContactId = null;
-                _selectedContactName = null;
-                _selectedContactType = null;
+                _selectedContactId = res['id'];
+                _selectedContactName = res['name'];
+                _selectedContactType = res['type'];
               });
             }
-            _filterContacts(v);
           },
         ),
-        // Selected contact indicator
-        if (_selectedContactId != null && _selectedContactName != null)
-          Padding(
-            padding: EdgeInsets.only(top: 6),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.successLight,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle_rounded,
-                      size: 14, color: AppColors.success),
-                  SizedBox(width: 6),
-                  Text(_selectedContactName!,
-                      style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.success)),
-                  Text(
-                    _selectedContactType == 'customer'
-                        ? '  (Client)'
-                        : '  (Fournisseur)',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.success.withValues(alpha: 0.7)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        // Contact search results (inline, not overlaid)
-        if (_showContactDropdown && _contactResults.isNotEmpty)
-          Container(
-            margin: EdgeInsets.only(top: 4),
-            constraints: BoxConstraints(maxHeight: 220),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: AppColors.border),
-              boxShadow: AppShadows.sm,
-            ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              itemCount: _contactResults.length,
-              itemBuilder: (context, index) {
-                final c = _contactResults[index];
-                final isCustomer = c['type'] == 'customer';
-                return InkWell(
-                  onTap: () {
-                    setState(() {
-                      _selectedContactId = c['id'];
-                      _selectedContactName = c['name'];
-                      _selectedContactType = c['type'];
-                      _contactSearchCtrl.text = c['name'];
-                      _showContactDropdown = false;
-                      _contactResults = [];
-                    });
-                  },
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: isCustomer
-                                ? AppColors.primary.withValues(alpha: 0.1)
-                                : AppColors.warning.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            isCustomer
-                                ? Icons.person_rounded
-                                : Icons.factory_rounded,
-                            size: 14,
-                            color: isCustomer
-                                ? AppColors.primary
-                                : AppColors.warning,
-                          ),
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(c['name'],
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500)),
-                              Text(
-                                isCustomer ? 'Client' : 'Fournisseur',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.textTertiary),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        // Loading indicator
-        if (!_contactsLoaded)
-          Padding(
-            padding: EdgeInsets.only(top: 6),
-            child: Text('Chargement des contacts...',
-                style: TextStyle(
-                    fontSize: 11, color: AppColors.textTertiary)),
-          ),
       ],
     );
   }
@@ -1383,60 +1250,37 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                               fontWeight: FontWeight.w600,
                               color: AppColors.textSecondary)),
                       SizedBox(height: 6),
-                      Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceAlt,
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.md),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 12),
-                        child: BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
-                          builder: (context, state) {
-                            List<TreasuryAccount> tAccounts = [];
-                            if (state is TreasuryAccountsLoaded) {
-                              tAccounts = state.accounts;
-                              if (_selectedAccountId == null && tAccounts.isNotEmpty) {
-                                _selectedAccountId = tAccounts.first.id;
-                              }
+                      BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+                        builder: (context, state) {
+                          List<TreasuryAccount> tAccounts = [];
+                          if (state is TreasuryAccountsLoaded) {
+                            tAccounts = state.accounts;
+                            if (_selectedAccountId == null && tAccounts.isNotEmpty) {
+                              _selectedAccountId = tAccounts.first.id;
                             }
-                            return DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _selectedAccountId,
-                                isExpanded: true,
-                                hint: Text('Selectionner un compte',
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        color: AppColors.textTertiary)),
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    color: AppColors.textPrimary),
-                                items: tAccounts.map((a) {
-                                  return DropdownMenuItem(
-                                    value: a.id,
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          a.type == 'bank'
-                                              ? Icons.account_balance_rounded
-                                              : Icons.payments_rounded,
-                                          size: 14,
-                                          color: AppColors.primary,
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text('${a.name} (Solde: ${formatCurrencyDT(a.balance)})'),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (v) =>
-                                    setState(() => _selectedAccountId = v),
-                              ),
-                            );
-                          },
-                        ),
+                          }
+                          final selectedAccount = tAccounts.cast<TreasuryAccount?>().firstWhere(
+                            (a) => a?.id == _selectedAccountId,
+                            orElse: () => null,
+                          );
+
+                          return SearchableSelectorField(
+                            hint: 'Selectionner un compte',
+                            selectedText: selectedAccount != null
+                                ? '${selectedAccount.name} (Solde: ${formatCurrencyDT(selectedAccount.balance)})'
+                                : null,
+                            onTap: () async {
+                              final res = await showTreasuryAccountSelectDialog(
+                                context,
+                                tAccounts,
+                                selectedAccountId: _selectedAccountId,
+                              );
+                              if (res != null) {
+                                setState(() => _selectedAccountId = res);
+                              }
+                            },
+                          );
+                        },
                       ),
                     ],
                   ),

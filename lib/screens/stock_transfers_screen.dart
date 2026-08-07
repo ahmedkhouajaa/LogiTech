@@ -12,6 +12,7 @@ import '../blocs/products/products_bloc.dart';
 import '../models/stock_movement.dart';
 import '../database/database_helper.dart';
 import '../widgets/custom_date_range_picker.dart';
+import '../widgets/searchable_dropdown_field.dart';
 
 class StockTransfersScreen extends StatefulWidget {
   const StockTransfersScreen({super.key});
@@ -559,25 +560,28 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                           SizedBox(height: 4),
                           SizedBox(
                             height: 36,
-                            child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  
-                              value: _filterWarehouseId,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                filled: true,
-                                fillColor: AppColors.surfaceAlt,
-                              ),
-                              
-                              items: [
-                                const DropdownMenuItem<String?>(value: null, child: Text('Tous les Entrepôts', style: TextStyle(fontSize: 13))),
-                                ..._warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))),
-                              ],
-                              onChanged: (v) => setState(() => _filterWarehouseId = v),
+                            child: Builder(
+                              builder: (context) {
+                                final selectedWh = _warehouses.cast<Warehouse?>().firstWhere(
+                                  (w) => w?.id == _filterWarehouseId,
+                                  orElse: () => null,
+                                );
+                                return SearchableSelectorField(
+                                  hint: 'Tous les Entrepôts',
+                                  selectedText: selectedWh?.name ?? 'Tous les Entrepôts',
+                                  onTap: () async {
+                                    final res = await showWarehouseSelectDialog(
+                                      context,
+                                      _warehouses,
+                                      selectedWarehouseId: _filterWarehouseId,
+                                      includeAll: true,
+                                    );
+                                    if (res != null) {
+                                      setState(() => _filterWarehouseId = (res == '__all__' ? null : res));
+                                    }
+                                  },
+                                );
+                              },
                             ),
                           ),
                         ],

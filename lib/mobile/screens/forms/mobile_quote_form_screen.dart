@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../blocs/quotes/quotes_bloc.dart';
 import '../../../../blocs/customers/customers_bloc.dart';
+import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../models/quote.dart';
 import '../../../../models/customer.dart';
+import '../../../../models/project.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../database/database_helper.dart';
@@ -15,7 +17,6 @@ import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
-import 'mobile_product_form_screen.dart';
 import '../../../../screens/customers_screen.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 
@@ -32,6 +33,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
   bool _isLoading = false;
 
   String? _selectedCustomerId;
+  String? _selectedProjectId;
   List<QuoteItem> _items = [];
   DateTime _date = DateTime.now();
   DateTime _validityDate = DateTime.now().add(const Duration(days: 30));
@@ -68,6 +70,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
   void initState() {
     super.initState();
     context.read<CustomersBloc>().add(LoadCustomers());
+    context.read<ProjectsBloc>().add(LoadProjects());
 
     if (widget.existing != null) {
       final n = widget.existing!;
@@ -184,7 +187,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
     if (index != null) {
       final item = _items[index];
       initialData = MobileArticleFormResult(
-        productId: item.productId ?? '',
+        productId: item.productId,
         productName: item.productName ?? '',
         description: item.description ?? item.productName ?? '',
         quantity: item.quantity,
@@ -311,6 +314,25 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                       ),
                     ),
                   ],
+                ),
+                SizedBox(height: 16),
+                BlocBuilder<ProjectsBloc, ProjectsState>(
+                  builder: (context, state) {
+                    final projects = state is ProjectsLoaded ? state.projects : <Project>[];
+                    final selectedProject = projects.cast<Project?>().firstWhere((p) => p?.id == _selectedProjectId, orElse: () => null);
+                    final displayName = selectedProject != null ? selectedProject.name : 'Projet par défaut';
+                    return SmartSearchableSelector(
+                      label: 'Projet',
+                      hint: 'Projet par défaut',
+                      selectedText: displayName,
+                      onTap: () async {
+                        final res = await showProjectSelectDialog(context, projects, selectedProjectId: _selectedProjectId);
+                        if (res != null && mounted) {
+                          setState(() => _selectedProjectId = res == '__default__' ? null : res);
+                        }
+                      },
+                    );
+                  },
                 ),
               ],
             ),

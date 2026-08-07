@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/dashboard/dashboard_bloc.dart';
+import '../blocs/enterprise/enterprise_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_event.dart';
+import '../blocs/projects/projects_bloc.dart';
+import '../blocs/customers/customers_bloc.dart';
+import '../blocs/suppliers/suppliers_bloc.dart';
+import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
+import '../blocs/products/products_bloc.dart';
 import '../widgets/sidebar_menu.dart';
 import '../widgets/sync_indicator.dart';
 import '../utils/constants.dart';
@@ -249,7 +257,23 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
           child: Container(height: 1, color: AppColors.border),
         ),
       ),
-      body: _buildContent(),
+      body: BlocListener<EnterpriseBloc, EnterpriseState>(
+        listenWhen: (previous, current) =>
+            previous is EnterpriseLoaded &&
+            current is EnterpriseLoaded &&
+            previous.currentEnterpriseId != current.currentEnterpriseId,
+        listener: (context, state) {
+          // Trigger reloads for all active modules on enterprise switch
+          context.read<WarehousesBloc>().add(LoadWarehouses());
+          context.read<ProjectsBloc>().add(LoadProjects());
+          context.read<CustomersBloc>().add(LoadFirstClients());
+          context.read<SuppliersBloc>().add(LoadFirstSuppliers());
+          context.read<TreasuryAccountsBloc>().add(LoadTreasuryAccounts());
+          context.read<ProductsBloc>().add(LoadProducts());
+          context.read<DashboardBloc>().add(DashboardRefreshRequested());
+        },
+        child: _buildContent(),
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: AppColors.border)),

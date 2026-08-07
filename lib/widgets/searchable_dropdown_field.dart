@@ -47,7 +47,7 @@ class SearchableSelectorField extends StatelessWidget {
           ),
           style: TextStyle(
             fontSize: 13,
-            color: selectedText != null ? AppColors.textPrimary : AppColors.textTertiary,
+            color: AppColors.textPrimary,
           ),
         ),
       ),
@@ -188,6 +188,175 @@ Future<String?> showCustomerSelectDialog(
                                 },
                               );
                             },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+Future<Map<String, dynamic>?> showContactSelectDialog(
+  BuildContext context, {
+  List<Customer> customers = const [],
+  List<Supplier> suppliers = const [],
+  String? selectedContactId,
+}) async {
+  return showDialog<Map<String, dynamic>?>(
+    context: context,
+    builder: (context) {
+      String search = '';
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          final query = search.trim().toLowerCase();
+          
+          final filteredCustomers = customers.where((c) {
+            if (query.isEmpty) return true;
+            final nameMatch = c.name.toLowerCase().contains(query);
+            final companyMatch = c.companyName?.toLowerCase().contains(query) ?? false;
+            final codeMatch = c.code.toLowerCase().contains(query);
+            return nameMatch || companyMatch || codeMatch;
+          }).toList();
+
+          final filteredSuppliers = suppliers.where((s) {
+            if (query.isEmpty) return true;
+            final nameMatch = s.name.toLowerCase().contains(query);
+            final companyMatch = s.companyName?.toLowerCase().contains(query) ?? false;
+            final codeMatch = s.code.toLowerCase().contains(query);
+            return nameMatch || companyMatch || codeMatch;
+          }).toList();
+
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+            backgroundColor: AppColors.surface,
+            child: Container(
+              width: 460,
+              constraints: const BoxConstraints(maxHeight: 520),
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Sélectionner un contact',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
+                        onPressed: () => Navigator.of(context).pop(),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                  SizedBox(
+                    height: 38,
+                    child: TextField(
+                      autofocus: true,
+                      onChanged: (val) => setDialogState(() => search = val),
+                      style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'Rechercher un client ou fournisseur...',
+                        hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                        prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
+                        filled: true,
+                        fillColor: AppColors.background,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          borderSide: BorderSide(color: AppColors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          borderSide: BorderSide(color: AppColors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          borderSide: BorderSide(color: AppColors.primary),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Divider(height: 1, color: AppColors.border),
+                  SizedBox(height: 4),
+                  Flexible(
+                    child: (filteredCustomers.isEmpty && filteredSuppliers.isEmpty)
+                        ? Padding(
+                            padding: EdgeInsets.all(20.0),
+                            child: Center(
+                              child: Text(
+                                'Aucun contact trouvé',
+                                style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                              ),
+                            ),
+                          )
+                        : ListView(
+                            shrinkWrap: true,
+                            children: [
+                              if (filteredCustomers.isNotEmpty) ...[
+                                Padding(
+                                  padding: EdgeInsets.fromLTRB(12, 8, 12, 4),
+                                  child: Text('CLIENTS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                                ),
+                                ...filteredCustomers.map((customer) {
+                                  final isSelected = customer.id == selectedContactId;
+                                  return ListTile(
+                                    dense: true,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                    selected: isSelected,
+                                    selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
+                                    leading: CircleAvatar(
+                                      radius: 14,
+                                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                      child: Icon(Icons.person_rounded, size: 14, color: AppColors.primary),
+                                    ),
+                                    title: Text(
+                                      customer.name,
+                                      style: TextStyle(fontSize: 13, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500),
+                                    ),
+                                    subtitle: customer.phone != null ? Text('Tél: ${customer.phone}', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)) : null,
+                                    trailing: isSelected ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary) : null,
+                                    onTap: () => Navigator.of(context).pop({'id': customer.id, 'name': customer.name, 'type': 'customer'}),
+                                  );
+                                }),
+                              ],
+                              if (filteredSuppliers.isNotEmpty) ...[
+                                Padding(
+                                  padding: EdgeInsets.fromLTRB(12, 12, 12, 4),
+                                  child: Text('FOURNISSEURS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.warning)),
+                                ),
+                                ...filteredSuppliers.map((supplier) {
+                                  final isSelected = supplier.id == selectedContactId;
+                                  return ListTile(
+                                    dense: true,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                    selected: isSelected,
+                                    selectedTileColor: AppColors.warning.withValues(alpha: 0.08),
+                                    leading: CircleAvatar(
+                                      radius: 14,
+                                      backgroundColor: AppColors.warning.withValues(alpha: 0.1),
+                                      child: Icon(Icons.factory_rounded, size: 14, color: AppColors.warning),
+                                    ),
+                                    title: Text(
+                                      supplier.name,
+                                      style: TextStyle(fontSize: 13, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500),
+                                    ),
+                                    subtitle: supplier.phone != null ? Text('Tél: ${supplier.phone}', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)) : null,
+                                    trailing: isSelected ? Icon(Icons.check_rounded, size: 18, color: AppColors.warning) : null,
+                                    onTap: () => Navigator.of(context).pop({'id': supplier.id, 'name': supplier.name, 'type': 'supplier'}),
+                                  );
+                                }),
+                              ],
+                            ],
                           ),
                   ),
                 ],
@@ -504,6 +673,8 @@ Future<String?> showProductSelectDialog(
   BuildContext context,
   List<Product> products, {
   String? selectedProductId,
+  String? warehouseId,
+  Map<String, double>? warehouseStockMap,
 }) async {
   return showDialog<String?>(
     context: context,
@@ -596,6 +767,12 @@ Future<String?> showProductSelectDialog(
                             itemBuilder: (context, index) {
                               final product = filtered[index];
                               final isSelected = product.id == selectedProductId;
+                              final displayStock = (warehouseStockMap != null && warehouseStockMap.containsKey(product.id))
+                                  ? warehouseStockMap[product.id]!
+                                  : product.stockQty;
+
+                              final stockBg = AppColors.textTertiary.withValues(alpha: 0.12);
+                              final stockFg = AppColors.textSecondary;
 
                               return ListTile(
                                 dense: true,
@@ -610,13 +787,40 @@ Future<String?> showProductSelectDialog(
                                     color: isSelected ? AppColors.primary : AppColors.textPrimary,
                                   ),
                                 ),
-                                subtitle: Text(
-                                  [
-                                    if (product.code.isNotEmpty) 'Code: ${product.code}',
-                                    if (product.reference?.isNotEmpty ?? false) 'Réf: ${product.reference}',
-                                    'Stock: ${product.stockQty} ${product.unit}',
-                                  ].join(' • '),
-                                  style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 2.0),
+                                  child: Row(
+                                    children: [
+                                      if (product.code.isNotEmpty || (product.reference?.isNotEmpty ?? false))
+                                        Flexible(
+                                          child: Text(
+                                            [
+                                              if (product.code.isNotEmpty) 'Code: ${product.code}',
+                                              if (product.reference?.isNotEmpty ?? false) 'Réf: ${product.reference}',
+                                            ].join(' • '),
+                                            style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      if (product.code.isNotEmpty || (product.reference?.isNotEmpty ?? false))
+                                        const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: stockBg,
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          'Stock: ${displayStock.toStringAsFixed(displayStock.truncateToDouble() == displayStock ? 0 : 1)} ${product.unit}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: stockFg,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -981,7 +1185,7 @@ Future<String?> showWarehouseSelectDialog(
   BuildContext context,
   List<Warehouse> warehouses, {
   String? selectedWarehouseId,
-  bool includeAll = true,
+  bool includeAll = false,
 }) async {
   return showDialog<String?>(
     context: context,
@@ -1056,7 +1260,6 @@ Future<String?> showWarehouseSelectDialog(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                       selected: selectedWarehouseId == null,
                       selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
-                      leading: Icon(Icons.warehouse_rounded, size: 18, color: AppColors.primary),
                       title: Text(
                         'Tous les Entrepôts',
                         style: TextStyle(
@@ -1098,11 +1301,6 @@ Future<String?> showWarehouseSelectDialog(
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                 selected: isSelected,
                                 selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
-                                leading: Icon(
-                                  Icons.store_rounded,
-                                  size: 18,
-                                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                                ),
                                 title: Text(
                                   warehouse.name,
                                   style: TextStyle(
@@ -1168,9 +1366,11 @@ Future<String?> showSimpleOptionSelectDialog(
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        title,
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
@@ -1233,11 +1433,6 @@ Future<String?> showSimpleOptionSelectDialog(
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                                 selected: isSelected,
                                 selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
-                                leading: Icon(
-                                  Icons.label_outline_rounded,
-                                  size: 18,
-                                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                                ),
                                 title: Text(
                                   option['label'] ?? '',
                                   style: TextStyle(

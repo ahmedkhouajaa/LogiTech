@@ -6,6 +6,7 @@ import '../blocs/warehouses/warehouses_event.dart';
 import '../blocs/warehouses/warehouses_state.dart';
 import '../models/stock_movement.dart';
 import '../utils/constants.dart';
+import '../services/enterprise_service.dart';
 import '../widgets/custom_app_bar.dart';
 
 class WarehousesScreen extends StatefulWidget {
@@ -34,7 +35,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
   void _showWarehouseDialog([Warehouse? warehouse]) {
     showDialog(
       context: context,
-      builder: (context) => _CreateWarehouseDialog(warehouse: warehouse),
+      builder: (context) => CreateWarehouseDialog(warehouse: warehouse),
     );
   }
 
@@ -238,16 +239,15 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
   }
 }
 
-class _CreateWarehouseDialog extends StatefulWidget {
+class CreateWarehouseDialog extends StatefulWidget {
   final Warehouse? warehouse;
-
-  const _CreateWarehouseDialog({this.warehouse});
+  const CreateWarehouseDialog({super.key, this.warehouse});
 
   @override
-  State<_CreateWarehouseDialog> createState() => _CreateWarehouseDialogState();
+  State<CreateWarehouseDialog> createState() => _CreateWarehouseDialogState();
 }
 
-class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
+class _CreateWarehouseDialogState extends State<CreateWarehouseDialog> {
   final _formKey = GlobalKey<FormState>();
   
   late TextEditingController _nameController;
@@ -306,6 +306,7 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
         country: _selectedCountry,
         isActive: _isActive,
         isDefault: _isDefault,
+        enterpriseId: widget.warehouse?.enterpriseId ?? EnterpriseService.instance.currentEnterpriseId,
       );
 
       if (widget.warehouse == null) {
@@ -320,10 +321,20 @@ class _CreateWarehouseDialogState extends State<_CreateWarehouseDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 600;
+
     return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: isMobile ? const EdgeInsets.symmetric(horizontal: 16, vertical: 24) : const EdgeInsets.symmetric(horizontal: 80, vertical: 48),
       child: Container(
-        width: 600,
-        constraints: const BoxConstraints(maxHeight: 800),
+        width: isMobile ? size.width : 600,
+        constraints: BoxConstraints(maxHeight: size.height * 0.85),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          boxShadow: AppShadows.lg,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -19,6 +19,7 @@ import 'create_inventory_sheet_screen.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import '../mobile/screens/mobile_inventory_sheet_detail_screen.dart';
+import '../widgets/searchable_dropdown_field.dart';
 
 
 enum InventorySheetStatus {
@@ -674,25 +675,28 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                           SizedBox(height: 4),
                           SizedBox(
                             height: 36,
-                            child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  
-                              value: _filterWarehouseId,
-                              isExpanded: true,
-                              decoration: InputDecoration(
-                                contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                filled: true,
-                                fillColor: AppColors.surfaceAlt,
-                              ),
-                              
-                              items: [
-                                const DropdownMenuItem<String?>(value: null, child: Text('Tous les Entrepôts', style: TextStyle(fontSize: 13))),
-                                ..._warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))),
-                              ],
-                              onChanged: (v) => setState(() => _filterWarehouseId = v),
+                            child: Builder(
+                              builder: (context) {
+                                final selectedWh = _warehouses.cast<Warehouse?>().firstWhere(
+                                  (w) => w?.id == _filterWarehouseId,
+                                  orElse: () => null,
+                                );
+                                return SearchableSelectorField(
+                                  hint: 'Tous les Entrepôts',
+                                  selectedText: selectedWh?.name ?? 'Tous les Entrepôts',
+                                  onTap: () async {
+                                    final res = await showWarehouseSelectDialog(
+                                      context,
+                                      _warehouses,
+                                      selectedWarehouseId: _filterWarehouseId,
+                                      includeAll: true,
+                                    );
+                                    if (res != null) {
+                                      setState(() => _filterWarehouseId = (res == '__all__' ? null : res));
+                                    }
+                                  },
+                                );
+                              },
                             ),
                           ),
                         ],

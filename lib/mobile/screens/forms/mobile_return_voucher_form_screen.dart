@@ -16,7 +16,6 @@ import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
-import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import '../../../../screens/customers_screen.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
@@ -244,42 +243,87 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
                   onChanged: (v) { if (!widget.isReadOnly) setState(() => _date = v); },
                 ),
                 SizedBox(height: 16),
-                BlocBuilder<CustomersBloc, CustomersState>(
-                  builder: (context, state) {
-                    final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                    return AbsorbPointer(
-                      absorbing: widget.isReadOnly,
-                      child: SmartSearchableSelector(
-                        label: 'Client',
-                        hint: 'Rechercher des clients...',
-                        selectedText: _selectedCustomerId != null
-                            ? (customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.companyName?.isNotEmpty == true
-                                ? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)!.companyName!
-                                : customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.name)
-                            : null,
-                        onTap: () async {
-                          final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
-                          if (res != null && mounted && !widget.isReadOnly) {
-                            setState(() => _selectedCustomerId = res);
-                          }
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: BlocBuilder<CustomersBloc, CustomersState>(
+                        builder: (context, state) {
+                          final customers = state is CustomersLoaded ? state.customers : <Customer>[];
+                          return AbsorbPointer(
+                            absorbing: widget.isReadOnly,
+                            child: SmartSearchableSelector(
+                              label: 'Client',
+                              hint: 'Rechercher des clients...',
+                              selectedText: _selectedCustomerId != null
+                                  ? (customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                      ? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)!.companyName!
+                                      : customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.name)
+                                  : null,
+                              onTap: () async {
+                                final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
+                                if (res != null && mounted && !widget.isReadOnly) {
+                                  setState(() => _selectedCustomerId = res);
+                                }
+                              },
+                            ),
+                          );
                         },
                       ),
-                    );
-                  },
+                    ),
+                    if (!widget.isReadOnly) ...[
+                      SizedBox(width: 8),
+                      Container(
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final newId = await showDialog<String>(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => BlocProvider.value(
+                                value: context.read<CustomersBloc>(),
+                                child: const CustomerDialog(existing: null),
+                              ),
+                            );
+                            if (newId != null && mounted) {
+                              setState(() {
+                                _selectedCustomerId = newId;
+                              });
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary.withOpacity(0.1),
+                            foregroundColor: AppColors.primary,
+                            elevation: 0,
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                            ),
+                            side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                          ),
+                          child: Icon(Icons.person_add_alt_1_rounded),
+                        ),
+                      ),
+                    ]
+                  ],
                 ),
                 SizedBox(height: 16),
                 BlocBuilder<ProjectsBloc, ProjectsState>(
                   builder: (context, state) {
                     final projects = state is ProjectsLoaded ? state.projects : <Project>[];
-                    return SmartDropdown<String>(
+                    final selectedProject = projects.cast<Project?>().firstWhere((p) => p?.id == _selectedProjectId, orElse: () => null);
+                    final displayName = selectedProject != null ? selectedProject.name : 'Projet par défaut';
+                    return SmartSearchableSelector(
                       label: 'Projet',
-                      value: _selectedProjectId,
-                      items: [
-                        const DropdownMenuItem<String>(value: null, child: Text('Projet par défaut', style: TextStyle(fontSize: 16))),
-                        ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: TextStyle(fontSize: 16)))),
-                      ],
-                      onChanged: (v) { if (!widget.isReadOnly) setState(() => _selectedProjectId = v); },
                       hint: 'Projet par défaut',
+                      selectedText: displayName,
+                      onTap: () async {
+                        if (widget.isReadOnly) return;
+                        final res = await showProjectSelectDialog(context, projects, selectedProjectId: _selectedProjectId);
+                        if (res != null && mounted) {
+                          setState(() => _selectedProjectId = res == '__default__' ? null : res);
+                        }
+                      },
                     );
                   },
                 ),
@@ -317,7 +361,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
                 else
                   ..._items.asMap().entries.map((e) => MobileArticleCard(
                     index: e.key,
-                    designation: e.value.designation ?? 'Article',
+                    designation: e.value.designation,
                     quantity: e.value.quantity,
                     unitPrice: e.value.unitPrice,
                     tvaRate: e.value.tvaRate,

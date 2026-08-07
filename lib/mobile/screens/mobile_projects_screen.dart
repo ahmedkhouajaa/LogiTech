@@ -78,31 +78,22 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
             bool matchesSearch = true;
             bool matchesFilter = true;
 
-            String statusStr = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                statusStr = translateStatus(s.toString());
-              }
-            } catch (_) {}
-
-            String reference = '';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? '').toString(); } catch (_) {}
-            
-            String name = '';
-            try { name = ((item as dynamic).customerName ?? (item as dynamic).supplierName ?? (item as dynamic).companyName ?? (item as dynamic).name ?? '').toString(); } catch (_) {}
+            String statusStr = translateStatus(item.status.name);
 
             if (_searchQuery.isNotEmpty) {
               final query = _searchQuery.toLowerCase();
-              if (!reference.toLowerCase().contains(query) && !name.toLowerCase().contains(query)) {
+              final nameMatch = item.name.toLowerCase().contains(query);
+              final descMatch = item.description?.toLowerCase().contains(query) ?? false;
+              final custMatch = item.customerName?.toLowerCase().contains(query) ?? false;
+              if (!nameMatch && !descMatch && !custMatch) {
                 matchesSearch = false;
               }
             }
 
             if (_selectedFilter != 'Tous') {
-               if (statusStr.toLowerCase() != _selectedFilter.toLowerCase()) {
-                   matchesFilter = false;
-               }
+              if (statusStr.toLowerCase() != _selectedFilter.toLowerCase()) {
+                matchesFilter = false;
+              }
             }
 
             return matchesSearch && matchesFilter;
@@ -111,42 +102,28 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
           isEmpty = filteredItems.isEmpty;
           
           cards = filteredItems.map((item) {
-            String reference = 'N/A';
-            try { reference = ((item as dynamic).number ?? (item as dynamic).reference ?? (item as dynamic).name ?? 'N/A').toString(); } catch (_) {}
+            String reference = item.name.isNotEmpty ? item.name : 'Projet sans nom';
             
-            String status = 'N/A';
-            try {
-              final s = (item as dynamic).status;
-              if (s != null) {
-                status = translateStatus(s.toString());
-              }
-            } catch (_) {}
+            String status = item.status.name;
+            String? description = item.description;
             
-            String? name;
-            try { name = (item as dynamic).customerName ?? (item as dynamic).supplierName ?? (item as dynamic).companyName ?? (item as dynamic).name; } catch (_) {}
-            
-            DateTime? date;
-            try { date = (item as dynamic).date ?? (item as dynamic).createdAt; } catch (_) {}
-            
-            double amount = 0;
-            try { amount = (item as dynamic).totalTTC?.toDouble() ?? (item as dynamic).totalTTC.toDouble(); } catch (_) {}
-            if (amount == 0) {
-              try { amount = (item as dynamic).amount?.toDouble() ?? (item as dynamic).amount.toDouble(); } catch (_) {}
-            }
-            if (amount == 0) {
-              try { amount = (item as dynamic).price?.toDouble() ?? (item as dynamic).price.toDouble(); } catch (_) {}
-            }
-            
-            String id = '';
-            try { id = (item as dynamic).id; } catch (_) {}
+            DateTime date = item.startDate;
+            double budget = item.budget;
+            String id = item.id;
 
             return MobileGenericCard(
               reference: reference,
               status: status,
-              name: name,
+              name: description != null && description.isNotEmpty ? description : 'Budget: ${budget.toStringAsFixed(2)} TND',
               date: date,
-              amount: amount,
+              amount: budget > 0 ? budget : null,
               onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MobileProjectFormScreen(existing: item)),
+                ).then((_) {
+                  context.read<ProjectsBloc>().add(LoadProjects());
+                });
               },
               onEdit: () {
                 Navigator.push(
@@ -185,8 +162,8 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
               context.read<ProjectsBloc>().add(LoadProjects());
             });
           },
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 80),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: cards,
           ),
         );

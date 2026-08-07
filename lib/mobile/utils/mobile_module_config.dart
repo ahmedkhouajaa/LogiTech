@@ -177,7 +177,13 @@ class MobileModuleConfig {
         return MobileModuleConfig(
           title: 'Projets',
           fabText: 'Nouveau projet',
-          filterOptions: ['Tous', 'En cours', 'Terminé'], // Added defaults
+          filterOptions: ['Tous', 'En cours', 'Terminé', 'Planification', 'En pause'],
+        );
+      case AppModule.warehouses:
+        return MobileModuleConfig(
+          title: 'Entrepôts',
+          fabText: 'Ajouter un entrepôt',
+          filterOptions: ['Tous', 'Actif', 'Inactif', 'Par Défaut'],
         );
       default:
         return MobileModuleConfig(

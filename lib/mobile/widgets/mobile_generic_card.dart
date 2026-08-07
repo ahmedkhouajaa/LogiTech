@@ -7,6 +7,9 @@ class MobileGenericCard extends StatelessWidget {
   final String status;
   final String? name;
   final IconData? nameIcon;
+  final String? subtitle;
+  final IconData? subtitleIcon;
+  final String? badgeText;
   final DateTime? date;
   final double? amount;
   final VoidCallback onTap;
@@ -20,6 +23,9 @@ class MobileGenericCard extends StatelessWidget {
     required this.status,
     this.name,
     this.nameIcon,
+    this.subtitle,
+    this.subtitleIcon,
+    this.badgeText,
     this.date,
     this.amount,
     required this.onTap,
@@ -52,7 +58,7 @@ class MobileGenericCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top row: Ref Badge Chip + Status Pill + Chevron
+                // Top row: Ref Badge Chip + BadgeText (if any) + Status Pill + Chevron
                 Row(
                   children: [
                     Container(
@@ -70,6 +76,25 @@ class MobileGenericCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (badgeText != null && badgeText!.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.amber.shade700.withValues(alpha: 0.4)),
+                        ),
+                        child: Text(
+                          badgeText!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.amber.shade900,
+                          ),
+                        ),
+                      ),
+                    ],
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -108,7 +133,7 @@ class MobileGenericCard extends StatelessWidget {
                   const SizedBox(height: 6),
                 ],
 
-                // Row 2: Name / Client on left + Total Amount on right (NO $ SIGN)
+                // Row 2: Name / Client on left + Total Amount on right
                 Row(
                   children: [
                     if (name != null && name!.isNotEmpty) ...[
@@ -117,7 +142,7 @@ class MobileGenericCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           name!,
-                          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -134,6 +159,24 @@ class MobileGenericCard extends StatelessWidget {
                       ),
                   ],
                 ),
+
+                // Subtitle Row (e.g. Address)
+                if (subtitle != null && subtitle!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(subtitleIcon ?? Icons.location_on_outlined, size: 14, color: AppColors.textSecondary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          subtitle!,
+                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

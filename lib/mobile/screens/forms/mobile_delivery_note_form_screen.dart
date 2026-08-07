@@ -17,7 +17,6 @@ import '../../widgets/forms/mobile_article_card.dart';
 import '../../widgets/forms/mobile_article_form.dart';
 import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
-import 'mobile_product_form_screen.dart';
 import '../../../../screens/customers_screen.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 
@@ -201,7 +200,7 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
     if (index != null) {
       final item = _items[index];
       initialData = MobileArticleFormResult(
-        productId: item.productId ?? '',
+        productId: item.productId,
         productName: '',
         description: item.description ?? '',
         quantity: item.quantity,
@@ -329,15 +328,18 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
                 BlocBuilder<ProjectsBloc, ProjectsState>(
                   builder: (context, state) {
                     final projects = state is ProjectsLoaded ? state.projects : <Project>[];
-                    return SmartDropdown<String>(
+                    final selectedProject = projects.cast<Project?>().firstWhere((p) => p?.id == _selectedProjectId, orElse: () => null);
+                    final displayName = selectedProject != null ? selectedProject.name : 'Projet par défaut';
+                    return SmartSearchableSelector(
                       label: 'Projet',
-                      value: _selectedProjectId,
-                      items: [
-                        const DropdownMenuItem<String>(value: null, child: Text('Projet par défaut', style: TextStyle(fontSize: 16))),
-                        ...projects.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name, style: TextStyle(fontSize: 16)))),
-                      ],
-                      onChanged: (v) => setState(() => _selectedProjectId = v),
                       hint: 'Projet par défaut',
+                      selectedText: displayName,
+                      onTap: () async {
+                        final res = await showProjectSelectDialog(context, projects, selectedProjectId: _selectedProjectId);
+                        if (res != null && mounted) {
+                          setState(() => _selectedProjectId = res == '__default__' ? null : res);
+                        }
+                      },
                     );
                   },
                 ),

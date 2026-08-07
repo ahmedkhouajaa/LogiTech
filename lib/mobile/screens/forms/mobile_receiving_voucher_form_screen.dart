@@ -34,6 +34,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
   bool _isLoading = false;
 
   String? _selectedSupplierId;
+  String? _selectedProjectId;
   List<ReceivingVoucherItem> _items = [];
   DateTime _date = DateTime.now();
   String _notes = '';
@@ -191,7 +192,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
     if (index != null) {
       final item = _items[index];
       initialData = MobileArticleFormResult(
-        productId: item.productId ?? '',
+        productId: item.productId,
         productName: item.productName ?? '',
         description: item.productName ?? '',
         quantity: item.quantityReceived,
@@ -353,6 +354,26 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                       ),
                     ]
                   ],
+                ),
+                SizedBox(height: 16),
+                BlocBuilder<ProjectsBloc, ProjectsState>(
+                  builder: (context, state) {
+                    final projects = state is ProjectsLoaded ? state.projects : <Project>[];
+                    final selectedProject = projects.cast<Project?>().firstWhere((p) => p?.id == _selectedProjectId, orElse: () => null);
+                    final displayName = selectedProject != null ? selectedProject.name : 'Projet par défaut';
+                    return SmartSearchableSelector(
+                      label: 'Projet',
+                      hint: 'Projet par défaut',
+                      selectedText: displayName,
+                      onTap: () async {
+                        if (widget.isReadOnly) return;
+                        final res = await showProjectSelectDialog(context, projects, selectedProjectId: _selectedProjectId);
+                        if (res != null && mounted) {
+                          setState(() => _selectedProjectId = res == '__default__' ? null : res);
+                        }
+                      },
+                    );
+                  },
                 ),
                 SizedBox(height: 24),
                 AbsorbPointer(

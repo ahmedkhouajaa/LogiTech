@@ -10,6 +10,7 @@ import '../../../utils/helpers.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
+import '../../../widgets/searchable_dropdown_field.dart';
 
 class MobileStockAdjustmentForm extends StatefulWidget {
   const MobileStockAdjustmentForm({super.key});
@@ -180,88 +181,23 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                         if (pState is! ProductsLoaded) {
                           return Center(child: CircularProgressIndicator());
                         }
-                        return Autocomplete<Product>(
-                          displayStringForOption: (p) => p.name,
-                          optionsBuilder: (textEditingValue) {
-                            if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
-                            return pState.products.where((p) =>
-                                p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) ||
-                                p.code.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-                          },
-                          onSelected: (p) {
-                            setState(() {
-                              _selectedProduct = p;
-                              if (_adjustmentAction == 'correct') {
-                                _quantityCtrl.text = _getWarehouseStockForProduct(p, stockState).toStringAsFixed(0);
+                        return SmartSearchableSelector(
+                          label: 'Désignation',
+                          hint: 'Rechercher un article...',
+                          selectedText: _selectedProduct?.name,
+                          onTap: () async {
+                            final res = await showProductSelectDialog(context, pState.products);
+                            if (res != null && mounted) {
+                              final p = pState.products.cast<Product?>().firstWhere((item) => item?.id == res, orElse: () => null);
+                              if (p != null) {
+                                setState(() {
+                                  _selectedProduct = p;
+                                  if (_adjustmentAction == 'correct') {
+                                    _quantityCtrl.text = _getWarehouseStockForProduct(p, stockState).toStringAsFixed(0);
+                                  }
+                                });
                               }
-                            });
-                          },
-                          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                            return TextFormField(
-                              controller: controller,
-                              focusNode: focusNode,
-                              decoration: InputDecoration(
-                                hintText: 'Rechercher un article par nom ou code...',
-                                hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 14),
-                                prefixIcon: Icon(Icons.search, color: AppColors.textTertiary),
-                                filled: true,
-                                fillColor: AppColors.background,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  borderSide: BorderSide(color: AppColors.border),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  borderSide: BorderSide(color: AppColors.border),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  borderSide: BorderSide(color: AppColors.primary, width: 1.5),
-                                ),
-                              ),
-                            );
-                          },
-                          optionsViewBuilder: (context, onSelected, options) {
-                            return Align(
-                              alignment: Alignment.topLeft,
-                              child: Material(
-                                elevation: 4,
-                                borderRadius: BorderRadius.circular(AppRadius.md),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxHeight: 200,
-                                    maxWidth: MediaQuery.of(context).size.width - 64,
-                                  ),
-                                  child: ListView.builder(
-                                    padding: EdgeInsets.zero,
-                                    shrinkWrap: true,
-                                    itemCount: options.length,
-                                    itemBuilder: (context, i) {
-                                      final option = options.elementAt(i);
-                                      final optStock = _getWarehouseStockForProduct(option, stockState);
-                                      return ListTile(
-                                        leading: Container(
-                                          padding: EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primary.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.primary),
-                                        ),
-                                        title: Text(option.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                                        subtitle: Text(
-                                          'Code: ${option.code} • Stock: ${formatQuantity(optStock)} ${option.unit}',
-                                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                        ),
-                                        onTap: () => onSelected(option),
-                                        dense: true,
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                            );
+                            }
                           },
                         );
                       },
@@ -339,17 +275,22 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                   });
                 }
 
+                final selectedWarehouse = stockState.warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
+                final warehouseName = selectedWarehouse != null ? selectedWarehouse.name : 'Entrepôt Principal';
+
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SmartDropdown<String>(
+                    SmartSearchableSelector(
                       label: 'Entrepôt',
-                      value: _selectedWarehouseId,
-                      items: stockState.warehouses.map((w) =>
-                        DropdownMenuItem(value: w.id, child: Text(w.name, style: TextStyle(fontSize: 15))),
-                      ).toList(),
-                      onChanged: (v) => setState(() => _selectedWarehouseId = v),
                       hint: 'Sélectionner un entrepôt',
+                      selectedText: warehouseName,
+                      onTap: () async {
+                        final res = await showWarehouseSelectDialog(context, stockState.warehouses, selectedWarehouseId: _selectedWarehouseId);
+                        if (res != null && mounted) {
+                          setState(() => _selectedWarehouseId = res);
+                        }
+                      },
                     ),
                     SizedBox(height: 16),
                     Row(

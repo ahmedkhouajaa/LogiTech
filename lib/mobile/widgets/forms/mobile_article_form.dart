@@ -5,6 +5,7 @@ import '../../../models/product.dart';
 import '../../../blocs/products/products_bloc.dart';
 import '../../../utils/constants.dart';
 import '../../../utils/helpers.dart';
+import '../../../widgets/searchable_dropdown_field.dart';
 import 'mobile_smart_fields.dart';
 
 class MobileArticleFormResult {
@@ -193,80 +194,27 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                         child: BlocBuilder<ProductsBloc, ProductsState>(
                           builder: (context, state) {
                             final products = state is ProductsLoaded ? state.products : <Product>[];
-                            return Autocomplete<Product>(
-                              initialValue: TextEditingValue(text: _productName),
-                              optionsBuilder: (TextEditingValue textEditingValue) {
-                                if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
-                                return products.where((Product p) => 
-                                  p.name.toLowerCase().contains(textEditingValue.text.toLowerCase()) || 
-                                  (p.reference?.toLowerCase().contains(textEditingValue.text.toLowerCase()) ?? false)
-                                );
-                              },
-                              displayStringForOption: (Product option) => option.name,
-                              fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                                return TextFormField(
-                                  controller: textEditingController,
-                                  focusNode: focusNode,
-                                  decoration: InputDecoration(
-                                    hintText: 'Rechercher un article...',
-                                    hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 16),
-                                    filled: true,
-                                    fillColor: AppColors.background,
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
-                                    suffixIcon: Icon(Icons.search_rounded, color: AppColors.textTertiary),
-                                  ),
-                                  style: TextStyle(fontSize: 16),
-                                  onChanged: (v) {
-                                    setState(() {
-                                      _productName = v;
-                                      if (!_showDescription) _description = v;
-                                    });
-                                  },
-                                );
-                              },
-                              optionsViewBuilder: (context, onSelected, options) {
-                                return Align(
-                                  alignment: Alignment.topLeft,
-                                  child: Material(
-                                    elevation: 4,
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
-                                    child: ConstrainedBox(
-                                      constraints: BoxConstraints(maxHeight: 250, maxWidth: MediaQuery.of(context).size.width - 40),
-                                      child: ListView.builder(
-                                        padding: EdgeInsets.zero,
-                                        shrinkWrap: true,
-                                        itemCount: options.length,
-                                        itemBuilder: (context, i) {
-                                          final option = options.elementAt(i);
-                                          return ListTile(
-                                            title: Text(option.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                                            subtitle: option.reference != null ? Text(option.reference!, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)) : null,
-                                            trailing: Text(
-                                              '${(widget.isPurchase ? option.purchasePrice : option.sellingPrice).toStringAsFixed(2)} DT', 
-                                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)
-                                            ),
-                                            onTap: () => onSelected(option),
-                                            dense: true,
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                              onSelected: (Product selection) {
-                                final price = widget.isPurchase ? selection.purchasePrice : selection.sellingPrice;
-                                setState(() {
-                                  _productId = selection.id;
-                                  _productName = selection.name;
-                                  _description = selection.name;
-                                  _unitPrice = price;
-                                  _tvaRate = selection.tvaRate;
-                                  _unitPriceController.text = price.toStringAsFixed(3);
-                                });
+                            final selectedProduct = products.cast<Product?>().firstWhere((p) => p?.id == _productId || p?.name == _productName, orElse: () => null);
+                            final displayName = selectedProduct != null ? selectedProduct.name : (_productName.isNotEmpty ? _productName : null);
+
+                            return SmartSearchableSelector(
+                              label: '',
+                              hint: 'Rechercher un article...',
+                              selectedText: displayName,
+                              onTap: () async {
+                                final res = await showProductSelectDialog(context, products, selectedProductId: _productId);
+                                if (res != null && mounted) {
+                                  final sel = products.firstWhere((p) => p.id == res);
+                                  final price = widget.isPurchase ? sel.purchasePrice : sel.sellingPrice;
+                                  setState(() {
+                                    _productId = sel.id;
+                                    _productName = sel.name;
+                                    _description = sel.name;
+                                    _unitPrice = price;
+                                    _tvaRate = sel.tvaRate;
+                                    _unitPriceController.text = price.toStringAsFixed(3);
+                                  });
+                                }
                               },
                             );
                           },

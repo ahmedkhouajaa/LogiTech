@@ -237,25 +237,28 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                                 const SizedBox(height: 8),
                                 SizedBox(
                                   height: 36,
-                                  child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  
-                                    value: _filterWarehouseId,
-                                    isExpanded: true,
-                                    decoration: InputDecoration(
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                      filled: true,
-                                      fillColor: AppColors.surfaceAlt,
-                                    ),
-                                    
-                                    items: [
-                                      const DropdownMenuItem<String?>(value: null, child: Text('Tous les Entrepôts', style: TextStyle(fontSize: 13))),
-                                      ...state.warehouses.map((w) => DropdownMenuItem<String?>(value: w.id, child: Text(w.name, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))),
-                                    ],
-                                    onChanged: (v) => setState(() => _filterWarehouseId = v),
+                                  child: Builder(
+                                    builder: (context) {
+                                      final selectedWh = state.warehouses.cast<Warehouse?>().firstWhere(
+                                        (w) => w?.id == _filterWarehouseId,
+                                        orElse: () => null,
+                                      );
+                                      return SearchableSelectorField(
+                                        hint: 'Tous les Entrepôts',
+                                        selectedText: selectedWh?.name ?? 'Tous les Entrepôts',
+                                        onTap: () async {
+                                          final res = await showWarehouseSelectDialog(
+                                            context,
+                                            state.warehouses,
+                                            selectedWarehouseId: _filterWarehouseId,
+                                            includeAll: true,
+                                          );
+                                          if (res != null) {
+                                            setState(() => _filterWarehouseId = (res == '__all__' ? null : res));
+                                          }
+                                        },
+                                      );
+                                    },
                                   ),
                                 ),
                               ],
@@ -272,20 +275,19 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                                 const SizedBox(height: 8),
                                 SizedBox(
                                   height: 36,
-                                  child: DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  
+                                  child: DropdownButtonFormField<MovementType?>(
                                     value: _filterType,
                                     isExpanded: true,
+                                    dropdownColor: AppColors.surfaceAlt,
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                                     decoration: InputDecoration(
                                       contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                                       filled: true,
                                       fillColor: AppColors.surfaceAlt,
                                     ),
-                                    
                                     items: [
                                       const DropdownMenuItem(value: null, child: Text('Tous les types', style: TextStyle(fontSize: 13))),
                                       ...[MovementType.entry, MovementType.exit, MovementType.transfer, MovementType.adjustment].map((t) => DropdownMenuItem(value: t, child: Text(t.label, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))),
@@ -678,21 +680,27 @@ class _StockAdjustmentDialogState extends State<_StockAdjustmentDialog> {
                     SizedBox(height: 16),
                     Text('Entrepôt', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
                     const SizedBox(height: 6),
-                    DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  
-                      value: _selectedWarehouseId,
-                      items: stockState.warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
-                      onChanged: (v) => setState(() => _selectedWarehouseId = v),
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16),
-                        filled: true,
-                        fillColor: AppColors.background,
-                      ),
-                      validator: (v) => v == null ? 'Sélectionner un entrepôt' : null,
+                    Builder(
+                      builder: (context) {
+                        final selectedWh = stockState.warehouses.cast<Warehouse?>().firstWhere(
+                          (w) => w?.id == _selectedWarehouseId,
+                          orElse: () => null,
+                        );
+                        return SearchableSelectorField(
+                          hint: 'Sélectionner un entrepôt',
+                          selectedText: selectedWh?.name ?? 'Entrepot Principal',
+                          onTap: () async {
+                            final res = await showWarehouseSelectDialog(
+                              context,
+                              stockState.warehouses,
+                              selectedWarehouseId: _selectedWarehouseId,
+                            );
+                            if (res != null) {
+                              setState(() => _selectedWarehouseId = res);
+                            }
+                          },
+                        );
+                      },
                     ),
                     const SizedBox(height: 16),
                     Row(

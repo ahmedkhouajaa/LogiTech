@@ -240,7 +240,7 @@ class SmartSearchableSelector extends StatelessWidget {
               ),
               style: TextStyle(
                 fontSize: 13,
-                color: selectedText != null ? AppColors.textPrimary : AppColors.textTertiary,
+                color: AppColors.textPrimary,
               ),
             ),
           ),

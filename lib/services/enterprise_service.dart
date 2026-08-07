@@ -187,6 +187,11 @@ class EnterpriseService {
       }
     }
 
+    // Update local state early so subsequent inserts adopt currentEnterpriseId
+    _enterprises.add(enterprise);
+    _currentEnterpriseId = id;
+    await _persistToPrefs();
+
     // Insert company_settings row into SQLite for this enterprise
     try {
       final db = await DatabaseHelper.instance.database;
@@ -224,6 +229,11 @@ class EnterpriseService {
         updatedAt: now,
       );
       await DatabaseHelper.instance.insertWarehouse(defaultWarehouse);
+      FirebaseFirestore.instance
+          .collection('warehouses')
+          .doc(defaultWarehouse.id)
+          .set(defaultWarehouse.toMap(), SetOptions(merge: true))
+          .catchError((e) => print('Firestore warehouse sync error: $e'));
     } catch (e) {
       print('EnterpriseService.createEnterprise default warehouse insert warning: $e');
     }
@@ -243,6 +253,11 @@ class EnterpriseService {
         updatedAt: now,
       );
       await DatabaseHelper.instance.insertCustomer(defaultCustomer);
+      FirebaseFirestore.instance
+          .collection('clients')
+          .doc(defaultCustomer.id)
+          .set(defaultCustomer.toMap(), SetOptions(merge: true))
+          .catchError((e) => print('Firestore customer sync error: $e'));
     } catch (e) {
       print('EnterpriseService.createEnterprise default customer insert warning: $e');
     }
@@ -261,15 +276,20 @@ class EnterpriseService {
         updatedAt: now,
       );
       await DatabaseHelper.instance.insertSupplier(defaultSupplier);
+      FirebaseFirestore.instance
+          .collection('fournisseurs')
+          .doc(defaultSupplier.id)
+          .set(defaultSupplier.toMap(), SetOptions(merge: true))
+          .catchError((e) => print('Firestore supplier sync error: $e'));
     } catch (e) {
       print('EnterpriseService.createEnterprise default supplier insert warning: $e');
     }
 
-    // Insert default treasury account ("Caisse principale") for this enterprise
+    // Insert default treasury account ("Compte principal") for this enterprise
     try {
       final defaultAccount = TreasuryAccount(
         id: const Uuid().v4(),
-        name: 'Caisse principale',
+        name: 'Compte principal',
         type: 'cash',
         currency: 'TND',
         isDefault: true,
@@ -278,6 +298,16 @@ class EnterpriseService {
         updatedAt: now,
       );
       await DatabaseHelper.instance.createTreasuryAccount(defaultAccount.toMap());
+      FirebaseFirestore.instance
+          .collection('treasury_accounts')
+          .doc(defaultAccount.id)
+          .set(defaultAccount.toMap(), SetOptions(merge: true))
+          .catchError((e) => print('Firestore treasury account sync error: $e'));
+      FirebaseFirestore.instance
+          .collection('comptes_tresorerie')
+          .doc(defaultAccount.id)
+          .set(defaultAccount.toMap(), SetOptions(merge: true))
+          .catchError((e) => print('Firestore treasury account sync error: $e'));
     } catch (e) {
       print('EnterpriseService.createEnterprise default treasury account insert warning: $e');
     }
@@ -295,14 +325,15 @@ class EnterpriseService {
         updatedAt: now,
       );
       await DatabaseHelper.instance.insertProject(defaultProject);
+      FirebaseFirestore.instance
+          .collection('projects')
+          .doc(defaultProject.id)
+          .set(defaultProject.toMap(), SetOptions(merge: true))
+          .catchError((e) => print('Firestore project sync error: $e'));
     } catch (e) {
       print('EnterpriseService.createEnterprise default project insert warning: $e');
     }
 
-    // Update local state
-    _enterprises.add(enterprise);
-    _currentEnterpriseId = id;
-    await _persistToPrefs();
     _enterpriseController.add(_currentEnterpriseId);
 
     return enterprise;
