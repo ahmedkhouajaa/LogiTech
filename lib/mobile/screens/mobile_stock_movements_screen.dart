@@ -477,6 +477,13 @@ class _MobileStockMovementCard extends StatelessWidget {
       statusColor = AppColors.textPrimary;
     }
 
+    final bool isCancelled = movement.isDeleted || (movement.notes != null && movement.notes!.contains('Suppression'));
+
+    if (isCancelled) {
+      qtyCol = AppColors.textTertiary;
+      statusColor = AppColors.textTertiary;
+    }
+
     String warehouseName = movement.warehouseName ?? '—';
     if (warehouseName == '—' && movement.warehouseId.isNotEmpty) {
       if (movement.warehouseId == 'default_warehouse') {
@@ -488,6 +495,10 @@ class _MobileStockMovementCard extends StatelessWidget {
       }
     }
 
+    final reasonStr = movement.notes != null && movement.notes!.isNotEmpty
+        ? movement.notes!
+        : (movement.referenceType != null && movement.referenceId != null ? '${movement.referenceType}: ${movement.referenceId}' : null);
+
     return Card(
       elevation: 0,
       margin: EdgeInsets.only(bottom: 12),
@@ -495,7 +506,7 @@ class _MobileStockMovementCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: AppColors.border),
       ),
-      color: AppColors.surface,
+      color: isCancelled ? AppColors.surfaceAlt.withValues(alpha: 0.5) : AppColors.surface,
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -508,7 +519,7 @@ class _MobileStockMovementCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     formatDate(movement.date),
-                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary),
+                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: isCancelled ? AppColors.textTertiary : AppColors.textSecondary),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -522,7 +533,7 @@ class _MobileStockMovementCard extends StatelessWidget {
                     border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                   ),
                   child: Text(
-                    movement.type.label,
+                    isCancelled ? '${movement.type.label} (Annulé)' : movement.type.label,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -543,7 +554,7 @@ class _MobileStockMovementCard extends StatelessWidget {
                     color: AppColors.surfaceAlt,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.inventory_2_outlined, size: 20, color: AppColors.textSecondary),
+                  child: Icon(Icons.inventory_2_outlined, size: 20, color: isCancelled ? AppColors.textTertiary : AppColors.textSecondary),
                 ),
                 SizedBox(width: 12),
                 Expanded(
@@ -552,7 +563,7 @@ class _MobileStockMovementCard extends StatelessWidget {
                     children: [
                       Text(
                         movement.productName ?? '—',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: isCancelled ? AppColors.textTertiary : AppColors.textPrimary),
                       ),
                       SizedBox(height: 4),
                       Row(
@@ -562,7 +573,7 @@ class _MobileStockMovementCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               warehouseName,
-                              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                              style: TextStyle(fontSize: 13, color: isCancelled ? AppColors.textTertiary : AppColors.textSecondary),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -586,44 +597,25 @@ class _MobileStockMovementCard extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: 12),
-            // Row 3: Reference & Notes (if any)
-            if ((movement.referenceId != null && movement.referenceId!.isNotEmpty) || (movement.notes != null && movement.notes!.isNotEmpty)) ...[
+            if (reasonStr != null) ...[
+              SizedBox(height: 12),
               Divider(height: 1),
               SizedBox(height: 12),
-              if (movement.referenceId != null && movement.referenceId!.isNotEmpty) ...[
-                Row(
-                  children: [
-                    Icon(Icons.receipt_long_outlined, size: 14, color: AppColors.textTertiary),
-                    SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        '${movement.referenceType ?? ''} ${movement.referenceId}'.trim(),
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 14, color: AppColors.textTertiary),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Raison: $reasonStr',
+                      style: TextStyle(fontSize: 12, color: isCancelled ? AppColors.textTertiary : AppColors.textSecondary, fontStyle: FontStyle.italic),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ],
-                ),
-                if (movement.notes != null && movement.notes!.isNotEmpty) SizedBox(height: 6),
-              ],
-              if (movement.notes != null && movement.notes!.isNotEmpty)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.notes_rounded, size: 14, color: AppColors.textTertiary),
-                    SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        movement.notes!,
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
             ],
           ],
         ),

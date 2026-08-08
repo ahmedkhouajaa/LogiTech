@@ -179,7 +179,8 @@ enum InvoiceStatus {
   paid,
   unpaid,
   overdue,
-  cancelled;
+  cancelled,
+  transformed;
 
   String get label {
     switch (this) {
@@ -197,6 +198,8 @@ enum InvoiceStatus {
         return 'En retard';
       case cancelled:
         return 'Annulee';
+      case transformed:
+        return 'Transformé en avoir';
     }
   }
 
@@ -216,6 +219,8 @@ enum InvoiceStatus {
         return AppColors.error;
       case cancelled:
         return AppColors.textTertiary;
+      case transformed:
+        return AppColors.info;
     }
   }
 }

@@ -143,12 +143,15 @@ class DatabaseHelper {
     final path = p.join(dir.path, 'business_manager_pro.db');
     final db = await openDatabase(
       path,
-      version: 52,
+      version: 53,
       onConfigure: (db) async {
         await db.rawQuery('PRAGMA busy_timeout = 30000;');
       },
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
+      onOpen: (db) async {
+        await _ensureAllColumnsExist(db);
+      },
     );
     await _ensureAllColumnsExist(db);
     return db;
@@ -278,9 +281,43 @@ class DatabaseHelper {
       } catch (_) {}
     }
 
+    final docTablesToEnsureWarehouse = [
+      'quotes', 'customer_orders', 'delivery_notes', 'invoices',
+      'bons_sortie', 'return_notes', 'supplier_orders', 'receiving_vouchers',
+      'purchase_invoices', 'supplier_returns', 'supplier_credit_notes',
+      'credit_notes'
+    ];
+
+    for (final table in docTablesToEnsureWarehouse) {
+      try {
+        final info = await db.rawQuery('PRAGMA table_info($table)');
+        final existingCols = info.map((e) => e['name'] as String).toSet();
+        if (!existingCols.contains('warehouse_id')) {
+          await db.execute('ALTER TABLE $table ADD COLUMN warehouse_id TEXT');
+        }
+      } catch (_) {}
+    }
+
+    try {
+      await db.execute("UPDATE invoices SET status = 'unpaid' WHERE status = 'draft'");
+    } catch (_) {}
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 53) {
+      final docTables = [
+        'quotes', 'customer_orders', 'delivery_notes', 'invoices',
+        'bons_sortie', 'return_notes', 'supplier_orders', 'receiving_vouchers',
+        'purchase_invoices', 'supplier_returns', 'supplier_credit_notes',
+        'credit_notes'
+      ];
+      for (final table in docTables) {
+        try {
+          await db.execute('ALTER TABLE $table ADD COLUMN warehouse_id TEXT');
+        } catch (_) {}
+      }
+    }
+
     if (oldVersion < 52) {
       // Create enterprises local table
       await db.execute('''
@@ -2968,12 +3005,18 @@ class DatabaseHelper {
     final db = await database;
     final filter = _entFilter('i');
     final maps = await db.rawQuery('''
-      SELECT i.*, c.name as customer_name, p.name as project_name
+      SELECT i.*, 
+             COALESCE(
+               NULLIF(c.company_name, ''),
+               NULLIF(c.responsible_name, ''),
+               c.name
+             ) as customer_name, 
+             p.name as project_name
       FROM invoices i 
       LEFT JOIN customers c ON i.customer_id = c.id 
       LEFT JOIN projects p ON i.project_id = p.id
       WHERE i.is_deleted = 0 $filter
-      ORDER BY i.created_at DESC
+      ORDER BY i.date DESC, i.created_at DESC
     ''');
     List<Invoice> invoices = [];
     for (var m in maps) {
@@ -3122,19 +3165,256 @@ class DatabaseHelper {
   }
 
   Future<void> insertInvoice(Invoice invoice) async {
-    await insert('invoices', invoice.toMap());
-    for (final item in invoice.items) {
-      final db = await database;
-      await db.insert('invoice_items', item.toMap());
-    }
+    final db = await database;
+    await _ensureAllColumnsExist(db);
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    await db.transaction((txn) async {
+      final invMap = invoice.toMap();
+      if ((invMap['enterprise_id'] == null || invMap['enterprise_id'].toString().isEmpty) && currentEntId != null) {
+        invMap['enterprise_id'] = currentEntId;
+      }
+      invMap.remove('items');
+      try {
+        await txn.insert('invoices', invMap);
+      } catch (e) {
+        if (e.toString().contains('warehouse_id')) {
+          await txn.execute('ALTER TABLE invoices ADD COLUMN warehouse_id TEXT');
+          await txn.insert('invoices', invMap);
+        } else {
+          rethrow;
+        }
+      }
+
+      for (final item in invoice.items) {
+        await txn.insert('invoice_items', item.toMap());
+
+        if (item.productId.isNotEmpty && item.quantity > 0) {
+          final warehouseId = (invMap['warehouse_id'] as String?)?.isNotEmpty == true
+              ? invMap['warehouse_id'] as String
+              : 'default_warehouse';
+
+          final movementId = _uuid.v4();
+          final movement = StockMovement(
+            id: movementId,
+            productId: item.productId,
+            warehouseId: warehouseId,
+            type: MovementType.exit,
+            quantity: item.quantity,
+            referenceType: 'facture',
+            referenceId: invoice.number,
+            date: invoice.date,
+            notes: 'Création facture ${invoice.number}',
+          );
+          await txn.insert('stock_movements', movement.toMap());
+
+          await txn.rawUpdate(
+            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) - ? WHERE id = ?',
+            [item.quantity, item.productId],
+          );
+        }
+      }
+    });
+
+    final invMap = invoice.toMap();
+    invMap['items'] = invoice.items.map((i) => i.toMap()).toList();
+    await addToSyncQueue('invoices', invoice.id, 'INSERT', invMap);
   }
 
   Future<void> updateInvoice(Invoice invoice) async {
-    await update('invoices', invoice.toMap(), invoice.id);
+    final db = await database;
+    final oldItemsMaps = await db.query(
+      'invoice_items',
+      where: 'invoice_id = ?',
+      whereArgs: [invoice.id],
+    );
+
+    await db.transaction((txn) async {
+      // 1. Revert previous stock movements for this invoice
+      for (final oldItemMap in oldItemsMaps) {
+        final productId = oldItemMap['product_id'] as String?;
+        final qty = (oldItemMap['quantity'] as num?)?.toDouble() ?? 0;
+        if (productId != null && productId.isNotEmpty && qty > 0) {
+          await txn.rawUpdate(
+            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) + ? WHERE id = ?',
+            [qty, productId],
+          );
+        }
+      }
+
+      await txn.delete(
+        'stock_movements',
+        where: 'reference_type = ? AND reference_id = ?',
+        whereArgs: ['facture', invoice.number],
+      );
+
+      // 2. Update invoice & items
+      final invMap = invoice.toMap();
+      invMap.remove('items');
+      await txn.update('invoices', invMap, where: 'id = ?', whereArgs: [invoice.id]);
+
+      await txn.delete('invoice_items', where: 'invoice_id = ?', whereArgs: [invoice.id]);
+
+      for (final item in invoice.items) {
+        await txn.insert('invoice_items', item.toMap());
+
+        if (item.productId.isNotEmpty && item.quantity > 0) {
+          final warehouseId = (invMap['warehouse_id'] as String?)?.isNotEmpty == true
+              ? invMap['warehouse_id'] as String
+              : 'default_warehouse';
+
+          final movementId = _uuid.v4();
+          final movement = StockMovement(
+            id: movementId,
+            productId: item.productId,
+            warehouseId: warehouseId,
+            type: MovementType.exit,
+            quantity: item.quantity,
+            referenceType: 'facture',
+            referenceId: invoice.number,
+            date: invoice.date,
+            notes: 'Modification facture ${invoice.number}',
+          );
+          await txn.insert('stock_movements', movement.toMap());
+
+          await txn.rawUpdate(
+            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) - ? WHERE id = ?',
+            [item.quantity, item.productId],
+          );
+        }
+      }
+    });
+
+    final invMap = invoice.toMap();
+    invMap['items'] = invoice.items.map((i) => i.toMap()).toList();
+    await addToSyncQueue('invoices', invoice.id, 'UPDATE', invMap);
   }
 
   Future<void> deleteInvoice(String id) async {
-    await softDelete('invoices', id);
+    final db = await database;
+    final invoiceMap = await getById('invoices', id);
+    if (invoiceMap == null) return;
+    final invoiceNum = invoiceMap['number'] as String? ?? id;
+
+    final oldItemsMaps = await db.query(
+      'invoice_items',
+      where: 'invoice_id = ?',
+      whereArgs: [id],
+    );
+
+    await db.transaction((txn) async {
+      await txn.update(
+        'invoices',
+        {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      // Revert stock & record reversal movement
+      for (final oldItemMap in oldItemsMaps) {
+        final productId = oldItemMap['product_id'] as String?;
+        final qty = (oldItemMap['quantity'] as num?)?.toDouble() ?? 0;
+        if (productId != null && productId.isNotEmpty && qty > 0) {
+          final warehouseId = (invoiceMap['warehouse_id'] as String?)?.isNotEmpty == true
+              ? invoiceMap['warehouse_id'] as String
+              : 'default_warehouse';
+
+          await txn.rawUpdate(
+            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) + ? WHERE id = ?',
+            [qty, productId],
+          );
+
+          // Mark existing movement as deleted/cancelled or insert reversal movement
+          final updatedCount = await txn.update(
+            'stock_movements',
+            {
+              'is_deleted': 1,
+              'notes': 'Suppression facture $invoiceNum (Annulé)',
+            },
+            where: 'reference_type = ? AND reference_id = ? AND product_id = ?',
+            whereArgs: ['facture', invoiceNum, productId],
+          );
+
+          if (updatedCount == 0) {
+            final movementId = _uuid.v4();
+            final movement = StockMovement(
+              id: movementId,
+              productId: productId,
+              warehouseId: warehouseId,
+              type: MovementType.exit,
+              quantity: qty,
+              referenceType: 'facture',
+              referenceId: invoiceNum,
+              date: DateTime.now(),
+              notes: 'Suppression facture $invoiceNum (Annulé)',
+              isDeleted: true,
+            );
+            await txn.insert('stock_movements', movement.toMap());
+          }
+        }
+      }
+    });
+
+    await addToSyncQueue('invoices', id, 'DELETE', {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()});
+  }
+
+  Future<void> convertInvoiceToCreditNote(Invoice invoice, CreditNote creditNote) async {
+    final db = await database;
+    await _ensureAllColumnsExist(db);
+    await db.transaction((txn) async {
+      // 1. Save Credit Note
+      final cnMap = creditNote.toMap();
+      cnMap.remove('items');
+      await txn.insert('credit_notes', cnMap);
+      for (final item in creditNote.items) {
+        await txn.insert('credit_note_items', item.toMap(creditNote.id));
+      }
+
+      // 2. Mark original Invoice status as 'transformed' and link creditNoteId
+      await txn.update(
+        'invoices',
+        {
+          'status': InvoiceStatus.transformed.name,
+          'credit_note_id': creditNote.id,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [invoice.id],
+      );
+
+      // 3. Stock Reversal (INCREASE stock back) & record stock movement
+      for (final item in invoice.items) {
+        if (item.productId.isNotEmpty && item.quantity > 0) {
+          final warehouseId = (invoice.warehouseId?.isNotEmpty == true)
+              ? invoice.warehouseId!
+              : 'default_warehouse';
+
+          await txn.rawUpdate(
+            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) + ? WHERE id = ?',
+            [item.quantity, item.productId],
+          );
+
+          final movementId = _uuid.v4();
+          final movement = StockMovement(
+            id: movementId,
+            productId: item.productId,
+            warehouseId: warehouseId,
+            type: MovementType.entry,
+            quantity: item.quantity,
+            referenceType: 'avoir',
+            referenceId: creditNote.number,
+            date: DateTime.now(),
+            notes: 'Transformation en avoir de la facture ${invoice.number}',
+            enterpriseId: invoice.enterpriseId,
+          );
+          await txn.insert('stock_movements', movement.toMap());
+        }
+      }
+    });
+
+    final cnMap = creditNote.toMap();
+    cnMap['items'] = creditNote.items.map((i) => i.toMap(creditNote.id)).toList();
+    await addToSyncQueue('credit_notes', creditNote.id, 'CREATE', cnMap);
+    await addToSyncQueue('invoices', invoice.id, 'UPDATE', {'status': InvoiceStatus.transformed.name, 'credit_note_id': creditNote.id});
   }
 
   Future<int> getNextInvoiceNumber() async {
@@ -3363,22 +3643,14 @@ class DatabaseHelper {
     final currentEntId = EnterpriseService.instance.currentEnterpriseId;
     if (currentEntId == null || currentEntId.isEmpty) return '1=1';
     final col = tablePrefix.isNotEmpty ? '$tablePrefix.enterprise_id' : 'enterprise_id';
-    if (EnterpriseService.instance.isDefaultEnterprise) {
-      return "($col = '$currentEntId' OR $col IS NULL OR $col = '')";
-    } else {
-      return "$col = '$currentEntId'";
-    }
+    return "($col = '$currentEntId' OR $col IS NULL OR $col = '')";
   }
 
   String _entFilter([String tablePrefix = '']) {
     final currentEntId = EnterpriseService.instance.currentEnterpriseId;
     if (currentEntId == null || currentEntId.isEmpty) return '';
     final col = tablePrefix.isNotEmpty ? '$tablePrefix.enterprise_id' : 'enterprise_id';
-    if (EnterpriseService.instance.isDefaultEnterprise) {
-      return " AND ($col = '$currentEntId' OR $col IS NULL OR $col = '')";
-    } else {
-      return " AND $col = '$currentEntId'";
-    }
+    return " AND ($col = '$currentEntId' OR $col IS NULL OR $col = '')";
   }
 
   Future<double> getTotalInvoiced() async {
@@ -4468,7 +4740,7 @@ class DatabaseHelper {
       FROM stock_movements sm
       LEFT JOIN products p ON sm.product_id = p.id
       LEFT JOIN warehouses w ON sm.warehouse_id = w.id
-      WHERE sm.is_deleted = 0 $filter
+      WHERE 1=1 $filter
       ORDER BY sm.date DESC
     ''');
     return maps.map((m) => StockMovement.fromMap(m)).toList();
@@ -4586,35 +4858,256 @@ class DatabaseHelper {
   }
 
   Future<void> insertPurchaseInvoice(PurchaseInvoice invoice) async {
-    await insert('purchase_invoices', invoice.toMap());
     final db = await database;
-    for (final item in invoice.items) {
-      await db.insert('purchase_invoice_items', item.toMap());
-    }
+    await _ensureAllColumnsExist(db);
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    await db.transaction((txn) async {
+      final invMap = invoice.toMap();
+      if ((invMap['enterprise_id'] == null || invMap['enterprise_id'].toString().isEmpty) && currentEntId != null) {
+        invMap['enterprise_id'] = currentEntId;
+      }
+      invMap.remove('items');
+      try {
+        await txn.insert('purchase_invoices', invMap);
+      } catch (e) {
+        if (e.toString().contains('warehouse_id')) {
+          await txn.execute('ALTER TABLE purchase_invoices ADD COLUMN warehouse_id TEXT');
+          await txn.insert('purchase_invoices', invMap);
+        } else {
+          rethrow;
+        }
+      }
+
+      for (final item in invoice.items) {
+        await txn.insert('purchase_invoice_items', item.toMap());
+
+        if (item.productId.isNotEmpty && item.quantity > 0) {
+          final warehouseId = (invMap['warehouse_id'] as String?)?.isNotEmpty == true
+              ? invMap['warehouse_id'] as String
+              : 'default_warehouse';
+
+          final movementId = _uuid.v4();
+          final movement = StockMovement(
+            id: movementId,
+            productId: item.productId,
+            warehouseId: warehouseId,
+            type: MovementType.entry,
+            quantity: item.quantity,
+            referenceType: 'facture_achat',
+            referenceId: invoice.number,
+            date: invoice.date,
+            notes: 'Création facture d\'achat ${invoice.number}',
+          );
+          await txn.insert('stock_movements', movement.toMap());
+
+          await txn.rawUpdate(
+            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) + ? WHERE id = ?',
+            [item.quantity, item.productId],
+          );
+        }
+      }
+    });
+
+    final invMap = invoice.toMap();
+    invMap['items'] = invoice.items.map((i) => i.toMap()).toList();
+    await addToSyncQueue('purchase_invoices', invoice.id, 'INSERT', invMap);
   }
 
   Future<void> updatePurchaseInvoice(PurchaseInvoice invoice) async {
-    await update('purchase_invoices', invoice.toMap(), invoice.id);
     final db = await database;
-    
-    // Delete old items
-    await db.delete('purchase_invoice_items', where: 'invoice_id = ?', whereArgs: [invoice.id]);
-    
-    // Insert new items
-    for (final item in invoice.items) {
-      await db.insert('purchase_invoice_items', item.toMap());
-    }
+    final oldItemsMaps = await db.query(
+      'purchase_invoice_items',
+      where: 'invoice_id = ?',
+      whereArgs: [invoice.id],
+    );
+
+    await db.transaction((txn) async {
+      // 1. Revert previous stock additions for this purchase invoice (decrease stock)
+      for (final oldItemMap in oldItemsMaps) {
+        final productId = oldItemMap['product_id'] as String?;
+        final qty = (oldItemMap['quantity'] as num?)?.toDouble() ?? 0;
+        if (productId != null && productId.isNotEmpty && qty > 0) {
+          await txn.rawUpdate(
+            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) - ? WHERE id = ?',
+            [qty, productId],
+          );
+        }
+      }
+
+      await txn.delete(
+        'stock_movements',
+        where: 'reference_type = ? AND reference_id = ?',
+        whereArgs: ['facture_achat', invoice.number],
+      );
+
+      // 2. Update purchase invoice & items
+      final invMap = invoice.toMap();
+      invMap.remove('items');
+      await txn.update('purchase_invoices', invMap, where: 'id = ?', whereArgs: [invoice.id]);
+
+      await txn.delete('purchase_invoice_items', where: 'invoice_id = ?', whereArgs: [invoice.id]);
+
+      for (final item in invoice.items) {
+        await txn.insert('purchase_invoice_items', item.toMap());
+
+        if (item.productId.isNotEmpty && item.quantity > 0) {
+          final warehouseId = (invMap['warehouse_id'] as String?)?.isNotEmpty == true
+              ? invMap['warehouse_id'] as String
+              : 'default_warehouse';
+
+          final movementId = _uuid.v4();
+          final movement = StockMovement(
+            id: movementId,
+            productId: item.productId,
+            warehouseId: warehouseId,
+            type: MovementType.entry,
+            quantity: item.quantity,
+            referenceType: 'facture_achat',
+            referenceId: invoice.number,
+            date: invoice.date,
+            notes: 'Modification facture d\'achat ${invoice.number}',
+          );
+          await txn.insert('stock_movements', movement.toMap());
+
+          await txn.rawUpdate(
+            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) + ? WHERE id = ?',
+            [item.quantity, item.productId],
+          );
+        }
+      }
+    });
+
+    final invMap = invoice.toMap();
+    invMap['items'] = invoice.items.map((i) => i.toMap()).toList();
+    await addToSyncQueue('purchase_invoices', invoice.id, 'UPDATE', invMap);
   }
 
   Future<void> deletePurchaseInvoice(String id) async {
     final db = await database;
-    await db.update(
-      'purchase_invoices',
-      {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
-      where: 'id = ?',
+    final invoiceMap = await getById('purchase_invoices', id);
+    if (invoiceMap == null) return;
+    final invoiceNum = invoiceMap['number'] as String? ?? id;
+
+    final oldItemsMaps = await db.query(
+      'purchase_invoice_items',
+      where: 'invoice_id = ?',
       whereArgs: [id],
     );
+
+    await db.transaction((txn) async {
+      await txn.update(
+        'purchase_invoices',
+        {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      // Revert stock (DECREASE back) & mark movement as deleted / cancelled
+      for (final oldItemMap in oldItemsMaps) {
+        final productId = oldItemMap['product_id'] as String?;
+        final qty = (oldItemMap['quantity'] as num?)?.toDouble() ?? 0;
+        if (productId != null && productId.isNotEmpty && qty > 0) {
+          await txn.rawUpdate(
+            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) - ? WHERE id = ?',
+            [qty, productId],
+          );
+
+          final warehouseId = (invoiceMap['warehouse_id'] as String?)?.isNotEmpty == true
+              ? invoiceMap['warehouse_id'] as String
+              : 'default_warehouse';
+
+          final updatedCount = await txn.update(
+            'stock_movements',
+            {
+              'is_deleted': 1,
+              'notes': 'Suppression facture d\'achat $invoiceNum (Annulé)',
+            },
+            where: 'reference_type = ? AND reference_id = ? AND product_id = ?',
+            whereArgs: ['facture_achat', invoiceNum, productId],
+          );
+
+          if (updatedCount == 0) {
+            final movementId = _uuid.v4();
+            final movement = StockMovement(
+              id: movementId,
+              productId: productId,
+              warehouseId: warehouseId,
+              type: MovementType.entry,
+              quantity: qty,
+              referenceType: 'facture_achat',
+              referenceId: invoiceNum,
+              date: DateTime.now(),
+              notes: 'Suppression facture d\'achat $invoiceNum (Annulé)',
+              isDeleted: true,
+            );
+            await txn.insert('stock_movements', movement.toMap());
+          }
+        }
+      }
+    });
+
+    await addToSyncQueue('purchase_invoices', id, 'DELETE', {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()});
   }
+
+  Future<void> convertPurchaseInvoiceToCreditNote(PurchaseInvoice invoice, SupplierCreditNote supplierCreditNote) async {
+    final db = await database;
+    await _ensureAllColumnsExist(db);
+    await db.transaction((txn) async {
+      // 1. Save Supplier Credit Note
+      final scnMap = supplierCreditNote.toMap();
+      scnMap.remove('items');
+      await txn.insert('supplier_credit_notes', scnMap);
+      for (final item in supplierCreditNote.items) {
+        await txn.insert('supplier_credit_note_items', item.toMap());
+      }
+
+      // 2. Mark original Purchase Invoice status as 'transformed' and link creditNoteId
+      await txn.update(
+        'purchase_invoices',
+        {
+          'status': InvoiceStatus.transformed.name,
+          'credit_note_id': supplierCreditNote.id,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [invoice.id],
+      );
+
+      // 3. Stock Reversal (DECREASE stock back) & record stock movement
+      for (final item in invoice.items) {
+        if (item.productId.isNotEmpty && item.quantity > 0) {
+          final warehouseId = (invoice.warehouseId?.isNotEmpty == true)
+              ? invoice.warehouseId!
+              : 'default_warehouse';
+
+          await txn.rawUpdate(
+            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) - ? WHERE id = ?',
+            [item.quantity, item.productId],
+          );
+
+          final movementId = _uuid.v4();
+          final movement = StockMovement(
+            id: movementId,
+            productId: item.productId,
+            warehouseId: warehouseId,
+            type: MovementType.exit,
+            quantity: item.quantity,
+            referenceType: 'avoir_fournisseur',
+            referenceId: supplierCreditNote.number,
+            date: DateTime.now(),
+            notes: 'Transformation en avoir de la facture ${invoice.number}',
+          );
+          await txn.insert('stock_movements', movement.toMap());
+        }
+      }
+    });
+
+    final scnMap = supplierCreditNote.toMap();
+    scnMap['items'] = supplierCreditNote.items.map((i) => i.toMap()).toList();
+    await addToSyncQueue('supplier_credit_notes', supplierCreditNote.id, 'CREATE', scnMap);
+    await addToSyncQueue('purchase_invoices', invoice.id, 'UPDATE', {'status': InvoiceStatus.transformed.name, 'credit_note_id': supplierCreditNote.id});
+  }
+
 
   Future<List<PurchaseInvoice>> getPurchaseInvoicesPaginated({
     int limit = 10,

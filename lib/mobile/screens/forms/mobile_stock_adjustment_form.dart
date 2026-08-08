@@ -186,7 +186,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                           hint: 'Rechercher un article...',
                           selectedText: _selectedProduct?.name,
                           onTap: () async {
-                            final res = await showProductSelectDialog(context, pState.products);
+                            final res = await showProductSelectDialog(context, pState.products, warehouseId: _selectedWarehouseId);
                             if (res != null && mounted) {
                               final p = pState.products.cast<Product?>().firstWhere((item) => item?.id == res, orElse: () => null);
                               if (p != null) {

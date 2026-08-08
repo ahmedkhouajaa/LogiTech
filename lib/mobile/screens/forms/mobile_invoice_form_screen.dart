@@ -4,9 +4,12 @@ import 'package:uuid/uuid.dart';
 import '../../../../blocs/invoices/invoices_bloc.dart';
 import '../../../../blocs/customers/customers_bloc.dart';
 import '../../../../blocs/projects/projects_bloc.dart';
+import '../../../../blocs/products/products_bloc.dart';
 import '../../../../models/invoice.dart';
 import '../../../../models/customer.dart';
 import '../../../../models/project.dart';
+import '../../../../blocs/stock/stock_bloc.dart';
+import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../database/database_helper.dart';
@@ -19,6 +22,7 @@ import 'mobile_product_form_screen.dart';
 import '../../widgets/forms/mobile_totals_card.dart';
 import 'mobile_product_form_screen.dart';
 import '../../../../screens/customers_screen.dart';
+import '../../../../services/enterprise_service.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 
 class MobileInvoiceFormScreen extends StatefulWidget {
@@ -35,6 +39,7 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
 
   String? _selectedCustomerId;
   String? _selectedProjectId;
+  String? _selectedWarehouseId;
   List<InvoiceItem> _items = [];
   DateTime _date = DateTime.now();
   DateTime _dueDate = DateTime.now().add(const Duration(days: 30));
@@ -86,6 +91,9 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
     super.initState();
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<ProjectsBloc>().add(LoadProjects());
+    if (context.read<StockBloc>().state is! StockLoaded) {
+      context.read<StockBloc>().add(LoadStock());
+    }
 
     if (widget.existing != null) {
       final n = widget.existing!;
@@ -141,6 +149,8 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
         number: number,
         customerId: _selectedCustomerId!,
         projectId: _selectedProjectId,
+        warehouseId: _selectedWarehouseId,
+        enterpriseId: widget.existing?.enterpriseId ?? EnterpriseService.instance.currentEnterpriseId,
         date: _date,
         dueDate: _dueDate,
         status: _status,
@@ -172,9 +182,14 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
       );
 
       if (_isEditing) {
-        bloc.add(UpdateInvoice(invoice));
+        context.read<InvoicesBloc>().add(UpdateInvoice(invoice));
       } else {
-        bloc.add(AddInvoice(invoice));
+        context.read<InvoicesBloc>().add(AddInvoice(invoice));
+      }
+
+      if (mounted) {
+        context.read<StockBloc>().add(LoadStock());
+        context.read<ProductsBloc>().add(const ResetProductsPagination());
       }
 
       if (mounted) {
@@ -213,7 +228,7 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
       );
     }
 
-    final result = await MobileArticleForm.show(context, initialData: initialData, isPurchase: false);
+    final result = await MobileArticleForm.show(context, initialData: initialData, isPurchase: false, warehouseId: _selectedWarehouseId);
 
     if (result != null) {
       setState(() {
@@ -345,6 +360,26 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
                       ],
                       onChanged: (v) => setState(() => _selectedProjectId = v),
                       hint: 'Projet par défaut',
+                    );
+                  },
+                ),
+                SizedBox(height: 16),
+                BlocBuilder<StockBloc, StockState>(
+                  builder: (context, state) {
+                    final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                    final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
+                    final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
+
+                    return SmartSearchableSelector(
+                      label: 'Entrepôt',
+                      hint: 'Sélectionner un entrepôt',
+                      selectedText: warehouseName,
+                      onTap: () async {
+                        final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId);
+                        if (res != null && mounted) {
+                          setState(() => _selectedWarehouseId = res);
+                        }
+                      },
                     );
                   },
                 ),

@@ -10,6 +10,8 @@ import '../models/quote.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/project.dart';
+import '../blocs/stock/stock_bloc.dart';
+import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'customers_screen.dart';
@@ -31,6 +33,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
 
   String? _selectedCustomerId;
   String? _selectedProjectId;
+  String? _selectedWarehouseId;
   List<QuoteItem> _items = [];
   DateTime _date = DateTime.now();
   DateTime _validityDate = DateTime.now().add(const Duration(days: 30));
@@ -78,6 +81,9 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
+    if (context.read<StockBloc>().state is! StockLoaded) {
+      context.read<StockBloc>().add(LoadStock());
+    }
 
     if (widget.existing != null) {
       final n = widget.existing!;
@@ -545,6 +551,33 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                     ),
                   ],
                 ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
+          // Entrepôt field (under Projet)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              SizedBox(height: 6),
+              BlocBuilder<StockBloc, StockState>(
+                builder: (context, state) {
+                  final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                  final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
+                  final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
+
+                  return SearchableSelectorField(
+                    hint: 'Sélectionner un entrepôt',
+                    selectedText: warehouseName,
+                    onTap: () async {
+                      final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId);
+                      if (res != null && mounted) {
+                        setState(() => _selectedWarehouseId = res);
+                      }
+                    },
+                  );
+                },
               ),
             ],
           ),
@@ -1043,7 +1076,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                             hint: 'Rechercher un article...',
                             selectedText: currentDescription,
                             onTap: () async {
-                              final res = await showProductSelectDialog(context, products);
+                              final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
                               if (res != null && mounted) {
                                 final selection = products.firstWhere((p) => p.id == res);
                                 setState(() {
@@ -1305,7 +1338,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                 hint: 'Sélectionner un article...',
                 selectedText: null,
                 onTap: () async {
-                  final res = await showProductSelectDialog(context, products);
+                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
                   if (res != null) {
                     final product = products.firstWhere((p) => p.id == res);
                     setState(() {

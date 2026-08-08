@@ -12,6 +12,7 @@ import '../../blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
 import '../../blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
 import '../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../../blocs/treasury_transactions/treasury_transactions_bloc.dart';
+import '../../blocs/stock/stock_bloc.dart';
 
 import '../../models/purchase_invoice.dart';
 import '../../models/product.dart';
@@ -526,19 +527,28 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
                 updatedAt: now,
               );
 
-              try {
-                context.read<SupplierCreditNotesBloc>().add(AddSupplierCreditNote(creditNote));
-              } catch (e) {
-                await DatabaseHelper.instance.insertSupplierCreditNote(creditNote);
-              }
+              await DatabaseHelper.instance.convertPurchaseInvoiceToCreditNote(invoice, creditNote);
               
-              final updatedInvoice = invoice.copyWith(creditNoteId: cnId);
-              if (context.mounted) {
-                context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedInvoice));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Avoir $cnNumber créé avec succès'), backgroundColor: AppColors.success),
-                );
-              }
+              if (!mounted) return;
+              try {
+                context.read<SupplierCreditNotesBloc>().add(LoadSupplierCreditNotes());
+              } catch (_) {}
+              try {
+                context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
+              } catch (_) {}
+              try {
+                context.read<StockBloc>().add(LoadStock());
+              } catch (_) {}
+              try {
+                context.read<ProductsBloc>().add(const ResetProductsPagination());
+              } catch (_) {}
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Avoir fournisseur $cnNumber créé et stock réajusté avec succès'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
             },
             child: Text('Confirmer'),
           ),

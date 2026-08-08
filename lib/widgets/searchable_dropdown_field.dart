@@ -6,6 +6,8 @@ import '../models/product.dart';
 import '../models/treasury_account.dart';
 import '../models/transaction_category.dart';
 import '../models/stock_movement.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../blocs/stock/stock_bloc.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 
@@ -676,6 +678,41 @@ Future<String?> showProductSelectDialog(
   String? warehouseId,
   Map<String, double>? warehouseStockMap,
 }) async {
+  Map<String, double> computedStockMap = warehouseStockMap ?? {};
+  if (warehouseStockMap == null) {
+    try {
+      final stockState = context.read<StockBloc>().state;
+      if (stockState is StockLoaded) {
+        bool isWarehouseDefault = false;
+        if (warehouseId != null && warehouseId.isNotEmpty) {
+          try {
+            isWarehouseDefault = stockState.warehouses.firstWhere((w) => w.id == warehouseId).isDefault;
+          } catch (_) {}
+        }
+        for (var p in products) {
+          double stock = 0.0;
+          if (warehouseId == null || warehouseId.isEmpty) {
+            stock = p.stockQty;
+          } else {
+            for (var m in stockState.movements) {
+              if (m.productId == p.id) {
+                final isWarehouseMatch = m.warehouseId == warehouseId || (m.warehouseId == 'default_warehouse' && isWarehouseDefault);
+                if (isWarehouseMatch) {
+                  if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
+                    stock += m.quantity;
+                  } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
+                    stock -= m.quantity;
+                  }
+                }
+              }
+            }
+          }
+          computedStockMap[p.id] = stock;
+        }
+      }
+    } catch (_) {}
+  }
+
   return showDialog<String?>(
     context: context,
     builder: (context) {
@@ -767,8 +804,8 @@ Future<String?> showProductSelectDialog(
                             itemBuilder: (context, index) {
                               final product = filtered[index];
                               final isSelected = product.id == selectedProductId;
-                              final displayStock = (warehouseStockMap != null && warehouseStockMap.containsKey(product.id))
-                                  ? warehouseStockMap[product.id]!
+                              final displayStock = computedStockMap.containsKey(product.id)
+                                  ? computedStockMap[product.id]!
                                   : product.stockQty;
 
                               final stockBg = AppColors.textTertiary.withValues(alpha: 0.12);

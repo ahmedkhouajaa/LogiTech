@@ -10,6 +10,8 @@ import '../models/supplier_order.dart';
 import '../models/supplier.dart';
 import '../models/product.dart';
 import '../models/project.dart';
+import '../blocs/stock/stock_bloc.dart';
+import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../models/receiving_voucher.dart';
@@ -57,6 +59,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
 
   String? _selectedSupplierId;
   String? _selectedProjectId;
+  String? _selectedWarehouseId;
   List<ReceivingVoucherItem> _items = [];
   DateTime _date = DateTime.now();
   final _notesCtrl = TextEditingController();
@@ -108,6 +111,9 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
     context.read<SuppliersBloc>().add(LoadSuppliers());
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
+    if (context.read<StockBloc>().state is! StockLoaded) {
+      context.read<StockBloc>().add(LoadStock());
+    }
 
     if (widget.existing != null) {
       final n = widget.existing!;
@@ -485,6 +491,33 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
               ),
             ],
           ),
+          SizedBox(height: 16),
+          // Entrepôt field (under Projet)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              SizedBox(height: 6),
+              BlocBuilder<StockBloc, StockState>(
+                builder: (context, state) {
+                  final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                  final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
+                  final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
+
+                  return SearchableSelectorField(
+                    hint: 'Sélectionner un entrepôt',
+                    selectedText: warehouseName,
+                    onTap: () async {
+                      final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId);
+                      if (res != null && mounted) {
+                        setState(() => _selectedWarehouseId = res);
+                      }
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
           SizedBox(height: 20),
           // Pricing mode radio
           Text('Les prix des articles sont en', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
@@ -624,7 +657,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                       hint: 'Rechercher un article...',
                       selectedText: selectedProd?.name ?? (item.productName?.isNotEmpty == true ? item.productName : null),
                       onTap: () async {
-                        final res = await showProductSelectDialog(context, products);
+                        final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
                         if (res != null && mounted) {
                           final selection = products.firstWhere((p) => p.id == res);
                           setState(() {
@@ -813,7 +846,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                 hint: 'Sélectionner un article...',
                 selectedText: null,
                 onTap: () async {
-                  final res = await showProductSelectDialog(context, products);
+                  final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
                   if (res != null) {
                     final product = products.firstWhere((p) => p.id == res);
                     setState(() {

@@ -7,6 +7,8 @@ import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../models/supplier_order.dart';
 import '../../../../models/supplier.dart';
 import '../../../../models/project.dart';
+import '../../../../blocs/stock/stock_bloc.dart';
+import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../database/database_helper.dart';
@@ -35,6 +37,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
 
   String? _selectedSupplierId;
   String? _selectedProjectId;
+  String? _selectedWarehouseId;
   List<SupplierOrderItem> _items = [];
   DateTime _date = DateTime.now();
   String _notes = '';
@@ -85,6 +88,9 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
     super.initState();
     context.read<SuppliersBloc>().add(LoadSuppliers());
     context.read<ProjectsBloc>().add(LoadProjects());
+    if (context.read<StockBloc>().state is! StockLoaded) {
+      context.read<StockBloc>().add(LoadStock());
+    }
 
     if (widget.existing != null) {
       final n = widget.existing!;
@@ -208,7 +214,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
       );
     }
 
-    final result = await MobileArticleForm.show(context, initialData: initialData, isPurchase: true);
+    final result = await MobileArticleForm.show(context, initialData: initialData, isPurchase: true, warehouseId: _selectedWarehouseId);
 
     if (result != null) {
       setState(() {
@@ -340,6 +346,27 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                         final res = await showProjectSelectDialog(context, projects, selectedProjectId: _selectedProjectId);
                         if (res != null && mounted) {
                           setState(() => _selectedProjectId = res == '__default__' ? null : res);
+                        }
+                      },
+                    );
+                  },
+                ),
+                SizedBox(height: 16),
+                BlocBuilder<StockBloc, StockState>(
+                  builder: (context, state) {
+                    final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                    final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
+                    final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
+
+                    return SmartSearchableSelector(
+                      label: 'Entrepôt',
+                      hint: 'Sélectionner un entrepôt',
+                      selectedText: warehouseName,
+                      onTap: () async {
+                        if (widget.isReadOnly) return;
+                        final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId);
+                        if (res != null && mounted) {
+                          setState(() => _selectedWarehouseId = res);
                         }
                       },
                     );

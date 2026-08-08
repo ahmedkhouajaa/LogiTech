@@ -9,6 +9,7 @@ import '../../blocs/payments/payments_bloc.dart';
 import '../../blocs/credit_notes/credit_notes_bloc.dart';
 import '../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../../blocs/treasury_transactions/treasury_transactions_bloc.dart';
+import '../../blocs/stock/stock_bloc.dart';
 
 import '../../models/invoice.dart';
 import '../../models/product.dart';
@@ -537,19 +538,25 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                 updatedAt: now,
               );
 
-              try {
-                context.read<CreditNotesBloc>().add(AddCreditNote(creditNote));
-              } catch (e) {
-                await DatabaseHelper.instance.insertCreditNote(creditNote);
-              }
+              await DatabaseHelper.instance.convertInvoiceToCreditNote(inv, creditNote);
               
-              final updatedInvoice = inv.copyWith(creditNoteId: cnId);
               if (!mounted) return;
-              context.read<InvoicesBloc>().add(UpdateInvoice(updatedInvoice));
+              try {
+                context.read<CreditNotesBloc>().add(LoadCreditNotes());
+              } catch (_) {}
+              try {
+                context.read<InvoicesBloc>().add(LoadInvoices());
+              } catch (_) {}
+              try {
+                context.read<StockBloc>().add(LoadStock());
+              } catch (_) {}
+              try {
+                context.read<ProductsBloc>().add(const ResetProductsPagination());
+              } catch (_) {}
               
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Avoir $cnNumber créé avec succès'),
+                  content: Text('Avoir $cnNumber créé et stock réajusté avec succès'),
                   backgroundColor: AppColors.success,
                 ),
               );

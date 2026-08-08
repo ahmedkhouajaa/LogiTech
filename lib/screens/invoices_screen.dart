@@ -15,13 +15,14 @@ import '../widgets/invoice_payment_dialog.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
-import '../blocs/invoices/invoices_bloc.dart';
+import '../blocs/stock/stock_bloc.dart';
 import '../blocs/credit_notes/credit_notes_bloc.dart';
 import '../models/credit_note.dart';
 import 'create_invoice_screen.dart';
 import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import '../database/database_helper.dart';
 
 class InvoicesScreen extends StatefulWidget {
   const InvoicesScreen({super.key});
@@ -933,11 +934,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context); // Close dialog
 
               final now = DateTime.now();
-              final String cnId = Uuid().v4();
+              final String cnId = const Uuid().v4();
 
               final String cnNumber = 'AV-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
               
@@ -964,19 +965,21 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 updatedAt: now,
               );
 
-              // Create the credit note
-              context.read<CreditNotesBloc>().add(AddCreditNote(creditNote));
-              
-              // Update the invoice to link it
-              final updatedInvoice = inv.copyWith(creditNoteId: cnId);
-              context.read<InvoicesBloc>().add(UpdateInvoice(updatedInvoice));
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Avoir $cnNumber créé avec succès'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
+              await DatabaseHelper.instance.convertInvoiceToCreditNote(inv, creditNote);
+
+              if (context.mounted) {
+                context.read<CreditNotesBloc>().add(LoadCreditNotes());
+                context.read<InvoicesBloc>().add(LoadInvoices());
+                context.read<StockBloc>().add(LoadStock());
+                context.read<ProductsBloc>().add(const ResetProductsPagination());
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Avoir $cnNumber créé et stock réajusté avec succès'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             child: Text('Confirmer', style: TextStyle(color: Colors.white)),

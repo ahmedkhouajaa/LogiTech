@@ -311,7 +311,7 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
 
   Future<void> _onDelete(DeleteInvoice event, Emitter<InvoicesState> emit) async {
     try {
-      await DatabaseHelper.instance.softDelete('invoices', event.id);
+      await DatabaseHelper.instance.deleteInvoice(event.id);
       add(LoadInvoices());
     } catch (e) {
       emit(InvoicesError(e.toString()));

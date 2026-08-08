@@ -456,57 +456,67 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                   child: AppCard(
                     padding: EdgeInsets.zero,
                     child: DataTableWidget<StockMovement>(
-                      columns: const ['Reference', 'Date', 'Produit', 'Entrepot', 'Type', 'Quantite'],
+                      columns: const ['Reference', 'Date', 'Produit', 'Entrepot', 'Type', 'Quantite', 'Raison'],
                       rows: filteredMovements,
                       emptyMessage: 'Aucun mouvement de stock trouve',
                       cellBuilder: (m) {
+                        final bool isCancelled = m.isDeleted || (m.notes != null && m.notes!.contains('Suppression'));
                         double val = m.quantity;
                         if (m.type == MovementType.exit && val > 0) val = -val;
                         if (m.type == MovementType.entry && val < 0) val = -val;
                         
                         String qtyStr = '';
-                        Color qtyCol = AppColors.textPrimary;
+                        Color qtyCol = isCancelled ? AppColors.textTertiary : AppColors.textPrimary;
                         if (m.type == MovementType.adjustment) {
                           qtyStr = val > 0 ? '+${formatQuantity(val)}' : (val < 0 ? '-${formatQuantity(val.abs())}' : formatQuantity(val));
-                          qtyCol = val > 0 ? AppColors.success : (val < 0 ? AppColors.error : AppColors.textPrimary);
+                          qtyCol = isCancelled ? AppColors.textTertiary : (val > 0 ? AppColors.success : (val < 0 ? AppColors.error : AppColors.textPrimary));
                         } else if (m.type == MovementType.transfer || m.type == MovementType.transfer_out || m.type == MovementType.transfer_in) {
                           qtyStr = formatQuantity(val.abs());
                         } else if (val > 0) { 
-                          qtyStr = '+${formatQuantity(val)}'; qtyCol = AppColors.success; 
+                          qtyStr = '+${formatQuantity(val)}'; qtyCol = isCancelled ? AppColors.textTertiary : AppColors.success; 
                         } else if (val < 0) { 
-                          qtyStr = '-${formatQuantity(val.abs())}'; qtyCol = AppColors.error; 
+                          qtyStr = '-${formatQuantity(val.abs())}'; qtyCol = isCancelled ? AppColors.textTertiary : AppColors.error; 
                         } else { 
                           qtyStr = formatQuantity(val); 
                         }
 
                         IconData typeIcon = Icons.tune_rounded;
-                        Color typeColor = AppColors.textSecondary;
+                        Color typeColor = isCancelled ? AppColors.textTertiary : AppColors.textSecondary;
                         if (m.type == MovementType.entry) {
                           typeIcon = Icons.arrow_downward_rounded;
-                          typeColor = AppColors.success;
+                          typeColor = isCancelled ? AppColors.textTertiary : AppColors.success;
                         } else if (m.type == MovementType.exit) {
                           typeIcon = Icons.arrow_upward_rounded;
-                          typeColor = AppColors.error;
+                          typeColor = isCancelled ? AppColors.textTertiary : AppColors.error;
                         } else if (m.type == MovementType.transfer || m.type == MovementType.transfer_in || m.type == MovementType.transfer_out) {
                           typeIcon = Icons.swap_horiz_rounded;
                         }
 
+                        final TextStyle textStyle = isCancelled
+                            ? TextStyle(color: AppColors.textTertiary)
+                            : const TextStyle();
+
+                        final String reasonStr = m.notes != null && m.notes!.isNotEmpty
+                            ? m.notes!
+                            : (m.referenceType != null && m.referenceId != null ? '${m.referenceType}: ${m.referenceId}' : '—');
+
                         return [
-                          DataCell(SizedBox(width: 200, child: Text(m.referenceId ?? '—', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)))),
-                          DataCell(Text(formatDate(m.date), style: const TextStyle(fontWeight: FontWeight.w500))),
-                          DataCell(SizedBox(width: 180, child: Text(m.productName ?? '—', style: const TextStyle(fontWeight: FontWeight.bold)))),
-                          DataCell(SizedBox(width: 200, child: Text(m.warehouseName ?? '—'))),
+                          DataCell(SizedBox(width: 160, child: Text(m.referenceId ?? '—', style: isCancelled ? TextStyle(color: AppColors.textTertiary) : TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)))),
+                          DataCell(Text(formatDate(m.date), style: isCancelled ? TextStyle(color: AppColors.textTertiary) : const TextStyle(fontWeight: FontWeight.w500))),
+                          DataCell(SizedBox(width: 160, child: Text(m.productName ?? '—', style: isCancelled ? TextStyle(color: AppColors.textTertiary) : const TextStyle(fontWeight: FontWeight.bold)))),
+                          DataCell(SizedBox(width: 160, child: Text(m.warehouseName ?? '—', style: textStyle))),
                           DataCell(
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(typeIcon, size: 16, color: typeColor),
                                 const SizedBox(width: 6),
-                                Text(m.type.label, style: const TextStyle(fontWeight: FontWeight.w500)),
+                                Text(isCancelled ? '${m.type.label} (Annulé)' : m.type.label, style: isCancelled ? TextStyle(color: AppColors.textTertiary) : const TextStyle(fontWeight: FontWeight.w500)),
                               ],
                             )
                           ),
                           DataCell(Text(qtyStr, style: TextStyle(fontWeight: FontWeight.bold, color: qtyCol))),
+                          DataCell(SizedBox(width: 220, child: Text(reasonStr, style: TextStyle(fontSize: 12, color: isCancelled ? AppColors.textTertiary : AppColors.textSecondary, fontStyle: FontStyle.italic)))),
                         ];
                       },
                     ),

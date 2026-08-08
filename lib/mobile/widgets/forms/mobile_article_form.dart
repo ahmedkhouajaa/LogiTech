@@ -34,17 +34,20 @@ class MobileArticleForm extends StatefulWidget {
   final MobileArticleFormResult? initialData;
   final ValueChanged<MobileArticleFormResult> onSave;
   final bool isPurchase; // if true, uses purchase price instead of selling price
+  final String? warehouseId;
 
   const MobileArticleForm({
     super.key,
     this.initialData,
     required this.onSave,
     this.isPurchase = false,
+    this.warehouseId,
   });
 
   static Future<MobileArticleFormResult?> show(BuildContext context, {
     MobileArticleFormResult? initialData,
     bool isPurchase = false,
+    String? warehouseId,
   }) {
     return showModalBottomSheet<MobileArticleFormResult>(
       context: context,
@@ -53,6 +56,7 @@ class MobileArticleForm extends StatefulWidget {
       builder: (ctx) => MobileArticleForm(
         initialData: initialData,
         isPurchase: isPurchase,
+        warehouseId: warehouseId,
         onSave: (result) => Navigator.pop(ctx, result),
       ),
     );
@@ -202,7 +206,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                               hint: 'Rechercher un article...',
                               selectedText: displayName,
                               onTap: () async {
-                                final res = await showProductSelectDialog(context, products, selectedProductId: _productId);
+                                final res = await showProductSelectDialog(context, products, selectedProductId: _productId, warehouseId: widget.warehouseId);
                                 if (res != null && mounted) {
                                   final sel = products.firstWhere((p) => p.id == res);
                                   final price = widget.isPurchase ? sel.purchasePrice : sel.sellingPrice;

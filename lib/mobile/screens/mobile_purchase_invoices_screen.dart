@@ -58,13 +58,7 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
   }
 
   void _fetchFilteredPurchaseInvoices() {
-    context.read<PurchaseInvoicesBloc>().add(LoadFirstPurchaseInvoices(
-      searchQuery: _searchQuery,
-      supplierId: _selectedSupplierId,
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-      status: _selectedStatus,
-    ));
+    context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
   }
 
   void _onSearchChanged(String query) {
@@ -197,13 +191,7 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
           activeModule: AppModule.purchaseInvoices,
           onModuleSelected: (module) {},
           onRefresh: () async {
-            context.read<PurchaseInvoicesBloc>().add(ResetPurchaseInvoicesPagination(
-              searchQuery: _searchQuery,
-              supplierId: _selectedSupplierId,
-              dateFrom: _dateFrom,
-              dateTo: _dateTo,
-              status: _selectedStatus,
-            ));
+            context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
             context.read<SuppliersBloc>().add(LoadSuppliers());
           },
           onSearchChanged: _onSearchChanged,

@@ -7,6 +7,8 @@ import '../../../../blocs/invoices/invoices_bloc.dart';
 import '../../../../models/credit_note.dart';
 import '../../../../models/customer.dart';
 import '../../../../models/invoice.dart';
+import '../../../../blocs/stock/stock_bloc.dart';
+import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
@@ -33,6 +35,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
 
   String? _selectedCustomerId;
   String? _selectedInvoiceId;
+  String? _selectedWarehouseId;
   List<CreditNoteItem> _items = [];
   DateTime _date = DateTime.now();
   String _reason = '';
@@ -63,6 +66,9 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
     super.initState();
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<InvoicesBloc>().add(LoadInvoices());
+    if (context.read<StockBloc>().state is! StockLoaded) {
+      context.read<StockBloc>().add(LoadStock());
+    }
 
     if (widget.existing != null) {
       final cn = widget.existing!;
@@ -158,7 +164,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
       discountPercent: 0,
     ) : null;
 
-    final result = await MobileArticleForm.show(context, initialData: initialData, isPurchase: false);
+    final result = await MobileArticleForm.show(context, initialData: initialData, isPurchase: false, warehouseId: _selectedWarehouseId);
     if (result != null) {
       final newItem = CreditNoteItem(
         id: item?.id ?? _uuid.v4(),
@@ -242,6 +248,26 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
                         onChanged: (v) => setState(() => _selectedInvoiceId = v),
                         hint: 'Sélectionner une facture',
                       ),
+                    );
+                  },
+                ),
+                SizedBox(height: 16),
+                BlocBuilder<StockBloc, StockState>(
+                  builder: (context, state) {
+                    final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                    final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
+                    final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
+
+                    return SmartSearchableSelector(
+                      label: 'Entrepôt',
+                      hint: 'Sélectionner un entrepôt',
+                      selectedText: warehouseName,
+                      onTap: () async {
+                        final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId);
+                        if (res != null && mounted) {
+                          setState(() => _selectedWarehouseId = res);
+                        }
+                      },
                     );
                   },
                 ),

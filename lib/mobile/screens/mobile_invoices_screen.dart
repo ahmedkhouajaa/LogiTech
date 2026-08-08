@@ -7,6 +7,9 @@ import '../widgets/mobile_advanced_filter_panel.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/invoices/invoices_bloc.dart';
 import '../../blocs/customers/customers_bloc.dart';
+import '../../blocs/products/products_bloc.dart';
+import '../../blocs/projects/projects_bloc.dart';
+import '../../blocs/stock/stock_bloc.dart';
 import '../../models/customer.dart';
 import 'forms/mobile_invoice_form_screen.dart';
 import 'mobile_invoice_detail_screen.dart';
@@ -58,13 +61,7 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
   }
 
   void _fetchFilteredInvoices() {
-    context.read<InvoicesBloc>().add(LoadFirstInvoices(
-      searchQuery: _searchQuery,
-      customerId: _selectedCustomerId,
-      dateFrom: _dateFrom,
-      dateTo: _dateTo,
-      status: _selectedStatus,
-    ));
+    context.read<InvoicesBloc>().add(LoadInvoices());
   }
 
   void _onSearchChanged(String query) {
@@ -172,7 +169,18 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
               onEdit: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobileInvoiceFormScreen(existing: item)),
+                  MaterialPageRoute(
+                    builder: (_) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider.value(value: context.read<InvoicesBloc>()),
+                        BlocProvider.value(value: context.read<CustomersBloc>()),
+                        BlocProvider.value(value: context.read<ProductsBloc>()),
+                        BlocProvider.value(value: context.read<ProjectsBloc>()),
+                        BlocProvider.value(value: context.read<StockBloc>()),
+                      ],
+                      child: MobileInvoiceFormScreen(existing: item),
+                    ),
+                  ),
                 ).then((_) {
                   _fetchFilteredInvoices();
                 });
@@ -187,13 +195,7 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
           activeModule: AppModule.invoices,
           onModuleSelected: (module) {},
           onRefresh: () async {
-            context.read<InvoicesBloc>().add(ResetInvoicesPagination(
-              searchQuery: _searchQuery,
-              customerId: _selectedCustomerId,
-              dateFrom: _dateFrom,
-              dateTo: _dateTo,
-              status: _selectedStatus,
-            ));
+            context.read<InvoicesBloc>().add(LoadInvoices());
             context.read<CustomersBloc>().add(LoadCustomers());
           },
           onSearchChanged: _onSearchChanged,
@@ -246,7 +248,18 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
           onFabPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const MobileInvoiceFormScreen()),
+              MaterialPageRoute(
+                builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider.value(value: context.read<InvoicesBloc>()),
+                    BlocProvider.value(value: context.read<CustomersBloc>()),
+                    BlocProvider.value(value: context.read<ProductsBloc>()),
+                    BlocProvider.value(value: context.read<ProjectsBloc>()),
+                    BlocProvider.value(value: context.read<StockBloc>()),
+                  ],
+                  child: const MobileInvoiceFormScreen(),
+                ),
+              ),
             ).then((_) {
               _fetchFilteredInvoices();
             });

@@ -28,6 +28,7 @@ class PurchaseInvoice {
   final List<PurchaseInvoiceItem> items;
   final String? firebaseUid;
   final String? creditNoteId;
+  final String? warehouseId;
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -43,6 +44,7 @@ class PurchaseInvoice {
     this.projectName,
     this.devisId,
     this.receivingVoucherId,
+    this.warehouseId,
     required this.date,
     required this.dueDate,
     this.status = InvoiceStatus.unpaid,
@@ -74,6 +76,7 @@ class PurchaseInvoice {
         'order_id': orderId, 'delivery_note_id': deliveryNoteId,
         'project_id': projectId, 'devis_id': devisId,
         'receiving_voucher_id': receivingVoucherId,
+        'warehouse_id': warehouseId,
         'date': date.toIso8601String(), 'due_date': dueDate.toIso8601String(),
         'status': status.name, 'total_ht': totalHT, 'total_tva': totalTva,
         'total_ttc': totalTTC, 'amount_paid': amountPaid, 'stamp_tax': stampTax,
@@ -124,6 +127,7 @@ class PurchaseInvoice {
         projectName: map['project_name']?.toString(),
         devisId: map['devis_id']?.toString(),
         receivingVoucherId: map['receiving_voucher_id']?.toString(),
+        warehouseId: map['warehouse_id']?.toString(),
         date: map['date'] != null ? DateTime.tryParse(map['date'].toString()) ?? DateTime.now() : DateTime.now(),
         dueDate: map['due_date'] != null ? DateTime.tryParse(map['due_date'].toString()) ?? DateTime.now() : DateTime.now(),
         status: InvoiceStatus.values.firstWhere(
@@ -152,7 +156,7 @@ class PurchaseInvoice {
   PurchaseInvoice copyWith({
     String? id, String? number, String? supplierId, String? supplierName,
     String? orderId, String? deliveryNoteId, String? projectId, String? projectName,
-    String? devisId, String? receivingVoucherId,
+    String? devisId, String? receivingVoucherId, String? warehouseId,
     DateTime? date, DateTime? dueDate,
     InvoiceStatus? status, double? totalHT, double? totalTva, double? totalTTC,
     double? amountPaid, double? stampTax, double? timbreFiscal,
@@ -170,6 +174,7 @@ class PurchaseInvoice {
         projectName: projectName ?? this.projectName,
         devisId: devisId ?? this.devisId,
         receivingVoucherId: receivingVoucherId ?? this.receivingVoucherId,
+        warehouseId: warehouseId ?? this.warehouseId,
         date: date ?? this.date, dueDate: dueDate ?? this.dueDate,
         status: status ?? this.status, totalHT: totalHT ?? this.totalHT,
         totalTva: totalTva ?? this.totalTva, totalTTC: totalTTC ?? this.totalTTC,

@@ -27,6 +27,7 @@ class Invoice {
   final String? conditionsGenerales;
   final List<InvoiceItem> items;
   final String? firebaseUid;
+  final String? warehouseId;
   final String? creditNoteId;
   final bool isDeleted;
   final DateTime createdAt;
@@ -44,6 +45,7 @@ class Invoice {
     this.projectId,
     this.projectName,
     this.devisId,
+    this.warehouseId,
     required this.date,
     required this.dueDate,
     this.status = InvoiceStatus.unpaid,
@@ -74,7 +76,7 @@ class Invoice {
   Map<String, dynamic> toMap() => {
         'id': id, 'number': number, 'customer_id': customerId,
         'order_id': orderId, 'delivery_note_id': deliveryNoteId,
-        'project_id': projectId, 'devis_id': devisId,
+        'project_id': projectId, 'devis_id': devisId, 'warehouse_id': warehouseId,
         'date': date.toIso8601String(), 'due_date': dueDate.toIso8601String(),
         'status': status.name, 'total_ht': totalHT, 'total_tva': totalTva,
         'total_ttc': totalTTC, 'amount_paid': amountPaid, 'stamp_tax': stampTax,
@@ -108,6 +110,7 @@ class Invoice {
         projectId: map['project_id']?.toString(),
         projectName: map['project_name']?.toString(),
         devisId: map['devis_id']?.toString(),
+        warehouseId: map['warehouse_id']?.toString(),
         date: map['date'] != null ? DateTime.tryParse(map['date'].toString()) ?? DateTime.now() : DateTime.now(),
         dueDate: map['due_date'] != null ? DateTime.tryParse(map['due_date'].toString()) ?? DateTime.now() : DateTime.now(),
         status: InvoiceStatus.values.firstWhere(
@@ -137,7 +140,7 @@ class Invoice {
   Invoice copyWith({
     String? id, String? number, String? customerId, String? customerName,
     String? orderId, String? deliveryNoteId, String? projectId, String? projectName,
-    String? devisId,
+    String? devisId, String? warehouseId,
     DateTime? date, DateTime? dueDate,
     InvoiceStatus? status, double? totalHT, double? totalTva, double? totalTTC,
     double? amountPaid, double? stampTax, double? timbreFiscal,
@@ -154,6 +157,7 @@ class Invoice {
         projectId: projectId ?? this.projectId,
         projectName: projectName ?? this.projectName,
         devisId: devisId ?? this.devisId,
+        warehouseId: warehouseId ?? this.warehouseId,
         date: date ?? this.date, dueDate: dueDate ?? this.dueDate,
         status: status ?? this.status, totalHT: totalHT ?? this.totalHT,
         totalTva: totalTva ?? this.totalTva, totalTTC: totalTTC ?? this.totalTTC,

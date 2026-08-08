@@ -15,7 +15,7 @@ import '../widgets/purchase_invoice_payment_dialog.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
-import '../blocs/purchase_invoices/purchase_invoices_bloc.dart';
+import '../blocs/stock/stock_bloc.dart';
 import '../blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
 import '../blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
 import '../models/supplier_credit_note.dart';
@@ -23,6 +23,7 @@ import 'create_purchase_invoice_screen.dart';
 import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import '../database/database_helper.dart';
 
 class PurchaseInvoicesScreen extends StatefulWidget {
   const PurchaseInvoicesScreen({super.key});
@@ -884,6 +885,8 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
             onPressed: () {
               Navigator.pop(context);
               context.read<PurchaseInvoicesBloc>().add(DeletePurchaseInvoice(inv.id));
+              context.read<StockBloc>().add(LoadStock());
+              context.read<ProductsBloc>().add(const ResetProductsPagination());
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: Text('Supprimer', style: TextStyle(color: Colors.white)),
@@ -921,11 +924,11 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
             child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context); // Close dialog
 
               final now = DateTime.now();
-              final String cnId = Uuid().v4();
+              final String cnId = const Uuid().v4();
 
               final String cnNumber = 'AVF-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
               
@@ -939,7 +942,6 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                   id: const Uuid().v4(),
                   supplierCreditNoteId: cnId,
                   productId: i.productId,
-                  
                   quantity: i.quantity,
                   unitPrice: i.unitPrice,
                   tvaRate: i.tvaRate,
@@ -949,19 +951,21 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                 updatedAt: now,
               );
 
-              // Create the credit note
-              context.read<SupplierCreditNotesBloc>().add(AddSupplierCreditNote(creditNote));
-              
-              // Update the purchaseInvoice to link it
-              final updatedPurchaseInvoice = inv.copyWith(creditNoteId: cnId);
-              context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedPurchaseInvoice));
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Avoir fournisseur $cnNumber créé avec succès'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
+              await DatabaseHelper.instance.convertPurchaseInvoiceToCreditNote(inv, creditNote);
+
+              if (context.mounted) {
+                context.read<SupplierCreditNotesBloc>().add(LoadSupplierCreditNotes());
+                context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
+                context.read<StockBloc>().add(LoadStock());
+                context.read<ProductsBloc>().add(const ResetProductsPagination());
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Avoir fournisseur $cnNumber créé et stock réajusté avec succès'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             child: Text('Confirmer', style: TextStyle(color: Colors.white)),

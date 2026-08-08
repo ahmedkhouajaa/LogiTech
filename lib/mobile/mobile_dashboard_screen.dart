@@ -453,6 +453,8 @@ class MobileDashboardScreen extends StatelessWidget {
         return AppColors.error;
       case InvoiceStatus.cancelled:
         return AppColors.textSecondary;
+      case InvoiceStatus.transformed:
+        return AppColors.info;
     }
   }
 }
