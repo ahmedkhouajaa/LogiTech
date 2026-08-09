@@ -2,10 +2,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/customer_order.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 import '../../services/sync_service.dart';
 
 // ─── Events ────────────────────────────────────────────────────────
-abstract class CustomerOrdersEvent {}
+abstract class CustomerOrdersEvent { const CustomerOrdersEvent(); }
 
 class LoadCustomerOrders extends CustomerOrdersEvent {}
 
@@ -16,7 +17,7 @@ class LoadFirstCustomerOrders extends CustomerOrdersEvent {
   final DateTime? dateTo;
   final String? status;
 
-  LoadFirstCustomerOrders({
+  const LoadFirstCustomerOrders({
     this.searchQuery,
     this.customerId,
     this.dateFrom,
@@ -242,9 +243,8 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
 
   Future<void> _onAddCustomerOrder(AddCustomerOrder event, Emitter<CustomerOrdersState> emit) async {
     try {
-      await _dbHelper.insertCustomerOrder(event.order);
-      await SyncService.instance.triggerSync();
-      add(LoadCustomerOrders());
+      await FirestoreRepository.instance.saveCustomerOrder(event.order);
+      add(const LoadFirstCustomerOrders());
     } catch (e) {
       emit(CustomerOrdersError(e.toString()));
     }
@@ -252,8 +252,8 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
 
   Future<void> _onUpdateCustomerOrder(UpdateCustomerOrder event, Emitter<CustomerOrdersState> emit) async {
     try {
-      await _dbHelper.updateCustomerOrder(event.order);
-      add(LoadCustomerOrders());
+      await FirestoreRepository.instance.saveCustomerOrder(event.order);
+      add(const LoadFirstCustomerOrders());
     } catch (e) {
       emit(CustomerOrdersError(e.toString()));
     }

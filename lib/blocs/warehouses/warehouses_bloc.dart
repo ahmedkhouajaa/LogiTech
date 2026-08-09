@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../database/database_helper.dart';
 import '../../models/stock_movement.dart';
 import '../../services/enterprise_service.dart';
+import '../../services/firestore_repository.dart';
 import 'warehouses_event.dart';
 import 'warehouses_state.dart';
 
@@ -20,101 +21,94 @@ class WarehousesBloc extends Bloc<WarehousesEvent, WarehousesState> {
   Future<void> _onLoadWarehouses(LoadWarehouses event, Emitter<WarehousesState> emit) async {
     emit(WarehousesLoading());
     final currentEntId = EnterpriseService.instance.currentEnterpriseId;
-    print('📦 [DEBUG WarehousesBloc] Loading warehouses for currentEnterpriseId: $currentEntId');
     
+    Query query = FirebaseFirestore.instance.collection('warehouses').where('is_deleted', isEqualTo: 0);
+    if (currentEntId != null && currentEntId.isNotEmpty) {
+      query = query.where('enterprise_id', isEqualTo: currentEntId);
+    }
+
+    bool shownFromCache = false;
     try {
-      var localWarehouses = await dbHelper.getWarehouses();
-      print('📦 [DEBUG WarehousesBloc] Loaded ${localWarehouses.length} warehouses from local SQLite');
+      final cacheSnap = await query.get(const GetOptions(source: Source.cache));
+      if (cacheSnap.docs.isNotEmpty && !emit.isDone) {
+        final accounts = cacheSnap.docs.map((d) => Warehouse.fromMap(d.data() as Map<String, dynamic>)).toList();
+        emit(WarehousesLoaded(accounts));
+        shownFromCache = true;
+      }
+    } catch (_) {}
+
+    try {
+      final serverSnap = await query.get(const GetOptions(source: Source.server));
+      List<Warehouse> accounts = serverSnap.docs.map((d) => Warehouse.fromMap(d.data() as Map<String, dynamic>)).toList();
       
-      // If enterprise has 0 warehouses locally, create 'Entrepôt par défaut' automatically right now
-      if (localWarehouses.isEmpty) {
+      if (!accounts.any((w) => w.isDefault)) {
         final defaultWarehouse = Warehouse(
           id: const Uuid().v4(),
           name: 'Entrepôt par défaut',
           reference: 'WH-001',
           isDefault: true,
           isActive: true,
-          enterpriseId: currentEntId ?? EnterpriseService.instance.currentEnterpriseId,
+          enterpriseId: currentEntId ?? '',
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
-        await dbHelper.insertWarehouse(defaultWarehouse);
-        localWarehouses = await dbHelper.getWarehouses();
-        if (localWarehouses.isEmpty) {
-          localWarehouses = [defaultWarehouse];
-        }
-        
-        FirebaseFirestore.instance
-            .collection('warehouses')
-            .doc(defaultWarehouse.id)
-            .set(defaultWarehouse.toMap(), SetOptions(merge: true))
+        accounts.add(defaultWarehouse);
+
+        FirestoreRepository.instance
+            .saveDocument('warehouses', defaultWarehouse.id, defaultWarehouse.toMap())
             .catchError((e) => print('Firestore warehouse auto-create sync error: $e'));
       }
-      
-      emit(WarehousesLoaded(localWarehouses));
-    } catch (e) {
-      print('📦 [DEBUG WarehousesBloc] SQLite fetch error: $e');
-      emit(WarehousesError(e.toString()));
-      return;
-    }
 
-    // Background Firestore Sync (Non-blocking with 5s timeout)
-    try {
-      Query query = FirebaseFirestore.instance
-          .collection('warehouses')
-          .where('is_deleted', isEqualTo: 0);
+      accounts.sort((a, b) => (a.reference ?? '').compareTo(b.reference ?? ''));
 
-      if (currentEntId != null && currentEntId.isNotEmpty) {
-        query = query.where('enterprise_id', isEqualTo: currentEntId);
-      }
-
-      final snapshot = await query.get().timeout(const Duration(seconds: 5));
-      print('📦 [DEBUG WarehousesBloc] Firestore returned ${snapshot.docs.length} warehouse documents');
-      final firestoreWarehouses = snapshot.docs
-          .map((doc) => Warehouse.fromMap(doc.data() as Map<String, dynamic>))
-          .toList();
-
-      for (var warehouse in firestoreWarehouses) {
-        await dbHelper.insertWarehouse(warehouse);
-      }
-
-      final updatedWarehouses = await dbHelper.getWarehouses();
-      if (!emit.isDone && updatedWarehouses.isNotEmpty) {
-        emit(WarehousesLoaded(updatedWarehouses));
+      if (!emit.isDone) {
+        emit(WarehousesLoaded(accounts));
       }
     } catch (e) {
-      print('📦 [DEBUG WarehousesBloc] Firestore background sync note: $e');
+      if (!shownFromCache && !emit.isDone) {
+        emit(WarehousesLoaded(const []));
+      }
     }
   }
 
   Future<void> _onAddWarehouse(AddWarehouse event, Emitter<WarehousesState> emit) async {
-    print('📦 [DEBUG WarehousesBloc] AddWarehouse event triggered: ${event.warehouse.name} (id: ${event.warehouse.id}, enterpriseId: ${event.warehouse.enterpriseId})');
     final currentState = state;
     List<Warehouse> currentList = [];
     if (currentState is WarehousesLoaded) {
       currentList = List<Warehouse>.from(currentState.warehouses);
     }
-    currentList.removeWhere((w) => w.id == event.warehouse.id);
-    currentList.insert(0, event.warehouse);
-    emit(WarehousesLoaded(currentList));
-    print('📦 [DEBUG WarehousesBloc] Emitted optimistic WarehousesLoaded with ${currentList.length} items');
-
-    try {
-      if (event.warehouse.isDefault) {
-        await _unsetOtherDefaults(exceptId: event.warehouse.id);
+    
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    
+    String? finalReference = event.warehouse.reference;
+    if (finalReference == null || finalReference.trim().isEmpty || finalReference.toUpperCase().startsWith('WH')) {
+      try {
+        finalReference = await DatabaseHelper.instance.generateNextWarehouseSequenceAtomic(currentEntId);
+      } catch (e) {
+        // Fallback silently if offline or failed
       }
-      await dbHelper.insertWarehouse(event.warehouse);
-      print('📦 [DEBUG WarehousesBloc] Successfully inserted warehouse to local SQLite');
-    } catch (e) {
-      print("📦 [DEBUG WarehousesBloc] Failed to save warehouse to SQLite: $e");
     }
 
-    FirebaseFirestore.instance
-        .collection('warehouses')
-        .doc(event.warehouse.id)
-        .set(event.warehouse.toMap(), SetOptions(merge: true))
-        .then((_) => print('📦 [DEBUG WarehousesBloc] Successfully synced warehouse to Firestore'))
-        .catchError((e) => print("📦 [DEBUG WarehousesBloc] Failed to add warehouse to Firestore: $e"));
+    final warehouse = (event.warehouse.enterpriseId == null || event.warehouse.enterpriseId!.isEmpty || finalReference != event.warehouse.reference)
+        ? event.warehouse.copyWith(
+            enterpriseId: currentEntId ?? '',
+            reference: finalReference,
+          )
+        : event.warehouse;
+
+    currentList.removeWhere((w) => w.id == warehouse.id);
+    currentList.insert(0, warehouse);
+    currentList.sort((a, b) => (a.reference ?? '').compareTo(b.reference ?? ''));
+    emit(WarehousesLoaded(currentList));
+
+    try {
+      if (warehouse.isDefault) {
+        await _unsetOtherDefaults(exceptId: warehouse.id);
+      }
+      await FirestoreRepository.instance.saveDocument('warehouses', warehouse.id, warehouse.toMap());
+    } catch (e) {
+      print("Failed to save warehouse to Firestore: $e");
+    }
   }
 
   Future<void> _onUpdateWarehouse(UpdateWarehouse event, Emitter<WarehousesState> emit) async {
@@ -127,6 +121,7 @@ class WarehousesBloc extends Bloc<WarehousesEvent, WarehousesState> {
       } else {
         currentList.insert(0, event.warehouse);
       }
+      currentList.sort((a, b) => (a.reference ?? '').compareTo(b.reference ?? ''));
       emit(WarehousesLoaded(currentList));
     }
 
@@ -134,16 +129,10 @@ class WarehousesBloc extends Bloc<WarehousesEvent, WarehousesState> {
       if (event.warehouse.isDefault) {
         await _unsetOtherDefaults(exceptId: event.warehouse.id);
       }
-      await dbHelper.updateWarehouse(event.warehouse);
+      await FirestoreRepository.instance.saveDocument('warehouses', event.warehouse.id, event.warehouse.toMap());
     } catch (e) {
-      print("Failed to update warehouse in SQLite: $e");
+      print("Failed to update warehouse in Firestore: $e");
     }
-
-    FirebaseFirestore.instance
-        .collection('warehouses')
-        .doc(event.warehouse.id)
-        .set(event.warehouse.toMap(), SetOptions(merge: true))
-        .catchError((e) => print("Failed to update warehouse in Firestore: $e"));
   }
 
   Future<void> _onDeleteWarehouse(DeleteWarehouse event, Emitter<WarehousesState> emit) async {
@@ -155,30 +144,31 @@ class WarehousesBloc extends Bloc<WarehousesEvent, WarehousesState> {
     }
 
     try {
-      await dbHelper.deleteWarehouse(event.id);
+      await FirestoreRepository.instance.softDeleteDocument('warehouses', event.id);
     } catch (e) {
-      print("Failed to delete warehouse in SQLite: $e");
+      print("Failed to delete warehouse in Firestore: $e");
     }
-
-    FirebaseFirestore.instance
-        .collection('warehouses')
-        .doc(event.id)
-        .update({'is_deleted': 1})
-        .catchError((e) => print("Failed to delete warehouse in Firestore: $e"));
   }
 
   Future<void> _unsetOtherDefaults({String? exceptId}) async {
-    final warehouses = await dbHelper.getWarehouses();
-    for (var w in warehouses) {
-      if (w.isDefault && w.id != exceptId) {
-        final updated = w.copyWith(isDefault: false);
-        await dbHelper.updateWarehouse(updated);
-        FirebaseFirestore.instance
-            .collection('warehouses')
-            .doc(w.id)
-            .set(updated.toMap(), SetOptions(merge: true))
-            .catchError((e) => print("Failed to unset default warehouse in Firestore: $e"));
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    Query query = FirebaseFirestore.instance.collection('warehouses')
+      .where('isDefault', isEqualTo: true)
+      .where('is_deleted', isEqualTo: 0);
+      
+    if (currentEntId != null && currentEntId.isNotEmpty) {
+      query = query.where('enterprise_id', isEqualTo: currentEntId);
+    }
+    
+    try {
+      final snap = await query.get();
+      for (var doc in snap.docs) {
+        if (doc.id != exceptId) {
+          await doc.reference.update({'isDefault': false});
+        }
       }
+    } catch (e) {
+      print("Failed to unset other defaults in Firestore: $e");
     }
   }
 }

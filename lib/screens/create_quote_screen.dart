@@ -11,6 +11,9 @@ import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/project.dart';
 import '../blocs/stock/stock_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
+import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
@@ -30,8 +33,10 @@ class CreateQuoteScreen extends StatefulWidget {
 class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
   final _formKey = GlobalKey<FormState>();
   final _uuid = const Uuid();
+  bool _isSaving = false;
 
   String? _selectedCustomerId;
+  String? _selectedCustomerName;
   String? _selectedProjectId;
   String? _selectedWarehouseId;
   List<QuoteItem> _items = [];
@@ -84,13 +89,16 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     if (context.read<StockBloc>().state is! StockLoaded) {
       context.read<StockBloc>().add(LoadStock());
     }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
 
     if (widget.existing != null) {
       final n = widget.existing!;
       _date = n.date;
       _validityDate = n.validityDate;
       _selectedCustomerId = n.customerId;
+      _selectedCustomerName = n.customerName;
       _selectedProjectId = n.projectId;
+      _selectedWarehouseId = n.warehouseId;
       _status = n.status;
       _pricingModeHT = n.pricingMode == 'ht';
       _globalDiscountPercent = n.globalDiscountPercent;
@@ -135,74 +143,99 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
-    String number = widget.existing?.number ?? '';
-    if (number.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextQuoteSequence();
-      number = generateDocNumber('DV', seq);
-    }
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
 
-    final custState = context.read<CustomersBloc>().state;
-    String? custName;
-    if (custState is CustomersLoaded) {
-      final found = custState.customers.firstWhere(
-        (c) => c.id == _selectedCustomerId,
-        orElse: () => Customer(id: '', code: '', name: 'Client Inconnu'),
+    try {
+      final bloc = context.read<QuotesBloc>();
+      final nav = Navigator.of(context);
+      final messenger = ScaffoldMessenger.of(context);
+
+      String number = widget.existing?.number ?? '';
+      if (number.isEmpty) {
+        final seq = await DatabaseHelper.instance.getNextQuoteSequence();
+        number = generateDocNumber('DV', seq);
+      }
+
+      final custState = context.read<CustomersBloc>().state;
+      String? custName = _selectedCustomerName;
+      
+      if (custName == null && custState is CustomersLoaded) {
+        final found = custState.customers.cast<Customer?>().firstWhere(
+          (c) => c?.id == _selectedCustomerId,
+          orElse: () => null,
+        );
+        if (found != null) {
+          custName = found.companyName?.isNotEmpty == true
+              ? found.companyName
+              : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
+        }
+      }
+      custName ??= 'Client Inconnu';
+
+      final quoteId = widget.existing?.id ?? _uuid.v4();
+      final quote = Quote(
+        id: quoteId,
+        number: number,
+        customerId: _selectedCustomerId!,
+        customerName: custName,
+        projectId: _selectedProjectId,
+        warehouseId: _selectedWarehouseId,
+        date: _date,
+        validityDate: _validityDate,
+        status: _status,
+        totalHT: _totalHTAfterDiscount,
+        totalTva: _totalTvaAfterDiscount,
+        totalTTC: _totalTTC,
+        timbreFiscal: _timbreFiscal,
+        globalDiscountPercent: _globalDiscountPercent,
+        globalDiscountAmount: _globalDiscountAmount,
+        pricingMode: _pricingModeHT ? 'ht' : 'ttc',
+        notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
+        items: _items.map((item) => QuoteItem(
+          id: item.id,
+          quoteId: quoteId,
+          productId: item.productId,
+          productName: item.productName,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          tvaRate: item.tvaRate,
+          discountPercent: item.discountPercent,
+          totalHT: item.computedTotalHT,
+        )).toList(),
+        isDeleted: widget.existing?.isDeleted ?? false,
+        isConverted: widget.existing?.isConverted ?? false,
+        convertedTo: widget.existing?.convertedTo,
+        convertedToId: widget.existing?.convertedToId,
       );
-      custName = found.companyName?.isNotEmpty == true
-          ? found.companyName
-          : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
+
+      if (_isEditing) {
+        bloc.add(UpdateQuote(quote));
+      } else {
+        bloc.add(AddQuote(quote));
+      }
+
+      nav.pop();
+      messenger.showSnackBar(SnackBar(
+        content: Text(_isEditing
+            ? 'Devis ${quote.number} mis a jour'
+            : 'Devis ${quote.number} cree avec succes'),
+        backgroundColor: AppColors.success,
+      ));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur: ${e.toString()}'),
+          backgroundColor: AppColors.error,
+        ));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
-
-    final quoteId = widget.existing?.id ?? _uuid.v4();
-    final quote = Quote(
-      id: quoteId,
-      number: number,
-      customerId: _selectedCustomerId!,
-      customerName: custName,
-      projectId: _selectedProjectId,
-      date: _date,
-      validityDate: _validityDate,
-      status: _status,
-      totalHT: _totalHTAfterDiscount,
-      totalTva: _totalTvaAfterDiscount,
-      totalTTC: _totalTTC,
-      timbreFiscal: _timbreFiscal,
-      globalDiscountPercent: _globalDiscountPercent,
-      globalDiscountAmount: _globalDiscountAmount,
-      pricingMode: _pricingModeHT ? 'ht' : 'ttc',
-      notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
-      conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
-      items: _items.map((item) => QuoteItem(
-        id: item.id,
-        quoteId: quoteId,
-        productId: item.productId,
-        productName: item.productName,
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        tvaRate: item.tvaRate,
-        discountPercent: item.discountPercent,
-        totalHT: item.computedTotalHT,
-      )).toList(),
-      isDeleted: widget.existing?.isDeleted ?? false,
-      isConverted: widget.existing?.isConverted ?? false,
-      convertedTo: widget.existing?.convertedTo,
-      convertedToId: widget.existing?.convertedToId,
-    );
-
-    if (_isEditing) {
-      bloc.add(UpdateQuote(quote));
-    } else {
-      bloc.add(AddQuote(quote));
-    }
-
-    nav.pop();
-    messenger.showSnackBar(SnackBar(
-      content: Text(_isEditing
-          ? 'Devis ${quote.number} mis a jour'
-          : 'Devis ${quote.number} cree avec succes'),
-      backgroundColor: AppColors.success,
-    ));
   }
 
   @override
@@ -274,11 +307,16 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
           SizedBox(
             height: 36,
             child: ElevatedButton.icon(
-              onPressed: _save,
-              icon: Icon(Icons.check_rounded, size: 16),
-              label: Text('Valider',
-                  style:
-                      TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              onPressed: _isSaving ? null : _save,
+              icon: _isSaving
+                  ? SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Icon(Icons.check_rounded, size: 16),
+              label: Text(_isSaving ? 'Enregistrement...' : 'Valider',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -447,14 +485,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                           child: BlocBuilder<CustomersBloc, CustomersState>(
                             builder: (context, state) {
                               final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                              final selectedCustomer = customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null);
-                              final displayName = selectedCustomer != null
-                                  ? (selectedCustomer.companyName?.isNotEmpty == true
-                                      ? selectedCustomer.companyName!
-                                      : (selectedCustomer.responsibleName?.isNotEmpty == true
-                                          ? selectedCustomer.responsibleName!
-                                          : selectedCustomer.name))
-                                  : null;
+                              final displayName = _selectedCustomerName;
 
                               return FormField<String>(
                                 initialValue: _selectedCustomerId,
@@ -470,8 +501,16 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                                         onTap: () async {
                                           final res = await _showCustomerSelectDialog(context, customers);
                                           if (res != null) {
-                                            setState(() => _selectedCustomerId = res);
-                                            field.didChange(res);
+                                            final displayName = res.companyName?.isNotEmpty == true
+                                                ? res.companyName!
+                                                : (res.responsibleName?.isNotEmpty == true
+                                                    ? res.responsibleName!
+                                                    : res.name);
+                                            setState(() {
+                                              _selectedCustomerId = res.id;
+                                              _selectedCustomerName = displayName;
+                                            });
+                                            field.didChange(res.id);
                                           }
                                         },
                                       ),
@@ -496,7 +535,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                             message: 'Créer un nouveau client',
                             child: ElevatedButton(
                               onPressed: () async {
-                                final newId = await showDialog<String>(
+                                final newRes = await showDialog<dynamic>(
                                   context: context,
                                   barrierDismissible: false,
                                   builder: (_) => BlocProvider.value(
@@ -504,8 +543,20 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                                     child: const CustomerDialog(existing: null),
                                   ),
                                 );
-                                if (newId != null && mounted) {
-                                  setState(() => _selectedCustomerId = newId);
+                                if (newRes != null && mounted) {
+                                  if (newRes is Customer) {
+                                    final displayName = newRes.companyName?.isNotEmpty == true
+                                        ? newRes.companyName!
+                                        : (newRes.responsibleName?.isNotEmpty == true
+                                            ? newRes.responsibleName!
+                                            : newRes.name);
+                                    setState(() {
+                                      _selectedCustomerId = newRes.id;
+                                      _selectedCustomerName = displayName;
+                                    });
+                                  } else if (newRes is String) {
+                                    setState(() => _selectedCustomerId = newRes);
+                                  }
                                 }
                               },
                               style: ElevatedButton.styleFrom(
@@ -561,9 +612,9 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
             children: [
               Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
-              BlocBuilder<StockBloc, StockState>(
+              BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
-                  final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                  final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                   final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                   final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -666,23 +717,30 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
     );
   }
 
-  Future<String?> _showCustomerSelectDialog(BuildContext context, List<Customer> customers) async {
-    return showDialog<String?>(
+  Future<Customer?> _showCustomerSelectDialog(BuildContext context, List<Customer> initialCustomers) async {
+    try {
+      context.read<CustomersBloc>().add(LoadCustomers());
+    } catch (_) {}
+
+    return showDialog<Customer?>(
       context: context,
       builder: (context) {
         String search = '';
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final query = search.trim().toLowerCase();
-            final filtered = customers.where((c) {
-              if (query.isEmpty) return true;
-              final nameMatch = c.name.toLowerCase().contains(query);
-              final companyMatch = c.companyName?.toLowerCase().contains(query) ?? false;
-              final respMatch = c.responsibleName?.toLowerCase().contains(query) ?? false;
-              final codeMatch = c.code.toLowerCase().contains(query);
-              final phoneMatch = c.phone?.toLowerCase().contains(query) ?? false;
-              return nameMatch || companyMatch || respMatch || codeMatch || phoneMatch;
-            }).toList();
+            return BlocBuilder<CustomersBloc, CustomersState>(
+              builder: (context, state) {
+                final customers = state is CustomersLoaded ? state.customers : initialCustomers;
+                final query = search.trim().toLowerCase();
+                final filtered = customers.where((c) {
+                  if (query.isEmpty) return true;
+                  final nameMatch = c.name.toLowerCase().contains(query);
+                  final companyMatch = c.companyName?.toLowerCase().contains(query) ?? false;
+                  final respMatch = c.responsibleName?.toLowerCase().contains(query) ?? false;
+                  final codeMatch = c.code.toLowerCase().contains(query);
+                  final phoneMatch = c.phone?.toLowerCase().contains(query) ?? false;
+                  return nameMatch || companyMatch || respMatch || codeMatch || phoneMatch;
+                }).toList();
 
             return Dialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
@@ -791,7 +849,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                                       ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
                                       : null,
                                   onTap: () {
-                                    Navigator.of(context).pop(customer.id);
+                                    Navigator.of(context).pop(customer);
                                   },
                                 );
                               },
@@ -805,7 +863,9 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
         );
       },
     );
-  }
+  },
+);
+}
 
   Future<String?> _showProjectSelectDialog(BuildContext context, List<Project> projects) async {
     return showDialog<String?>(
@@ -1364,8 +1424,31 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
           tooltip: 'Créer un nouvel article',
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          onPressed: () async {
+            final newProd = await Navigator.push<dynamic>(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BlocProvider.value(
+                  value: context.read<ProductsBloc>(),
+                  child: const CreateArticleScreen(),
+                ),
+              ),
+            );
+            if (newProd != null && newProd is Product && mounted) {
+              setState(() {
+                _items.add(QuoteItem(
+                  id: _uuid.v4(),
+                  quoteId: widget.existing?.id ?? '',
+                  productId: newProd.id,
+                  productName: newProd.name,
+                  description: newProd.description ?? newProd.name,
+                  quantity: 1,
+                  unitPrice: newProd.sellingPrice,
+                  tvaRate: newProd.tvaRate,
+                  discountPercent: 0,
+                ));
+              });
+            }
           },
           splashRadius: 24,
         ),

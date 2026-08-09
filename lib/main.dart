@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
@@ -57,6 +57,7 @@ import 'utils/constants.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/app_shell_screen.dart';
+import 'screens/onboarding_enterprise_screen.dart';
 
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -65,6 +66,8 @@ import 'dart:ui';
 import 'utils/platform_utils.dart';
 import 'mobile/mobile_login_screen.dart';
 import 'mobile/mobile_shell_screen.dart';
+import 'services/migration_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -82,8 +85,8 @@ void main() async {
   await initializeDateFormatting('fr_FR', null);
   
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
+    
+    
   }
 
   // Initialize Firebase
@@ -99,6 +102,7 @@ void main() async {
   // Initialize enterprise service (loads cached enterprise from SharedPreferences)
   try {
     await EnterpriseService.instance.initialize();
+    await MigrationService.instance.runEnterpriseMigration();
   } catch (e, stack) {
     print('ENTERPRISE SERVICE INIT ERROR: $e');
     print(stack);
@@ -121,7 +125,7 @@ void main() async {
 
   // Warm up the database
   try {
-    await DatabaseHelper.instance.database;
+    
     print('Database initialized successfully.');
   } catch (e, stack) {
     print('DATABASE INIT ERROR: $e');
@@ -419,36 +423,17 @@ class _EnterpriseGateState extends State<_EnterpriseGate> {
             ),
           );
         }
-        if (state is EnterpriseLoaded && state.currentEnterpriseId != null) {
+        if (state is EnterpriseLoaded) {
+          if (state.enterprises.isEmpty || state.currentEnterpriseId == null || state.currentEnterpriseId!.isEmpty) {
+            return const OnboardingEnterpriseScreen();
+          }
           // KeyedSubtree: changing the key forces a full rebuild of the UI shell
           return KeyedSubtree(
             key: ValueKey(state.currentEnterpriseId),
             child: PlatformUtils.isAndroid ? const MobileShellScreen() : const AppShellScreen(),
           );
         }
-        // Error or no enterprise — show error with retry
-        return Scaffold(
-          backgroundColor: AppColors.sidebarBg,
-          body: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.business_rounded, color: Colors.white38, size: 48),
-                SizedBox(height: 16),
-                Text(
-                  state is EnterpriseError ? state.message : 'Aucune entreprise trouvée',
-                  style: TextStyle(color: Colors.white60, fontSize: 14),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () => context.read<EnterpriseBloc>().add(LoadEnterprises()),
-                  child: Text('Réessayer'),
-                ),
-              ],
-            ),
-          ),
-        );
+        return const OnboardingEnterpriseScreen();
       },
     );
   }

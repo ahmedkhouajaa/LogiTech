@@ -1,6 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:uuid/uuid.dart';
+import '../../services/firestore_repository.dart';
 import '../../database/database_helper.dart';
 import '../../models/customer.dart';
 import '../../services/firestore_pagination_service.dart';
@@ -123,30 +126,99 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
   }
 
   Future<void> _onLoadCustomers(LoadCustomers event, Emitter<CustomersState> emit) async {
-    try {
-      final localCustomers = await DatabaseHelper.instance.getCustomers();
-      emit(CustomersLoaded(localCustomers, totalCount: localCustomers.length, hasMore: false));
-    } catch (e) {
-      emit(CustomersLoading());
-    }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     final currentEntId = EnterpriseService.instance.currentEnterpriseId;
-    Query query = FirebaseFirestore.instance.collection('clients').where('is_deleted', isEqualTo: 0);
-    if (currentEntId != null && currentEntId.isNotEmpty) {
-      query = query.where('enterprise_id', isEqualTo: currentEntId);
+
+    // Show loading while we fetch from Firestore
+    emit(CustomersLoading());
+
+    Query buildQuery() {
+      Query query = FirebaseFirestore.instance.collection('clients');
+      if (uid != null && uid.isNotEmpty) {
+        query = query.where('userId', isEqualTo: uid);
+      }
+      if (currentEntId != null && currentEntId.isNotEmpty) {
+        query = query.where('enterprise_id', isEqualTo: currentEntId);
+      }
+      query = query.where('is_deleted', isEqualTo: 0);
+      return query;
     }
-    query.get().then((snapshot) async {
-          final List<Customer> firestoreCustomers = snapshot.docs.map((doc) => Customer.fromMap(doc.data() as Map<String, dynamic>)).toList();
-          for (var customer in firestoreCustomers) {
-            await DatabaseHelper.instance.insertCustomer(customer);
-          }
-          final customers = await DatabaseHelper.instance.getCustomers();
-          if (!emit.isDone) {
-            emit(CustomersLoaded(customers, totalCount: customers.length, hasMore: false));
-          }
-        })
-        .catchError((e) {
-          print("Failed to fetch/save customers from Firestore: $e");
-        });
+
+    List<Customer> parseSnapshot(QuerySnapshot snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
+        data['id'] = doc.id;
+        data['created_at'] = data['created_at'] ?? DateTime.now().toIso8601String();
+        data['updated_at'] = data['updated_at'] ?? DateTime.now().toIso8601String();
+        if (!data.containsKey('code') && data.containsKey('clientCode')) {
+          data['code'] = data['clientCode'];
+        }
+        if (!data.containsKey('customer_type') && data.containsKey('type')) {
+          data['customer_type'] = data['type'];
+        }
+        return Customer.fromMap(data);
+      }).toList();
+    }
+
+    try {
+      // Phase 1: Try cache for instant display
+      bool shownFromCache = false;
+      try {
+        final cacheSnapshot = await buildQuery().get(const GetOptions(source: Source.cache));
+        if (cacheSnapshot.docs.isNotEmpty && !emit.isDone) {
+          final cachedCustomers = parseSnapshot(cacheSnapshot);
+          emit(CustomersLoaded(cachedCustomers, totalCount: cachedCustomers.length, hasMore: false));
+          shownFromCache = true;
+        }
+      } catch (_) {
+        // Cache unavailable, will fetch from server below
+      }
+
+      // Phase 2: Always fetch from server for cross-device sync
+      try {
+        final serverSnapshot = await buildQuery().get(const GetOptions(source: Source.server));
+        List<Customer> customers = parseSnapshot(serverSnapshot);
+
+        // Only create default if server is truly empty for this enterprise
+        if (customers.isEmpty && !shownFromCache) {
+          final defaultCustomer = Customer(
+            id: const Uuid().v4(),
+            code: 'CL-001',
+            name: 'Client Passager',
+            email: 'passager@client.com',
+            phone: '',
+            address: 'Passager',
+            city: '',
+            taxId: '',
+            rc: '',
+            balance: 0.0,
+            creditLimit: 0.0,
+            isDeleted: false,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            enterpriseId: currentEntId,
+          );
+          customers = [defaultCustomer];
+
+          FirestoreRepository.instance
+              .saveDocument('clients', defaultCustomer.id, defaultCustomer.toMap())
+              .catchError((e) => print("Firestore default customer auto-create error: $e"));
+        }
+
+        if (!emit.isDone) {
+          emit(CustomersLoaded(customers, totalCount: customers.length, hasMore: false));
+        }
+      } catch (e) {
+        // Server fetch failed; if we already showed cache data, that's fine
+        if (!shownFromCache && !emit.isDone) {
+          emit(CustomersLoaded([], totalCount: 0, hasMore: false));
+        }
+      }
+    } catch (e) {
+      if (!emit.isDone) {
+        emit(CustomersLoaded([], totalCount: 0, hasMore: false));
+      }
+    }
   }
 
   Future<void> _onLoadFirstClients(LoadFirstClients event, Emitter<CustomersState> emit) async {
@@ -209,46 +281,101 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
   }
 
   Future<void> _onAddCustomer(AddCustomer event, Emitter<CustomersState> emit) async {
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+
+    String finalCode = event.customer.code;
+    
+    // If the code looks like an auto-generated sequence, fetch the next atomic sequence right before saving
+    if (finalCode.toUpperCase().startsWith('CL')) {
+      try {
+        finalCode = await DatabaseHelper.instance.generateNextCustomerSequenceAtomic(currentEntId);
+      } catch (e) {
+        // Fallback to the code provided if offline
+      }
+    }
+
+    // Ensure the customer has the current enterpriseId
+    final customer = (event.customer.enterpriseId == null || event.customer.enterpriseId!.isEmpty || finalCode != event.customer.code)
+        ? Customer(
+            id: event.customer.id,
+            code: finalCode,
+            name: event.customer.name,
+            email: event.customer.email,
+            phone: event.customer.phone,
+            address: event.customer.address,
+            city: event.customer.city,
+            taxId: event.customer.taxId,
+            rc: event.customer.rc,
+            balance: event.customer.balance,
+            creditLimit: event.customer.creditLimit,
+            notes: event.customer.notes,
+            firebaseUid: event.customer.firebaseUid,
+            enterpriseId: currentEntId,
+            isDeleted: event.customer.isDeleted,
+            createdAt: event.customer.createdAt,
+            updatedAt: event.customer.updatedAt,
+            customerType: event.customer.customerType,
+            companyName: event.customer.companyName,
+            responsibleName: event.customer.responsibleName,
+            cinNumber: event.customer.cinNumber,
+            birthDate: event.customer.birthDate,
+            referenceCode: event.customer.referenceCode,
+            streetAddress: event.customer.streetAddress,
+            postalCode: event.customer.postalCode,
+            country: event.customer.country,
+            deliveryStreet: event.customer.deliveryStreet,
+            deliveryCity: event.customer.deliveryCity,
+            deliveryPostalCode: event.customer.deliveryPostalCode,
+            deliveryCountry: event.customer.deliveryCountry,
+            deliverySameAsBilling: event.customer.deliverySameAsBilling,
+            bankAccount: event.customer.bankAccount,
+            tvaSuspension: event.customer.tvaSuspension,
+            tvaAttestation: event.customer.tvaAttestation,
+            tvaStartDate: event.customer.tvaStartDate,
+            tvaEndDate: event.customer.tvaEndDate,
+            priceList: event.customer.priceList,
+            privateNote: event.customer.privateNote,
+          )
+        : event.customer;
+
     final currentState = state;
     List<Customer> currentList = [];
     if (currentState is CustomersLoaded) {
       currentList = List<Customer>.from(currentState.customers);
     }
-    currentList.removeWhere((c) => c.id == event.customer.id);
-    currentList.insert(0, event.customer);
+    currentList.removeWhere((c) => c.id == customer.id);
+    currentList.add(customer);
+    
+    // Maintain list sorted by code ascending
+    currentList.sort((a, b) => a.code.compareTo(b.code));
+    
     emit(CustomersLoaded(currentList, totalCount: currentList.length, hasMore: false));
 
-    DatabaseHelper.instance.insertCustomer(event.customer).catchError((e) {
-      print("Failed to save customer to SQLite: $e");
-    });
-    FirebaseFirestore.instance
-        .collection('clients')
-        .doc(event.customer.id)
-        .set(event.customer.toMap(), SetOptions(merge: true))
-        .catchError((e) => print("Failed to add customer to Firestore: $e"));
+    try {
+      await FirestoreRepository.instance.saveCustomer(customer);
+    } catch (e) {
+      print("Failed to save customer to Firestore: $e");
+    }
   }
 
   Future<void> _onUpdateCustomer(UpdateCustomer event, Emitter<CustomersState> emit) async {
     final currentState = state;
     if (currentState is CustomersLoaded) {
       final currentList = List<Customer>.from(currentState.customers);
-      final idx = currentList.indexWhere((c) => c.id == event.customer.id);
-      if (idx != -1) {
-        currentList[idx] = event.customer;
-      } else {
-        currentList.insert(0, event.customer);
-      }
+      currentList.removeWhere((c) => c.id == event.customer.id);
+      currentList.add(event.customer);
+      
+      // Maintain list sorted by code ascending
+      currentList.sort((a, b) => a.code.compareTo(b.code));
+      
       emit(CustomersLoaded(currentList, totalCount: currentList.length, hasMore: false));
     }
 
-    DatabaseHelper.instance.updateCustomer(event.customer).catchError((e) {
-      print("Failed to update customer in SQLite: $e");
-    });
-    FirebaseFirestore.instance
-        .collection('clients')
-        .doc(event.customer.id)
-        .set(event.customer.toMap(), SetOptions(merge: true))
-        .catchError((e) => print("Failed to update customer in Firestore: $e"));
+    try {
+      await FirestoreRepository.instance.saveCustomer(event.customer);
+    } catch (e) {
+      print("Failed to update customer in Firestore: $e");
+    }
   }
 
   Future<void> _onDeleteCustomer(DeleteCustomer event, Emitter<CustomersState> emit) async {
@@ -258,13 +385,10 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
       emit(CustomersLoaded(currentList, totalCount: currentList.length, hasMore: false));
     }
 
-    DatabaseHelper.instance.deleteCustomer(event.id).catchError((e) {
-      print("Failed to delete customer in SQLite: $e");
-    });
-    FirebaseFirestore.instance
-        .collection('clients')
-        .doc(event.id)
-        .update({'is_deleted': 1})
-        .catchError((e) => print("Failed to delete customer in Firestore: $e"));
+    try {
+      await FirestoreRepository.instance.softDeleteDocument('clients', event.id);
+    } catch (e) {
+      print("Failed to delete customer in Firestore: $e");
+    }
   }
 }

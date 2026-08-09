@@ -18,6 +18,7 @@ class CreateArticleScreen extends StatefulWidget {
 
 class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  bool _isSaving = false;
   
   // Controllers
   late final TextEditingController _nameCtrl, _refCtrl, _descCtrl;
@@ -116,12 +117,19 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                 ),
                 SizedBox(width: 12),
                 ElevatedButton(
-                  onPressed: _save,
+                  onPressed: _isSaving ? null : _save,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   ),
-                  child: Text('Creer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: _isSaving
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : Text(widget.existing == null ? 'Creer' : 'Enregistrer',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -693,38 +701,56 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
     );
   }
 
-  void _save() {
+  Future<void> _save() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
     
-    final product = Product(
-      id: widget.existing?.id ?? const Uuid().v4(),
-      code: widget.existing?.code ?? 'ART-${DateTime.now().millisecondsSinceEpoch % 10000}',
-      name: _nameCtrl.text.trim(),
-      reference: _refCtrl.text.trim().isEmpty ? null : _refCtrl.text.trim(),
-      description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
-      productType: _productType,
-      familyId: _family,
-      subFamilyId: _subFamily,
-      category: _category,
-      brandId: _brand,
-      unit: _unit,
-      purchasePrice: double.tryParse(_purchCtrl.text) ?? 0,
-      sellingPrice: double.tryParse(_sellCtrl.text) ?? 0,
-      tvaRate: _tvaRate,
-      allowNegativeStock: _allowNegativeStock,
-      lowStockAlert: _lowStockAlert,
-      highStockAlert: _highStockAlert,
-      barcode: _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim(),
-      privateNotes: _privateNotesCtrl.text.trim().isEmpty ? null : _privateNotesCtrl.text.trim(),
-      isActive: widget.existing?.isActive ?? true,
-    );
+    setState(() => _isSaving = true);
+    final nav = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
-    if (widget.existing == null) {
-      context.read<ProductsBloc>().add(AddProduct(product));
-    } else {
-      context.read<ProductsBloc>().add(UpdateProduct(product));
+    try {
+      final product = Product(
+        id: widget.existing?.id ?? const Uuid().v4(),
+        code: widget.existing?.code ?? 'ART-${DateTime.now().millisecondsSinceEpoch % 10000}',
+        name: _nameCtrl.text.trim(),
+        reference: _refCtrl.text.trim().isEmpty ? null : _refCtrl.text.trim(),
+        description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+        productType: _productType,
+        familyId: _family,
+        subFamilyId: _subFamily,
+        category: _category,
+        brandId: _brand,
+        unit: _unit,
+        purchasePrice: double.tryParse(_purchCtrl.text) ?? 0,
+        sellingPrice: double.tryParse(_sellCtrl.text) ?? 0,
+        tvaRate: _tvaRate,
+        allowNegativeStock: _allowNegativeStock,
+        lowStockAlert: _lowStockAlert,
+        highStockAlert: _highStockAlert,
+        barcode: _barcodeCtrl.text.trim().isEmpty ? null : _barcodeCtrl.text.trim(),
+        privateNotes: _privateNotesCtrl.text.trim().isEmpty ? null : _privateNotesCtrl.text.trim(),
+        isActive: widget.existing?.isActive ?? true,
+      );
+
+      if (widget.existing == null) {
+        context.read<ProductsBloc>().add(AddProduct(product));
+      } else {
+        context.read<ProductsBloc>().add(UpdateProduct(product));
+      }
+
+      nav.pop(product);
+      messenger.showSnackBar(SnackBar(
+        content: Text(widget.existing == null ? 'Article cree avec succes' : 'Article mis a jour'),
+        backgroundColor: AppColors.success,
+      ));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur: ${e.toString()}'),
+          backgroundColor: AppColors.error,
+        ));
+      }
     }
-    
-    Navigator.pop(context);
   }
 }

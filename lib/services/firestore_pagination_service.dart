@@ -24,16 +24,23 @@ import '../models/product.dart';
 import '../database/database_helper.dart';
 import 'enterprise_service.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+
 Query _applyEnterpriseFilter(Query query) {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid != null && uid.isNotEmpty) {
+    query = query.where('userId', isEqualTo: uid);
+  }
   final currentEntId = EnterpriseService.instance.currentEnterpriseId;
   if (currentEntId != null && currentEntId.isNotEmpty) {
-    return query.where('enterprise_id', isEqualTo: currentEntId);
+    query = query.where('enterprise_id', isEqualTo: currentEntId);
   }
   return query;
 }
 
 class FirestorePaginationService {
-  static final FirestorePaginationService instance = FirestorePaginationService._();
+  static final FirestorePaginationService instance =
+      FirestorePaginationService._();
   FirestorePaginationService._();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -52,6 +59,7 @@ class FirestorePaginationService {
     try {
       _firestore.settings = const Settings(
         persistenceEnabled: true,
+        cacheSizeBytes: 100000000,
       );
       _initialized = true;
     } catch (_) {}
@@ -67,23 +75,10 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetDevisPagination();
-    try {
-      final localQuotes = await DatabaseHelper.instance.getQuotesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (localQuotes.isNotEmpty) {
-        return localQuotes;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('quotes'));
+      Query query = _applyEnterpriseFilter(_firestore.collection('quotes'))
+          .where('is_deleted', isEqualTo: 0);
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -104,29 +99,20 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastDevisSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => Quote.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map((doc) => Quote.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getQuotesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -140,24 +126,8 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final localQuotes = await DatabaseHelper.instance.getQuotesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (localQuotes.isNotEmpty) {
-        return localQuotes;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastDevisSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('quotes'));
+      Query query = _applyEnterpriseFilter(_firestore.collection('quotes'))
+          .where('is_deleted', isEqualTo: 0);
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -184,17 +154,11 @@ class FirestorePaginationService {
         _lastDevisSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => Quote.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map((doc) => Quote.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getQuotesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -210,18 +174,8 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final localCount = await DatabaseHelper.instance.getQuotesCount(
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('quotes'));
+      Query query = _applyEnterpriseFilter(_firestore.collection('quotes'))
+          .where('is_deleted', isEqualTo: 0);
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -241,13 +195,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getQuotesCount(
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -263,20 +211,6 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetInvoicesPagination();
-    try {
-      final local = await DatabaseHelper.instance.getInvoicesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
       Query query = _applyEnterpriseFilter(_firestore.collection('invoices'));
@@ -300,29 +234,20 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastInvoiceSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => Invoice.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map((doc) => Invoice.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getInvoicesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -336,23 +261,6 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getInvoicesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastInvoiceSnapshot == null) return [];
-
       Query query = _applyEnterpriseFilter(_firestore.collection('invoices'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
@@ -380,17 +288,11 @@ class FirestorePaginationService {
         _lastInvoiceSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => Invoice.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map((doc) => Invoice.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getInvoicesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -405,17 +307,6 @@ class FirestorePaginationService {
     DateTime? dateTo,
     String? status,
   }) async {
-    try {
-      final localCount = await DatabaseHelper.instance.getInvoicesCount(
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
     try {
       Query query = _applyEnterpriseFilter(_firestore.collection('invoices'));
 
@@ -437,13 +328,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getInvoicesCount(
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -457,23 +342,11 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetPurchaseInvoicesPagination();
-    try {
-      final local = await DatabaseHelper.instance.getPurchaseInvoicesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('purchase_invoices'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('purchase_invoices'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -494,29 +367,23 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastPurchaseInvoiceSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => PurchaseInvoice.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) =>
+                PurchaseInvoice.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getPurchaseInvoicesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -530,24 +397,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getPurchaseInvoicesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('purchase_invoices'),
       );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastPurchaseInvoiceSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('purchase_invoices'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -574,17 +426,14 @@ class FirestorePaginationService {
         _lastPurchaseInvoiceSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => PurchaseInvoice.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) =>
+                PurchaseInvoice.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getPurchaseInvoicesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -600,18 +449,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final localCount = await DatabaseHelper.instance.getPurchaseInvoicesCount(
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('purchase_invoices'),
       );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('purchase_invoices'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -631,13 +471,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getPurchaseInvoicesCount(
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -647,16 +481,6 @@ class FirestorePaginationService {
     String? searchQuery,
   }) async {
     resetCustomersPagination();
-    try {
-      final local = await DatabaseHelper.instance.getCustomersPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
       Query query = _applyEnterpriseFilter(_firestore.collection('clients'));
@@ -665,19 +489,21 @@ class FirestorePaginationService {
         final q = searchQuery.trim();
         query = query
             .where('name', isGreaterThanOrEqualTo: q)
-            .where('name', isLessThanOrEqualTo: '$q\uf8ff');
+            .where('name', isLessThanOrEqualTo: '$q\uf8ff')
+            .orderBy('name', descending: false);
+      } else {
+        query = query.orderBy('code', descending: false);
       }
 
-      query = query.orderBy('name', descending: false).limit(pageSize);
+      query = query.limit(pageSize);
 
+      // Always fetch from server for cross-device sync
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        // Fallback to cache if server is unreachable
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
@@ -688,22 +514,22 @@ class FirestorePaginationService {
         final data = doc.data() as Map<String, dynamic>;
         final mappedData = Map<String, dynamic>.from(data);
         mappedData['id'] = doc.id;
-        if (!mappedData.containsKey('code') && mappedData.containsKey('clientCode')) {
+        if (!mappedData.containsKey('code') &&
+            mappedData.containsKey('clientCode')) {
           mappedData['code'] = mappedData['clientCode'];
         }
-        if (!mappedData.containsKey('customer_type') && mappedData.containsKey('type')) {
+        if (!mappedData.containsKey('customer_type') &&
+            mappedData.containsKey('type')) {
           mappedData['customer_type'] = mappedData['type'];
         }
-        mappedData['created_at'] = mappedData['created_at'] ?? DateTime.now().toIso8601String();
-        mappedData['updated_at'] = mappedData['updated_at'] ?? DateTime.now().toIso8601String();
+        mappedData['created_at'] =
+            mappedData['created_at'] ?? DateTime.now().toIso8601String();
+        mappedData['updated_at'] =
+            mappedData['updated_at'] ?? DateTime.now().toIso8601String();
         return Customer.fromMap(mappedData);
       }).toList();
     } catch (e) {
-      return DatabaseHelper.instance.getCustomersPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-      );
+      return [];
     }
   }
 
@@ -713,32 +539,19 @@ class FirestorePaginationService {
     String? searchQuery,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getCustomersPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastCustomerSnapshot == null) return [];
-
       Query query = _applyEnterpriseFilter(_firestore.collection('clients'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
         query = query
             .where('name', isGreaterThanOrEqualTo: q)
-            .where('name', isLessThanOrEqualTo: '$q\uf8ff');
+            .where('name', isLessThanOrEqualTo: '$q\uf8ff')
+            .orderBy('name', descending: false);
+      } else {
+        query = query.orderBy('code', descending: false);
       }
 
-      query = query
-          .orderBy('name', descending: false)
-          .startAfterDocument(_lastCustomerSnapshot!)
-          .limit(pageSize);
+      query = query.startAfterDocument(_lastCustomerSnapshot!).limit(pageSize);
 
       final snapshot = await query.get();
       if (snapshot.docs.isNotEmpty) {
@@ -749,22 +562,22 @@ class FirestorePaginationService {
         final data = doc.data() as Map<String, dynamic>;
         final mappedData = Map<String, dynamic>.from(data);
         mappedData['id'] = doc.id;
-        if (!mappedData.containsKey('code') && mappedData.containsKey('clientCode')) {
+        if (!mappedData.containsKey('code') &&
+            mappedData.containsKey('clientCode')) {
           mappedData['code'] = mappedData['clientCode'];
         }
-        if (!mappedData.containsKey('customer_type') && mappedData.containsKey('type')) {
+        if (!mappedData.containsKey('customer_type') &&
+            mappedData.containsKey('type')) {
           mappedData['customer_type'] = mappedData['type'];
         }
-        mappedData['created_at'] = mappedData['created_at'] ?? DateTime.now().toIso8601String();
-        mappedData['updated_at'] = mappedData['updated_at'] ?? DateTime.now().toIso8601String();
+        mappedData['created_at'] =
+            mappedData['created_at'] ?? DateTime.now().toIso8601String();
+        mappedData['updated_at'] =
+            mappedData['updated_at'] ?? DateTime.now().toIso8601String();
         return Customer.fromMap(mappedData);
       }).toList();
     } catch (e) {
-      return DatabaseHelper.instance.getCustomersPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-      );
+      return [];
     }
   }
 
@@ -772,16 +585,7 @@ class FirestorePaginationService {
     _lastCustomerSnapshot = null;
   }
 
-  Future<int> getCustomersCount({
-    String? searchQuery,
-  }) async {
-    try {
-      final localCount = await DatabaseHelper.instance.getCustomersCount(
-        searchQuery: searchQuery,
-      );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
+  Future<int> getCustomersCount({String? searchQuery}) async {
     try {
       Query query = _applyEnterpriseFilter(_firestore.collection('clients'));
 
@@ -795,9 +599,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getCustomersCount(
-        searchQuery: searchQuery,
-      );
+      return 0;
     }
   }
 
@@ -807,37 +609,31 @@ class FirestorePaginationService {
     String? searchQuery,
   }) async {
     resetSuppliersPagination();
-    try {
-      final local = await DatabaseHelper.instance.getSuppliersPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('fournisseurs'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('fournisseurs'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
         query = query
             .where('name', isGreaterThanOrEqualTo: q)
-            .where('name', isLessThanOrEqualTo: '$q\uf8ff');
+            .where('name', isLessThanOrEqualTo: '$q\uf8ff')
+            .orderBy('name', descending: false);
+      } else {
+        query = query.orderBy('code', descending: false);
       }
 
-      query = query.orderBy('name', descending: false).limit(pageSize);
+      query = query.limit(pageSize);
 
+      // Always fetch from server for cross-device sync
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        // Fallback to cache if server is unreachable
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
@@ -848,22 +644,22 @@ class FirestorePaginationService {
         final data = doc.data() as Map<String, dynamic>;
         final mappedData = Map<String, dynamic>.from(data);
         mappedData['id'] = doc.id;
-        if (!mappedData.containsKey('code') && mappedData.containsKey('supplierCode')) {
+        if (!mappedData.containsKey('code') &&
+            mappedData.containsKey('supplierCode')) {
           mappedData['code'] = mappedData['supplierCode'];
         }
-        if (!mappedData.containsKey('supplier_type') && mappedData.containsKey('type')) {
+        if (!mappedData.containsKey('supplier_type') &&
+            mappedData.containsKey('type')) {
           mappedData['supplier_type'] = mappedData['type'];
         }
-        mappedData['created_at'] = mappedData['created_at'] ?? DateTime.now().toIso8601String();
-        mappedData['updated_at'] = mappedData['updated_at'] ?? DateTime.now().toIso8601String();
+        mappedData['created_at'] =
+            mappedData['created_at'] ?? DateTime.now().toIso8601String();
+        mappedData['updated_at'] =
+            mappedData['updated_at'] ?? DateTime.now().toIso8601String();
         return Supplier.fromMap(mappedData);
       }).toList();
     } catch (e) {
-      return DatabaseHelper.instance.getSuppliersPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-      );
+      return [];
     }
   }
 
@@ -873,32 +669,21 @@ class FirestorePaginationService {
     String? searchQuery,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getSuppliersPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('fournisseurs'),
       );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastSupplierSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('fournisseurs'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
         query = query
             .where('name', isGreaterThanOrEqualTo: q)
-            .where('name', isLessThanOrEqualTo: '$q\uf8ff');
+            .where('name', isLessThanOrEqualTo: '$q\uf8ff')
+            .orderBy('name', descending: false);
+      } else {
+        query = query.orderBy('code', descending: false);
       }
 
-      query = query
-          .orderBy('name', descending: false)
-          .startAfterDocument(_lastSupplierSnapshot!)
-          .limit(pageSize);
+      query = query.startAfterDocument(_lastSupplierSnapshot!).limit(pageSize);
 
       final snapshot = await query.get();
       if (snapshot.docs.isNotEmpty) {
@@ -909,22 +694,22 @@ class FirestorePaginationService {
         final data = doc.data() as Map<String, dynamic>;
         final mappedData = Map<String, dynamic>.from(data);
         mappedData['id'] = doc.id;
-        if (!mappedData.containsKey('code') && mappedData.containsKey('supplierCode')) {
+        if (!mappedData.containsKey('code') &&
+            mappedData.containsKey('supplierCode')) {
           mappedData['code'] = mappedData['supplierCode'];
         }
-        if (!mappedData.containsKey('supplier_type') && mappedData.containsKey('type')) {
+        if (!mappedData.containsKey('supplier_type') &&
+            mappedData.containsKey('type')) {
           mappedData['supplier_type'] = mappedData['type'];
         }
-        mappedData['created_at'] = mappedData['created_at'] ?? DateTime.now().toIso8601String();
-        mappedData['updated_at'] = mappedData['updated_at'] ?? DateTime.now().toIso8601String();
+        mappedData['created_at'] =
+            mappedData['created_at'] ?? DateTime.now().toIso8601String();
+        mappedData['updated_at'] =
+            mappedData['updated_at'] ?? DateTime.now().toIso8601String();
         return Supplier.fromMap(mappedData);
       }).toList();
     } catch (e) {
-      return DatabaseHelper.instance.getSuppliersPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-      );
+      return [];
     }
   }
 
@@ -932,18 +717,11 @@ class FirestorePaginationService {
     _lastSupplierSnapshot = null;
   }
 
-  Future<int> getSuppliersCount({
-    String? searchQuery,
-  }) async {
+  Future<int> getSuppliersCount({String? searchQuery}) async {
     try {
-      final localCount = await DatabaseHelper.instance.getSuppliersCount(
-        searchQuery: searchQuery,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('fournisseurs'),
       );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('fournisseurs'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -955,9 +733,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getSuppliersCount(
-        searchQuery: searchQuery,
-      );
+      return 0;
     }
   }
 
@@ -968,17 +744,6 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetPaymentsPagination();
-    try {
-      final local = await DatabaseHelper.instance.getPaymentsPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
       Query query = _applyEnterpriseFilter(_firestore.collection('paiements'));
@@ -998,12 +763,9 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
@@ -1015,17 +777,13 @@ class FirestorePaginationService {
         final mappedData = Map<String, dynamic>.from(data);
         mappedData['id'] = doc.id;
         if (mappedData['payment_date'] == null) {
-          mappedData['payment_date'] = mappedData['date'] ?? DateTime.now().millisecondsSinceEpoch;
+          mappedData['payment_date'] =
+              mappedData['date'] ?? DateTime.now().millisecondsSinceEpoch;
         }
         return Payment.fromMap(mappedData);
       }).toList();
     } catch (e) {
-      return DatabaseHelper.instance.getPaymentsPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -1036,20 +794,6 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getPaymentsPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastPaymentSnapshot == null) return [];
-
       Query query = _applyEnterpriseFilter(_firestore.collection('paiements'));
 
       if (status != null && status.isNotEmpty) {
@@ -1078,17 +822,13 @@ class FirestorePaginationService {
         final mappedData = Map<String, dynamic>.from(data);
         mappedData['id'] = doc.id;
         if (mappedData['payment_date'] == null) {
-          mappedData['payment_date'] = mappedData['date'] ?? DateTime.now().millisecondsSinceEpoch;
+          mappedData['payment_date'] =
+              mappedData['date'] ?? DateTime.now().millisecondsSinceEpoch;
         }
         return Payment.fromMap(mappedData);
       }).toList();
     } catch (e) {
-      return DatabaseHelper.instance.getPaymentsPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -1096,18 +836,7 @@ class FirestorePaginationService {
     _lastPaymentSnapshot = null;
   }
 
-  Future<int> getPaymentsCount({
-    String? searchQuery,
-    String? status,
-  }) async {
-    try {
-      final localCount = await DatabaseHelper.instance.getPaymentsCount(
-        searchQuery: searchQuery,
-        status: status,
-      );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
+  Future<int> getPaymentsCount({String? searchQuery, String? status}) async {
     try {
       Query query = _applyEnterpriseFilter(_firestore.collection('paiements'));
 
@@ -1125,10 +854,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getPaymentsCount(
-        searchQuery: searchQuery,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -1147,7 +873,9 @@ class FirestorePaginationService {
 
     // ── Try Firestore first (always up-to-date) ──
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('customer_orders'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('customer_orders'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1174,7 +902,12 @@ class FirestorePaginationService {
 
       if (snapshot.docs.isNotEmpty) {
         _lastCustomerOrderSnapshot = snapshot.docs.last;
-        return snapshot.docs.map((doc) => CustomerOrder.fromMap(doc.data() as Map<String, dynamic>)).toList();
+        return snapshot.docs
+            .map(
+              (doc) =>
+                  CustomerOrder.fromMap(doc.data() as Map<String, dynamic>),
+            )
+            .toList();
       }
     } catch (_) {}
 
@@ -1209,7 +942,9 @@ class FirestorePaginationService {
         throw Exception('No pagination cursor');
       }
 
-      Query query = _applyEnterpriseFilter(_firestore.collection('customer_orders'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('customer_orders'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1238,9 +973,13 @@ class FirestorePaginationService {
       final snapshot = await query.get(const GetOptions(source: Source.server));
       if (snapshot.docs.isNotEmpty) {
         _lastCustomerOrderSnapshot = snapshot.docs.last;
-        return snapshot.docs.map((doc) => CustomerOrder.fromMap(doc.data() as Map<String, dynamic>)).toList();
+        return snapshot.docs
+            .map(
+              (doc) =>
+                  CustomerOrder.fromMap(doc.data() as Map<String, dynamic>),
+            )
+            .toList();
       }
-      return [];
     } catch (_) {}
 
     // ── Fallback to local SQLite ──
@@ -1272,7 +1011,9 @@ class FirestorePaginationService {
   }) async {
     // ── Try Firestore count().get() (1 read only) ──
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('customer_orders'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('customer_orders'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1324,23 +1065,11 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetStockEntriesPagination();
-    try {
-      final local = await DatabaseHelper.instance.getStockEntriesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('stock_entries'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('stock_entries'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1361,29 +1090,22 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastStockEntrySnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => StockEntry.fromMap(doc.data() as Map<String, dynamic>, [])).toList();
+      return snapshot.docs
+          .map(
+            (doc) => StockEntry.fromMap(doc.data() as Map<String, dynamic>, []),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getStockEntriesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -1397,24 +1119,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getStockEntriesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('stock_entries'),
       );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastStockEntrySnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('stock_entries'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1441,17 +1148,13 @@ class FirestorePaginationService {
         _lastStockEntrySnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => StockEntry.fromMap(doc.data() as Map<String, dynamic>, [])).toList();
+      return snapshot.docs
+          .map(
+            (doc) => StockEntry.fromMap(doc.data() as Map<String, dynamic>, []),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getStockEntriesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -1467,18 +1170,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final localCount = await DatabaseHelper.instance.getStockEntriesCount(
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('stock_entries'),
       );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('stock_entries'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1498,13 +1192,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getStockEntriesCount(
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -1520,23 +1208,11 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetDeliveryNotesPagination();
-    try {
-      final local = await DatabaseHelper.instance.getDeliveryNotesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('delivery_notes'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('delivery_notes'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1557,29 +1233,22 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastDeliveryNoteSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => DeliveryNote.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) => DeliveryNote.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getDeliveryNotesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -1593,24 +1262,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getDeliveryNotesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('delivery_notes'),
       );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastDeliveryNoteSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('delivery_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1637,17 +1291,13 @@ class FirestorePaginationService {
         _lastDeliveryNoteSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => DeliveryNote.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) => DeliveryNote.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getDeliveryNotesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -1663,18 +1313,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final localCount = await DatabaseHelper.instance.getDeliveryNotesCount(
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('delivery_notes'),
       );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('delivery_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1694,13 +1335,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getDeliveryNotesCount(
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -1716,23 +1351,11 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetSupplierOrdersPagination();
-    try {
-      final local = await DatabaseHelper.instance.getSupplierOrdersPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_orders'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('supplier_orders'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1753,29 +1376,22 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastSupplierOrderSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => SupplierOrder.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) => SupplierOrder.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getSupplierOrdersPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -1789,24 +1405,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getSupplierOrdersPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('supplier_orders'),
       );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastSupplierOrderSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_orders'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1833,17 +1434,13 @@ class FirestorePaginationService {
         _lastSupplierOrderSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => SupplierOrder.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) => SupplierOrder.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getSupplierOrdersPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -1859,18 +1456,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final localCount = await DatabaseHelper.instance.getSupplierOrdersCount(
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('supplier_orders'),
       );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_orders'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1890,13 +1478,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getSupplierOrdersCount(
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -1912,23 +1494,11 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetReceivingVouchersPagination();
-    try {
-      final local = await DatabaseHelper.instance.getReceivingVouchersPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('receiving_vouchers'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('receiving_vouchers'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -1949,29 +1519,25 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastReceivingVoucherSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => ReceivingVoucher.fromMap(doc.data() as Map<String, dynamic>, [])).toList();
+      return snapshot.docs
+          .map(
+            (doc) => ReceivingVoucher.fromMap(
+              doc.data() as Map<String, dynamic>,
+              [],
+            ),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getReceivingVouchersPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -1985,24 +1551,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getReceivingVouchersPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('receiving_vouchers'),
       );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastReceivingVoucherSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('receiving_vouchers'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2029,17 +1580,16 @@ class FirestorePaginationService {
         _lastReceivingVoucherSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => ReceivingVoucher.fromMap(doc.data() as Map<String, dynamic>, [])).toList();
+      return snapshot.docs
+          .map(
+            (doc) => ReceivingVoucher.fromMap(
+              doc.data() as Map<String, dynamic>,
+              [],
+            ),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getReceivingVouchersPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -2055,18 +1605,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final localCount = await DatabaseHelper.instance.getReceivingVouchersCount(
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('receiving_vouchers'),
       );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('receiving_vouchers'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2086,13 +1627,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getReceivingVouchersCount(
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -2112,17 +1647,15 @@ class FirestorePaginationService {
 
     // ── Try Firestore first (primary source, always up-to-date) ──
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('bons_sortie'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('bons_sortie'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
         query = query
             .where('number', isGreaterThanOrEqualTo: q)
             .where('number', isLessThanOrEqualTo: '$q\uf8ff');
-      } else {
-        query = query
-            .where('number', isGreaterThanOrEqualTo: 'BS-')
-            .where('number', isLessThanOrEqualTo: 'BS-\uf8ff');
       }
 
       if (customerId != null && customerId.isNotEmpty) {
@@ -2140,7 +1673,12 @@ class FirestorePaginationService {
 
       if (snapshot.docs.isNotEmpty) {
         _lastExitVoucherSnapshot = snapshot.docs.last;
-        return snapshot.docs.map((doc) => StockWithdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
+        return snapshot.docs
+            .map(
+              (doc) =>
+                  StockWithdrawal.fromMap(doc.data() as Map<String, dynamic>),
+            )
+            .toList();
       }
     } catch (_) {}
 
@@ -2177,7 +1715,9 @@ class FirestorePaginationService {
         throw Exception('No pagination cursor');
       }
 
-      Query query = _applyEnterpriseFilter(_firestore.collection('bons_sortie'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('bons_sortie'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2206,9 +1746,13 @@ class FirestorePaginationService {
       final snapshot = await query.get(const GetOptions(source: Source.server));
       if (snapshot.docs.isNotEmpty) {
         _lastExitVoucherSnapshot = snapshot.docs.last;
-        return snapshot.docs.map((doc) => StockWithdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
+        return snapshot.docs
+            .map(
+              (doc) =>
+                  StockWithdrawal.fromMap(doc.data() as Map<String, dynamic>),
+            )
+            .toList();
       }
-      return [];
     } catch (_) {}
 
     // ── Fallback to local SQLite ──
@@ -2240,7 +1784,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('bons_sortie'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('bons_sortie'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2293,24 +1839,11 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetStockWithdrawalsPagination();
-    try {
-      final local = await DatabaseHelper.instance.getStockWithdrawalsPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-        numberPrefix: 'BP-',
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('bons_sortie'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('bons_sortie'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2335,30 +1868,23 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastStockWithdrawalSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => StockWithdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) =>
+                StockWithdrawal.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getStockWithdrawalsPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-        numberPrefix: 'BP-',
-      );
+      return [];
     }
   }
 
@@ -2372,25 +1898,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getStockWithdrawalsPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-        numberPrefix: 'BP-',
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('bons_sortie'),
       );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastStockWithdrawalSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('bons_sortie'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2421,18 +1931,14 @@ class FirestorePaginationService {
         _lastStockWithdrawalSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => StockWithdrawal.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) =>
+                StockWithdrawal.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getStockWithdrawalsPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-        numberPrefix: 'BP-',
-      );
+      return [];
     }
   }
 
@@ -2448,7 +1954,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('bons_sortie'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('bons_sortie'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2501,23 +2009,11 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetCreditNotesPagination();
-    try {
-      final local = await DatabaseHelper.instance.getCreditNotesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('credit_notes'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('credit_notes'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2538,29 +2034,20 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastCreditNoteSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => CreditNote.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map((doc) => CreditNote.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getCreditNotesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -2574,24 +2061,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getCreditNotesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('credit_notes'),
       );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastCreditNoteSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('credit_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2618,17 +2090,11 @@ class FirestorePaginationService {
         _lastCreditNoteSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => CreditNote.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map((doc) => CreditNote.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getCreditNotesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -2644,18 +2110,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final localCount = await DatabaseHelper.instance.getCreditNotesCount(
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('credit_notes'),
       );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('credit_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2675,13 +2132,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getCreditNotesCount(
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -2697,23 +2148,11 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetSupplierCreditNotesPagination();
-    try {
-      final local = await DatabaseHelper.instance.getSupplierCreditNotesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_credit_notes'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('supplier_credit_notes'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2734,29 +2173,25 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastSupplierCreditNoteSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => SupplierCreditNote.fromMap(doc.data() as Map<String, dynamic>, [])).toList();
+      return snapshot.docs
+          .map(
+            (doc) => SupplierCreditNote.fromMap(
+              doc.data() as Map<String, dynamic>,
+              [],
+            ),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getSupplierCreditNotesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -2770,24 +2205,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getSupplierCreditNotesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('supplier_credit_notes'),
       );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastSupplierCreditNoteSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_credit_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2814,17 +2234,16 @@ class FirestorePaginationService {
         _lastSupplierCreditNoteSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => SupplierCreditNote.fromMap(doc.data() as Map<String, dynamic>, [])).toList();
+      return snapshot.docs
+          .map(
+            (doc) => SupplierCreditNote.fromMap(
+              doc.data() as Map<String, dynamic>,
+              [],
+            ),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getSupplierCreditNotesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -2840,18 +2259,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final localCount = await DatabaseHelper.instance.getSupplierCreditNotesCount(
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('supplier_credit_notes'),
       );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_credit_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2871,13 +2281,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getSupplierCreditNotesCount(
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -2893,23 +2297,11 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetReturnNotesPagination();
-    try {
-      final local = await DatabaseHelper.instance.getReturnNotesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('return_notes'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('return_notes'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -2930,29 +2322,20 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastReturnNoteSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => ReturnNote.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map((doc) => ReturnNote.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getReturnNotesPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -2966,24 +2349,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getReturnNotesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('return_notes'),
       );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastReturnNoteSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('return_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3010,17 +2378,11 @@ class FirestorePaginationService {
         _lastReturnNoteSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => ReturnNote.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map((doc) => ReturnNote.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getReturnNotesPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -3036,18 +2398,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final localCount = await DatabaseHelper.instance.getReturnNotesCount(
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('return_notes'),
       );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('return_notes'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3067,13 +2420,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getReturnNotesCount(
-        searchQuery: searchQuery,
-        customerId: customerId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -3089,23 +2436,11 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetSupplierReturnsPagination();
-    try {
-      final local = await DatabaseHelper.instance.getSupplierReturnsPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_returns'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('supplier_returns'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3126,29 +2461,22 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastSupplierReturnSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => SupplierReturn.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) => SupplierReturn.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getSupplierReturnsPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -3162,24 +2490,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getSupplierReturnsPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('supplier_returns'),
       );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastSupplierReturnSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_returns'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3206,17 +2519,13 @@ class FirestorePaginationService {
         _lastSupplierReturnSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => SupplierReturn.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) => SupplierReturn.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getSupplierReturnsPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -3232,18 +2541,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final localCount = await DatabaseHelper.instance.getSupplierReturnsCount(
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('supplier_returns'),
       );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('supplier_returns'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3263,13 +2563,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getSupplierReturnsCount(
-        searchQuery: searchQuery,
-        supplierId: supplierId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -3285,23 +2579,11 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetInventorySheetsPagination();
-    try {
-      final local = await DatabaseHelper.instance.getInventorySheetsPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        warehouseId: warehouseId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('inventory_sheets'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('inventory_sheets'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3322,29 +2604,22 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastInventorySheetSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => InventorySheet.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) => InventorySheet.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getInventorySheetsPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        warehouseId: warehouseId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -3358,24 +2633,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getInventorySheetsPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        warehouseId: warehouseId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('inventory_sheets'),
       );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastInventorySheetSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('inventory_sheets'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3402,17 +2662,13 @@ class FirestorePaginationService {
         _lastInventorySheetSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => InventorySheet.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) => InventorySheet.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getInventorySheetsPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        warehouseId: warehouseId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -3428,18 +2684,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final localCount = await DatabaseHelper.instance.getInventorySheetsCount(
-        searchQuery: searchQuery,
-        warehouseId: warehouseId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('inventory_sheets'),
       );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('inventory_sheets'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3459,13 +2706,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getInventorySheetsCount(
-        searchQuery: searchQuery,
-        warehouseId: warehouseId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -3481,23 +2722,11 @@ class FirestorePaginationService {
     String? status,
   }) async {
     resetStockTransfersPagination();
-    try {
-      final local = await DatabaseHelper.instance.getStockTransfersPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        sourceWarehouseId: sourceWarehouseId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('stock_transfers'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('stock_transfers'),
+      );
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3507,7 +2736,10 @@ class FirestorePaginationService {
       }
 
       if (sourceWarehouseId != null && sourceWarehouseId.isNotEmpty) {
-        query = query.where('source_warehouse_id', isEqualTo: sourceWarehouseId);
+        query = query.where(
+          'source_warehouse_id',
+          isEqualTo: sourceWarehouseId,
+        );
       }
 
       if (status != null && status != 'Tous' && status.isNotEmpty) {
@@ -3518,29 +2750,22 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastStockTransferSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => StockTransfer.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) => StockTransfer.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getStockTransfersPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-        sourceWarehouseId: sourceWarehouseId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -3554,24 +2779,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final local = await DatabaseHelper.instance.getStockTransfersPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        sourceWarehouseId: sourceWarehouseId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('stock_transfers'),
       );
-      if (local.isNotEmpty) {
-        return local;
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastStockTransferSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('stock_transfers'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3581,7 +2791,10 @@ class FirestorePaginationService {
       }
 
       if (sourceWarehouseId != null && sourceWarehouseId.isNotEmpty) {
-        query = query.where('source_warehouse_id', isEqualTo: sourceWarehouseId);
+        query = query.where(
+          'source_warehouse_id',
+          isEqualTo: sourceWarehouseId,
+        );
       }
 
       if (status != null && status != 'Tous' && status.isNotEmpty) {
@@ -3598,17 +2811,13 @@ class FirestorePaginationService {
         _lastStockTransferSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) => StockTransfer.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) => StockTransfer.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      return DatabaseHelper.instance.getStockTransfersPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-        sourceWarehouseId: sourceWarehouseId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return [];
     }
   }
 
@@ -3624,18 +2833,9 @@ class FirestorePaginationService {
     String? status,
   }) async {
     try {
-      final localCount = await DatabaseHelper.instance.getStockTransfersCount(
-        searchQuery: searchQuery,
-        sourceWarehouseId: sourceWarehouseId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('stock_transfers'),
       );
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('stock_transfers'));
 
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
@@ -3645,7 +2845,10 @@ class FirestorePaginationService {
       }
 
       if (sourceWarehouseId != null && sourceWarehouseId.isNotEmpty) {
-        query = query.where('source_warehouse_id', isEqualTo: sourceWarehouseId);
+        query = query.where(
+          'source_warehouse_id',
+          isEqualTo: sourceWarehouseId,
+        );
       }
 
       if (status != null && status != 'Tous' && status.isNotEmpty) {
@@ -3655,13 +2858,7 @@ class FirestorePaginationService {
       final aggregateSnapshot = await query.count().get();
       return aggregateSnapshot.count ?? 0;
     } catch (e) {
-      return DatabaseHelper.instance.getStockTransfersCount(
-        searchQuery: searchQuery,
-        sourceWarehouseId: sourceWarehouseId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
-        status: status,
-      );
+      return 0;
     }
   }
 
@@ -3676,18 +2873,9 @@ class FirestorePaginationService {
   }) async {
     resetTreasuryAccountsPagination();
     try {
-      final localAccounts = await DatabaseHelper.instance.getTreasuryAccountsPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('treasury_accounts'),
       );
-      if (localAccounts.isNotEmpty) {
-        return localAccounts.map((e) => TreasuryAccount.fromMap(e)).toList();
-      }
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('treasury_accounts'));
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
         query = query
@@ -3698,24 +2886,27 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastTreasuryAccountSnapshot = snapshot.docs.last;
       }
-      return snapshot.docs.map((doc) => TreasuryAccount.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) =>
+                TreasuryAccount.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      final localData = await DatabaseHelper.instance.getTreasuryAccountsPaginated(
-        limit: pageSize,
-        offset: 0,
-        searchQuery: searchQuery,
-      );
+      final localData = await DatabaseHelper.instance
+          .getTreasuryAccountsPaginated(
+            limit: pageSize,
+            offset: 0,
+            searchQuery: searchQuery,
+          );
       return localData.map((e) => TreasuryAccount.fromMap(e)).toList();
     }
   }
@@ -3726,60 +2917,52 @@ class FirestorePaginationService {
     String? searchQuery,
   }) async {
     try {
-      final localAccounts = await DatabaseHelper.instance.getTreasuryAccountsPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('treasury_accounts'),
       );
-      if (localAccounts.isNotEmpty) {
-        return localAccounts.map((e) => TreasuryAccount.fromMap(e)).toList();
-      }
-    } catch (_) {}
-
-    try {
-      if (_lastTreasuryAccountSnapshot == null) return [];
-
-      Query query = _applyEnterpriseFilter(_firestore.collection('treasury_accounts'));
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
         query = query
             .where('name', isGreaterThanOrEqualTo: q)
             .where('name', isLessThanOrEqualTo: '$q\uf8ff');
       }
-      query = query.orderBy('name', descending: false).startAfterDocument(_lastTreasuryAccountSnapshot!).limit(pageSize);
+      query = query
+          .orderBy('name', descending: false)
+          .startAfterDocument(_lastTreasuryAccountSnapshot!)
+          .limit(pageSize);
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastTreasuryAccountSnapshot = snapshot.docs.last;
       }
-      return snapshot.docs.map((doc) => TreasuryAccount.fromMap(doc.data() as Map<String, dynamic>)).toList();
+      return snapshot.docs
+          .map(
+            (doc) =>
+                TreasuryAccount.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
     } catch (e) {
-      final localData = await DatabaseHelper.instance.getTreasuryAccountsPaginated(
-        limit: pageSize,
-        offset: currentOffset,
-        searchQuery: searchQuery,
-      );
+      final localData = await DatabaseHelper.instance
+          .getTreasuryAccountsPaginated(
+            limit: pageSize,
+            offset: currentOffset,
+            searchQuery: searchQuery,
+          );
       return localData.map((e) => TreasuryAccount.fromMap(e)).toList();
     }
   }
 
   Future<int> getTreasuryAccountsCount({String? searchQuery}) async {
     try {
-      final localCount = await DatabaseHelper.instance.getTreasuryAccountsCount(searchQuery: searchQuery);
-      if (localCount > 0) return localCount;
-    } catch (_) {}
-
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('treasury_accounts'));
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('treasury_accounts'),
+      );
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
         query = query
@@ -3789,7 +2972,9 @@ class FirestorePaginationService {
       final AggregateQuerySnapshot snapshot = await query.count().get();
       return snapshot.count ?? 0;
     } catch (e) {
-      return await DatabaseHelper.instance.getTreasuryAccountsCount(searchQuery: searchQuery);
+      return await DatabaseHelper.instance.getTreasuryAccountsCount(
+        searchQuery: searchQuery,
+      );
     }
   }
 
@@ -3807,22 +2992,28 @@ class FirestorePaginationService {
   }) async {
     resetTreasuryTransactionsPagination();
     try {
-      final localData = await DatabaseHelper.instance.getTreasuryTransactionsPaginated(
-        pageSize,
-        0,
-        searchQuery ?? '',
-        typeFilter,
-      );
+      final localData = await DatabaseHelper.instance
+          .getTreasuryTransactionsPaginated(
+            pageSize,
+            0,
+            searchQuery ?? '',
+            typeFilter,
+          );
       if (localData.isNotEmpty) {
         return localData.map((e) => TreasuryTransaction.fromMap(e)).toList();
       }
     } catch (_) {}
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('treasury_transactions'));
-      
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('treasury_transactions'),
+      );
+
       if (typeFilter != 'Tous') {
-        query = query.where('type', isEqualTo: typeFilter == 'Entrée' ? 'income' : 'expense');
+        query = query.where(
+          'type',
+          isEqualTo: typeFilter == 'Entrée' ? 'income' : 'expense',
+        );
       }
 
       // No range query on reference for transactions to allow ordering by date
@@ -3831,37 +3022,43 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastTreasuryTransactionSnapshot = snapshot.docs.last;
       }
-      
-      var results = snapshot.docs.map((doc) => TreasuryTransaction.fromMap(doc.data() as Map<String, dynamic>)).toList();
-      
+
+      var results = snapshot.docs
+          .map(
+            (doc) =>
+                TreasuryTransaction.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
+
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim().toLowerCase();
-        results = results.where((t) => 
-          (t.transactionNumber.toLowerCase().contains(q)) || 
-          (t.accountName?.toLowerCase().contains(q) ?? false) ||
-          (t.description?.toLowerCase().contains(q) ?? false)
-        ).toList();
+        results = results
+            .where(
+              (t) =>
+                  (t.transactionNumber.toLowerCase().contains(q)) ||
+                  (t.accountName?.toLowerCase().contains(q) ?? false) ||
+                  (t.description?.toLowerCase().contains(q) ?? false),
+            )
+            .toList();
       }
-      
+
       return results;
     } catch (e) {
-      final localData = await DatabaseHelper.instance.getTreasuryTransactionsPaginated(
-        pageSize,
-        0,
-        searchQuery ?? '',
-        typeFilter,
-      );
+      final localData = await DatabaseHelper.instance
+          .getTreasuryTransactionsPaginated(
+            pageSize,
+            0,
+            searchQuery ?? '',
+            typeFilter,
+          );
       return localData.map((e) => TreasuryTransaction.fromMap(e)).toList();
     }
   }
@@ -3873,24 +3070,28 @@ class FirestorePaginationService {
     String typeFilter = 'Tous',
   }) async {
     try {
-      final localData = await DatabaseHelper.instance.getTreasuryTransactionsPaginated(
-        pageSize,
-        currentOffset,
-        searchQuery ?? '',
-        typeFilter,
-      );
+      final localData = await DatabaseHelper.instance
+          .getTreasuryTransactionsPaginated(
+            pageSize,
+            currentOffset,
+            searchQuery ?? '',
+            typeFilter,
+          );
       if (localData.isNotEmpty) {
         return localData.map((e) => TreasuryTransaction.fromMap(e)).toList();
       }
     } catch (_) {}
 
     try {
-      if (_lastTreasuryTransactionSnapshot == null) return [];
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('treasury_transactions'),
+      );
 
-      Query query = _applyEnterpriseFilter(_firestore.collection('treasury_transactions'));
-      
       if (typeFilter != 'Tous') {
-        query = query.where('type', isEqualTo: typeFilter == 'Entrée' ? 'income' : 'expense');
+        query = query.where(
+          'type',
+          isEqualTo: typeFilter == 'Entrée' ? 'income' : 'expense',
+        );
       }
 
       query = query
@@ -3900,58 +3101,70 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
-          snapshot = await query.get(const GetOptions(source: Source.server));
-        }
-      } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.server));
+      } catch (_) {
+        snapshot = await query.get(const GetOptions(source: Source.cache));
       }
 
       if (snapshot.docs.isNotEmpty) {
         _lastTreasuryTransactionSnapshot = snapshot.docs.last;
       }
-      
-      var results = snapshot.docs.map((doc) => TreasuryTransaction.fromMap(doc.data() as Map<String, dynamic>)).toList();
-      
+
+      var results = snapshot.docs
+          .map(
+            (doc) =>
+                TreasuryTransaction.fromMap(doc.data() as Map<String, dynamic>),
+          )
+          .toList();
+
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim().toLowerCase();
-        results = results.where((t) => 
-          (t.transactionNumber.toLowerCase().contains(q)) || 
-          (t.accountName?.toLowerCase().contains(q) ?? false) ||
-          (t.description?.toLowerCase().contains(q) ?? false)
-        ).toList();
+        results = results
+            .where(
+              (t) =>
+                  (t.transactionNumber.toLowerCase().contains(q)) ||
+                  (t.accountName?.toLowerCase().contains(q) ?? false) ||
+                  (t.description?.toLowerCase().contains(q) ?? false),
+            )
+            .toList();
       }
-      
+
       return results;
     } catch (e) {
-      final localData = await DatabaseHelper.instance.getTreasuryTransactionsPaginated(
-        pageSize,
-        currentOffset,
-        searchQuery ?? '',
-        typeFilter,
-      );
+      final localData = await DatabaseHelper.instance
+          .getTreasuryTransactionsPaginated(
+            pageSize,
+            currentOffset,
+            searchQuery ?? '',
+            typeFilter,
+          );
       return localData.map((e) => TreasuryTransaction.fromMap(e)).toList();
     }
   }
 
-  Future<int> getTreasuryTransactionsCount({String? searchQuery, String typeFilter = 'Tous'}) async {
+  Future<int> getTreasuryTransactionsCount({
+    String? searchQuery,
+    String typeFilter = 'Tous',
+  }) async {
     try {
-      final localCount = await DatabaseHelper.instance.getTreasuryTransactionsCount(searchQuery ?? '', typeFilter);
-      if (localCount > 0) return localCount;
-    } catch (_) {}
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('treasury_transactions'),
+      );
 
-    try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('treasury_transactions'));
-      
       if (typeFilter != 'Tous') {
-        query = query.where('type', isEqualTo: typeFilter == 'Entrée' ? 'income' : 'expense');
+        query = query.where(
+          'type',
+          isEqualTo: typeFilter == 'Entrée' ? 'income' : 'expense',
+        );
       }
-      
+
       final AggregateQuerySnapshot snapshot = await query.count().get();
       return snapshot.count ?? 0;
     } catch (e) {
-      return await DatabaseHelper.instance.getTreasuryTransactionsCount(searchQuery ?? '', typeFilter);
+      return await DatabaseHelper.instance.getTreasuryTransactionsCount(
+        searchQuery ?? '',
+        typeFilter,
+      );
     }
   }
 
@@ -3975,7 +3188,9 @@ class FirestorePaginationService {
         if (!isSales && p.direction != 'decaissement') return false;
 
         if (statusFilter != 'Tous') {
-          String dbStatus = statusFilter == 'Payé' ? 'paid' : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');
+          String dbStatus = statusFilter == 'Payé'
+              ? 'paid'
+              : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');
           if (p.status != dbStatus) return false;
         }
 
@@ -3984,24 +3199,34 @@ class FirestorePaginationService {
           final ref = p.reference?.toLowerCase() ?? '';
           final num = p.paymentNumber.toLowerCase();
           final contact = p.contactName?.toLowerCase() ?? '';
-          if (!ref.contains(q) && !num.contains(q) && !contact.contains(q)) return false;
+          if (!ref.contains(q) && !num.contains(q) && !contact.contains(q))
+            return false;
         }
 
         return true;
       }).toList();
 
-      return filtered.map((p) => RetenueSourceVente(
-        id: p.id,
-        invoiceReference: (p.reference != null && p.reference!.isNotEmpty) ? p.reference! : p.paymentNumber,
-        clientName: p.contactName ?? 'Inconnu',
-        date: p.paymentDate,
-        amount: p.amount,
-        status: (p.status == 'paid' || p.status == 'payee') ? 'Payé' : (p.status == 'cancelled' ? 'Annulé' : 'En attente'),
-      )).toList();
+      return filtered
+          .map(
+            (p) => RetenueSourceVente(
+              id: p.id,
+              invoiceReference: (p.reference != null && p.reference!.isNotEmpty)
+                  ? p.reference!
+                  : p.paymentNumber,
+              clientName: p.contactName ?? 'Inconnu',
+              date: p.paymentDate,
+              amount: p.amount,
+              status: (p.status == 'paid' || p.status == 'payee')
+                  ? 'Payé'
+                  : (p.status == 'cancelled' ? 'Annulé' : 'En attente'),
+            ),
+          )
+          .toList();
     } catch (e) {
       print("Error reading local payments DB: $e");
-      return [];
     }
+
+    return [];
   }
 
   Future<List<RetenueSourceVente>> getFirstRetenueSourceVentes({
@@ -4013,15 +3238,20 @@ class FirestorePaginationService {
     resetRetenueSourceVentesPagination();
     try {
       Query query = _applyEnterpriseFilter(_firestore.collection('payments'))
-        .where('method', isEqualTo: 'retenue_source')
-        .where('direction', isEqualTo: isSales ? 'encaissement' : 'decaissement')
-        .orderBy('payment_date', descending: true);
-      
+          .where('method', isEqualTo: 'retenue_source')
+          .where(
+            'direction',
+            isEqualTo: isSales ? 'encaissement' : 'decaissement',
+          )
+          .orderBy('payment_date', descending: true);
+
       if (statusFilter != 'Tous') {
-        String dbStatus = statusFilter == 'Payé' ? 'paid' : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');
+        String dbStatus = statusFilter == 'Payé'
+            ? 'paid'
+            : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');
         query = query.where('status', isEqualTo: dbStatus);
       }
-      
+
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
         query = query
@@ -4033,7 +3263,14 @@ class FirestorePaginationService {
 
       if (snapshot.docs.isNotEmpty) {
         _lastRetenueSourceVenteSnapshot = snapshot.docs.last;
-        var results = snapshot.docs.map((doc) => RetenueSourceVente.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+        var results = snapshot.docs
+            .map(
+              (doc) => RetenueSourceVente.fromMap(
+                doc.data() as Map<String, dynamic>,
+                doc.id,
+              ),
+            )
+            .toList();
         results.sort((a, b) => b.date.compareTo(a.date));
         return results;
       }
@@ -4057,20 +3294,30 @@ class FirestorePaginationService {
     bool isSales = true,
   }) async {
     if (_lastRetenueSourceVenteSnapshot == null) {
-      return getFirstRetenueSourceVentes(pageSize: pageSize, searchQuery: searchQuery, statusFilter: statusFilter, isSales: isSales);
+      return getFirstRetenueSourceVentes(
+        pageSize: pageSize,
+        searchQuery: searchQuery,
+        statusFilter: statusFilter,
+        isSales: isSales,
+      );
     }
 
     try {
       Query query = _applyEnterpriseFilter(_firestore.collection('payments'))
-        .where('method', isEqualTo: 'retenue_source')
-        .where('direction', isEqualTo: isSales ? 'encaissement' : 'decaissement')
-        .orderBy('payment_date', descending: true);
-      
+          .where('method', isEqualTo: 'retenue_source')
+          .where(
+            'direction',
+            isEqualTo: isSales ? 'encaissement' : 'decaissement',
+          )
+          .orderBy('payment_date', descending: true);
+
       if (statusFilter != 'Tous') {
-        String dbStatus = statusFilter == 'Payé' ? 'paid' : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');
+        String dbStatus = statusFilter == 'Payé'
+            ? 'paid'
+            : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');
         query = query.where('status', isEqualTo: dbStatus);
       }
-      
+
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
         query = query
@@ -4078,12 +3325,21 @@ class FirestorePaginationService {
             .where('reference', isLessThanOrEqualTo: '$q\uf8ff');
       }
 
-      query = query.startAfterDocument(_lastRetenueSourceVenteSnapshot!).limit(pageSize);
+      query = query
+          .startAfterDocument(_lastRetenueSourceVenteSnapshot!)
+          .limit(pageSize);
       final snapshot = await query.get();
 
       if (snapshot.docs.isNotEmpty) {
         _lastRetenueSourceVenteSnapshot = snapshot.docs.last;
-        var results = snapshot.docs.map((doc) => RetenueSourceVente.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+        var results = snapshot.docs
+            .map(
+              (doc) => RetenueSourceVente.fromMap(
+                doc.data() as Map<String, dynamic>,
+                doc.id,
+              ),
+            )
+            .toList();
         results.sort((a, b) => b.date.compareTo(a.date));
         return results;
       }
@@ -4100,24 +3356,33 @@ class FirestorePaginationService {
     return localResults;
   }
 
-  Future<int> getRetenueSourceVentesCount({String? searchQuery, String statusFilter = 'Tous', bool isSales = true}) async {
+  Future<int> getRetenueSourceVentesCount({
+    String? searchQuery,
+    String statusFilter = 'Tous',
+    bool isSales = true,
+  }) async {
     try {
       Query query = _applyEnterpriseFilter(_firestore.collection('payments'))
-        .where('method', isEqualTo: 'retenue_source')
-        .where('direction', isEqualTo: isSales ? 'encaissement' : 'decaissement');
-      
+          .where('method', isEqualTo: 'retenue_source')
+          .where(
+            'direction',
+            isEqualTo: isSales ? 'encaissement' : 'decaissement',
+          );
+
       if (statusFilter != 'Tous') {
-        String dbStatus = statusFilter == 'Payé' ? 'paid' : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');
+        String dbStatus = statusFilter == 'Payé'
+            ? 'paid'
+            : (statusFilter == 'Annulé' ? 'cancelled' : 'pending');
         query = query.where('status', isEqualTo: dbStatus);
       }
-      
+
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
         query = query
             .where('reference', isGreaterThanOrEqualTo: q)
             .where('reference', isLessThanOrEqualTo: '$q\uf8ff');
       }
-      
+
       final AggregateQuerySnapshot snapshot = await query.count().get();
       int count = snapshot.count ?? 0;
       if (count > 0) return count;
@@ -4157,7 +3422,8 @@ class FirestorePaginationService {
           final name = p.name.toLowerCase();
           final code = p.code.toLowerCase();
           final ref = p.reference?.toLowerCase() ?? '';
-          if (!name.contains(q) && !code.contains(q) && !ref.contains(q)) return false;
+          if (!name.contains(q) && !code.contains(q) && !ref.contains(q))
+            return false;
         }
 
         return true;
@@ -4166,8 +3432,9 @@ class FirestorePaginationService {
       return filtered;
     } catch (e) {
       print("Error reading local products DB: $e");
-      return [];
     }
+
+    return [];
   }
 
   Future<List<Product>> getFirstProducts({
@@ -4177,7 +3444,10 @@ class FirestorePaginationService {
   }) async {
     resetProductsPagination();
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('products')).where('is_deleted', isEqualTo: false);
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('articles'),
+      );
+      print("DEBUG: getFirstProducts query created.");
 
       if (stockFilter == 'En stock') {
         query = query.where('stock_qty', isGreaterThan: 0);
@@ -4193,11 +3463,26 @@ class FirestorePaginationService {
       }
 
       final snapshot = await query.limit(pageSize).get();
+      print("DEBUG: getFirstProducts Firebase snapshot length: ${snapshot.docs.length}");
 
       if (snapshot.docs.isNotEmpty) {
         _lastProductSnapshot = snapshot.docs.last;
-        var results = snapshot.docs.map((doc) => Product.fromMap(doc.data() as Map<String, dynamic>)).toList();
-        return results;
+        try {
+          var results = snapshot.docs
+              .map((doc) => Product.fromMap(doc.data() as Map<String, dynamic>))
+              .toList();
+          print("DEBUG: getFirstProducts mapped ${results.length} products successfully.");
+          return results;
+        } catch (e) {
+          print("DEBUG: Product.fromMap CRASHED! Error: $e");
+          for (var doc in snapshot.docs) {
+            try {
+              Product.fromMap(doc.data() as Map<String, dynamic>);
+            } catch (e2) {
+              print("DEBUG: Crashed on document ${doc.id}: $e2\nData: ${doc.data()}");
+            }
+          }
+        }
       }
     } catch (e) {
       print("Error getting first products from Firebase: $e");
@@ -4216,11 +3501,17 @@ class FirestorePaginationService {
     String stockFilter = 'Tous',
   }) async {
     if (_lastProductSnapshot == null) {
-      return getFirstProducts(pageSize: pageSize, searchQuery: searchQuery, stockFilter: stockFilter);
+      return getFirstProducts(
+        pageSize: pageSize,
+        searchQuery: searchQuery,
+        stockFilter: stockFilter,
+      );
     }
 
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('products')).where('is_deleted', isEqualTo: false);
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('articles'),
+      );
 
       if (stockFilter == 'En stock') {
         query = query.where('stock_qty', isGreaterThan: 0);
@@ -4240,7 +3531,9 @@ class FirestorePaginationService {
 
       if (snapshot.docs.isNotEmpty) {
         _lastProductSnapshot = snapshot.docs.last;
-        var results = snapshot.docs.map((doc) => Product.fromMap(doc.data() as Map<String, dynamic>)).toList();
+        var results = snapshot.docs
+            .map((doc) => Product.fromMap(doc.data() as Map<String, dynamic>))
+            .toList();
         return results;
       }
     } catch (e) {
@@ -4254,9 +3547,14 @@ class FirestorePaginationService {
     return localResults;
   }
 
-  Future<int> getProductsCount({String? searchQuery, String stockFilter = 'Tous'}) async {
+  Future<int> getProductsCount({
+    String? searchQuery,
+    String stockFilter = 'Tous',
+  }) async {
     try {
-      Query query = _applyEnterpriseFilter(_firestore.collection('products')).where('is_deleted', isEqualTo: false);
+      Query query = _applyEnterpriseFilter(
+        _firestore.collection('articles'),
+      );
 
       if (stockFilter == 'En stock') {
         query = query.where('stock_qty', isGreaterThan: 0);
@@ -4285,4 +3583,3 @@ class FirestorePaginationService {
     return localResults.length;
   }
 }
-

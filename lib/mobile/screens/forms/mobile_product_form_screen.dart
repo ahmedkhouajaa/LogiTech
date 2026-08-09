@@ -111,7 +111,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
         context.read<ProductsBloc>().add(UpdateProduct(product));
       }
       
-      Navigator.pop(context);
+      Navigator.pop(context, product);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(widget.existing == null ? 'Article créé avec succès' : 'Article mis à jour'),
         backgroundColor: AppColors.success,

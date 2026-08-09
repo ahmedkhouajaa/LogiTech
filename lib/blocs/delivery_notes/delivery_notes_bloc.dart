@@ -2,9 +2,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/delivery_note.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
-abstract class DeliveryNotesEvent {}
+abstract class DeliveryNotesEvent { const DeliveryNotesEvent(); }
 
 class LoadDeliveryNotes extends DeliveryNotesEvent {}
 
@@ -15,7 +16,7 @@ class LoadFirstDeliveryNotes extends DeliveryNotesEvent {
   final DateTime? dateTo;
   final String? status;
 
-  LoadFirstDeliveryNotes({
+  const LoadFirstDeliveryNotes({
     this.searchQuery,
     this.customerId,
     this.dateFrom,
@@ -240,8 +241,8 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
 
   Future<void> _onAdd(AddDeliveryNote event, Emitter<DeliveryNotesState> emit) async {
     try {
-      await _db.insertDeliveryNote(event.note);
-      add(LoadDeliveryNotes());
+      await FirestoreRepository.instance.saveDeliveryNote(event.note);
+      add(const LoadFirstDeliveryNotes());
     } catch (e) {
       emit(DeliveryNotesError(e.toString()));
     }
@@ -249,8 +250,8 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
 
   Future<void> _onUpdate(UpdateDeliveryNote event, Emitter<DeliveryNotesState> emit) async {
     try {
-      await _db.updateDeliveryNote(event.note);
-      add(LoadDeliveryNotes());
+      await FirestoreRepository.instance.saveDeliveryNote(event.note);
+      add(const LoadFirstDeliveryNotes());
     } catch (e) {
       emit(DeliveryNotesError(e.toString()));
     }
@@ -258,8 +259,8 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
 
   Future<void> _onDelete(DeleteDeliveryNote event, Emitter<DeliveryNotesState> emit) async {
     try {
-      await _db.softDelete('delivery_notes', event.noteId);
-      add(LoadDeliveryNotes());
+      await FirestoreRepository.instance.softDeleteDocument('delivery_notes', event.noteId);
+      add(const LoadFirstDeliveryNotes());
     } catch (e) {
       emit(DeliveryNotesError(e.toString()));
     }

@@ -5,6 +5,7 @@ import '../../models/quote.dart';
 import '../../models/quote_status_history.dart';
 import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 
 abstract class QuotesEvent extends Equatable { const QuotesEvent(); @override List<Object?> get props => []; }
 class LoadQuotes extends QuotesEvent {}
@@ -72,13 +73,20 @@ class UpdateQuoteStatus extends QuotesEvent {
   final String id;
   final DocumentStatus oldStatus;
   final DocumentStatus newStatus;
-  final String changedBy;
+  final String? changedBy;
   final String? notes;
-  const UpdateQuoteStatus(this.id, this.oldStatus, this.newStatus, this.changedBy, [this.notes]);
+  const UpdateQuoteStatus(
+    this.id,
+    this.oldStatus,
+    this.newStatus, [
+    this.changedBy,
+    this.notes,
+  ]);
   @override List<Object?> get props => [id, oldStatus, newStatus, changedBy, notes];
 }
 class DeleteQuote extends QuotesEvent { final String id; const DeleteQuote(this.id); @override List<Object?> get props => [id]; }
 
+// ── States ─────────────────────────────────────────────────────────
 abstract class QuotesState extends Equatable { const QuotesState(); @override List<Object?> get props => []; }
 class QuotesInitial extends QuotesState {}
 class QuotesLoading extends QuotesState {}
@@ -115,8 +123,9 @@ class QuotesLoaded extends QuotesState {
 
 class QuotesError extends QuotesState { final String message; const QuotesError(this.message); @override List<Object?> get props => [message]; }
 
+// ── BLoC ───────────────────────────────────────────────────────────
 class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
-  static const int pageSize = 10;
+  static const int pageSize = 20;
 
   QuotesBloc() : super(QuotesInitial()) {
     on<LoadQuotes>(_onLoad);
@@ -130,13 +139,7 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
   }
 
   Future<void> _onLoad(LoadQuotes event, Emitter<QuotesState> emit) async {
-    emit(QuotesLoading());
-    try {
-      final quotes = await DatabaseHelper.instance.getQuotes();
-      emit(QuotesLoaded(quotes, totalCount: quotes.length));
-    } catch (e) {
-      emit(QuotesError(e.toString()));
-    }
+    add(const LoadFirstDevis());
   }
 
   Future<void> _onLoadFirstDevis(LoadFirstDevis event, Emitter<QuotesState> emit) async {
@@ -218,8 +221,8 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
 
   Future<void> _onAdd(AddQuote event, Emitter<QuotesState> emit) async {
     try {
-      await DatabaseHelper.instance.insertQuote(event.quote);
-      add(LoadQuotes());
+      await FirestoreRepository.instance.saveQuote(event.quote);
+      add(const LoadFirstDevis());
     } catch (e) {
       emit(QuotesError(e.toString()));
     }
@@ -227,8 +230,8 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
 
   Future<void> _onUpdate(UpdateQuote event, Emitter<QuotesState> emit) async {
     try {
-      await DatabaseHelper.instance.updateQuote(event.quote);
-      add(LoadQuotes());
+      await FirestoreRepository.instance.saveQuote(event.quote);
+      add(const LoadFirstDevis());
     } catch (e) {
       emit(QuotesError(e.toString()));
     }
@@ -236,18 +239,18 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
 
   Future<void> _onUpdateStatus(UpdateQuoteStatus event, Emitter<QuotesState> emit) async {
     try {
-      await DatabaseHelper.instance.update('quotes', {'status': event.newStatus.name, 'updated_at': DateTime.now().toIso8601String()}, event.id);
+      await FirestoreRepository.instance.updateDocument('quotes', event.id, {'status': event.newStatus.name});
       final history = QuoteStatusHistory(
         id: DatabaseHelper.instance.newId,
         quoteId: event.id,
         oldStatus: event.oldStatus.name,
         newStatus: event.newStatus.name,
-        changedBy: event.changedBy,
+        changedBy: event.changedBy ?? 'System',
         notes: event.notes,
         changedAt: DateTime.now(),
       );
-      await DatabaseHelper.instance.insert('quote_status_history', history.toMap());
-      add(LoadQuotes());
+      await FirestoreRepository.instance.saveDocument('quote_status_history', history.id, history.toMap());
+      add(const LoadFirstDevis());
     } catch (e) {
       emit(QuotesError(e.toString()));
     }
@@ -255,8 +258,8 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
 
   Future<void> _onDelete(DeleteQuote event, Emitter<QuotesState> emit) async {
     try {
-      await DatabaseHelper.instance.softDelete('quotes', event.id);
-      add(LoadQuotes());
+      await FirestoreRepository.instance.softDeleteDocument('quotes', event.id);
+      add(const LoadFirstDevis());
     } catch (e) {
       emit(QuotesError(e.toString()));
     }

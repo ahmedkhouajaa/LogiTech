@@ -41,7 +41,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<CustomerOrdersBloc>().add(LoadCustomerOrders());
+    context.read<CustomerOrdersBloc>().add(const LoadFirstCustomerOrders());
     context.read<CustomersBloc>().add(LoadCustomers());
   }
 

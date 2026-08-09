@@ -44,7 +44,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<InvoicesBloc>().add(LoadInvoices());
+    context.read<InvoicesBloc>().add(const LoadFirstInvoices());
     context.read<CustomersBloc>().add(LoadCustomers());
   }
 

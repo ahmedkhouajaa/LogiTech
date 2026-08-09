@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../blocs/customers/customers_bloc.dart';
 import '../../../../models/customer.dart';
+import '../../../../database/database_helper.dart';
 import '../../../../utils/constants.dart';
+import '../../../../services/enterprise_service.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
@@ -74,7 +76,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
     }
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (widget.isReadOnly) return;
     if (!_formKey.currentState!.validate()) return;
     
@@ -92,10 +94,13 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
 
     try {
       final validBankAccounts = _bankAccounts.map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      final code = widget.existing?.code ?? await DatabaseHelper.instance.getNextCustomerSequence();
+      if (!mounted) return;
       final customer = Customer(
         id: widget.existing?.id ?? _uuid.v4(),
-        code: widget.existing?.code ?? 'CLI-${DateTime.now().millisecondsSinceEpoch % 10000}',
+        code: code,
         name: _name.isEmpty ? _companyName : _name,
+        enterpriseId: widget.existing?.enterpriseId ?? EnterpriseService.instance.currentEnterpriseId,
         customerType: _customerType,
         companyName: _companyName.trim().isEmpty ? null : _companyName.trim(),
         email: _email.trim().isEmpty ? null : _email.trim(),

@@ -29,12 +29,13 @@ class Quote {
   final String? convertedToOrderId;
   final bool isConvertedToDelivery;
   final String? convertedToDeliveryId;
+  final String? warehouseId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
   Quote({
     required this.id, required this.number, required this.customerId,
-    this.customerName, this.projectId, this.projectName, required this.date, required this.validityDate,
+    this.customerName, this.projectId, this.projectName, this.warehouseId, required this.date, required this.validityDate,
     this.status = DocumentStatus.draft, this.totalHT = 0, this.totalTva = 0,
     this.totalTTC = 0, this.globalDiscountPercent = 0, this.globalDiscountAmount = 0,
     this.timbreFiscal = 1.000, this.pricingMode = 'ht', this.notes, this.conditionsGenerales, this.items = const [],
@@ -49,7 +50,7 @@ class Quote {
   bool get isExpired => validityDate.isBefore(DateTime.now());
 
   Map<String, dynamic> toMap() => {
-        'id': id, 'number': number, 'customer_id': customerId, 'project_id': projectId,
+        'id': id, 'number': number, 'customer_id': customerId, 'customer_name': customerName, 'project_id': projectId, 'project_name': projectName, 'warehouse_id': warehouseId,
         'date': date.toIso8601String(), 'validity_date': validityDate.toIso8601String(),
         'status': status.name, 'total_ht': totalHT, 'total_tva': totalTva,
         'total_ttc': totalTTC, 'global_discount_percent': globalDiscountPercent,
@@ -74,6 +75,7 @@ class Quote {
         customerName: map['customer_name'] as String?,
         projectId: map['project_id'] as String?,
         projectName: map['project_name'] as String?,
+        warehouseId: map['warehouse_id'] as String?,
         date: DateTime.parse(map['date'] as String),
         validityDate: DateTime.parse(map['validity_date'] as String),
         status: DocumentStatus.values.firstWhere(
@@ -87,6 +89,9 @@ class Quote {
         pricingMode: map['pricing_mode'] as String? ?? 'ht',
         notes: map['notes'] as String?,
         conditionsGenerales: map['conditions_generales'] as String?,
+        items: (map['items'] as List<dynamic>?)
+            ?.map((i) => QuoteItem.fromMap(Map<String, dynamic>.from(i as Map)))
+            .toList() ?? const [],
         firebaseUid: map['firebase_uid'] as String?,
         isDeleted: map['is_deleted'] == 1,
         isConverted: map['is_converted'] == 1,
@@ -102,7 +107,7 @@ class Quote {
 
   Quote copyWith({
     String? id, String? number, String? customerId, String? customerName,
-    String? projectId, String? projectName,
+    String? projectId, String? projectName, String? warehouseId,
     DateTime? date, DateTime? validityDate, DocumentStatus? status,
     double? totalHT, double? totalTva, double? totalTTC,
     double? globalDiscountPercent, double? globalDiscountAmount,
@@ -119,6 +124,7 @@ class Quote {
         customerName: customerName ?? this.customerName,
         projectId: projectId ?? this.projectId,
         projectName: projectName ?? this.projectName,
+        warehouseId: warehouseId ?? this.warehouseId,
         date: date ?? this.date, validityDate: validityDate ?? this.validityDate,
         status: status ?? this.status, totalHT: totalHT ?? this.totalHT,
         totalTva: totalTva ?? this.totalTva, totalTTC: totalTTC ?? this.totalTTC,

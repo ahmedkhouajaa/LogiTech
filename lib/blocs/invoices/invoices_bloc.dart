@@ -4,6 +4,7 @@ import '../../database/database_helper.dart';
 import '../../models/invoice.dart';
 import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 
 abstract class InvoicesEvent extends Equatable {
   const InvoicesEvent();
@@ -293,8 +294,8 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
 
   Future<void> _onAdd(AddInvoice event, Emitter<InvoicesState> emit) async {
     try {
-      await DatabaseHelper.instance.insertInvoice(event.invoice);
-      add(LoadInvoices());
+      await FirestoreRepository.instance.saveInvoice(event.invoice);
+      add(const LoadFirstInvoices());
     } catch (e) {
       emit(InvoicesError(e.toString()));
     }
@@ -302,8 +303,8 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
 
   Future<void> _onUpdate(UpdateInvoice event, Emitter<InvoicesState> emit) async {
     try {
-      await DatabaseHelper.instance.updateInvoice(event.invoice);
-      add(LoadInvoices());
+      await FirestoreRepository.instance.saveInvoice(event.invoice);
+      add(const LoadFirstInvoices());
     } catch (e) {
       emit(InvoicesError(e.toString()));
     }
@@ -311,8 +312,8 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
 
   Future<void> _onDelete(DeleteInvoice event, Emitter<InvoicesState> emit) async {
     try {
-      await DatabaseHelper.instance.deleteInvoice(event.id);
-      add(LoadInvoices());
+      await FirestoreRepository.instance.softDeleteDocument('invoices', event.id);
+      add(const LoadFirstInvoices());
     } catch (e) {
       emit(InvoicesError(e.toString()));
     }

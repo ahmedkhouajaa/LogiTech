@@ -20,6 +20,9 @@ import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
 import '../services/auth_service.dart';
 import '../database/database_helper.dart';
+import '../blocs/projects/projects_bloc.dart';
+import '../blocs/stock/stock_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
 import 'create_invoice_screen.dart';
 import 'create_customer_order_screen.dart';
 import 'create_delivery_note_screen.dart';
@@ -48,7 +51,7 @@ class _QuotesScreenState extends State<QuotesScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<QuotesBloc>().add(LoadQuotes());
+    context.read<QuotesBloc>().add(const LoadFirstDevis());
     context.read<CustomersBloc>().add(LoadCustomers());
   }
 
@@ -97,6 +100,9 @@ class _QuotesScreenState extends State<QuotesScreen> {
                         BlocProvider.value(value: context.read<QuotesBloc>()),
                         BlocProvider.value(value: context.read<CustomersBloc>()),
                         BlocProvider.value(value: context.read<ProductsBloc>()),
+                        BlocProvider.value(value: context.read<ProjectsBloc>()),
+                        BlocProvider.value(value: context.read<StockBloc>()),
+                        BlocProvider.value(value: context.read<WarehousesBloc>()),
                       ],
                       child: const CreateQuoteScreen(),
                     ),
@@ -1020,6 +1026,9 @@ class _QuotesScreenState extends State<QuotesScreen> {
                 BlocProvider.value(value: context.read<QuotesBloc>()),
                 BlocProvider.value(value: context.read<CustomersBloc>()),
                 BlocProvider.value(value: context.read<ProductsBloc>()),
+                BlocProvider.value(value: context.read<ProjectsBloc>()),
+                BlocProvider.value(value: context.read<StockBloc>()),
+                BlocProvider.value(value: context.read<WarehousesBloc>()),
               ],
               child: CreateQuoteScreen(existing: quote),
             ),

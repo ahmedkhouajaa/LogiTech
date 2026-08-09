@@ -1,8 +1,12 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:uuid/uuid.dart';
 import '../../models/treasury_account.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/enterprise_service.dart';
+import '../../services/firestore_repository.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Events
 abstract class TreasuryAccountsEvent extends Equatable {
@@ -126,11 +130,55 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
   Future<void> _onLoadAccounts(LoadTreasuryAccounts event, Emitter<TreasuryAccountsState> emit) async {
     emit(TreasuryAccountsLoading());
     try {
-      final maps = await databaseHelper.getTreasuryAccounts();
-      final accounts = maps.map((e) => TreasuryAccount.fromMap(e)).toList();
-      emit(TreasuryAccountsLoaded(accounts, totalCount: accounts.length, hasMore: false));
+      final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+      Query query = FirebaseFirestore.instance.collection('treasury_accounts');
+      if (currentEntId != null && currentEntId.isNotEmpty) {
+        query = query.where('enterprise_id', isEqualTo: currentEntId);
+      }
+      
+      bool shownFromCache = false;
+      try {
+        final cacheSnap = await query.get(const GetOptions(source: Source.cache));
+        if (cacheSnap.docs.isNotEmpty && !emit.isDone) {
+          final accounts = cacheSnap.docs.map((d) => TreasuryAccount.fromMap(d.data() as Map<String, dynamic>)).toList();
+          emit(TreasuryAccountsLoaded(accounts, totalCount: accounts.length, hasMore: false));
+          shownFromCache = true;
+        }
+      } catch (_) {}
+
+      try {
+        final serverSnap = await query.get(const GetOptions(source: Source.server));
+        List<TreasuryAccount> accounts = serverSnap.docs.map((d) => TreasuryAccount.fromMap(d.data() as Map<String, dynamic>)).toList();
+        
+        if (accounts.isEmpty) {
+          final defaultAccount = TreasuryAccount(
+            id: const Uuid().v4(),
+            name: 'Compte principal',
+            type: 'cash',
+            currency: 'TND',
+            balance: 0.0,
+            isDefault: true,
+            enterpriseId: currentEntId,
+          );
+          accounts = [defaultAccount];
+
+          FirestoreRepository.instance
+              .saveDocument('treasury_accounts', defaultAccount.id, defaultAccount.toMap())
+              .catchError((e) => print("Firestore default treasury account auto-create error: $e"));
+        }
+
+        if (!emit.isDone) {
+          emit(TreasuryAccountsLoaded(accounts, totalCount: accounts.length, hasMore: false));
+        }
+      } catch (e) {
+        if (!shownFromCache && !emit.isDone) {
+          emit(TreasuryAccountsLoaded(const [], totalCount: 0, hasMore: false));
+        }
+      }
     } catch (e) {
-      emit(TreasuryAccountsError(e.toString()));
+      if (!emit.isDone) {
+        emit(TreasuryAccountsError(e.toString()));
+      }
     }
   }
 
@@ -209,29 +257,56 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
   }
 
   Future<void> _onCreateAccount(CreateTreasuryAccount event, Emitter<TreasuryAccountsState> emit) async {
+    final currentEntId = EnterpriseService.instance.currentEnterpriseId;
+    final account = (event.account.enterpriseId == null || event.account.enterpriseId!.isEmpty)
+        ? event.account.copyWith(enterpriseId: currentEntId)
+        : event.account;
+
+    final currentState = state;
+    if (currentState is TreasuryAccountsLoaded) {
+      final currentList = List<TreasuryAccount>.from(currentState.accounts);
+      currentList.insert(0, account);
+      emit(currentState.copyWith(accounts: currentList, totalCount: currentList.length));
+    }
+
     try {
-      await databaseHelper.createTreasuryAccount(event.account.toMap());
-      add(LoadTreasuryAccounts());
+      await FirestoreRepository.instance.saveDocument('treasury_accounts', account.id, account.toMap());
     } catch (e) {
-      emit(TreasuryAccountsError(e.toString()));
+      print("Failed to save treasury account: $e");
     }
   }
 
   Future<void> _onUpdateAccount(UpdateTreasuryAccount event, Emitter<TreasuryAccountsState> emit) async {
+    final currentState = state;
+    if (currentState is TreasuryAccountsLoaded) {
+      final currentList = List<TreasuryAccount>.from(currentState.accounts);
+      final idx = currentList.indexWhere((a) => a.id == event.account.id);
+      if (idx != -1) {
+        currentList[idx] = event.account;
+      } else {
+        currentList.insert(0, event.account);
+      }
+      emit(currentState.copyWith(accounts: currentList));
+    }
+
     try {
-      await databaseHelper.updateTreasuryAccount(event.account.id, event.account.toMap());
-      add(LoadTreasuryAccounts());
+      await FirestoreRepository.instance.saveDocument('treasury_accounts', event.account.id, event.account.toMap());
     } catch (e) {
-      emit(TreasuryAccountsError(e.toString()));
+      print("Failed to update treasury account: $e");
     }
   }
 
   Future<void> _onDeleteAccount(DeleteTreasuryAccount event, Emitter<TreasuryAccountsState> emit) async {
+    final currentState = state;
+    if (currentState is TreasuryAccountsLoaded) {
+      final currentList = List<TreasuryAccount>.from(currentState.accounts)..removeWhere((a) => a.id == event.id);
+      emit(currentState.copyWith(accounts: currentList, totalCount: currentList.length));
+    }
+
     try {
-      await databaseHelper.deleteTreasuryAccount(event.id);
-      add(LoadTreasuryAccounts());
+      await FirestoreRepository.instance.softDeleteDocument('treasury_accounts', event.id);
     } catch (e) {
-      emit(TreasuryAccountsError(e.toString()));
+      print("Failed to delete treasury account: $e");
     }
   }
 }

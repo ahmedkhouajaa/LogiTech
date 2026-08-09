@@ -6,6 +6,7 @@ import '../widgets/custom_app_bar.dart';
 import '../database/database_helper.dart';
 import '../models/project.dart';
 import '../services/sync_service.dart';
+import '../services/enterprise_service.dart';
 
 class CompanyInfoScreen extends StatefulWidget {
   const CompanyInfoScreen({super.key});
@@ -35,16 +36,18 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
 
   Future<void> _loadSettings() async {
     final settings = await DatabaseHelper.instance.getCompanySettings();
+    final currentEnt = EnterpriseService.instance.currentEnterprise;
+
     setState(() {
       _settings = settings;
-      _nameController.text = settings.name;
-      _phoneController.text = settings.phone ?? '';
-      _emailController.text = settings.email ?? '';
-      _websiteController.text = settings.website ?? '';
-      _taxIdController.text = settings.taxId ?? '';
-      _rcNumberController.text = settings.rcNumber ?? '';
-      _addressController.text = settings.address ?? '';
-      _ribController.text = settings.rib ?? '';
+      _nameController.text = (settings?.name != null && settings!.name.isNotEmpty) ? settings.name : (currentEnt?.name ?? '');
+      _phoneController.text = settings?.phone ?? currentEnt?.phone ?? '';
+      _emailController.text = settings?.email ?? currentEnt?.email ?? '';
+      _websiteController.text = settings?.website ?? currentEnt?.website ?? '';
+      _taxIdController.text = settings?.taxId ?? currentEnt?.taxId ?? '';
+      _rcNumberController.text = settings?.rcNumber ?? currentEnt?.rcNumber ?? '';
+      _addressController.text = settings?.address ?? currentEnt?.address ?? '';
+      _ribController.text = settings?.rib ?? currentEnt?.rib ?? '';
       _isLoading = false;
     });
   }
@@ -95,6 +98,8 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
       return Center(child: CircularProgressIndicator());
     }
 
+    final isMobile = MediaQuery.of(context).size.width < 700;
+
     return BlocListener<EnterpriseBloc, EnterpriseState>(
       listener: (context, state) {
         if (state is EnterpriseLoaded) {
@@ -102,21 +107,45 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
         }
       },
       child: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.all(isMobile ? AppSpacing.md : AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Informations sur la société', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              AppButton(
-                label: 'Enregistrer',
-                icon: Icons.save_rounded,
-                onPressed: _saveSettings,
-              ),
-            ],
-          ),
+          if (isMobile)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Informations sur la société',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                ),
+                SizedBox(height: AppSpacing.md),
+                AppButton(
+                  label: 'Enregistrer',
+                  icon: Icons.save_rounded,
+                  onPressed: _saveSettings,
+                ),
+              ],
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Informations sur la société',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                SizedBox(width: AppSpacing.md),
+                AppButton(
+                  label: 'Enregistrer',
+                  icon: Icons.save_rounded,
+                  onPressed: _saveSettings,
+                ),
+              ],
+            ),
           SizedBox(height: AppSpacing.lg),
           Container(
             padding: EdgeInsets.all(AppSpacing.xl),

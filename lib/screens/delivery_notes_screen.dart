@@ -47,7 +47,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<DeliveryNotesBloc>().add(LoadDeliveryNotes());
+    context.read<DeliveryNotesBloc>().add(LoadFirstDeliveryNotes());
     context.read<CustomersBloc>().add(LoadCustomers());
   }
 

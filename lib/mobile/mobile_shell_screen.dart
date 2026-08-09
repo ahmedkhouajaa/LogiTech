@@ -11,6 +11,8 @@ import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../widgets/sidebar_menu.dart';
 import '../widgets/sync_indicator.dart';
+import '../widgets/enterprise_switcher.dart';
+import '../services/enterprise_service.dart';
 import '../utils/constants.dart';
 import 'mobile_drawer.dart';
 import 'mobile_dashboard_screen.dart';

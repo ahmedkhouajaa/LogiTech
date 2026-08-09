@@ -44,6 +44,16 @@ class EnterpriseService {
     return _currentEnterpriseId == null || _currentEnterpriseId == _enterprises.first.id;
   }
 
+  /// The currently active Enterprise object.
+  Enterprise? get currentEnterprise {
+    if (_currentEnterpriseId == null || _enterprises.isEmpty) return null;
+    try {
+      return _enterprises.firstWhere((e) => e.id == _currentEnterpriseId);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Cached enterprise list (may be stale until refreshed from Firestore).
   List<Enterprise> get enterprises => List.unmodifiable(_enterprises);
 
@@ -89,10 +99,8 @@ class EnterpriseService {
       }
 
       if (enterpriseIds.isEmpty) {
-        // First-time user: auto-create default enterprise
-        final enterprise = await createEnterprise('Mon Entreprise');
-        _enterprises = [enterprise];
-        _currentEnterpriseId = enterprise.id;
+        _enterprises = [];
+        _currentEnterpriseId = null;
         await _persistToPrefs();
         _enterpriseController.add(_currentEnterpriseId);
         return _enterprises;
@@ -174,7 +182,10 @@ class EnterpriseService {
         await FirebaseFirestore.instance
             .collection('enterprises')
             .doc(id)
-            .set(enterprise.toMap());
+            .set({
+              ...enterprise.toMap(),
+              'userId': uid,
+            });
 
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'email': FirebaseAuth.instance.currentUser?.email,
@@ -194,8 +205,7 @@ class EnterpriseService {
 
     // Insert company_settings row into SQLite for this enterprise
     try {
-      final db = await DatabaseHelper.instance.database;
-      await db.insert('company_settings', {
+      await DatabaseHelper.instance.insert('company_settings', {
         'id': const Uuid().v4(),
         'enterprise_id': id,
         'name': name,
@@ -229,10 +239,12 @@ class EnterpriseService {
         updatedAt: now,
       );
       await DatabaseHelper.instance.insertWarehouse(defaultWarehouse);
+      final warehouseData = defaultWarehouse.toMap();
+      warehouseData['userId'] = uid;
       FirebaseFirestore.instance
           .collection('warehouses')
           .doc(defaultWarehouse.id)
-          .set(defaultWarehouse.toMap(), SetOptions(merge: true))
+          .set(warehouseData, SetOptions(merge: true))
           .catchError((e) => print('Firestore warehouse sync error: $e'));
     } catch (e) {
       print('EnterpriseService.createEnterprise default warehouse insert warning: $e');
@@ -253,10 +265,12 @@ class EnterpriseService {
         updatedAt: now,
       );
       await DatabaseHelper.instance.insertCustomer(defaultCustomer);
+      final customerData = defaultCustomer.toMap();
+      customerData['userId'] = uid;
       FirebaseFirestore.instance
           .collection('clients')
           .doc(defaultCustomer.id)
-          .set(defaultCustomer.toMap(), SetOptions(merge: true))
+          .set(customerData, SetOptions(merge: true))
           .catchError((e) => print('Firestore customer sync error: $e'));
     } catch (e) {
       print('EnterpriseService.createEnterprise default customer insert warning: $e');
@@ -276,10 +290,12 @@ class EnterpriseService {
         updatedAt: now,
       );
       await DatabaseHelper.instance.insertSupplier(defaultSupplier);
+      final supplierData = defaultSupplier.toMap();
+      supplierData['userId'] = uid;
       FirebaseFirestore.instance
           .collection('fournisseurs')
           .doc(defaultSupplier.id)
-          .set(defaultSupplier.toMap(), SetOptions(merge: true))
+          .set(supplierData, SetOptions(merge: true))
           .catchError((e) => print('Firestore supplier sync error: $e'));
     } catch (e) {
       print('EnterpriseService.createEnterprise default supplier insert warning: $e');
@@ -298,15 +314,17 @@ class EnterpriseService {
         updatedAt: now,
       );
       await DatabaseHelper.instance.createTreasuryAccount(defaultAccount.toMap());
+      final accountData = defaultAccount.toMap();
+      accountData['userId'] = uid;
       FirebaseFirestore.instance
           .collection('treasury_accounts')
           .doc(defaultAccount.id)
-          .set(defaultAccount.toMap(), SetOptions(merge: true))
+          .set(accountData, SetOptions(merge: true))
           .catchError((e) => print('Firestore treasury account sync error: $e'));
       FirebaseFirestore.instance
           .collection('comptes_tresorerie')
           .doc(defaultAccount.id)
-          .set(defaultAccount.toMap(), SetOptions(merge: true))
+          .set(accountData, SetOptions(merge: true))
           .catchError((e) => print('Firestore treasury account sync error: $e'));
     } catch (e) {
       print('EnterpriseService.createEnterprise default treasury account insert warning: $e');
@@ -325,10 +343,12 @@ class EnterpriseService {
         updatedAt: now,
       );
       await DatabaseHelper.instance.insertProject(defaultProject);
+      final projectData = defaultProject.toMap();
+      projectData['userId'] = uid;
       FirebaseFirestore.instance
           .collection('projects')
           .doc(defaultProject.id)
-          .set(defaultProject.toMap(), SetOptions(merge: true))
+          .set(projectData, SetOptions(merge: true))
           .catchError((e) => print('Firestore project sync error: $e'));
     } catch (e) {
       print('EnterpriseService.createEnterprise default project insert warning: $e');

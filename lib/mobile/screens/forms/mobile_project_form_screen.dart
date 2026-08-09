@@ -11,6 +11,7 @@ import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
+import '../../../../services/enterprise_service.dart';
 
 class MobileProjectFormScreen extends StatefulWidget {
   final Project? existing;
@@ -80,6 +81,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
         status: _status,
         progress: _progress,
         notes: _notes.trim().isEmpty ? null : _notes.trim(),
+        enterpriseId: widget.existing?.enterpriseId ?? EnterpriseService.instance.currentEnterpriseId,
         isDeleted: widget.existing?.isDeleted ?? false,
       );
 

@@ -32,6 +32,7 @@ class CreateInvoiceScreen extends StatefulWidget {
 class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final _formKey = GlobalKey<FormState>();
   final _uuid = const Uuid();
+  bool _isSaving = false;
 
   Customer? _selectedCustomer;
   String? _selectedProjectId;
@@ -214,9 +215,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           SizedBox(
             height: 36,
             child: ElevatedButton.icon(
-              onPressed: _save,
-              icon: Icon(Icons.check_rounded, size: 16),
-              label: Text('Valider', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              onPressed: _isSaving ? null : _save,
+              icon: _isSaving
+                  ? SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Icon(Icons.check_rounded, size: 16),
+              label: Text(_isSaving ? 'Enregistrement...' : 'Valider',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -1010,6 +1018,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   // ─── Save ────────────────────────────────────────────────────────
   void _save() {
+    if (_isSaving) return;
+
     if (_selectedCustomer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez selectionner un client'), backgroundColor: AppColors.error),
@@ -1017,49 +1027,63 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       return;
     }
 
-    final invoiceId = _isEditing ? widget.existing!.id : _uuid.v4();
-    final invoice = Invoice(
-      id: invoiceId,
-      number: _isEditing ? widget.existing!.number : generateDocNumber(DocPrefix.invoice, DateTime.now().millisecondsSinceEpoch % 1000000),
-      customerId: _selectedCustomer!.id,
-      customerName: _selectedCustomer!.name,
-      projectId: _selectedProjectId,
-      warehouseId: _selectedWarehouseId,
-      enterpriseId: widget.existing?.enterpriseId ?? EnterpriseService.instance.currentEnterpriseId,
-      date: _date,
-      dueDate: _dueDate,
-      status: _status,
-      totalHT: _totalHTAfterDiscount,
-      totalTva: _totalTvaAfterDiscount,
-      totalTTC: _totalHTAfterDiscount + _totalTvaAfterDiscount,
-      stampTax: 0,
-      timbreFiscal: _timbreFiscal,
-      globalDiscountPercent: _globalDiscountPercent,
-      globalDiscountAmount: _globalDiscountAmount,
-      pricingMode: _pricingModeHT ? 'ht' : 'ttc',
-      notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
-      conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
-      items: _items.map((item) => item.copyWith(invoiceId: invoiceId)).toList(),
-      createdAt: _isEditing ? widget.existing!.createdAt : null,
-    );
+    setState(() => _isSaving = true);
 
-    if (_isEditing) {
-      context.read<InvoicesBloc>().add(UpdateInvoice(invoice));
-    } else {
-      context.read<InvoicesBloc>().add(AddInvoice(invoice));
+    try {
+      final invoiceId = _isEditing ? widget.existing!.id : _uuid.v4();
+      final invoice = Invoice(
+        id: invoiceId,
+        number: _isEditing ? widget.existing!.number : generateDocNumber(DocPrefix.invoice, DateTime.now().millisecondsSinceEpoch % 1000000),
+        customerId: _selectedCustomer!.id,
+        customerName: _selectedCustomer!.name,
+        projectId: _selectedProjectId,
+        warehouseId: _selectedWarehouseId,
+        enterpriseId: widget.existing?.enterpriseId ?? EnterpriseService.instance.currentEnterpriseId,
+        date: _date,
+        dueDate: _dueDate,
+        status: _status,
+        totalHT: _totalHTAfterDiscount,
+        totalTva: _totalTvaAfterDiscount,
+        totalTTC: _totalHTAfterDiscount + _totalTvaAfterDiscount,
+        stampTax: 0,
+        timbreFiscal: _timbreFiscal,
+        globalDiscountPercent: _globalDiscountPercent,
+        globalDiscountAmount: _globalDiscountAmount,
+        pricingMode: _pricingModeHT ? 'ht' : 'ttc',
+        notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
+        items: _items.map((item) => item.copyWith(invoiceId: invoiceId)).toList(),
+        createdAt: _isEditing ? widget.existing!.createdAt : null,
+      );
+
+      if (_isEditing) {
+        context.read<InvoicesBloc>().add(UpdateInvoice(invoice));
+      } else {
+        context.read<InvoicesBloc>().add(AddInvoice(invoice));
+      }
+
+      context.read<StockBloc>().add(LoadStock());
+      context.read<ProductsBloc>().add(const ResetProductsPagination());
+
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isEditing
+              ? 'Facture ${invoice.number} mise a jour'
+              : 'Facture ${invoice.number} creee avec succes'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: ${e.toString()}'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
-
-    context.read<StockBloc>().add(LoadStock());
-    context.read<ProductsBloc>().add(const ResetProductsPagination());
-
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isEditing
-            ? 'Facture ${invoice.number} mise a jour'
-            : 'Facture ${invoice.number} creee avec succes'),
-        backgroundColor: AppColors.success,
-      ),
-    );
   }
 }

@@ -4,10 +4,15 @@ import 'package:uuid/uuid.dart';
 import '../../../../blocs/quotes/quotes_bloc.dart';
 import '../../../../blocs/customers/customers_bloc.dart';
 import '../../../../blocs/projects/projects_bloc.dart';
+import '../../../../blocs/products/products_bloc.dart';
 import '../../../../models/quote.dart';
 import '../../../../models/customer.dart';
 import '../../../../models/project.dart';
+import '../../../../models/product.dart';
 import '../../../../blocs/stock/stock_bloc.dart';
+import '../../../../blocs/warehouses/warehouses_bloc.dart';
+import '../../../../blocs/warehouses/warehouses_state.dart';
+import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
@@ -35,6 +40,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
   bool _isLoading = false;
 
   String? _selectedCustomerId;
+  String? _selectedCustomerName;
   String? _selectedProjectId;
   String? _selectedWarehouseId;
   List<QuoteItem> _items = [];
@@ -77,12 +83,16 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
     if (context.read<StockBloc>().state is! StockLoaded) {
       context.read<StockBloc>().add(LoadStock());
     }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
 
     if (widget.existing != null) {
       final n = widget.existing!;
       _date = n.date;
       _validityDate = n.validityDate;
       _selectedCustomerId = n.customerId;
+      _selectedCustomerName = n.customerName;
+      _selectedProjectId = n.projectId;
+      _selectedWarehouseId = n.warehouseId;
       _status = n.status;
       _notes = n.notes ?? '';
       _items = n.items.map((i) => QuoteItem(
@@ -119,8 +129,8 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
       }
 
       final custState = context.read<CustomersBloc>().state;
-      String? custName;
-      if (custState is CustomersLoaded) {
+      String? custName = _selectedCustomerName;
+      if (custName == null && custState is CustomersLoaded) {
         final found = custState.customers.firstWhere(
           (c) => c.id == _selectedCustomerId,
           orElse: () => Customer(id: '', code: '', name: 'Client Inconnu'),
@@ -136,6 +146,8 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
         number: number,
         customerId: _selectedCustomerId!,
         customerName: custName,
+        projectId: _selectedProjectId,
+        warehouseId: _selectedWarehouseId,
         date: _date,
         validityDate: _validityDate,
         status: _status,
@@ -266,13 +278,14 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                         builder: (context, state) {
                           final customers = state is CustomersLoaded ? state.customers : <Customer>[];
                           final selectedCustomer = customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null);
-                          final displayName = selectedCustomer != null
-                              ? (selectedCustomer.companyName?.isNotEmpty == true
-                                  ? selectedCustomer.companyName!
-                                  : (selectedCustomer.responsibleName?.isNotEmpty == true
-                                      ? selectedCustomer.responsibleName!
-                                      : selectedCustomer.name))
-                              : null;
+                          final displayName = _selectedCustomerName ??
+                              (selectedCustomer != null
+                                  ? (selectedCustomer.companyName?.isNotEmpty == true
+                                      ? selectedCustomer.companyName!
+                                      : (selectedCustomer.responsibleName?.isNotEmpty == true
+                                          ? selectedCustomer.responsibleName!
+                                          : selectedCustomer.name))
+                                  : null);
                           return SmartSearchableSelector(
                             label: 'Client',
                             hint: 'Rechercher des clients...',
@@ -280,7 +293,14 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                             onTap: () async {
                               final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
                               if (res != null && mounted) {
-                                setState(() => _selectedCustomerId = res);
+                                final found = customers.cast<Customer?>().firstWhere((c) => c?.id == res, orElse: () => null);
+                                final name = found != null
+                                    ? (found.companyName?.isNotEmpty == true ? found.companyName! : (found.responsibleName?.isNotEmpty == true ? found.responsibleName! : found.name))
+                                    : null;
+                                setState(() {
+                                  _selectedCustomerId = res;
+                                  _selectedCustomerName = name;
+                                });
                               }
                             },
                           );
@@ -292,7 +312,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                       height: 50,
                       child: ElevatedButton(
                         onPressed: () async {
-                          final newId = await showDialog<String>(
+                          final newRes = await showDialog<dynamic>(
                             context: context,
                             barrierDismissible: false,
                             builder: (_) => BlocProvider.value(
@@ -300,10 +320,22 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                               child: const CustomerDialog(existing: null),
                             ),
                           );
-                          if (newId != null && mounted) {
-                            setState(() {
-                              _selectedCustomerId = newId;
-                            });
+                          if (newRes != null && mounted) {
+                            if (newRes is Customer) {
+                              final displayName = newRes.companyName?.isNotEmpty == true
+                                  ? newRes.companyName!
+                                  : (newRes.responsibleName?.isNotEmpty == true
+                                      ? newRes.responsibleName!
+                                      : newRes.name);
+                              setState(() {
+                                _selectedCustomerId = newRes.id;
+                                _selectedCustomerName = displayName;
+                              });
+                            } else if (newRes is String) {
+                              setState(() {
+                                _selectedCustomerId = newRes;
+                              });
+                            }
                           }
                         },
                         style: ElevatedButton.styleFrom(
@@ -341,9 +373,9 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                   },
                 ),
                 SizedBox(height: 16),
-                BlocBuilder<StockBloc, StockState>(
+                BlocBuilder<WarehousesBloc, WarehousesState>(
                   builder: (context, state) {
-                    final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                    final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                     final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                     final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -412,8 +444,31 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                     IconButton(
                       icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
                       tooltip: 'Créer un nouvel article',
-                      onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
+                      onPressed: () async {
+                        final newProd = await Navigator.push<dynamic>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider.value(
+                              value: context.read<ProductsBloc>(),
+                              child: const MobileProductFormScreen(),
+                            ),
+                          ),
+                        );
+                        if (newProd != null && newProd is Product && mounted) {
+                          setState(() {
+                            _items.add(QuoteItem(
+                              id: _uuid.v4(),
+                              quoteId: widget.existing?.id ?? '',
+                              productId: newProd.id,
+                              productName: newProd.name,
+                              description: newProd.description ?? newProd.name,
+                              quantity: 1,
+                              unitPrice: newProd.sellingPrice,
+                              tvaRate: newProd.tvaRate,
+                              discountPercent: 0,
+                            ));
+                          });
+                        }
                       },
                     ),
                   ],

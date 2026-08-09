@@ -8,6 +8,11 @@ import '../models/transaction_category.dart';
 import '../models/stock_movement.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/stock/stock_bloc.dart';
+import '../blocs/customers/customers_bloc.dart';
+import '../blocs/projects/projects_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
+import '../blocs/warehouses/warehouses_event.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 
@@ -59,17 +64,24 @@ class SearchableSelectorField extends StatelessWidget {
 
 Future<String?> showCustomerSelectDialog(
   BuildContext context,
-  List<Customer> customers, {
+  List<Customer> initialCustomers, {
   String? selectedCustomerId,
 }) async {
+  try {
+    context.read<CustomersBloc>().add(LoadCustomers());
+  } catch (_) {}
+
   return showDialog<String?>(
     context: context,
     builder: (context) {
       String search = '';
       return StatefulBuilder(
         builder: (context, setDialogState) {
-          final query = search.trim().toLowerCase();
-          final filtered = customers.where((c) {
+          return BlocBuilder<CustomersBloc, CustomersState>(
+            builder: (context, state) {
+              final customers = state is CustomersLoaded ? state.customers : initialCustomers;
+              final query = search.trim().toLowerCase();
+              final filtered = customers.where((c) {
             if (query.isEmpty) return true;
             final nameMatch = c.name.toLowerCase().contains(query);
             final companyMatch = c.companyName?.toLowerCase().contains(query) ?? false;
@@ -200,6 +212,8 @@ Future<String?> showCustomerSelectDialog(
       );
     },
   );
+},
+);
 }
 
 Future<Map<String, dynamic>?> showContactSelectDialog(
@@ -373,17 +387,24 @@ Future<Map<String, dynamic>?> showContactSelectDialog(
 
 Future<String?> showProjectSelectDialog(
   BuildContext context,
-  List<Project> projects, {
+  List<Project> initialProjects, {
   String? selectedProjectId,
 }) async {
+  try {
+    context.read<ProjectsBloc>().add(LoadProjects());
+  } catch (_) {}
+
   return showDialog<String?>(
     context: context,
     builder: (context) {
       String search = '';
       return StatefulBuilder(
         builder: (context, setDialogState) {
-          final query = search.trim().toLowerCase();
-          final filtered = projects.where((p) {
+          return BlocBuilder<ProjectsBloc, ProjectsState>(
+            builder: (context, state) {
+              final projects = state is ProjectsLoaded ? state.projects : initialProjects;
+              final query = search.trim().toLowerCase();
+              final filtered = projects.where((p) {
             if (query.isEmpty) return true;
             final nameMatch = p.name.toLowerCase().contains(query);
             final descMatch = p.description?.toLowerCase().contains(query) ?? false;
@@ -524,6 +545,8 @@ Future<String?> showProjectSelectDialog(
       );
     },
   );
+},
+);
 }
 
 Future<String?> showSupplierSelectDialog(
@@ -1220,18 +1243,25 @@ Future<String?> showCategorySelectDialog(
 
 Future<String?> showWarehouseSelectDialog(
   BuildContext context,
-  List<Warehouse> warehouses, {
+  List<Warehouse> initialWarehouses, {
   String? selectedWarehouseId,
   bool includeAll = false,
 }) async {
+  try {
+    context.read<WarehousesBloc>().add(LoadWarehouses());
+  } catch (_) {}
+
   return showDialog<String?>(
     context: context,
     builder: (context) {
       String search = '';
       return StatefulBuilder(
         builder: (context, setDialogState) {
-          final query = search.trim().toLowerCase();
-          final filtered = warehouses.where((w) {
+          return BlocBuilder<WarehousesBloc, WarehousesState>(
+            builder: (context, state) {
+              final warehouses = state is WarehousesLoaded ? state.warehouses : initialWarehouses;
+              final query = search.trim().toLowerCase();
+              final filtered = warehouses.where((w) {
             if (query.isEmpty) return true;
             return w.name.toLowerCase().contains(query) || (w.reference?.toLowerCase().contains(query) ?? false);
           }).toList();
@@ -1370,6 +1400,8 @@ Future<String?> showWarehouseSelectDialog(
       );
     },
   );
+},
+);
 }
 
 Future<String?> showSimpleOptionSelectDialog(

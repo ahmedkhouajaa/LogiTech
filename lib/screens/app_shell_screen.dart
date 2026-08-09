@@ -4,6 +4,8 @@ import '../blocs/dashboard/dashboard_bloc.dart';
 import '../widgets/sidebar_menu.dart';
 import '../widgets/sync_indicator.dart';
 import '../widgets/custom_app_bar.dart';
+import '../widgets/enterprise_switcher.dart';
+import '../services/enterprise_service.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../utils/constants.dart';
 

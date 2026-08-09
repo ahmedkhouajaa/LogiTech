@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../database/database_helper.dart';
 import '../../models/product.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 
 abstract class ProductsEvent extends Equatable {
   const ProductsEvent();
@@ -152,20 +153,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
   }
 
   Future<void> _onLoad(LoadProducts event, Emitter<ProductsState> emit) async {
-    emit(ProductsLoading());
-    try {
-      final products = await DatabaseHelper.instance.getProducts();
-      final lowStock = await DatabaseHelper.instance.getLowStockProducts();
-      emit(ProductsLoaded(
-        products,
-        lowStock,
-        totalCount: products.length,
-        hasMore: false,
-        isLoadingMore: false,
-      ));
-    } catch (e) {
-      emit(ProductsError(e.toString()));
-    }
+    add(const LoadFirstProducts());
   }
 
   Future<void> _onLoadFirst(
@@ -241,8 +229,8 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
 
   Future<void> _onAdd(AddProduct event, Emitter<ProductsState> emit) async {
     try {
-      await DatabaseHelper.instance.insertProduct(event.product);
-      add(LoadProducts());
+      await FirestoreRepository.instance.saveProduct(event.product);
+      add(const LoadFirstProducts());
     } catch (e) {
       emit(ProductsError(e.toString()));
     }
@@ -250,8 +238,8 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
 
   Future<void> _onUpdate(UpdateProduct event, Emitter<ProductsState> emit) async {
     try {
-      await DatabaseHelper.instance.updateProduct(event.product);
-      add(LoadProducts());
+      await FirestoreRepository.instance.saveProduct(event.product);
+      add(const LoadFirstProducts());
     } catch (e) {
       emit(ProductsError(e.toString()));
     }
@@ -259,8 +247,8 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
 
   Future<void> _onDelete(DeleteProduct event, Emitter<ProductsState> emit) async {
     try {
-      await DatabaseHelper.instance.deleteProduct(event.id);
-      add(LoadProducts());
+      await FirestoreRepository.instance.softDeleteDocument('articles', event.id);
+      add(const LoadFirstProducts());
     } catch (e) {
       emit(ProductsError(e.toString()));
     }

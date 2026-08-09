@@ -24,7 +24,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<ProductsBloc>().add(LoadProducts());
+    context.read<ProductsBloc>().add(const LoadFirstProducts());
     context.read<StockBloc>().add(LoadStock());
   }
 

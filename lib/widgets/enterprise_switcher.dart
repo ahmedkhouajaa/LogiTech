@@ -80,7 +80,7 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
       ),
       onSelected: (value) {
         if (value == '__create_new__') {
-          _showCreateEnterpriseDialog(context);
+          showCreateEnterpriseDialog(context);
         } else {
           context.read<EnterpriseBloc>().add(SwitchEnterprise(value));
         }
@@ -359,7 +359,7 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
                   ),
                   onTap: () {
                     Navigator.pop(bottomSheetContext);
-                    _showCreateEnterpriseDialog(context);
+                    showCreateEnterpriseDialog(context);
                   },
                 ),
               ],
@@ -370,16 +370,21 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
     );
   }
 
-  static void _showCreateEnterpriseDialog(BuildContext context) {
+  static void showCreateEnterpriseDialog(BuildContext context, {bool isDismissible = true}) {
     showDialog(
       context: context,
-      builder: (dialogContext) => const _CreateEnterpriseFormDialog(),
+      barrierDismissible: isDismissible,
+      builder: (dialogContext) => PopScope(
+        canPop: isDismissible,
+        child: _CreateEnterpriseFormDialog(isDismissible: isDismissible),
+      ),
     );
   }
 }
 
 class _CreateEnterpriseFormDialog extends StatefulWidget {
-  const _CreateEnterpriseFormDialog();
+  final bool isDismissible;
+  const _CreateEnterpriseFormDialog({this.isDismissible = true});
 
   @override
   State<_CreateEnterpriseFormDialog> createState() => _CreateEnterpriseFormDialogState();
@@ -443,11 +448,12 @@ class _CreateEnterpriseFormDialogState extends State<_CreateEnterpriseFormDialog
                         maxLines: 1,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.pop(context),
-                      splashRadius: 20,
-                    ),
+                    if (widget.isDismissible)
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(context),
+                        splashRadius: 20,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -519,30 +525,34 @@ class _CreateEnterpriseFormDialogState extends State<_CreateEnterpriseFormDialog
                         onPressed: _submitForm,
                         child: const Text('Créer l\'entreprise', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
-                      const SizedBox(height: 8),
-                      OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      if (widget.isDismissible) ...[
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Annuler'),
                         ),
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Annuler'),
-                      ),
+                      ],
                     ],
                   )
                 else
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      if (widget.isDismissible) ...[
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Annuler'),
                         ),
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Annuler'),
-                      ),
-                      const SizedBox(width: 12),
+                        const SizedBox(width: 12),
+                      ],
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,

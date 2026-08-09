@@ -84,9 +84,9 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
       print('DashboardBloc: all queries completed, emitting DashboardLoaded!');
       emit(DashboardLoaded(
-        totalInvoiced: totalInvoiced,
+        totalInvoiced: (totalInvoiced as num).toDouble(),
         totalPaid: totalPaid,
-        totalDeliveryNotes: totalDeliveryNotes,
+        totalDeliveryNotes: (totalDeliveryNotes as num).toDouble(),
         totalTvaCollected: totalTvaCollected,
         totalTvaDeductible: totalTvaDeductible,
         invoiceStatusBreakdown: invoiceStatusBreakdown,

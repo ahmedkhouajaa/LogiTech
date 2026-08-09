@@ -10,6 +10,7 @@ import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
+import '../services/enterprise_service.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -338,7 +339,10 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
     _tvaSuspension = c?.tvaSuspension ?? false;
     _selectedPriceList = 'Prix par defaut';
 
-    _codeCtrl = TextEditingController(text: c?.code ?? 'CLI-${DateTime.now().millisecondsSinceEpoch % 10000}');
+    _codeCtrl = TextEditingController(text: c?.code ?? 'CL-002');
+    if (c == null) {
+      _loadNextCode();
+    }
     _companyNameCtrl = TextEditingController(text: c?.companyName ?? '');
     _responsibleNameCtrl = TextEditingController(text: c?.responsibleName ?? (c?.customerType == 'particulier' ? c?.name : '') ?? '');
     _cinCtrl = TextEditingController(text: c?.cinNumber ?? '');
@@ -419,6 +423,13 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
     _billingStreetCtrl.addListener(_syncDeliveryAddress);
     _billingCityCtrl.addListener(_syncDeliveryAddress);
     _billingPostalCodeCtrl.addListener(_syncDeliveryAddress);
+  }
+
+  Future<void> _loadNextCode() async {
+    final nextCode = await DatabaseHelper.instance.getNextCustomerSequence();
+    if (mounted && widget.existing == null) {
+      _codeCtrl.text = nextCode;
+    }
   }
 
   void _syncDeliveryAddress() {
@@ -1887,6 +1898,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
       id: widget.existing?.id ?? const Uuid().v4(),
       code: _codeCtrl.text.trim(),
       name: clientName,
+      enterpriseId: widget.existing?.enterpriseId ?? EnterpriseService.instance.currentEnterpriseId,
       email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
       phone: _phoneCtrl.text.trim().isEmpty 
           ? null 
@@ -1928,7 +1940,7 @@ class CustomerDialogState extends State<CustomerDialog> with SingleTickerProvide
     } else {
       context.read<CustomersBloc>().add(UpdateCustomer(customer));
     }
-    Navigator.pop(context, customer.id);
+    Navigator.pop(context, customer);
   }
 }
 

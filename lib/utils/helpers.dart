@@ -42,7 +42,7 @@ String formatDateRelative(DateTime date) {
 // ─── Document Number Generator ────────────────────────────────────
 String generateDocNumber(String prefix, int sequence) {
   final year = DateTime.now().year;
-  final seq = sequence.toString().padLeft(5, '0');
+  final seq = sequence.toString().padLeft(6, '0');
   return '$prefix-$year-$seq';
 }
 

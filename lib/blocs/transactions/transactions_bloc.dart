@@ -51,7 +51,7 @@ class TransactionsBloc extends Bloc<TransactionsEvent, TransactionsState> {
   }
 
   Future<void> _onUpdateCheck(UpdateCheckTraite event, Emitter<TransactionsState> emit) async {
-    try { await DatabaseHelper.instance.update('checks_traites', event.ct.toMap(), event.ct.id); add(LoadTransactions()); } catch (e) { emit(TransactionsError(e.toString())); }
+    try { await DatabaseHelper.instance.update('checks_traites', event.ct.toMap()); add(LoadTransactions()); } catch (e) { emit(TransactionsError(e.toString())); }
   }
 
   Future<void> _onAddAccount(AddAccount event, Emitter<TransactionsState> emit) async {

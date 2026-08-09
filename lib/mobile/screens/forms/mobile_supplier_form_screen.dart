@@ -7,6 +7,9 @@ import '../../../../utils/constants.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
+import '../../../../services/enterprise_service.dart';
+import '../../../../database/database_helper.dart';
+import 'package:provider/provider.dart';
 
 class MobileSupplierFormScreen extends StatefulWidget {
   final Supplier? existing;
@@ -49,7 +52,7 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
     }
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (widget.isReadOnly) return;
     if (!_formKey.currentState!.validate()) return;
     
@@ -61,9 +64,12 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final code = widget.existing?.code ?? await DatabaseHelper.instance.getNextSupplierSequence();
+      if (!mounted) return;
+
       final supplier = Supplier(
         id: widget.existing?.id ?? _uuid.v4(),
-        code: widget.existing?.code ?? 'FOU-${DateTime.now().millisecondsSinceEpoch % 10000}',
+        code: code,
         name: _name.trim(),
         email: _email.trim().isEmpty ? null : _email.trim(),
         phone: _phone.trim().isEmpty ? null : _phone.trim(),
@@ -72,6 +78,7 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
         address: _address.trim().isEmpty ? null : _address.trim(),
         city: _city.trim().isEmpty ? null : _city.trim(),
         notes: _notes.trim().isEmpty ? null : _notes.trim(),
+        enterpriseId: EnterpriseService.instance.currentEnterpriseId,
         isDeleted: widget.existing?.isDeleted ?? false,
       );
 

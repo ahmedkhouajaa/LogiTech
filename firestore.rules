@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    match /enterprises/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /{collectionName}/{docId} {
+      allow read: if isAuthenticated() && (
+        !('userId' in resource.data) || resource.data.userId == request.auth.uid
+      );
+      allow create: if isAuthenticated() && (
+        !('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid
+      );
+      allow update, delete: if isAuthenticated() && (
+        !('userId' in resource.data) || resource.data.userId == request.auth.uid
+      );
+    }
+  }
+}
