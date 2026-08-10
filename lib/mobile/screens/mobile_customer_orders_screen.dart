@@ -9,6 +9,9 @@ import '../../widgets/sidebar_menu.dart';
 import 'mobile_customer_order_detail_screen.dart';
 import '../../blocs/customer_orders/customer_orders_bloc.dart';
 import '../../blocs/customers/customers_bloc.dart';
+import '../../blocs/products/products_bloc.dart';
+import '../../blocs/projects/projects_bloc.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../models/customer.dart';
 import 'forms/mobile_customer_order_form_screen.dart';
 import '../../services/firestore_pagination_service.dart';
@@ -178,7 +181,18 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
               onEdit: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobileCustomerOrderFormScreen(existing: item)),
+                  MaterialPageRoute(
+                    builder: (_) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider.value(value: context.read<CustomerOrdersBloc>()),
+                        BlocProvider.value(value: context.read<CustomersBloc>()),
+                        BlocProvider.value(value: context.read<ProductsBloc>()),
+                        BlocProvider.value(value: context.read<ProjectsBloc>()),
+                        BlocProvider.value(value: context.read<WarehousesBloc>()),
+                      ],
+                      child: MobileCustomerOrderFormScreen(existing: item),
+                    ),
+                  ),
                 ).then((_) {
                   _fetchFilteredOrders();
                 });
@@ -251,7 +265,21 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
           itemCount: totalMatchingCount,
           fabText: _config.fabText,
           onFabPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileCustomerOrderFormScreen())).then((_) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider.value(value: context.read<CustomerOrdersBloc>()),
+                    BlocProvider.value(value: context.read<CustomersBloc>()),
+                    BlocProvider.value(value: context.read<ProductsBloc>()),
+                    BlocProvider.value(value: context.read<ProjectsBloc>()),
+                    BlocProvider.value(value: context.read<WarehousesBloc>()),
+                  ],
+                  child: const MobileCustomerOrderFormScreen(),
+                ),
+              ),
+            ).then((_) {
               _fetchFilteredOrders();
             });
           },

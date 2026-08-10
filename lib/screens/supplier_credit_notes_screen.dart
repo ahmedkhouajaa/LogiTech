@@ -6,6 +6,7 @@ import '../blocs/supplier_credit_notes/supplier_credit_notes_state.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
 import '../models/supplier_credit_note.dart';
 import '../models/supplier.dart';
 import '../utils/constants.dart';
@@ -59,12 +60,12 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<SupplierCreditNotesBloc>().add(LoadSupplierCreditNotes());
+    context.read<SupplierCreditNotesBloc>().add(const LoadFirstSupplierCreditNotes());
     context.read<SuppliersBloc>().add(LoadSuppliers());
   }
 
   void _applyFilters() {
-    context.read<SupplierCreditNotesBloc>().add(FilterSupplierCreditNotes(
+    context.read<SupplierCreditNotesBloc>().add(LoadFirstSupplierCreditNotes(
       supplierId: _selectedSupplierId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
@@ -150,6 +151,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
             BlocProvider.value(value: context.read<SuppliersBloc>()),
             BlocProvider.value(value: context.read<ProductsBloc>()),
             BlocProvider.value(value: context.read<ProjectsBloc>()),
+            BlocProvider.value(value: context.read<WarehousesBloc>()),
           ],
           child: CreateSupplierCreditNoteScreen(existing: existing),
         ),

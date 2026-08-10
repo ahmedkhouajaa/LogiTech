@@ -11,6 +11,7 @@ import '../blocs/return_notes/return_notes_state.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
 import '../models/return_note.dart';
 import '../models/customer.dart';
 import '../utils/constants.dart';
@@ -46,13 +47,13 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<ReturnNotesBloc>().add(LoadReturnNotes());
+    context.read<ReturnNotesBloc>().add(const LoadFirstReturnNotes());
     context.read<CustomersBloc>().add(LoadCustomers());
   }
 
   void _applyFilters() {
-    context.read<ReturnNotesBloc>().add(FilterReturnNotes(
-      clientId: _selectedClientId,
+    context.read<ReturnNotesBloc>().add(LoadFirstReturnNotes(
+      customerId: _selectedClientId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
       status: _statusFilter?.name,
@@ -143,6 +144,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
             BlocProvider.value(value: context.read<CustomersBloc>()),
             BlocProvider.value(value: context.read<ProductsBloc>()),
             BlocProvider.value(value: context.read<ProjectsBloc>()),
+            BlocProvider.value(value: context.read<WarehousesBloc>()),
           ],
           child: CreateReturnNoteScreen(existing: existing),
         ),

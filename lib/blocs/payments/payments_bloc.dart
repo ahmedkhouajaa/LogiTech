@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../database/database_helper.dart';
 import '../../models/payment_model.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 
 // ─── Events ─────────────────────────────────────────────────────────────────
 abstract class PaymentsEvent extends Equatable {
@@ -150,14 +151,7 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
   }
 
   Future<void> _onLoad(LoadPayments event, Emitter<PaymentsState> emit) async {
-    emit(PaymentsLoading());
-    try {
-      final payments = await DatabaseHelper.instance.getPayments();
-      final accounts = await DatabaseHelper.instance.getPaymentAccounts();
-      emit(PaymentsLoaded(payments, accounts, totalCount: payments.length, hasMore: false));
-    } catch (e) {
-      emit(PaymentsError(e.toString()));
-    }
+    await _onLoadFirst(const LoadFirstPayments(), emit);
   }
 
   Future<void> _onLoadFirst(LoadFirstPayments event, Emitter<PaymentsState> emit) async {
@@ -249,8 +243,8 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
 
   Future<void> _onAdd(AddPayment event, Emitter<PaymentsState> emit) async {
     try {
-      await DatabaseHelper.instance.insertPayment(event.payment);
-      add(ResetPaymentsPagination(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
+      await FirestoreRepository.instance.savePayment(event.payment);
+      add(LoadFirstPayments(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
     } catch (e) {
       emit(PaymentsError(e.toString()));
     }
@@ -258,8 +252,8 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
 
   Future<void> _onUpdate(UpdatePayment event, Emitter<PaymentsState> emit) async {
     try {
-      await DatabaseHelper.instance.updatePayment(event.payment);
-      add(ResetPaymentsPagination(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
+      await FirestoreRepository.instance.savePayment(event.payment);
+      add(LoadFirstPayments(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
     } catch (e) {
       emit(PaymentsError(e.toString()));
     }
@@ -267,8 +261,8 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
 
   Future<void> _onDelete(DeletePayment event, Emitter<PaymentsState> emit) async {
     try {
-      await DatabaseHelper.instance.softDeletePayment(event.id);
-      add(ResetPaymentsPagination(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
+      await FirestoreRepository.instance.softDeleteDocument('paiements', event.id);
+      add(LoadFirstPayments(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
     } catch (e) {
       emit(PaymentsError(e.toString()));
     }

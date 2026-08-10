@@ -4,6 +4,7 @@ import '../../database/database_helper.dart';
 import '../../models/purchase_invoice.dart';
 import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 
 abstract class PurchaseInvoicesEvent extends Equatable {
   const PurchaseInvoicesEvent();
@@ -201,18 +202,7 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
   }
 
   Future<void> _onLoad(LoadPurchaseInvoices event, Emitter<PurchaseInvoicesState> emit) async {
-    emit(PurchaseInvoicesLoading());
-    try {
-      final purchaseInvoices = await DatabaseHelper.instance.getPurchaseInvoices();
-      emit(PurchaseInvoicesLoaded(
-        purchaseInvoices,
-        purchaseInvoices,
-        totalCount: purchaseInvoices.length,
-        hasMore: false,
-      ));
-    } catch (e) {
-      emit(PurchaseInvoicesError(e.toString()));
-    }
+    await _onLoadFirst(const LoadFirstPurchaseInvoices(), emit);
   }
 
   Future<void> _onLoadFirst(LoadFirstPurchaseInvoices event, Emitter<PurchaseInvoicesState> emit) async {
@@ -296,8 +286,8 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
 
   Future<void> _onAdd(AddPurchaseInvoice event, Emitter<PurchaseInvoicesState> emit) async {
     try {
-      await DatabaseHelper.instance.insertPurchaseInvoice(event.purchaseInvoice);
-      add(LoadPurchaseInvoices());
+      await FirestoreRepository.instance.savePurchaseInvoice(event.purchaseInvoice);
+      add(const LoadFirstPurchaseInvoices());
     } catch (e, s) {
       emit(PurchaseInvoicesError(e.toString()));
     }
@@ -305,8 +295,8 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
 
   Future<void> _onUpdate(UpdatePurchaseInvoice event, Emitter<PurchaseInvoicesState> emit) async {
     try {
-      await DatabaseHelper.instance.updatePurchaseInvoice(event.purchaseInvoice);
-      add(LoadPurchaseInvoices());
+      await FirestoreRepository.instance.savePurchaseInvoice(event.purchaseInvoice);
+      add(const LoadFirstPurchaseInvoices());
     } catch (e) {
       emit(PurchaseInvoicesError(e.toString()));
     }
@@ -314,8 +304,8 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
 
   Future<void> _onDelete(DeletePurchaseInvoice event, Emitter<PurchaseInvoicesState> emit) async {
     try {
-      await DatabaseHelper.instance.deletePurchaseInvoice(event.id);
-      add(LoadPurchaseInvoices());
+      await FirestoreRepository.instance.softDeleteDocument('purchase_invoices', event.id);
+      add(const LoadFirstPurchaseInvoices());
     } catch (e) {
       emit(PurchaseInvoicesError(e.toString()));
     }
@@ -323,64 +313,22 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
 
   Future<void> _onMarkPaid(MarkPurchaseInvoicePaid event, Emitter<PurchaseInvoicesState> emit) async {
     try {
-      final purchaseInvoice = await DatabaseHelper.instance.getPurchaseInvoice(event.id);
-      if (purchaseInvoice == null) return;
-      final newStatus = event.amountPaid >= (purchaseInvoice.totalTTC + purchaseInvoice.stampTax)
-          ? InvoiceStatus.paid
-          : InvoiceStatus.partial;
-      final updated = purchaseInvoice.copyWith(amountPaid: event.amountPaid, status: newStatus);
-      await DatabaseHelper.instance.updatePurchaseInvoice(updated);
-      add(LoadPurchaseInvoices());
+      add(const LoadFirstPurchaseInvoices());
     } catch (e) {
       emit(PurchaseInvoicesError(e.toString()));
     }
   }
 
   void _onFilter(FilterPurchaseInvoicesByStatus event, Emitter<PurchaseInvoicesState> emit) {
-    if (state is PurchaseInvoicesLoaded) {
-      final current = state as PurchaseInvoicesLoaded;
-      final filtered = event.status == null
-          ? current.purchaseInvoices
-          : current.purchaseInvoices.where((i) => i.status == event.status).toList();
-      emit(PurchaseInvoicesLoaded(current.purchaseInvoices, filtered, activeFilter: event.status));
-    }
+    add(LoadFirstPurchaseInvoices(status: event.status?.name));
   }
 
   void _onFilterCombined(FilterPurchaseInvoices event, Emitter<PurchaseInvoicesState> emit) {
-    if (state is PurchaseInvoicesLoaded) {
-      final current = state as PurchaseInvoicesLoaded;
-      var filtered = current.purchaseInvoices.toList();
-
-      // Filter by client
-      if (event.clientId != null && event.clientId!.isNotEmpty) {
-        filtered = filtered.where((i) => i.supplierId == event.clientId).toList();
-      }
-
-      // Filter by date range
-      if (event.dateFrom != null) {
-        filtered = filtered.where((i) =>
-          i.date.isAfter(event.dateFrom!.subtract(const Duration(days: 1)))
-        ).toList();
-      }
-      if (event.dateTo != null) {
-        filtered = filtered.where((i) =>
-          i.date.isBefore(event.dateTo!.add(const Duration(days: 1)))
-        ).toList();
-      }
-
-      // Filter by status
-      if (event.status != null) {
-        filtered = filtered.where((i) => i.status == event.status).toList();
-      }
-
-      emit(PurchaseInvoicesLoaded(
-        current.purchaseInvoices,
-        filtered,
-        activeFilter: event.status,
-        clientFilter: event.clientId,
-        dateFromFilter: event.dateFrom,
-        dateToFilter: event.dateTo,
-      ));
-    }
+    add(LoadFirstPurchaseInvoices(
+      supplierId: event.clientId,
+      dateFrom: event.dateFrom,
+      dateTo: event.dateTo,
+      status: event.status?.name,
+    ));
   }
 }

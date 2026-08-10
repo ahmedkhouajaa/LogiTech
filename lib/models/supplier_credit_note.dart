@@ -4,6 +4,7 @@ class SupplierCreditNote {
   final String id;
   final String number;
   final String supplierId;
+  final String? supplierName;
   final DateTime date;
   final String status; // e.g. 'draft', 'validated', 'canceled'
   final String? reason;
@@ -19,6 +20,7 @@ class SupplierCreditNote {
     required this.id,
     required this.number,
     required this.supplierId,
+    this.supplierName,
     required this.date,
     required this.status,
     this.reason,
@@ -37,6 +39,7 @@ class SupplierCreditNote {
       'id': id,
       'number': number,
       'supplier_id': supplierId,
+      'supplier_name': supplierName,
       'date': date.toIso8601String(),
       'status': status,
       'reason': reason,
@@ -50,18 +53,23 @@ class SupplierCreditNote {
     };
   }
 
-  factory SupplierCreditNote.fromMap(Map<String, dynamic> map, List<SupplierCreditNoteItem> items) {
+  factory SupplierCreditNote.fromMap(Map<String, dynamic> map, [List<SupplierCreditNoteItem> items = const []]) {
+    List<SupplierCreditNoteItem> parsedItems = items;
+    if (parsedItems.isEmpty && map['items'] != null && map['items'] is List) {
+      parsedItems = (map['items'] as List).map((i) => SupplierCreditNoteItem.fromMap(Map<String, dynamic>.from(i))).toList();
+    }
     return SupplierCreditNote(
-      id: map['id'],
-      number: map['number'],
-      supplierId: map['supplier_id'],
-      date: DateTime.parse(map['date']),
-      status: map['status'],
-      reason: map['reason'],
-      isDeleted: map['is_deleted'] == 1,
-      createdAt: DateTime.parse(map['created_at']),
-      updatedAt: DateTime.parse(map['updated_at']),
-      items: items,
+      id: map['id']?.toString() ?? '',
+      number: map['number']?.toString() ?? '',
+      supplierId: map['supplier_id']?.toString() ?? '',
+      supplierName: map['supplier_name']?.toString(),
+      date: map['date'] != null ? (DateTime.tryParse(map['date'].toString()) ?? DateTime.now()) : DateTime.now(),
+      status: map['status']?.toString() ?? 'draft',
+      reason: map['reason']?.toString(),
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true || map['is_deleted'] == '1',
+      createdAt: map['created_at'] != null ? (DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()) : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? (DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now()) : DateTime.now(),
+      items: parsedItems,
     );
   }
 
@@ -69,6 +77,7 @@ class SupplierCreditNote {
     String? id,
     String? number,
     String? supplierId,
+    String? supplierName,
     DateTime? date,
     String? status,
     String? reason,
@@ -81,6 +90,7 @@ class SupplierCreditNote {
       id: id ?? this.id,
       number: number ?? this.number,
       supplierId: supplierId ?? this.supplierId,
+      supplierName: supplierName ?? this.supplierName,
       date: date ?? this.date,
       status: status ?? this.status,
       reason: reason ?? this.reason,

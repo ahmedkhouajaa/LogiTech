@@ -7,10 +7,16 @@ import '../../../../blocs/invoices/invoices_bloc.dart';
 import '../../../../models/credit_note.dart';
 import '../../../../models/customer.dart';
 import '../../../../models/invoice.dart';
-import '../../../../blocs/stock/stock_bloc.dart';
+import '../../../../models/product.dart';
+import '../../../../blocs/products/products_bloc.dart';
+import '../../../../blocs/warehouses/warehouses_bloc.dart';
+import '../../../../blocs/warehouses/warehouses_state.dart';
+import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
+import '../../../../database/database_helper.dart';
+import '../../../../screens/customers_screen.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
@@ -34,6 +40,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
   bool _isLoading = false;
 
   String? _selectedCustomerId;
+  String? _selectedCustomerName;
   String? _selectedInvoiceId;
   String? _selectedWarehouseId;
   List<CreditNoteItem> _items = [];
@@ -66,14 +73,13 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
     super.initState();
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<InvoicesBloc>().add(LoadInvoices());
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
 
     if (widget.existing != null) {
       final cn = widget.existing!;
       _date = cn.date;
       _selectedCustomerId = cn.customerId;
+      _selectedCustomerName = cn.customerName;
       _selectedInvoiceId = cn.invoiceId.isEmpty ? null : cn.invoiceId;
       _reason = cn.reason ?? '';
       _notes = cn.notes ?? '';
@@ -103,7 +109,20 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
       
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
-        number = generateDocNumber('AV', DateTime.now().millisecondsSinceEpoch % 1000000);
+        final seq = await DatabaseHelper.instance.getNextCreditNoteSequence();
+        number = generateDocNumber('AV', seq);
+      }
+
+      final custState = context.read<CustomersBloc>().state;
+      String? custName;
+      if (custState is CustomersLoaded) {
+        final found = custState.customers.firstWhere(
+          (c) => c.id == _selectedCustomerId,
+          orElse: () => Customer(id: '', code: '', name: 'Client Inconnu'),
+        );
+        custName = found.companyName?.isNotEmpty == true
+            ? found.companyName
+            : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
       }
 
       final creditNoteId = widget.existing?.id ?? _uuid.v4();
@@ -112,6 +131,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
         number: number,
         invoiceId: _selectedInvoiceId ?? '',
         customerId: _selectedCustomerId!,
+        customerName: custName ?? _selectedCustomerName,
         date: _date,
         reason: _reason.trim().isEmpty ? null : _reason.trim(),
         notes: _notes.trim().isEmpty ? null : _notes.trim(),
@@ -204,28 +224,74 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                BlocBuilder<CustomersBloc, CustomersState>(
-                  builder: (context, state) {
-                    final customers = state is CustomersLoaded ? state.customers : <Customer>[];
-                    return AbsorbPointer(
-                      absorbing: widget.isReadOnly,
-                      child: SmartSearchableSelector(
-                        label: 'Client *',
-                        hint: 'Sélectionner un client',
-                        selectedText: _selectedCustomerId != null
-                            ? (customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.companyName?.isNotEmpty == true
-                                ? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)!.companyName!
-                                : customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.name)
-                            : null,
-                        onTap: () async {
-                          final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
-                          if (res != null && mounted) {
-                            setState(() => _selectedCustomerId = res);
-                          }
+                Row(
+                  children: [
+                    Expanded(
+                      child: BlocBuilder<CustomersBloc, CustomersState>(
+                        builder: (context, state) {
+                          final customers = state is CustomersLoaded ? state.customers : <Customer>[];
+                          return AbsorbPointer(
+                            absorbing: widget.isReadOnly,
+                            child: SmartSearchableSelector(
+                              label: 'Client *',
+                              hint: 'Sélectionner un client',
+                              selectedText: _selectedCustomerId != null
+                                  ? (customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.companyName?.isNotEmpty == true
+                                      ? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)!.companyName!
+                                      : (_selectedCustomerName ?? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.name))
+                                  : null,
+                              onTap: () async {
+                                final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
+                                if (res != null && mounted) {
+                                  setState(() => _selectedCustomerId = res);
+                                }
+                              },
+                            ),
+                          );
                         },
                       ),
-                    );
-                  },
+                    ),
+                    if (!widget.isReadOnly) ...[
+                      SizedBox(width: 8),
+                      Container(
+                        height: 50,
+                        margin: EdgeInsets.only(top: 24),
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final res = await showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => BlocProvider.value(
+                                value: context.read<CustomersBloc>(),
+                                child: const CustomerDialog(existing: null),
+                              ),
+                            );
+                            if (res != null && mounted) {
+                              if (res is Customer) {
+                                setState(() {
+                                  _selectedCustomerId = res.id;
+                                  _selectedCustomerName = res.companyName?.isNotEmpty == true
+                                      ? res.companyName!
+                                      : (res.responsibleName?.isNotEmpty == true ? res.responsibleName! : res.name);
+                                });
+                              } else if (res is String) {
+                                setState(() => _selectedCustomerId = res);
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary.withOpacity(0.1),
+                            foregroundColor: AppColors.primary,
+                            elevation: 0,
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                            side: BorderSide(color: AppColors.primary.withOpacity(0.3)),
+                          ),
+                          child: Icon(Icons.person_add_alt_1_rounded),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 SizedBox(height: 16),
                 BlocBuilder<InvoicesBloc, InvoicesState>(
@@ -252,9 +318,9 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
                   },
                 ),
                 SizedBox(height: 16),
-                BlocBuilder<StockBloc, StockState>(
+                BlocBuilder<WarehousesBloc, WarehousesState>(
                   builder: (context, state) {
-                    final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                    final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                     final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                     final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -335,13 +401,34 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
                         )
      ),
      SizedBox(width: 8),
-     IconButton(
-       icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
-       tooltip: 'Créer un nouvel article',
-       onPressed: () {
-         Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
-       },
-     ),
+      IconButton(
+        icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
+        tooltip: 'Créer un nouvel article',
+        onPressed: () async {
+          final newProd = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BlocProvider.value(
+                value: context.read<ProductsBloc>(),
+                child: const MobileProductFormScreen(),
+              ),
+            ),
+          );
+          if (newProd != null && newProd is Product && mounted) {
+            setState(() {
+              _items.add(CreditNoteItem(
+                id: _uuid.v4(),
+                productId: newProd.id,
+                productName: newProd.name,
+                quantity: 1,
+                unitPrice: newProd.sellingPrice,
+                tvaRate: newProd.tvaRate,
+                totalHT: newProd.sellingPrice,
+              ));
+            });
+          }
+        },
+      ),
    ],
  ),
                 ),

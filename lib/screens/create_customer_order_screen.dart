@@ -10,6 +10,9 @@ import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/project.dart';
 import '../blocs/stock/stock_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
+import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
@@ -34,6 +37,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
   final _uuid = const Uuid();
 
   String? _selectedCustomerId;
+  String? _selectedCustomerName;
   String? _selectedProjectId;
   String? _selectedWarehouseId;
   List<CustomerOrderItem> _items = [];
@@ -87,15 +91,15 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
 
     if (widget.existing != null) {
       final n = widget.existing!;
       _date = n.date;
       _selectedCustomerId = n.customerId;
+      _selectedCustomerName = n.customerName;
       _selectedProjectId = n.projectId;
+      _selectedWarehouseId = n.warehouseId;
       _pricingModeHT = n.pricingMode == 'ht';
       _withGlobalDiscount = n.globalDiscountPercent > 0;
       _globalDiscountPercent = n.globalDiscountPercent;
@@ -167,8 +171,9 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
       id: orderId,
       number: number,
       customerId: _selectedCustomerId!,
-      customerName: custName,
+      customerName: custName ?? _selectedCustomerName,
       projectId: _selectedProjectId,
+      warehouseId: _selectedWarehouseId,
       date: _date,
       status: _status.name,
       pricingMode: _pricingModeHT ? 'ht' : 'ttc',
@@ -448,7 +453,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                             message: 'Créer un nouveau client',
                             child: ElevatedButton(
                               onPressed: () async {
-                                final newId = await showDialog<String>(
+                                final newRes = await showDialog<dynamic>(
                                   context: context,
                                   barrierDismissible: false,
                                   builder: (_) => BlocProvider.value(
@@ -456,8 +461,20 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                                     child: const CustomerDialog(existing: null),
                                   ),
                                 );
-                                if (newId != null && mounted) {
-                                  setState(() => _selectedCustomerId = newId);
+                                if (newRes != null && mounted) {
+                                  if (newRes is Customer) {
+                                    final displayName = newRes.companyName?.isNotEmpty == true
+                                        ? newRes.companyName!
+                                        : (newRes.responsibleName?.isNotEmpty == true
+                                            ? newRes.responsibleName!
+                                            : newRes.name);
+                                    setState(() {
+                                      _selectedCustomerId = newRes.id;
+                                      _selectedCustomerName = displayName;
+                                    });
+                                  } else if (newRes is String) {
+                                    setState(() => _selectedCustomerId = newRes);
+                                  }
                                 }
                               },
                               style: ElevatedButton.styleFrom(
@@ -519,9 +536,9 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
             children: [
               Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
-              BlocBuilder<StockBloc, StockState>(
+              BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
-                  final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                  final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                   final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                   final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -967,8 +984,29 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
           tooltip: 'Créer un nouvel article',
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          onPressed: () async {
+            final newProd = await Navigator.push<dynamic>(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BlocProvider.value(
+                  value: context.read<ProductsBloc>(),
+                  child: const CreateArticleScreen(),
+                ),
+              ),
+            );
+            if (newProd != null && newProd is Product && mounted) {
+              setState(() {
+                _items.add(CustomerOrderItem(
+                  id: _uuid.v4(),
+                  orderId: widget.existing?.id ?? '',
+                  productId: newProd.id,
+                  description: newProd.name,
+                  quantity: 1,
+                  unitPrice: newProd.sellingPrice,
+                  tvaRate: newProd.tvaRate,
+                ));
+              });
+            }
           },
           splashRadius: 24,
         ),

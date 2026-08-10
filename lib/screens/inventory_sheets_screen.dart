@@ -881,7 +881,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                 if (state is InventorySheetsLoaded) {
                   if (entries.isEmpty) {
                     return Center(
-                      child: Text("Aucun bon d'entrée trouvé", style: TextStyle(color: AppColors.textSecondary)),
+                      child: Text("Aucune fiche d'inventaire trouvée", style: TextStyle(color: AppColors.textSecondary)),
                     );
                   }
 

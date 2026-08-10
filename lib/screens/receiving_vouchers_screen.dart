@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
+import '../blocs/products/products_bloc.dart';
+import '../blocs/projects/projects_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
 import '../models/receiving_voucher.dart';
 import '../models/supplier.dart';
 import '../utils/constants.dart';
@@ -70,14 +73,20 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<ReceivingVouchersBloc>().add(LoadReceivingVouchers());
+    context.read<ReceivingVouchersBloc>().add(LoadFirstReceivingVouchers());
     context.read<SuppliersBloc>().add(LoadSuppliers());
   }
 
   void _applyFilters() {
-    _currentPage = 0;
-    // We don't have a backend filter event, so we just trigger a rebuild to filter locally
-    setState(() {});
+    context.read<ReceivingVouchersBloc>().add(LoadFirstReceivingVouchers(
+      supplierId: _selectedSupplierId,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      status: _statusFilter?.name,
+    ));
+    setState(() {
+      _currentPage = 0;
+    });
   }
 
   @override
@@ -108,7 +117,18 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const CreateReceivingVoucherScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => MultiBlocProvider(
+                        providers: [
+                          BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
+                          BlocProvider.value(value: context.read<SuppliersBloc>()),
+                          BlocProvider.value(value: context.read<ProductsBloc>()),
+                          BlocProvider.value(value: context.read<ProjectsBloc>()),
+                          BlocProvider.value(value: context.read<WarehousesBloc>()),
+                        ],
+                        child: const CreateReceivingVoucherScreen(),
+                      ),
+                    ),
                   );
                 },
                 isPrimary: true,

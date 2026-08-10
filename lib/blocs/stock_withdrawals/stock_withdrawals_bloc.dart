@@ -1,11 +1,13 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/stock_withdrawal.dart';
 import '../../models/stock_movement.dart';
 import '../../utils/constants.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
+import '../../services/firestore_repository.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
 abstract class StockWithdrawalsEvent {}
@@ -224,97 +226,65 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
   }
 
   Future<void> _onLoad(LoadStockWithdrawals event, Emitter<StockWithdrawalsState> emit) async {
-    emit(StockWithdrawalsLoading());
-    try {
-      final allWithdrawals = await _dbHelper.getStockWithdrawals();
-      final filtered = allWithdrawals.where((w) => w.number.startsWith('BP-')).toList();
-      emit(StockWithdrawalsLoaded(filtered, totalCount: filtered.length));
-    } catch (e) {
-      emit(StockWithdrawalsError("Erreur lors du chargement: $e"));
-    }
+    await _onLoadFirstStockWithdrawals(LoadFirstStockWithdrawals(), emit);
   }
 
   Future<void> _onAdd(AddStockWithdrawal event, Emitter<StockWithdrawalsState> emit) async {
     try {
-      final db = await _dbHelper.database;
-      final currentEntId = EnterpriseService.instance.currentEnterpriseId;
-      
-      String number = event.withdrawal.number;
-      if (number.isEmpty || number.startsWith('BP-') || number.startsWith('BS-') || number.startsWith('BL-')) {
-        final now = DateTime.now();
-        String countWhere = "date LIKE '${now.year}-%'";
-        if (currentEntId != null && currentEntId.isNotEmpty) {
-          if (EnterpriseService.instance.isDefaultEnterprise) {
-            countWhere += " AND (enterprise_id = '$currentEntId' OR enterprise_id IS NULL)";
-          } else {
-            countWhere += " AND enterprise_id = '$currentEntId'";
+      await FirestoreRepository.instance.saveStockWithdrawal(event.withdrawal);
+
+      for (var item in event.withdrawal.items) {
+        if (item.productId.isNotEmpty && item.quantity > 0) {
+          String? prodName;
+          try {
+            final prodRef = FirebaseFirestore.instance.collection('products').doc(item.productId);
+            final doc = await prodRef.get();
+            if (doc.exists && doc.data() != null) {
+              prodName = doc.data()!['name']?.toString();
+              final currentStock = (doc.data()!['stock_qty'] as num?)?.toDouble() ?? (doc.data()!['stock'] as num?)?.toDouble() ?? 0.0;
+              final newStock = currentStock - item.quantity;
+              await prodRef.update({
+                'stock_qty': newStock,
+                'updated_at': DateTime.now().toIso8601String(),
+              });
+            }
+          } catch (_) {}
+
+          String? whName;
+          final whId = event.withdrawal.warehouseId ?? '';
+          try {
+            if (whId.isNotEmpty) {
+              final whRef = FirebaseFirestore.instance.collection('warehouses').doc(whId);
+              final doc = await whRef.get();
+              if (doc.exists && doc.data() != null) {
+                whName = doc.data()!['name']?.toString();
+              }
+            }
+          } catch (_) {}
+          if (whName == null && (whId.isEmpty || whId == 'default_warehouse')) {
+            whName = 'Entrepôt principal';
           }
-        }
-        final countMap = await db.rawQuery(
-            "SELECT COUNT(*) as count FROM bons_sortie WHERE $countWhere"
-        );
-        final count = (countMap.first['count'] as int? ?? 0) + 1;
-        number = 'BP-${now.year}-${count.toString().padLeft(5, '0')}';
-      }
 
-      final newWithdrawal = event.withdrawal.copyWith(number: number);
-
-      final List<StockMovement> movements = [];
-      final List<StockWithdrawalItem> savedItems = [];
-      await db.transaction((txn) async {
-        final data = newWithdrawal.toMap();
-        if (currentEntId != null && currentEntId.isNotEmpty) {
-          data['enterprise_id'] = currentEntId;
-        }
-        data.remove('items');
-        await txn.insert('bons_sortie', data);
-
-        for (var item in newWithdrawal.items) {
-          final newItem = item.copyWith(id: _uuid.v4(), withdrawalId: newWithdrawal.id);
-          savedItems.add(newItem);
-          await txn.insert('bons_sortie_items', newItem.toMap());
-
-          final movement = StockMovement(
-            id: _uuid.v4(),
+          final movId = const Uuid().v4();
+          final mov = StockMovement(
+            id: movId,
             productId: item.productId,
-            warehouseId: newWithdrawal.warehouseId ?? 'default_warehouse',
+            productName: prodName,
+            warehouseId: whId.isNotEmpty ? whId : 'default_warehouse',
+            warehouseName: whName,
             type: MovementType.exit,
             quantity: item.quantity,
             referenceType: 'stock_withdrawal',
-            referenceId: newWithdrawal.id,
-            date: newWithdrawal.date,
-            notes: newWithdrawal.conditionsGenerales,
-            enterpriseId: currentEntId,
+            referenceId: event.withdrawal.number.isNotEmpty ? event.withdrawal.number : event.withdrawal.id,
+            date: event.withdrawal.date,
+            notes: event.withdrawal.notes ?? event.withdrawal.conditionsGenerales,
+            enterpriseId: EnterpriseService.instance.currentEnterpriseId,
           );
-          movements.add(movement);
-          await txn.insert('stock_movements', movement.toMap());
-
-          await txn.rawUpdate(
-            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) - ? WHERE id = ?',
-            [item.quantity, item.productId]
-          );
-        }
-      });
-
-      final newWithdrawalMap = newWithdrawal.toMap();
-      if (currentEntId != null && currentEntId.isNotEmpty) {
-        newWithdrawalMap['enterprise_id'] = currentEntId;
-      }
-      newWithdrawalMap['items'] = savedItems.map((i) => i.toMap()).toList();
-      await _dbHelper.addToSyncQueue('bons_sortie', newWithdrawal.id, 'INSERT', newWithdrawalMap);
-      
-      for (var mov in movements) {
-        await _dbHelper.addToSyncQueue('stock_movements', mov.id, 'INSERT', mov.toMap());
-      }
-      
-      for (var item in newWithdrawal.items) {
-        final pMap = await _dbHelper.getById('products', item.productId);
-        if (pMap != null) {
-          await _dbHelper.addToSyncQueue('products', item.productId, 'UPDATE', pMap);
+          await FirestoreRepository.instance.saveDocument('stock_movements', mov.id, mov.toMap());
         }
       }
 
-      add(LoadStockWithdrawals());
+      add(LoadFirstStockWithdrawals());
     } catch (e) {
       emit(StockWithdrawalsError("Erreur lors de l'ajout: $e"));
     }
@@ -322,172 +292,65 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
 
   Future<void> _onUpdate(UpdateStockWithdrawal event, Emitter<StockWithdrawalsState> emit) async {
     try {
-      final db = await _dbHelper.database;
-      final withdrawal = event.withdrawal.copyWith(updatedAt: DateTime.now());
+      await FirestoreRepository.instance.saveStockWithdrawal(event.withdrawal);
 
-      final List<Map<String, dynamic>> oldMovements = await db.query(
-        'stock_movements',
-        where: 'reference_type = ? AND reference_id = ?',
-        whereArgs: ['stock_withdrawal', withdrawal.id],
-      );
+      for (var item in event.withdrawal.items) {
+        if (item.productId.isNotEmpty && item.quantity > 0) {
+          String? prodName;
+          try {
+            final prodRef = FirebaseFirestore.instance.collection('products').doc(item.productId);
+            final doc = await prodRef.get();
+            if (doc.exists && doc.data() != null) {
+              prodName = doc.data()!['name']?.toString();
+            }
+          } catch (_) {}
 
-      final List<StockMovement> newMovements = [];
-      final List<Map<String, dynamic>> oldItems = await db.query(
-        'bons_sortie_items',
-        where: 'withdrawal_id = ?',
-        whereArgs: [withdrawal.id],
-      );
-      final List<StockWithdrawalItem> savedNewItems = [];
+          String? whName;
+          final whId = event.withdrawal.warehouseId ?? '';
+          try {
+            if (whId.isNotEmpty) {
+              final whRef = FirebaseFirestore.instance.collection('warehouses').doc(whId);
+              final doc = await whRef.get();
+              if (doc.exists && doc.data() != null) {
+                whName = doc.data()!['name']?.toString();
+              }
+            }
+          } catch (_) {}
+          if (whName == null && (whId.isEmpty || whId == 'default_warehouse')) {
+            whName = 'Entrepôt principal';
+          }
 
-      await db.transaction((txn) async {
-        final data = withdrawal.toMap();
-        data.remove('items');
-        await txn.update(
-          'bons_sortie',
-          data,
-          where: 'id = ?',
-          whereArgs: [withdrawal.id],
-        );
-
-        for (var oldMap in oldItems) {
-          final oldQty = (oldMap['quantity'] as num).toDouble();
-          final oldProductId = oldMap['product_id'] as String;
-          await txn.rawUpdate(
-            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) + ? WHERE id = ?',
-            [oldQty, oldProductId]
-          );
-        }
-
-        await txn.delete(
-          'bons_sortie_items',
-          where: 'withdrawal_id = ?',
-          whereArgs: [withdrawal.id],
-        );
-        
-        await txn.delete(
-          'stock_movements',
-          where: 'reference_type = ? AND reference_id = ?',
-          whereArgs: ['stock_withdrawal', withdrawal.id],
-        );
-
-        for (var item in withdrawal.items) {
-          final newItem = item.copyWith(
-            id: item.id.isEmpty ? _uuid.v4() : item.id,
-            withdrawalId: withdrawal.id,
-          );
-          savedNewItems.add(newItem);
-          await txn.insert('bons_sortie_items', newItem.toMap());
-          
-          final movement = StockMovement(
-            id: _uuid.v4(),
+          final movId = const Uuid().v4();
+          final mov = StockMovement(
+            id: movId,
             productId: item.productId,
-            warehouseId: withdrawal.warehouseId ?? 'default_warehouse',
+            productName: prodName,
+            warehouseId: whId.isNotEmpty ? whId : 'default_warehouse',
+            warehouseName: whName,
             type: MovementType.exit,
             quantity: item.quantity,
             referenceType: 'stock_withdrawal',
-            referenceId: withdrawal.id,
-            date: withdrawal.date,
-            notes: withdrawal.conditionsGenerales,
+            referenceId: event.withdrawal.number.isNotEmpty ? event.withdrawal.number : event.withdrawal.id,
+            date: event.withdrawal.date,
+            notes: event.withdrawal.notes ?? event.withdrawal.conditionsGenerales,
+            enterpriseId: EnterpriseService.instance.currentEnterpriseId,
           );
-          newMovements.add(movement);
-          await txn.insert('stock_movements', movement.toMap());
-
-          await txn.rawUpdate(
-            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) - ? WHERE id = ?',
-            [item.quantity, item.productId]
-          );
-        }
-      });
-
-      final withdrawalMap = withdrawal.toMap();
-      withdrawalMap['items'] = savedNewItems.map((i) => i.toMap()).toList();
-      await _dbHelper.addToSyncQueue('bons_sortie', withdrawal.id, 'UPDATE', withdrawalMap);
-
-      for (var mov in oldMovements) {
-        await _dbHelper.addToSyncQueue('stock_movements', mov['id'] as String, 'DELETE', {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()});
-      }
-      for (var mov in newMovements) {
-        await _dbHelper.addToSyncQueue('stock_movements', mov.id, 'INSERT', mov.toMap());
-      }
-
-      final productIds = <String>{};
-      for (var i in oldItems) {
-        productIds.add(i['product_id'] as String);
-      }
-      for (var i in withdrawal.items) {
-        productIds.add(i.productId);
-      }
-
-      for (var pId in productIds) {
-        final pMap = await _dbHelper.getById('products', pId);
-        if (pMap != null) {
-          await _dbHelper.addToSyncQueue('products', pId, 'UPDATE', pMap);
+          await FirestoreRepository.instance.saveDocument('stock_movements', mov.id, mov.toMap());
         }
       }
 
-      add(LoadStockWithdrawals());
+      add(LoadFirstStockWithdrawals());
     } catch (e) {
-      emit(StockWithdrawalsError('Erreur lors de la mise a jour: $e'));
+      emit(StockWithdrawalsError("Erreur lors de la mise à jour: $e"));
     }
   }
 
   Future<void> _onDelete(DeleteStockWithdrawal event, Emitter<StockWithdrawalsState> emit) async {
     try {
-      final db = await _dbHelper.database;
-      final List<Map<String, dynamic>> movementsToDelete = await db.query(
-        'stock_movements',
-        where: 'reference_type = ? AND reference_id = ?',
-        whereArgs: ['stock_withdrawal', event.withdrawalId],
-      );
-      final List<Map<String, dynamic>> oldItems = await db.query(
-        'bons_sortie_items',
-        where: 'withdrawal_id = ?',
-        whereArgs: [event.withdrawalId],
-      );
-
-      await db.transaction((txn) async {
-        await txn.update(
-          'bons_sortie',
-          {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()},
-          where: 'id = ?',
-          whereArgs: [event.withdrawalId],
-        );
-
-        for (var oldMap in oldItems) {
-          final oldQty = (oldMap['quantity'] as num).toDouble();
-          final oldProductId = oldMap['product_id'] as String;
-          await txn.rawUpdate(
-            'UPDATE products SET stock_qty = COALESCE(stock_qty, 0) + ? WHERE id = ?',
-            [oldQty, oldProductId]
-          );
-        }
-
-        await txn.update(
-          'stock_movements',
-          {'is_deleted': 1},
-          where: 'reference_type = ? AND reference_id = ?',
-          whereArgs: ['stock_withdrawal', event.withdrawalId],
-        );
-      });
-
-      final data = {'is_deleted': 1, 'updated_at': DateTime.now().toIso8601String()};
-      await _dbHelper.addToSyncQueue('bons_sortie', event.withdrawalId, 'DELETE', data);
-      
-      for (var mov in movementsToDelete) {
-        await _dbHelper.addToSyncQueue('stock_movements', mov['id'] as String, 'DELETE', data);
-      }
-      
-      for (var oldMap in oldItems) {
-        final pId = oldMap['product_id'] as String;
-        final pMap = await _dbHelper.getById('products', pId);
-        if (pMap != null) {
-          await _dbHelper.addToSyncQueue('products', pId, 'UPDATE', pMap);
-        }
-      }
-
-      add(LoadStockWithdrawals());
+      await FirestoreRepository.instance.softDeleteDocument('bons_sortie', event.withdrawalId);
+      add(LoadFirstStockWithdrawals());
     } catch (e) {
-      emit(StockWithdrawalsError('Erreur lors de la suppression: $e'));
+      emit(StockWithdrawalsError("Erreur lors de la suppression: $e"));
     }
   }
 

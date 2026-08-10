@@ -11,6 +11,9 @@ import '../../models/supplier.dart';
 import 'forms/mobile_purchase_invoice_form_screen.dart';
 import 'mobile_purchase_invoice_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../blocs/products/products_bloc.dart';
+import '../../blocs/projects/projects_bloc.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
 
 class MobilePurchaseInvoicesScreen extends StatefulWidget {
   const MobilePurchaseInvoicesScreen({super.key});
@@ -58,7 +61,13 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
   }
 
   void _fetchFilteredPurchaseInvoices() {
-    context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
+    context.read<PurchaseInvoicesBloc>().add(LoadFirstPurchaseInvoices(
+      searchQuery: _searchQuery,
+      supplierId: _selectedSupplierId,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      status: _selectedStatus,
+    ));
   }
 
   void _onSearchChanged(String query) {
@@ -176,7 +185,18 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
               onEdit: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobilePurchaseInvoiceFormScreen(existing: item)),
+                  MaterialPageRoute(
+                    builder: (_) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider.value(value: context.read<PurchaseInvoicesBloc>()),
+                        BlocProvider.value(value: context.read<SuppliersBloc>()),
+                        BlocProvider.value(value: context.read<ProductsBloc>()),
+                        BlocProvider.value(value: context.read<ProjectsBloc>()),
+                        BlocProvider.value(value: context.read<WarehousesBloc>()),
+                      ],
+                      child: MobilePurchaseInvoiceFormScreen(existing: item),
+                    ),
+                  ),
                 ).then((_) {
                   _fetchFilteredPurchaseInvoices();
                 });
@@ -245,7 +265,18 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
           onFabPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const MobilePurchaseInvoiceFormScreen()),
+              MaterialPageRoute(
+                builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider.value(value: context.read<PurchaseInvoicesBloc>()),
+                    BlocProvider.value(value: context.read<SuppliersBloc>()),
+                    BlocProvider.value(value: context.read<ProductsBloc>()),
+                    BlocProvider.value(value: context.read<ProjectsBloc>()),
+                    BlocProvider.value(value: context.read<WarehousesBloc>()),
+                  ],
+                  child: const MobilePurchaseInvoiceFormScreen(),
+                ),
+              ),
             ).then((_) {
               _fetchFilteredPurchaseInvoices();
             });

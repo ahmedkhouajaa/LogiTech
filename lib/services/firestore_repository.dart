@@ -14,6 +14,8 @@ import '../models/stock_transfer.dart';
 import '../models/credit_note.dart';
 import '../models/supplier_credit_note.dart';
 import '../models/return_note.dart';
+import '../models/supplier_order.dart';
+import '../models/purchase_invoice.dart';
 import '../models/supplier_return.dart';
 import '../models/inventory_sheet.dart';
 import '../models/stock_movement.dart';
@@ -21,6 +23,7 @@ import '../models/treasury_account.dart';
 import '../models/treasury_transaction.dart';
 import '../models/payment_model.dart';
 import '../models/check_traite.dart';
+import '../models/stock_entry.dart';
 import '../models/project.dart';
 
 class FirestoreRepository {
@@ -107,5 +110,81 @@ class FirestoreRepository {
   Future<void> saveDeliveryNote(DeliveryNote note) async {
     final map = note.toMap();
     await saveDocument('delivery_notes', note.id, map);
+  }
+
+  Future<void> saveStockWithdrawal(StockWithdrawal withdrawal) async {
+    final map = withdrawal.toMap();
+    await saveDocument('bons_sortie', withdrawal.id, map);
+  }
+
+  Future<void> saveStockTransfer(StockTransfer transfer) async {
+    final map = transfer.toMap();
+    await saveDocument('stock_transfers', transfer.id, map);
+  }
+
+  Future<void> saveInventorySheet(InventorySheet sheet) async {
+    final map = sheet.toMap();
+    await saveDocument('inventory_sheets', sheet.id, map);
+  }
+
+  Future<void> saveCreditNote(CreditNote creditNote) async {
+    final map = creditNote.toMap();
+    await saveDocument('credit_notes', creditNote.id, map);
+  }
+
+  Future<void> saveReturnNote(ReturnNote returnNote) async {
+    final map = returnNote.toMap();
+    await saveDocument('return_notes', returnNote.id, map);
+  }
+
+  Future<void> saveSupplierOrder(SupplierOrder order) async {
+    final map = order.toMap();
+    await saveDocument('supplier_orders', order.id, map);
+  }
+
+  Future<void> saveReceivingVoucher(ReceivingVoucher voucher) async {
+    final map = voucher.toMap();
+    await saveDocument('receiving_vouchers', voucher.id, map);
+  }
+
+  Future<void> savePurchaseInvoice(PurchaseInvoice invoice) async {
+    final map = invoice.toMap();
+    await saveDocument('purchase_invoices', invoice.id, map);
+  }
+
+  Future<void> saveSupplierCreditNote(SupplierCreditNote note) async {
+    final map = note.toMap();
+    await saveDocument('supplier_credit_notes', note.id, map);
+  }
+
+  Future<void> saveSupplierReturn(SupplierReturn item) async {
+    final map = item.toMap();
+    await saveDocument('supplier_returns', item.id, map);
+  }
+
+  Future<void> savePayment(Payment payment) async {
+    final map = payment.toMap();
+    await saveDocument('paiements', payment.id, map);
+
+    if (payment.accountId != null && payment.accountId!.isNotEmpty && payment.amount > 0) {
+      try {
+        final accRef = _firestore.collection('treasury_accounts').doc(payment.accountId);
+        final doc = await accRef.get();
+        if (doc.exists && doc.data() != null) {
+          final currentBalance = (doc.data()!['balance'] as num?)?.toDouble() ?? 0.0;
+          final delta = payment.direction == 'encaissement' ? payment.amount : -payment.amount;
+          final newBalance = currentBalance + delta;
+          await accRef.update({
+            'balance': newBalance,
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+        }
+      } catch (_) {}
+    }
+  }
+
+  Future<void> saveStockEntry(StockEntry entry) async {
+    final map = entry.toMap();
+    await saveDocument('stock_entries', entry.id, map);
   }
 }

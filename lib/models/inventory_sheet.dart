@@ -55,23 +55,31 @@ class InventorySheet {
         'items': items.map((i) => i.toMap()).toList(),
       };
 
-  factory InventorySheet.fromMap(Map<String, dynamic> map, [List<InventorySheetItem>? items]) => InventorySheet(
-        id: map['id'] as String,
-        number: map['number'] as String,
-        date: DateTime.parse(map['date'] as String),
-        inventoryDate: DateTime.parse(map['inventory_date'] as String),
-        warehouseId: map['warehouse_id'] as String,
-        countedBy: map['counted_by'] as String?,
-        status: map['status'] as String? ?? 'draft',
-        reason: map['reason'] as String?,
-        notes: map['notes'] as String?,
-        firebaseUid: map['firebase_uid'] as String?,
-        enterpriseId: map['enterprise_id'] as String?,
-        isDeleted: map['is_deleted'] == 1,
-        createdAt: DateTime.parse(map['created_at'] as String),
-        updatedAt: DateTime.parse(map['updated_at'] as String),
-        items: items ?? [],
-      );
+  factory InventorySheet.fromMap(Map<String, dynamic> map, [List<InventorySheetItem>? items]) {
+    List<InventorySheetItem> parsedItems = items ?? [];
+    if ((items == null || items.isEmpty) && map['items'] != null && map['items'] is List) {
+      parsedItems = (map['items'] as List)
+          .map((i) => InventorySheetItem.fromMap(Map<String, dynamic>.from(i as Map)))
+          .toList();
+    }
+    return InventorySheet(
+      id: map['id'] as String,
+      number: map['number'] as String,
+      date: DateTime.parse(map['date'] as String),
+      inventoryDate: map['inventory_date'] != null ? DateTime.parse(map['inventory_date'] as String) : DateTime.parse(map['date'] as String),
+      warehouseId: map['warehouse_id'] as String,
+      countedBy: map['counted_by'] as String?,
+      status: map['status'] as String? ?? 'draft',
+      reason: map['reason'] as String?,
+      notes: map['notes'] as String?,
+      firebaseUid: map['firebase_uid'] as String?,
+      enterpriseId: map['enterprise_id'] as String?,
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
+      createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: DateTime.parse(map['updated_at'] as String),
+      items: parsedItems,
+    );
+  }
 
   InventorySheet copyWith({
     String? id,

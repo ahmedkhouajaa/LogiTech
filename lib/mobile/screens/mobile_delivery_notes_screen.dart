@@ -8,6 +8,9 @@ import '../../widgets/sidebar_menu.dart';
 import '../../utils/constants.dart';
 import '../../blocs/delivery_notes/delivery_notes_bloc.dart';
 import '../../blocs/customers/customers_bloc.dart';
+import '../../blocs/products/products_bloc.dart';
+import '../../blocs/projects/projects_bloc.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../models/customer.dart';
 import 'forms/mobile_delivery_note_form_screen.dart';
 import 'mobile_delivery_note_detail_screen.dart';
@@ -173,7 +176,18 @@ class _MobileDeliveryNotesScreenState extends State<MobileDeliveryNotesScreen> {
               onEdit: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobileDeliveryNoteFormScreen(existing: item)),
+                  MaterialPageRoute(
+                    builder: (_) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider.value(value: context.read<DeliveryNotesBloc>()),
+                        BlocProvider.value(value: context.read<CustomersBloc>()),
+                        BlocProvider.value(value: context.read<ProductsBloc>()),
+                        BlocProvider.value(value: context.read<ProjectsBloc>()),
+                        BlocProvider.value(value: context.read<WarehousesBloc>()),
+                      ],
+                      child: MobileDeliveryNoteFormScreen(existing: item),
+                    ),
+                  ),
                 ).then((_) {
                   _fetchFilteredNotes();
                 });
@@ -247,7 +261,18 @@ class _MobileDeliveryNotesScreenState extends State<MobileDeliveryNotesScreen> {
           onFabPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const MobileDeliveryNoteFormScreen()),
+              MaterialPageRoute(
+                builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider.value(value: context.read<DeliveryNotesBloc>()),
+                    BlocProvider.value(value: context.read<CustomersBloc>()),
+                    BlocProvider.value(value: context.read<ProductsBloc>()),
+                    BlocProvider.value(value: context.read<ProjectsBloc>()),
+                    BlocProvider.value(value: context.read<WarehousesBloc>()),
+                  ],
+                  child: const MobileDeliveryNoteFormScreen(),
+                ),
+              ),
             ).then((_) {
               _fetchFilteredNotes();
             });

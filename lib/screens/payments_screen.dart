@@ -35,7 +35,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<PaymentsBloc>().add(LoadPayments());
+    context.read<PaymentsBloc>().add(const LoadFirstPayments());
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<SuppliersBloc>().add(LoadSuppliers());
   }
@@ -824,8 +824,10 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
         _direction == 'encaissement' ? 'PAI' : 'DEB';
 
     // Generate a unique payment number
-    final seq = now.millisecondsSinceEpoch % 1000000;
-    final paymentNumber = '$prefix-$year-${seq.toString().padLeft(6, '0')}';
+    final seq = await DatabaseHelper.instance.getNextPaymentSequence();
+    final paymentNumber = _direction == 'encaissement'
+        ? generateDocNumber(DocPrefix.paymentIn, seq)
+        : generateDocNumber(DocPrefix.paymentOut, seq);
 
     final payment = Payment(
       id: const Uuid().v4(),
@@ -1015,7 +1017,12 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                 icon: Icons.arrow_downward_rounded,
                 color: AppColors.success,
                 isSelected: _direction == 'encaissement',
-                onTap: () => setState(() => _direction = 'encaissement'),
+                onTap: () => setState(() {
+                  _direction = 'encaissement';
+                  _selectedContactType = 'customer';
+                  _selectedContactId = null;
+                  _selectedContactName = null;
+                }),
               ),
             ),
             SizedBox(width: 12),
@@ -1026,7 +1033,12 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                 icon: Icons.arrow_upward_rounded,
                 color: AppColors.error,
                 isSelected: _direction == 'decaissement',
-                onTap: () => setState(() => _direction = 'decaissement'),
+                onTap: () => setState(() {
+                  _direction = 'decaissement';
+                  _selectedContactType = 'supplier';
+                  _selectedContactId = null;
+                  _selectedContactName = null;
+                }),
               ),
             ),
           ],
@@ -1039,33 +1051,110 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Contact *',
+        Text('Type de contact',
             style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary)),
         SizedBox(height: 6),
-        SearchableSelectorField(
-          hint: 'Rechercher un client ou fournisseur...',
-          selectedText: _selectedContactName != null
-              ? '${_selectedContactName!} (${_selectedContactType == 'customer' ? 'Client' : 'Fournisseur'})'
-              : null,
-          onTap: () async {
-            final res = await showContactSelectDialog(
-              context,
-              customers: _customers,
-              suppliers: _suppliers,
-              selectedContactId: _selectedContactId,
-            );
-            if (res != null) {
-              setState(() {
-                _selectedContactId = res['id'];
-                _selectedContactName = res['name'];
-                _selectedContactType = res['type'];
-              });
-            }
-          },
+        Container(
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceAlt,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: AppColors.border),
+          ),
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedContactType ?? 'customer',
+              isExpanded: true,
+              style: TextStyle(fontSize: 14, color: AppColors.textPrimary),
+              items: const [
+                DropdownMenuItem(value: 'customer', child: Text('Client')),
+                DropdownMenuItem(value: 'supplier', child: Text('Fournisseur')),
+              ],
+              onChanged: (v) {
+                if (v != null) {
+                  setState(() {
+                    _selectedContactType = v;
+                    _selectedContactId = null;
+                    _selectedContactName = null;
+                  });
+                }
+              },
+            ),
+          ),
         ),
+        SizedBox(height: 16),
+        Text(_selectedContactType == 'supplier' ? 'Fournisseur *' : 'Client *',
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary)),
+        SizedBox(height: 6),
+        if (_selectedContactType == 'supplier')
+          BlocBuilder<SuppliersBloc, SuppliersState>(
+            builder: (context, state) {
+              final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
+              final selectedSupplier = suppliers.cast<Supplier?>().firstWhere(
+                (s) => s?.id == _selectedContactId,
+                orElse: () => null,
+              );
+              final displayName = selectedSupplier != null
+                  ? (selectedSupplier.companyName?.isNotEmpty == true
+                      ? selectedSupplier.companyName!
+                      : (selectedSupplier.responsibleName?.isNotEmpty == true ? selectedSupplier.responsibleName! : selectedSupplier.name))
+                  : _selectedContactName;
+
+              return SearchableSelectorField(
+                hint: 'Rechercher un fournisseur...',
+                selectedText: displayName,
+                onTap: () async {
+                  final res = await showSupplierSelectDialog(context, suppliers, selectedSupplierId: _selectedContactId);
+                  if (res != null) {
+                    final found = suppliers.firstWhere((s) => s.id == res, orElse: () => Supplier(id: '', code: '', name: ''));
+                    setState(() {
+                      _selectedContactId = res;
+                      _selectedContactName = found.companyName?.isNotEmpty == true
+                          ? found.companyName!
+                          : (found.responsibleName?.isNotEmpty == true ? found.responsibleName! : found.name);
+                      _selectedContactType = 'supplier';
+                    });
+                  }
+                },
+              );
+            },
+          )
+        else
+          BlocBuilder<CustomersBloc, CustomersState>(
+            builder: (context, state) {
+              final customers = state is CustomersLoaded ? state.customers : <Customer>[];
+              final selectedCustomer = customers.cast<Customer?>().firstWhere(
+                (c) => c?.id == _selectedContactId,
+                orElse: () => null,
+              );
+              final displayName = selectedCustomer != null
+                  ? (selectedCustomer.companyName?.isNotEmpty == true ? selectedCustomer.companyName! : selectedCustomer.name)
+                  : _selectedContactName;
+
+              return SearchableSelectorField(
+                hint: 'Rechercher un client...',
+                selectedText: displayName,
+                onTap: () async {
+                  final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedContactId);
+                  if (res != null) {
+                    final found = customers.firstWhere((c) => c.id == res, orElse: () => Customer(id: '', code: '', name: ''));
+                    setState(() {
+                      _selectedContactId = res;
+                      _selectedContactName = found.companyName?.isNotEmpty == true ? found.companyName! : found.name;
+                      _selectedContactType = 'customer';
+                    });
+                  }
+                },
+              );
+            },
+          ),
       ],
     );
   }

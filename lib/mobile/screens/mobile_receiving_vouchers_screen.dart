@@ -7,6 +7,9 @@ import '../widgets/mobile_advanced_filter_panel.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import '../../blocs/suppliers/suppliers_bloc.dart';
+import '../../blocs/products/products_bloc.dart';
+import '../../blocs/projects/projects_bloc.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../models/supplier.dart';
 import 'forms/mobile_receiving_voucher_form_screen.dart';
 import 'mobile_receiving_voucher_detail_screen.dart';
@@ -177,7 +180,16 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
               onEdit: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobileReceivingVoucherFormScreen(existing: item)),
+                  MaterialPageRoute(builder: (_) => MultiBlocProvider(
+                    providers: [
+                      BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
+                      BlocProvider.value(value: context.read<SuppliersBloc>()),
+                      BlocProvider.value(value: context.read<ProductsBloc>()),
+                      BlocProvider.value(value: context.read<ProjectsBloc>()),
+                      BlocProvider.value(value: context.read<WarehousesBloc>()),
+                    ],
+                    child: MobileReceivingVoucherFormScreen(existing: item),
+                  )),
                 ).then((_) {
                   _fetchFilteredVouchers();
                 });
@@ -252,7 +264,16 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
           onFabPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const MobileReceivingVoucherFormScreen()),
+              MaterialPageRoute(builder: (_) => MultiBlocProvider(
+                providers: [
+                  BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
+                  BlocProvider.value(value: context.read<SuppliersBloc>()),
+                  BlocProvider.value(value: context.read<ProductsBloc>()),
+                  BlocProvider.value(value: context.read<ProjectsBloc>()),
+                  BlocProvider.value(value: context.read<WarehousesBloc>()),
+                ],
+                child: const MobileReceivingVoucherFormScreen(),
+              )),
             ).then((_) {
               _fetchFilteredVouchers();
             });

@@ -55,7 +55,7 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<StockEntriesBloc>().add(LoadStockEntries());
+    context.read<StockEntriesBloc>().add(const LoadFirstStockEntries());
     _loadWarehouses();
   }
 

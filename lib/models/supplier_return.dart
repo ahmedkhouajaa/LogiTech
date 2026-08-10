@@ -129,6 +129,7 @@ class SupplierReturn extends Equatable {
       'id': id,
       'number': number,
       'supplier_id': supplierId,
+      'supplier_name': supplierName,
       'purchase_invoice_id': purchaseInvoiceId,
       'receiving_voucher_id': receivingVoucherId,
       'date': date.toIso8601String(),
@@ -143,21 +144,25 @@ class SupplierReturn extends Equatable {
   }
 
   factory SupplierReturn.fromMap(Map<String, dynamic> map, [List<SupplierReturnItem>? items, String? supplierName]) {
+    List<SupplierReturnItem> parsedItems = items ?? const [];
+    if (parsedItems.isEmpty && map['items'] != null && map['items'] is List) {
+      parsedItems = (map['items'] as List).map((i) => SupplierReturnItem.fromMap(Map<String, dynamic>.from(i))).toList();
+    }
     return SupplierReturn(
-      id: map['id'],
-      number: map['number'],
-      supplierId: map['supplier_id'],
-      purchaseInvoiceId: map['purchase_invoice_id'],
-      receivingVoucherId: map['receiving_voucher_id'],
-      date: DateTime.parse(map['date']),
-      reason: map['reason'],
-      status: map['status'] ?? 'draft',
-      firebaseUid: map['firebase_uid'],
-      isDeleted: map['is_deleted'] == 1,
-      createdAt: DateTime.parse(map['created_at']),
-      updatedAt: DateTime.parse(map['updated_at']),
-      supplierName: supplierName ?? map['supplier_name'],
-      items: items ?? [],
+      id: map['id']?.toString() ?? '',
+      number: map['number']?.toString() ?? '',
+      supplierId: map['supplier_id']?.toString() ?? '',
+      purchaseInvoiceId: map['purchase_invoice_id']?.toString(),
+      receivingVoucherId: map['receiving_voucher_id']?.toString(),
+      date: map['date'] != null ? (DateTime.tryParse(map['date'].toString()) ?? DateTime.now()) : DateTime.now(),
+      reason: map['reason']?.toString(),
+      status: map['status']?.toString() ?? 'draft',
+      firebaseUid: map['firebase_uid']?.toString(),
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true || map['is_deleted'] == '1',
+      createdAt: map['created_at'] != null ? (DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()) : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? (DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now()) : DateTime.now(),
+      supplierName: supplierName ?? map['supplier_name']?.toString(),
+      items: parsedItems,
     );
   }
 

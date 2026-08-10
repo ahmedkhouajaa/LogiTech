@@ -10,6 +10,8 @@ import '../blocs/stock/stock_bloc.dart';
 import '../models/stock_withdrawal.dart';
 import '../models/product.dart';
 import '../utils/constants.dart';
+import '../utils/helpers.dart';
+import '../database/database_helper.dart';
 
 import 'create_article_screen.dart';
 import '../mobile/screens/forms/mobile_product_form_screen.dart';
@@ -77,7 +79,7 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_warehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un entrepôt')));
@@ -100,19 +102,17 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
         return;
       }
       seenProducts.add(item.productId);
+    }
 
-      final stock = _stockQuantities[item.productId] ?? 0.0;
-      if (item.quantity > stock) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: La quantité à retirer (${item.quantity.toInt()}) dépasse le stock disponible (${stock.toInt()})')),
-        );
-        return;
-      }
+    String number = widget.existing?.number ?? '';
+    if (number.isEmpty) {
+      final seq = await DatabaseHelper.instance.getNextStockWithdrawalSequence();
+      number = generateDocNumber(DocPrefix.stockWithdrawal, seq);
     }
 
     final entry = StockWithdrawal(
       id: widget.existing?.id,
-      number: widget.existing?.number ?? '',
+      number: number,
       customerId: '',
       warehouseId: _warehouseId!,
       date: _date,
@@ -154,7 +154,11 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
       }
     }
     
-    Navigator.pop(context);
+    if (mounted) {
+      context.read<StockBloc>().add(LoadStock());
+      context.read<ProductsBloc>().add(LoadProducts());
+      Navigator.pop(context);
+    }
   }
 
   void _addEmptyItem() {
@@ -559,11 +563,13 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
       isWarehouseDefault = _warehouses.firstWhere((w) => w.id == _warehouseId).isDefault;
     } catch (_) {}
 
+    bool foundMovements = false;
     if (stockState is StockLoaded) {
       for (var m in stockState.movements) {
         if (m.productId == currentItem.productId) {
-          final isWarehouseMatch = m.warehouseId == _warehouseId || (m.warehouseId == 'default_warehouse' && isWarehouseDefault);
+          final isWarehouseMatch = _warehouseId == null || _warehouseId!.isEmpty || m.warehouseId == _warehouseId || (m.warehouseId == 'default_warehouse' && isWarehouseDefault);
           if (isWarehouseMatch) {
+            foundMovements = true;
             if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
               stock += m.quantity;
             } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
@@ -572,8 +578,18 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
           }
         }
       }
-    } else {
-      stock = _stockQuantities[currentItem.productId] ?? 0;
+    }
+
+    if (!foundMovements || stock == 0.0) {
+      try {
+        final pState = context.read<ProductsBloc>().state;
+        if (pState is ProductsLoaded) {
+          final prod = pState.products.cast<Product?>().firstWhere((p) => p?.id == currentItem.productId, orElse: () => null);
+          if (prod != null && prod.stockQty > 0) {
+            stock = prod.stockQty;
+          }
+        }
+      } catch (_) {}
     }
     
     // If editing an existing withdrawal, the DB stock already has the old quantity deducted.

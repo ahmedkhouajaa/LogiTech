@@ -10,7 +10,9 @@ import '../models/invoice.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/project.dart';
-import '../blocs/stock/stock_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
+import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
 import '../models/document_template.dart';
 import 'create_article_screen.dart';
@@ -102,9 +104,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
     _loadTemplate();
 
     // Load existing invoice data if editing
@@ -370,8 +370,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                           child: Tooltip(
                             message: 'Créer un nouveau client',
                             child: ElevatedButton(
-                              onPressed: () {
-                                showDialog(
+                              onPressed: () async {
+                                final res = await showDialog(
                                   context: context,
                                   barrierDismissible: false,
                                   builder: (_) => BlocProvider.value(
@@ -379,6 +379,17 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                                     child: const CustomerDialog(existing: null),
                                   ),
                                 );
+                                if (res != null && mounted) {
+                                  if (res is Customer) {
+                                    setState(() => _selectedCustomer = res);
+                                  } else if (res is String) {
+                                    final custs = context.read<CustomersBloc>().state;
+                                    if (custs is CustomersLoaded) {
+                                      final found = custs.customers.firstWhere((c) => c.id == res, orElse: () => Customer(id: res, code: '', name: 'Client'));
+                                      setState(() => _selectedCustomer = found);
+                                    }
+                                  }
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary.withValues(alpha: 0.1),
@@ -433,9 +444,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             children: [
               Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
-              BlocBuilder<StockBloc, StockState>(
+              BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
-                  final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                  final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                   final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                   final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -776,8 +787,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
           tooltip: 'Créer un nouvel article',
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          onPressed: () async {
+            final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+            if (res != null && res is Product && mounted) {
+              _addProductItem(res);
+            }
           },
           splashRadius: 24,
         ),
@@ -1017,7 +1031,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   }
 
   // ─── Save ────────────────────────────────────────────────────────
-  void _save() {
+  Future<void> _save() async {
     if (_isSaving) return;
 
     if (_selectedCustomer == null) {
@@ -1030,10 +1044,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     setState(() => _isSaving = true);
 
     try {
+      String number = widget.existing?.number ?? '';
+      if (number.isEmpty) {
+        final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
+        number = generateDocNumber('FA', seq);
+      }
+
       final invoiceId = _isEditing ? widget.existing!.id : _uuid.v4();
       final invoice = Invoice(
         id: invoiceId,
-        number: _isEditing ? widget.existing!.number : generateDocNumber(DocPrefix.invoice, DateTime.now().millisecondsSinceEpoch % 1000000),
+        number: number,
         customerId: _selectedCustomer!.id,
         customerName: _selectedCustomer!.name,
         projectId: _selectedProjectId,
@@ -1062,7 +1082,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         context.read<InvoicesBloc>().add(AddInvoice(invoice));
       }
 
-      context.read<StockBloc>().add(LoadStock());
+      context.read<WarehousesBloc>().add(LoadWarehouses());
       context.read<ProductsBloc>().add(const ResetProductsPagination());
 
       Navigator.pop(context);

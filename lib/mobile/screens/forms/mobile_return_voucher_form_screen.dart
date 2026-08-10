@@ -8,7 +8,11 @@ import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../models/return_note.dart';
 import '../../../../models/customer.dart';
 import '../../../../models/project.dart';
-import '../../../../blocs/stock/stock_bloc.dart';
+import '../../../../models/product.dart';
+import '../../../../blocs/products/products_bloc.dart';
+import '../../../../blocs/warehouses/warehouses_bloc.dart';
+import '../../../../blocs/warehouses/warehouses_state.dart';
+import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
@@ -37,6 +41,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
   bool _isLoading = false;
 
   String? _selectedCustomerId;
+  String? _selectedCustomerName;
   String? _selectedProjectId;
   String? _selectedWarehouseId;
   List<ReturnNoteItem> _items = [];
@@ -89,14 +94,13 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
     super.initState();
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<ProjectsBloc>().add(LoadProjects());
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
 
     if (widget.existing != null) {
       final n = widget.existing!;
       _date = n.dateEmission;
       _selectedCustomerId = n.customerId;
+      _selectedCustomerName = n.customerName;
       _status = n.status;
       _notes = n.notes ?? '';
       _conditions = n.conditions ?? '';
@@ -133,11 +137,24 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
         number = generateDocNumber('BR', seq);
       }
 
+      final custState = context.read<CustomersBloc>().state;
+      String? custName;
+      if (custState is CustomersLoaded) {
+        final found = custState.customers.firstWhere(
+          (c) => c.id == _selectedCustomerId,
+          orElse: () => Customer(id: '', code: '', name: 'Client Inconnu'),
+        );
+        custName = found.companyName?.isNotEmpty == true
+            ? found.companyName
+            : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
+      }
+
       final noteId = widget.existing?.id ?? _uuid.v4();
       final note = ReturnNote(
         id: noteId,
         returnNumber: number,
         customerId: _selectedCustomerId!,
+        customerName: custName ?? _selectedCustomerName,
         dateEmission: _date,
         status: _status,
         notes: _notes.isNotEmpty ? _notes : null,
@@ -283,7 +300,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
                         height: 50,
                         child: ElevatedButton(
                           onPressed: () async {
-                            final newId = await showDialog<String>(
+                            final res = await showDialog(
                               context: context,
                               barrierDismissible: false,
                               builder: (_) => BlocProvider.value(
@@ -291,10 +308,17 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
                                 child: const CustomerDialog(existing: null),
                               ),
                             );
-                            if (newId != null && mounted) {
-                              setState(() {
-                                _selectedCustomerId = newId;
-                              });
+                            if (res != null && mounted) {
+                              if (res is Customer) {
+                                setState(() {
+                                  _selectedCustomerId = res.id;
+                                  _selectedCustomerName = res.companyName?.isNotEmpty == true
+                                      ? res.companyName!
+                                      : (res.responsibleName?.isNotEmpty == true ? res.responsibleName! : res.name);
+                                });
+                              } else if (res is String) {
+                                setState(() => _selectedCustomerId = res);
+                              }
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -334,9 +358,9 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
                   },
                 ),
                 SizedBox(height: 16),
-                BlocBuilder<StockBloc, StockState>(
+                BlocBuilder<WarehousesBloc, WarehousesState>(
                   builder: (context, state) {
-                    final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                    final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                     final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                     final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -418,8 +442,30 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
                       IconButton(
                         icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
                         tooltip: 'Créer un nouvel article',
-                        onPressed: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
+                        onPressed: () async {
+                          final newProd = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => BlocProvider.value(
+                                value: context.read<ProductsBloc>(),
+                                child: const MobileProductFormScreen(),
+                              ),
+                            ),
+                          );
+                          if (newProd != null && newProd is Product && mounted) {
+                            setState(() {
+                              _items.add(ReturnNoteItem(
+                                id: _uuid.v4(),
+                                returnNoteId: widget.existing?.id ?? '',
+                                productId: newProd.id,
+                                designation: newProd.name,
+                                quantity: -1,
+                                unitPrice: newProd.sellingPrice,
+                                tvaRate: newProd.tvaRate,
+                                totalHT: -1 * newProd.sellingPrice,
+                              ));
+                            });
+                          }
                         },
                       ),
                     ],

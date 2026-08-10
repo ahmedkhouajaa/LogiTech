@@ -101,6 +101,7 @@ class Payment {
   final String status; // 'paid', 'pending', 'cancelled'
   final String? relatedInvoiceId;
   final String? relatedQuoteId;
+  final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -121,6 +122,7 @@ class Payment {
     this.status = 'paid',
     this.relatedInvoiceId,
     this.relatedQuoteId,
+    this.isDeleted = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -132,49 +134,53 @@ class Payment {
         'direction': direction,
         'contact_id': contactId,
         'contact_type': contactType,
+        'contact_name': contactName,
         'amount': amount,
         'method': method,
         'account_id': accountId,
+        'account_name': accountName,
         'reference': reference,
-        'payment_date': paymentDate.millisecondsSinceEpoch,
+        'payment_date': paymentDate.toIso8601String(),
         'notes': notes,
         'status': status,
         'related_invoice_id': relatedInvoiceId,
         'related_quote_id': relatedQuoteId,
-        'created_at': createdAt.millisecondsSinceEpoch,
-        'updated_at': updatedAt.millisecondsSinceEpoch,
+        'is_deleted': isDeleted ? 1 : 0,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
       };
 
   factory Payment.fromMap(Map<String, dynamic> map) => Payment(
-        id: map['id'] as String,
-        paymentNumber: map['payment_number'] as String,
-        direction: map['direction'] as String,
-        contactId: map['contact_id'] as String,
-        contactType: map['contact_type'] as String,
-        contactName: map['contact_name'] as String?,
+        id: map['id']?.toString() ?? '',
+        paymentNumber: map['payment_number']?.toString() ?? '',
+        direction: map['direction']?.toString() ?? 'encaissement',
+        contactId: map['contact_id']?.toString() ?? '',
+        contactType: map['contact_type']?.toString() ?? 'customer',
+        contactName: map['contact_name']?.toString(),
         amount: (map['amount'] as num?)?.toDouble() ?? 0,
-        method: map['method'] as String,
-        accountId: map['account_id'] as String?,
-        accountName: map['account_name'] as String?,
-        reference: map['reference'] as String?,
+        method: map['method']?.toString() ?? 'especes',
+        accountId: map['account_id']?.toString(),
+        accountName: map['account_name']?.toString(),
+        reference: map['reference']?.toString(),
         paymentDate: map['payment_date'] != null
             ? (map['payment_date'] is int
                 ? DateTime.fromMillisecondsSinceEpoch(map['payment_date'] as int)
-                : DateTime.parse(map['payment_date'].toString()))
+                : (DateTime.tryParse(map['payment_date'].toString()) ?? DateTime.now()))
             : DateTime.now(),
-        notes: map['notes'] as String?,
-        status: map['status'] as String? ?? 'paid',
-        relatedInvoiceId: map['related_invoice_id'] as String?,
-        relatedQuoteId: map['related_quote_id'] as String?,
+        notes: map['notes']?.toString(),
+        status: map['status']?.toString() ?? 'paid',
+        relatedInvoiceId: map['related_invoice_id']?.toString(),
+        relatedQuoteId: map['related_quote_id']?.toString(),
+        isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true || map['is_deleted'] == '1',
         createdAt: map['created_at'] != null
             ? (map['created_at'] is int
                 ? DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int)
-                : DateTime.parse(map['created_at'].toString()))
+                : (DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()))
             : DateTime.now(),
         updatedAt: map['updated_at'] != null
             ? (map['updated_at'] is int
                 ? DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int)
-                : DateTime.parse(map['updated_at'].toString()))
+                : (DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now()))
             : DateTime.now(),
       );
 
@@ -195,6 +201,7 @@ class Payment {
     String? status,
     String? relatedInvoiceId,
     String? relatedQuoteId,
+    bool? isDeleted,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) =>
@@ -215,6 +222,7 @@ class Payment {
         status: status ?? this.status,
         relatedInvoiceId: relatedInvoiceId ?? this.relatedInvoiceId,
         relatedQuoteId: relatedQuoteId ?? this.relatedQuoteId,
+        isDeleted: isDeleted ?? this.isDeleted,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );

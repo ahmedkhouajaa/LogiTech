@@ -26,30 +26,40 @@ class StockMovement {
   }) : createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() => {
-        'id': id, 'product_id': productId, 'warehouse_id': warehouseId,
-        'type': type.name, 'quantity': quantity,
-        'reference_type': referenceType, 'reference_id': referenceId,
-        'date': date.toIso8601String(), 'notes': notes,
-        'firebase_uid': firebaseUid, 'enterprise_id': enterpriseId, 'is_deleted': isDeleted ? 1 : 0,
+        'id': id,
+        'product_id': productId,
+        'product_name': productName,
+        'warehouse_id': warehouseId,
+        'warehouse_name': warehouseName,
+        'type': type.name,
+        'quantity': quantity,
+        'reference_type': referenceType,
+        'reference_id': referenceId,
+        'date': date.toIso8601String(),
+        'notes': notes,
+        'firebase_uid': firebaseUid,
+        'enterprise_id': enterpriseId,
+        'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
       };
 
   factory StockMovement.fromMap(Map<String, dynamic> map) => StockMovement(
-        id: map['id'] as String, productId: map['product_id'] as String,
-        productName: map['product_name'] as String?,
-        warehouseId: map['warehouse_id'] as String,
-        warehouseName: map['warehouse_name'] as String?,
+        id: map['id']?.toString() ?? '',
+        productId: map['product_id']?.toString() ?? '',
+        productName: map['product_name']?.toString(),
+        warehouseId: map['warehouse_id']?.toString() ?? '',
+        warehouseName: map['warehouse_name']?.toString(),
         type: MovementType.values.firstWhere(
           (e) => e.name == map['type'], orElse: () => MovementType.entry),
         quantity: (map['quantity'] as num?)?.toDouble() ?? 0,
-        referenceType: map['reference_type'] as String?,
-        referenceId: map['readable_reference_id'] as String? ?? map['reference_id'] as String?,
-        date: DateTime.parse(map['date'] as String),
-        notes: map['notes'] as String?,
-        firebaseUid: map['firebase_uid'] as String?,
-        enterpriseId: map['enterprise_id'] as String?,
-        isDeleted: map['is_deleted'] == 1,
-        createdAt: DateTime.parse(map['created_at'] as String),
+        referenceType: map['reference_type']?.toString(),
+        referenceId: map['readable_reference_id']?.toString() ?? map['reference_id']?.toString(),
+        date: map['date'] != null ? (DateTime.tryParse(map['date'].toString()) ?? DateTime.now()) : DateTime.now(),
+        notes: map['notes']?.toString(),
+        firebaseUid: map['firebase_uid']?.toString(),
+        enterpriseId: map['enterprise_id']?.toString(),
+        isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true || map['is_deleted'] == '1',
+        createdAt: map['created_at'] != null ? (DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()) : DateTime.now(),
       );
 }
 

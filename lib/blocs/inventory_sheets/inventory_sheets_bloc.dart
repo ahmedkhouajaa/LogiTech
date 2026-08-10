@@ -1,9 +1,15 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'inventory_sheets_event.dart';
 import 'inventory_sheets_state.dart';
 import '../../database/database_helper.dart';
 import '../../models/inventory_sheet.dart';
+import '../../models/stock_movement.dart';
+import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/enterprise_service.dart';
+import '../../services/firestore_repository.dart';
 
 class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsState> {
   static const int pageSize = 10;
@@ -20,13 +26,7 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
   }
 
   Future<void> _onLoadRequested(InventorySheetsLoadRequested event, Emitter<InventorySheetsState> emit) async {
-    emit(InventorySheetsLoading());
-    try {
-      final sheets = await databaseHelper.getInventorySheets();
-      emit(InventorySheetsLoaded(sheets, totalCount: sheets.length));
-    } catch (e) {
-      emit(InventorySheetsError(e.toString()));
-    }
+    await _onLoadFirstInventorySheets(LoadFirstInventorySheets(), emit);
   }
 
   Future<void> _onLoadFirstInventorySheets(LoadFirstInventorySheets event, Emitter<InventorySheetsState> emit) async {
@@ -108,28 +108,77 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
 
   Future<void> _onSheetAdded(InventorySheetAdded event, Emitter<InventorySheetsState> emit) async {
     try {
-      await databaseHelper.insertInventorySheet(event.sheet);
-      add(InventorySheetsLoadRequested());
+      await FirestoreRepository.instance.saveInventorySheet(event.sheet);
+
+      for (var item in event.sheet.items) {
+        final diff = item.actualQty - item.theoreticalQty;
+        if (item.productId.isNotEmpty && diff != 0) {
+          String? prodName;
+          try {
+            final prodRef = FirebaseFirestore.instance.collection('products').doc(item.productId);
+            final doc = await prodRef.get();
+            if (doc.exists && doc.data() != null) {
+              prodName = doc.data()!['name']?.toString();
+              final currentStock = (doc.data()!['stock_qty'] as num?)?.toDouble() ?? (doc.data()!['stock'] as num?)?.toDouble() ?? 0.0;
+              await prodRef.update({
+                'stock_qty': currentStock + diff,
+                'updated_at': DateTime.now().toIso8601String(),
+              });
+            }
+          } catch (_) {}
+
+          String? whName;
+          final whId = event.sheet.warehouseId;
+          try {
+            if (whId.isNotEmpty) {
+              final whRef = FirebaseFirestore.instance.collection('warehouses').doc(whId);
+              final doc = await whRef.get();
+              if (doc.exists && doc.data() != null) {
+                whName = doc.data()!['name']?.toString();
+              }
+            }
+          } catch (_) {}
+
+          final movId = const Uuid().v4();
+          final mov = StockMovement(
+            id: movId,
+            productId: item.productId,
+            productName: prodName,
+            warehouseId: whId,
+            warehouseName: whName,
+            type: MovementType.adjustment,
+            quantity: diff.abs(),
+            referenceType: 'inventory_sheet',
+            referenceId: event.sheet.number.isNotEmpty ? event.sheet.number : event.sheet.id,
+            date: event.sheet.date,
+            notes: event.sheet.notes ?? 'Ajustement d\'inventaire (${diff > 0 ? "+$diff" : "$diff"})',
+            enterpriseId: EnterpriseService.instance.currentEnterpriseId,
+          );
+          await FirestoreRepository.instance.saveDocument('stock_movements', mov.id, mov.toMap());
+        }
+      }
+
+      add(LoadFirstInventorySheets());
     } catch (e) {
-      emit(InventorySheetsError(e.toString()));
+      emit(InventorySheetsError("Erreur lors de l'ajout: $e"));
     }
   }
 
   Future<void> _onSheetUpdated(InventorySheetUpdated event, Emitter<InventorySheetsState> emit) async {
     try {
-      await databaseHelper.updateInventorySheet(event.sheet);
-      add(InventorySheetsLoadRequested());
+      await FirestoreRepository.instance.saveInventorySheet(event.sheet);
+      add(LoadFirstInventorySheets());
     } catch (e) {
-      emit(InventorySheetsError(e.toString()));
+      emit(InventorySheetsError("Erreur lors de la mise à jour: $e"));
     }
   }
 
   Future<void> _onSheetDeleted(InventorySheetDeleted event, Emitter<InventorySheetsState> emit) async {
     try {
-      await databaseHelper.deleteInventorySheet(event.sheetId);
-      add(InventorySheetsLoadRequested());
+      await FirestoreRepository.instance.softDeleteDocument('inventory_sheets', event.sheetId);
+      add(LoadFirstInventorySheets());
     } catch (e) {
-      emit(InventorySheetsError(e.toString()));
+      emit(InventorySheetsError("Erreur lors de la suppression: $e"));
     }
   }
 }

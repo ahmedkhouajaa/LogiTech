@@ -4,6 +4,7 @@ import '../blocs/customer_orders/customer_orders_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
 import '../models/customer_order.dart';
 import '../models/customer.dart';
 import '../utils/constants.dart';
@@ -91,6 +92,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                         BlocProvider.value(value: context.read<CustomersBloc>()),
                         BlocProvider.value(value: context.read<ProductsBloc>()),
                         BlocProvider.value(value: context.read<ProjectsBloc>()),
+                        BlocProvider.value(value: context.read<WarehousesBloc>()),
                       ],
                       child: const CreateCustomerOrderScreen(),
                     ),
@@ -1022,6 +1024,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                 BlocProvider.value(value: context.read<CustomersBloc>()),
                 BlocProvider.value(value: context.read<ProductsBloc>()),
                 BlocProvider.value(value: context.read<ProjectsBloc>()),
+                BlocProvider.value(value: context.read<WarehousesBloc>()),
               ],
               child: CreateCustomerOrderScreen(existing: order),
             ),

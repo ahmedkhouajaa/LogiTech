@@ -9,6 +9,9 @@ import '../../blocs/return_notes/return_notes_bloc.dart';
 import '../../blocs/return_notes/return_notes_state.dart';
 import '../../blocs/return_notes/return_notes_event.dart';
 import '../../blocs/customers/customers_bloc.dart';
+import '../../blocs/products/products_bloc.dart';
+import '../../blocs/projects/projects_bloc.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../models/customer.dart';
 import 'mobile_return_note_detail_screen.dart';
 import 'forms/mobile_return_voucher_form_screen.dart';
@@ -184,7 +187,16 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
               onEdit: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobileReturnVoucherFormScreen(existing: item)),
+                  MaterialPageRoute(builder: (_) => MultiBlocProvider(
+                    providers: [
+                      BlocProvider.value(value: context.read<ReturnNotesBloc>()),
+                      BlocProvider.value(value: context.read<CustomersBloc>()),
+                      BlocProvider.value(value: context.read<ProductsBloc>()),
+                      BlocProvider.value(value: context.read<ProjectsBloc>()),
+                      BlocProvider.value(value: context.read<WarehousesBloc>()),
+                    ],
+                    child: MobileReturnVoucherFormScreen(existing: item),
+                  )),
                 ).then((_) {
                   _fetchFilteredReturnNotes();
                 });
@@ -259,7 +271,16 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
           onFabPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const MobileReturnVoucherFormScreen()),
+              MaterialPageRoute(builder: (_) => MultiBlocProvider(
+                providers: [
+                  BlocProvider.value(value: context.read<ReturnNotesBloc>()),
+                  BlocProvider.value(value: context.read<CustomersBloc>()),
+                  BlocProvider.value(value: context.read<ProductsBloc>()),
+                  BlocProvider.value(value: context.read<ProjectsBloc>()),
+                  BlocProvider.value(value: context.read<WarehousesBloc>()),
+                ],
+                child: const MobileReturnVoucherFormScreen(),
+              )),
             ).then((_) {
               _fetchFilteredReturnNotes();
             });

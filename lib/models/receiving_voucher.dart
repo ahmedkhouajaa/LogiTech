@@ -126,6 +126,7 @@ class ReceivingVoucher {
       'id': id,
       'number': number,
       'supplier_id': supplierId,
+      'supplier_name': supplierName,
       'order_id': orderId,
       'date': date.toIso8601String(),
       'warehouse_id': warehouseId,
@@ -150,23 +151,27 @@ class ReceivingVoucher {
   }
 
   factory ReceivingVoucher.fromMap(Map<String, dynamic> map, [List<ReceivingVoucherItem> items = const []]) {
+    List<ReceivingVoucherItem> parsedItems = items;
+    if (parsedItems.isEmpty && map['items'] != null && map['items'] is List) {
+      parsedItems = (map['items'] as List).map((i) => ReceivingVoucherItem.fromMap(Map<String, dynamic>.from(i))).toList();
+    }
     return ReceivingVoucher(
-      id: map['id'],
-      number: map['number'],
-      supplierId: map['supplier_id'],
-      supplierName: map['supplier_name'],
-      orderId: map['order_id'],
+      id: map['id']?.toString() ?? '',
+      number: map['number']?.toString() ?? '',
+      supplierId: map['supplier_id']?.toString() ?? '',
+      supplierName: map['supplier_name']?.toString(),
+      orderId: map['order_id']?.toString(),
       date: map['date'] != null ? (DateTime.tryParse(map['date'].toString()) ?? DateTime.now()) : DateTime.now(),
-      warehouseId: map['warehouse_id'],
-      status: map['status'] ?? 'draft',
-      pricingMode: map['pricing_mode'] ?? 'ht',
+      warehouseId: map['warehouse_id']?.toString(),
+      status: map['status']?.toString() ?? 'draft',
+      pricingMode: map['pricing_mode']?.toString() ?? 'ht',
       globalDiscountPercent: (map['global_discount_percent'] ?? 0).toDouble(),
       globalDiscountAmount: (map['global_discount_amount'] ?? 0).toDouble(),
       timbreFiscal: (map['timbre_fiscal'] ?? 0).toDouble(),
-      conditionsGenerales: map['conditions_generales'],
+      conditionsGenerales: map['conditions_generales']?.toString(),
       amountPaid: (map['amount_paid'] ?? 0).toDouble(),
-      firebaseUid: map['firebase_uid'],
-      isDeleted: map['is_deleted'] == 1,
+      firebaseUid: map['firebase_uid']?.toString(),
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
       isConvertedToPurchaseInvoice: map['is_converted_to_purchase_invoice'] == 1,
       convertedToPurchaseInvoiceId: map['converted_to_purchase_invoice_id'],
       isConvertedToSupplierReturn: map['is_converted_to_supplier_return'] == 1,
@@ -174,7 +179,7 @@ class ReceivingVoucher {
       notes: map['notes'],
       createdAt: map['created_at'] != null ? (DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()) : DateTime.now(),
       updatedAt: map['updated_at'] != null ? (DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now()) : DateTime.now(),
-      items: items,
+      items: parsedItems,
     );
   }
 }
@@ -237,6 +242,7 @@ class ReceivingVoucherItem {
       'id': id,
       'voucher_id': voucherId,
       'product_id': productId,
+      'product_name': productName,
       'quantity_expected': quantityExpected,
       'quantity_received': quantityReceived,
       'unit_price': unitPrice,
@@ -247,12 +253,12 @@ class ReceivingVoucherItem {
 
   factory ReceivingVoucherItem.fromMap(Map<String, dynamic> map) {
     return ReceivingVoucherItem(
-      id: map['id'],
-      voucherId: map['voucher_id'],
-      productId: map['product_id'],
-      productName: map['product_name'], // From JOIN if any
+      id: map['id']?.toString() ?? '',
+      voucherId: map['voucher_id']?.toString() ?? '',
+      productId: map['product_id']?.toString() ?? '',
+      productName: map['product_name']?.toString(),
       quantityExpected: (map['quantity_expected'] ?? 0).toDouble(),
-      quantityReceived: (map['quantity_received'] ?? 0).toDouble(),
+      quantityReceived: (map['quantity_received'] ?? map['quantity'] ?? 0).toDouble(),
       unitPrice: (map['unit_price'] ?? 0).toDouble(),
       tvaRate: (map['tva_rate'] ?? 0).toDouble(),
       discountPercent: (map['discount_percent'] ?? 0).toDouble(),

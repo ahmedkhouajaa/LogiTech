@@ -6,6 +6,7 @@ import '../../widgets/sidebar_menu.dart';
 import '../../blocs/stock/stock_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
 import '../../models/stock_movement.dart';
+import '../../models/product.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../utils/mobile_module_config.dart';
 import 'forms/mobile_stock_adjustment_form.dart';
@@ -495,6 +496,20 @@ class _MobileStockMovementCard extends StatelessWidget {
       }
     }
 
+    String productName = movement.productName ?? '';
+    if (productName.isEmpty || productName == '—') {
+      try {
+        final pState = context.read<ProductsBloc>().state;
+        if (pState is ProductsLoaded) {
+          final foundProd = pState.products.cast<Product?>().firstWhere((p) => p?.id == movement.productId, orElse: () => null);
+          if (foundProd != null && foundProd.name.isNotEmpty) {
+            productName = foundProd.name;
+          }
+        }
+      } catch (_) {}
+    }
+    if (productName.isEmpty) productName = '—';
+
     final reasonStr = movement.notes != null && movement.notes!.isNotEmpty
         ? movement.notes!
         : (movement.referenceType != null && movement.referenceId != null ? '${movement.referenceType}: ${movement.referenceId}' : null);
@@ -562,7 +577,7 @@ class _MobileStockMovementCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        movement.productName ?? '—',
+                        productName,
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: isCancelled ? AppColors.textTertiary : AppColors.textPrimary),
                       ),
                       SizedBox(height: 4),

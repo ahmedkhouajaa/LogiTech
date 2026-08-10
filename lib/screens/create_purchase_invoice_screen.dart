@@ -10,7 +10,9 @@ import '../models/purchase_invoice.dart';
 import '../models/supplier.dart';
 import '../models/product.dart';
 import '../models/project.dart';
-import '../blocs/stock/stock_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
+import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
@@ -18,6 +20,7 @@ import '../widgets/dashboard_card.dart';
 import 'suppliers_screen.dart';
 import 'create_article_screen.dart';
 import '../services/enterprise_service.dart';
+import '../database/database_helper.dart';
 
 
 
@@ -100,9 +103,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
     context.read<SuppliersBloc>().add(LoadSuppliers());
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
 
     // Load existing purchaseInvoice data if editing
     if (widget.existing != null) {
@@ -346,7 +347,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                               message: 'Créer un nouveau fournisseur',
                               child: ElevatedButton(
                                 onPressed: () async {
-                                  final newId = await showDialog<String>(
+                                  final res = await showDialog(
                                     context: context,
                                     barrierDismissible: false,
                                     builder: (_) => BlocProvider.value(
@@ -354,14 +355,18 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                                       child: const SupplierDialog(existing: null),
                                     ),
                                   );
-                                  if (newId != null && mounted) {
-                                    final suppState = context.read<SuppliersBloc>().state;
-                                    if (suppState is SuppliersLoaded) {
-                                      final found = suppState.suppliers.firstWhere(
-                                        (s) => s.id == newId,
-                                        orElse: () => Supplier(id: newId, code: '', name: ''),
-                                      );
-                                      setState(() => _selectedSupplier = found);
+                                  if (res != null && mounted) {
+                                    if (res is Supplier) {
+                                      setState(() => _selectedSupplier = res);
+                                    } else if (res is String) {
+                                      final suppState = context.read<SuppliersBloc>().state;
+                                      if (suppState is SuppliersLoaded) {
+                                        final found = suppState.suppliers.firstWhere(
+                                          (s) => s.id == res,
+                                          orElse: () => Supplier(id: res, code: '', name: 'Fournisseur Inconnu'),
+                                        );
+                                        setState(() => _selectedSupplier = found);
+                                      }
                                     }
                                   }
                                 },
@@ -419,9 +424,9 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
             children: [
               Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
-              BlocBuilder<StockBloc, StockState>(
+              BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
-                  final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                  final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                   final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                   final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -786,8 +791,11 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
           tooltip: 'Créer un nouvel article',
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          onPressed: () async {
+            final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+            if (res != null && res is Product && mounted) {
+              _addProductItem(res);
+            }
           },
           splashRadius: 24,
         ),
@@ -1026,28 +1034,50 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   }
 
   // ─── Save ────────────────────────────────────────────────────────
-  void _save() {
+  Future<void> _save() async {
+    if (widget.isReadOnly) return;
     if (_selectedSupplier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez selectionner un client'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Veuillez selectionner un fournisseur'), backgroundColor: AppColors.error),
       );
       return;
     }
 
+    String number = widget.existing?.number ?? '';
+    if (number.isEmpty) {
+      final seq = await DatabaseHelper.instance.getNextPurchaseInvoiceSequence();
+      number = generateDocNumber(DocPrefix.purchaseInvoice, seq);
+    }
+
+    final projState = context.read<ProjectsBloc>().state;
+    String? projName;
+    if (_selectedProjectId != null && projState is ProjectsLoaded) {
+      final found = projState.projects.firstWhere(
+        (p) => p.id == _selectedProjectId,
+        orElse: () => Project(id: '', name: '', startDate: DateTime.now()),
+      );
+      projName = found.name;
+    }
+
+    final suppName = _selectedSupplier!.companyName?.isNotEmpty == true
+        ? _selectedSupplier!.companyName!
+        : (_selectedSupplier!.responsibleName?.isNotEmpty == true ? _selectedSupplier!.responsibleName! : _selectedSupplier!.name);
+
     final purchaseInvoiceId = _isEditing ? widget.existing!.id : _uuid.v4();
     final purchaseInvoice = PurchaseInvoice(
       id: purchaseInvoiceId,
-      number: _isEditing ? widget.existing!.number : generateDocNumber(DocPrefix.purchaseInvoice, DateTime.now().millisecondsSinceEpoch % 1000000),
+      number: number,
       supplierId: _selectedSupplier!.id,
-      supplierName: _selectedSupplier!.name,
+      supplierName: suppName,
       projectId: _selectedProjectId,
+      projectName: projName,
       warehouseId: _selectedWarehouseId,
       date: _date,
       dueDate: _dueDate,
       status: _status,
       totalHT: _totalHTAfterDiscount,
       totalTva: _totalTvaAfterDiscount,
-      totalTTC: _totalHTAfterDiscount + _totalTvaAfterDiscount,
+      totalTTC: _totalHTAfterDiscount + _totalTvaAfterDiscount + _timbreFiscal,
       stampTax: 0,
       timbreFiscal: _timbreFiscal,
       globalDiscountPercent: _globalDiscountPercent,
@@ -1065,18 +1095,17 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       context.read<PurchaseInvoicesBloc>().add(AddPurchaseInvoice(purchaseInvoice));
     }
 
-    context.read<StockBloc>().add(LoadStock());
-    context.read<ProductsBloc>().add(const ResetProductsPagination());
-
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isEditing
-            ? 'Facture ${purchaseInvoice.number} mise a jour'
-            : 'Facture ${purchaseInvoice.number} creee avec succes'),
-        backgroundColor: AppColors.success,
-      ),
-    );
+    if (mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isEditing
+              ? 'Facture ${purchaseInvoice.number} mise a jour'
+              : 'Facture ${purchaseInvoice.number} creee avec succes'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    }
   }
 }
 

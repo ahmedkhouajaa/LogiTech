@@ -7,6 +7,10 @@ import '../widgets/mobile_advanced_filter_panel.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/credit_notes/credit_notes_bloc.dart';
 import '../../blocs/customers/customers_bloc.dart';
+import '../../blocs/invoices/invoices_bloc.dart';
+import '../../blocs/products/products_bloc.dart';
+import '../../blocs/projects/projects_bloc.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../models/customer.dart';
 import 'forms/mobile_credit_note_form_screen.dart';
 import 'mobile_credit_note_detail_screen.dart';
@@ -177,7 +181,17 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
               onEdit: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobileCreditNoteFormScreen(existing: item)),
+                  MaterialPageRoute(builder: (_) => MultiBlocProvider(
+                    providers: [
+                      BlocProvider.value(value: context.read<CreditNotesBloc>()),
+                      BlocProvider.value(value: context.read<CustomersBloc>()),
+                      BlocProvider.value(value: context.read<InvoicesBloc>()),
+                      BlocProvider.value(value: context.read<ProductsBloc>()),
+                      BlocProvider.value(value: context.read<ProjectsBloc>()),
+                      BlocProvider.value(value: context.read<WarehousesBloc>()),
+                    ],
+                    child: MobileCreditNoteFormScreen(existing: item),
+                  )),
                 ).then((_) {
                   _fetchFilteredCreditNotes();
                 });
@@ -252,7 +266,17 @@ class _MobileCreditNotesScreenState extends State<MobileCreditNotesScreen> {
           onFabPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const MobileCreditNoteFormScreen()),
+              MaterialPageRoute(builder: (_) => MultiBlocProvider(
+                providers: [
+                  BlocProvider.value(value: context.read<CreditNotesBloc>()),
+                  BlocProvider.value(value: context.read<CustomersBloc>()),
+                  BlocProvider.value(value: context.read<InvoicesBloc>()),
+                  BlocProvider.value(value: context.read<ProductsBloc>()),
+                  BlocProvider.value(value: context.read<ProjectsBloc>()),
+                  BlocProvider.value(value: context.read<WarehousesBloc>()),
+                ],
+                child: const MobileCreditNoteFormScreen(),
+              )),
             ).then((_) {
               _fetchFilteredCreditNotes();
             });

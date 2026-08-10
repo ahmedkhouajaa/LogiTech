@@ -5,6 +5,9 @@ import '../../utils/constants.dart';
 import '../utils/mobile_module_config.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/payments/payments_bloc.dart';
+import '../../blocs/customers/customers_bloc.dart';
+import '../../blocs/suppliers/suppliers_bloc.dart';
+import '../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_payment_card.dart';
 import 'forms/mobile_payment_form_screen.dart';
@@ -140,7 +143,17 @@ class _MobilePaymentsScreenState extends State<MobilePaymentsScreen> {
           onFabPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const MobilePaymentFormScreen()),
+              MaterialPageRoute(
+                builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider.value(value: context.read<PaymentsBloc>()),
+                    BlocProvider.value(value: context.read<CustomersBloc>()),
+                    BlocProvider.value(value: context.read<SuppliersBloc>()),
+                    BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+                  ],
+                  child: const MobilePaymentFormScreen(),
+                ),
+              ),
             ).then((_) {
               context.read<PaymentsBloc>().add(LoadFirstPayments(
                 statusFilter: _activeFilter,

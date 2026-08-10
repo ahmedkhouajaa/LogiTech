@@ -131,11 +131,10 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
 
     Query buildQuery() {
       Query query = FirebaseFirestore.instance.collection('fournisseurs');
-      if (uid != null && uid.isNotEmpty) {
-        query = query.where('userId', isEqualTo: uid);
-      }
       if (currentEntId != null && currentEntId.isNotEmpty) {
         query = query.where('enterprise_id', isEqualTo: currentEntId);
+      } else if (uid != null && uid.isNotEmpty) {
+        query = query.where('userId', isEqualTo: uid);
       }
       query = query.where('is_deleted', isEqualTo: 0);
       return query;

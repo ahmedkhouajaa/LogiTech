@@ -9,7 +9,9 @@ import '../models/credit_note.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/project.dart';
-import '../blocs/stock/stock_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
+import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
 import '../models/document_template.dart';
 import 'create_article_screen.dart';
@@ -100,9 +102,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
     _loadTemplate();
 
     // Load existing creditNote data if editing
@@ -352,8 +352,8 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                           child: Tooltip(
                             message: 'Créer un nouveau client',
                             child: ElevatedButton(
-                              onPressed: () {
-                                showDialog(
+                              onPressed: () async {
+                                final res = await showDialog(
                                   context: context,
                                   barrierDismissible: false,
                                   builder: (_) => BlocProvider.value(
@@ -361,6 +361,20 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                                     child: const CustomerDialog(existing: null),
                                   ),
                                 );
+                                if (res != null && mounted) {
+                                  if (res is Customer) {
+                                    setState(() => _selectedCustomer = res);
+                                  } else if (res is String) {
+                                    final custState = context.read<CustomersBloc>().state;
+                                    if (custState is CustomersLoaded) {
+                                      final found = custState.customers.firstWhere(
+                                        (c) => c.id == res,
+                                        orElse: () => Customer(id: res, code: '', name: 'Client'),
+                                      );
+                                      setState(() => _selectedCustomer = found);
+                                    }
+                                  }
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary.withValues(alpha: 0.1),
@@ -415,9 +429,9 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
             children: [
               Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
-              BlocBuilder<StockBloc, StockState>(
+              BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
-                  final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                  final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                   final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                   final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -877,8 +891,11 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
           tooltip: 'Créer un nouvel article',
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          onPressed: () async {
+            final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+            if (res != null && res is Product && mounted) {
+              _addProductItem(res);
+            }
           },
           splashRadius: 24,
         ),
@@ -1116,7 +1133,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
   }
 
   // ─── Save ────────────────────────────────────────────────────────
-  void _save() {
+  Future<void> _save() async {
     if (_selectedCustomer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez selectionner un client'), backgroundColor: AppColors.error),
@@ -1125,9 +1142,15 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
     }
 
     final creditNoteId = _isEditing ? widget.existing!.id : const Uuid().v4();
+    String number = widget.existing?.number ?? '';
+    if (number.isEmpty) {
+      final seq = await DatabaseHelper.instance.getNextCreditNoteSequence();
+      number = generateDocNumber('AV', seq);
+    }
+
     final creditNote = CreditNote(
       id: creditNoteId,
-      number: _isEditing ? widget.existing!.number : generateDocNumber(DocPrefix.creditNote, DateTime.now().millisecondsSinceEpoch % 1000000),
+      number: number,
       invoiceId: widget.existing?.invoiceId ?? '',
       customerId: _selectedCustomer!.id,
       customerName: _selectedCustomer!.name,

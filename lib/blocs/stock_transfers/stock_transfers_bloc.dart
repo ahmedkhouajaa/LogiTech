@@ -1,7 +1,13 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/stock_transfer.dart';
+import '../../models/stock_movement.dart';
+import '../../utils/constants.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/enterprise_service.dart';
+import '../../services/firestore_repository.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
 abstract class StockTransfersEvent {}
@@ -127,13 +133,7 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
   }
 
   Future<void> _onLoad(LoadStockTransfers event, Emitter<StockTransfersState> emit) async {
-    emit(StockTransfersLoading());
-    try {
-      final transfers = await _dbHelper.getStockTransfers();
-      emit(StockTransfersLoaded(transfers, totalCount: transfers.length));
-    } catch (e) {
-      emit(StockTransfersError(e.toString()));
-    }
+    await _onLoadFirstStockTransfers(LoadFirstStockTransfers(), emit);
   }
 
   Future<void> _onLoadFirstStockTransfers(LoadFirstStockTransfers event, Emitter<StockTransfersState> emit) async {
@@ -215,41 +215,100 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
 
   Future<void> _onAdd(AddStockTransfer event, Emitter<StockTransfersState> emit) async {
     try {
-      final db = await _dbHelper.database;
-      
-      String number = event.transfer.number;
-      if (number.isEmpty || number.startsWith('BT-')) {
-        final now = DateTime.now();
-        final countMap = await db.rawQuery(
-            "SELECT COUNT(*) as count FROM stock_transfers WHERE date LIKE '${now.year}-%'"
-        );
-        final count = (countMap.first['count'] as int? ?? 0) + 1;
-        number = 'BT-${now.year}-${count.toString().padLeft(5, '0')}';
+      await FirestoreRepository.instance.saveStockTransfer(event.transfer);
+
+      for (var item in event.transfer.items) {
+        if (item.productId.isNotEmpty && item.quantityToTransfer > 0) {
+          String? prodName;
+          try {
+            final prodRef = FirebaseFirestore.instance.collection('products').doc(item.productId);
+            final doc = await prodRef.get();
+            if (doc.exists && doc.data() != null) {
+              prodName = doc.data()!['name']?.toString();
+            }
+          } catch (_) {}
+
+          String? srcWhName;
+          try {
+            if (event.transfer.sourceWarehouseId.isNotEmpty) {
+              final whRef = FirebaseFirestore.instance.collection('warehouses').doc(event.transfer.sourceWarehouseId);
+              final doc = await whRef.get();
+              if (doc.exists && doc.data() != null) {
+                srcWhName = doc.data()!['name']?.toString();
+              }
+            }
+          } catch (_) {}
+
+          String? destWhName;
+          try {
+            if (event.transfer.destinationWarehouseId.isNotEmpty) {
+              final whRef = FirebaseFirestore.instance.collection('warehouses').doc(event.transfer.destinationWarehouseId);
+              final doc = await whRef.get();
+              if (doc.exists && doc.data() != null) {
+                destWhName = doc.data()!['name']?.toString();
+              }
+            }
+          } catch (_) {}
+
+          // Outbound movement from source warehouse
+          final movOutId = const Uuid().v4();
+          final movOut = StockMovement(
+            id: movOutId,
+            productId: item.productId,
+            productName: prodName,
+            warehouseId: event.transfer.sourceWarehouseId,
+            warehouseName: srcWhName,
+            type: MovementType.transfer_out,
+            quantity: item.quantityToTransfer,
+            referenceType: 'stock_transfer',
+            referenceId: event.transfer.number.isNotEmpty ? event.transfer.number : event.transfer.id,
+            date: event.transfer.date,
+            notes: event.transfer.notes ?? 'Transfert de stock (Sortie)',
+            enterpriseId: EnterpriseService.instance.currentEnterpriseId,
+          );
+          await FirestoreRepository.instance.saveDocument('stock_movements', movOut.id, movOut.toMap());
+
+          // Inbound movement to destination warehouse
+          final movInId = const Uuid().v4();
+          final movIn = StockMovement(
+            id: movInId,
+            productId: item.productId,
+            productName: prodName,
+            warehouseId: event.transfer.destinationWarehouseId,
+            warehouseName: destWhName,
+            type: MovementType.transfer_in,
+            quantity: item.quantityToTransfer,
+            referenceType: 'stock_transfer',
+            referenceId: event.transfer.number.isNotEmpty ? event.transfer.number : event.transfer.id,
+            date: event.transfer.date,
+            notes: event.transfer.notes ?? 'Transfert de stock (Entrée)',
+            enterpriseId: EnterpriseService.instance.currentEnterpriseId,
+          );
+          await FirestoreRepository.instance.saveDocument('stock_movements', movIn.id, movIn.toMap());
+        }
       }
 
-      final transferToInsert = event.transfer.copyWith(number: number);
-      await _dbHelper.insertStockTransfer(transferToInsert);
-      add(LoadStockTransfers());
+      add(LoadFirstStockTransfers());
     } catch (e) {
-      emit(StockTransfersError(e.toString()));
+      emit(StockTransfersError("Erreur lors de l'ajout: $e"));
     }
   }
 
   Future<void> _onUpdate(UpdateStockTransfer event, Emitter<StockTransfersState> emit) async {
     try {
-      await _dbHelper.updateStockTransfer(event.transfer);
-      add(LoadStockTransfers());
+      await FirestoreRepository.instance.saveStockTransfer(event.transfer);
+      add(LoadFirstStockTransfers());
     } catch (e) {
-      emit(StockTransfersError(e.toString()));
+      emit(StockTransfersError("Erreur lors de la mise à jour: $e"));
     }
   }
 
   Future<void> _onDelete(DeleteStockTransfer event, Emitter<StockTransfersState> emit) async {
     try {
-      await _dbHelper.deleteStockTransfer(event.transferId);
-      add(LoadStockTransfers());
+      await FirestoreRepository.instance.softDeleteDocument('stock_transfers', event.transferId);
+      add(LoadFirstStockTransfers());
     } catch (e) {
-      emit(StockTransfersError(e.toString()));
+      emit(StockTransfersError("Erreur lors de la suppression: $e"));
     }
   }
 }

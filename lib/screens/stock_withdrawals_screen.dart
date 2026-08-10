@@ -351,7 +351,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                           children: [
                             Icon(Icons.inbox_rounded, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
                             SizedBox(height: 12),
-                            Text("Aucun bon d'entrée", style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                            Text("Aucun bon de prélèvement", style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
                             SizedBox(height: 4),
                             Text("Appuyez sur + pour en créer un", style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
                           ],
@@ -869,7 +869,7 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                 if (state is StockWithdrawalsLoaded) {
                   if (entries.isEmpty) {
                     return Center(
-                      child: Text("Aucun bon d'entrée trouvé", style: TextStyle(color: AppColors.textSecondary)),
+                      child: Text("Aucun bon de prélèvement trouvé", style: TextStyle(color: AppColors.textSecondary)),
                     );
                   }
 

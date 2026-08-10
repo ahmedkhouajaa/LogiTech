@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/credit_notes/credit_notes_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
+import '../blocs/products/products_bloc.dart';
+import '../blocs/projects/projects_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
 import '../models/credit_note.dart';
 import '../models/customer.dart';
 import '../models/document_wrapper.dart';
@@ -33,14 +36,38 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<CreditNotesBloc>().add(LoadCreditNotes());
+    context.read<CreditNotesBloc>().add(const LoadFirstCreditNotes());
     context.read<CustomersBloc>().add(LoadCustomers());
   }
 
   void _applyFilters() {
+    context.read<CreditNotesBloc>().add(LoadFirstCreditNotes(
+      customerId: _selectedClientId,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      status: _statusFilter?.name,
+    ));
     setState(() {
       _currentPage = 0;
     });
+  }
+
+  void _navigate(BuildContext context, [CreditNote? existing]) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: context.read<CreditNotesBloc>()),
+            BlocProvider.value(value: context.read<CustomersBloc>()),
+            BlocProvider.value(value: context.read<ProductsBloc>()),
+            BlocProvider.value(value: context.read<ProjectsBloc>()),
+            BlocProvider.value(value: context.read<WarehousesBloc>()),
+          ],
+          child: CreateCreditNoteScreen(existing: existing),
+        ),
+      ),
+    );
   }
 
   @override
@@ -68,9 +95,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
               AppButton(
                 label: 'Nouvel Avoir',
                 icon: Icons.add_rounded,
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateCreditNoteScreen()));
-                },
+                onPressed: () => _navigate(context),
               ),
             ],
           ),
@@ -839,7 +864,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                                                     final doc = DocumentWrapper.fromCreditNote(note);
                                                     Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
                                                   } else if (val == 'edit') {
-                                                    Navigator.push(context, MaterialPageRoute(builder: (_) => CreateCreditNoteScreen(existing: note)));
+                                                    _navigate(context, note);
                                                   } else if (val == 'email' || val == 'whatsapp') {
                                                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fonctionnalité en cours de développement')));
                                                   }

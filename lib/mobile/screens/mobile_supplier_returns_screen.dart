@@ -10,6 +10,9 @@ import '../../blocs/supplier_returns/supplier_returns_bloc.dart';
 import '../../blocs/supplier_returns/supplier_returns_state.dart';
 import '../../blocs/supplier_returns/supplier_returns_event.dart';
 import '../../blocs/suppliers/suppliers_bloc.dart';
+import '../../blocs/products/products_bloc.dart';
+import '../../blocs/projects/projects_bloc.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../models/supplier.dart';
 import 'forms/mobile_supplier_return_form_screen.dart';
 import 'mobile_supplier_return_detail_screen.dart';
@@ -185,7 +188,18 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
               onEdit: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobileSupplierReturnFormScreen(existing: item)),
+                  MaterialPageRoute(
+                    builder: (_) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider.value(value: context.read<SupplierReturnsBloc>()),
+                        BlocProvider.value(value: context.read<SuppliersBloc>()),
+                        BlocProvider.value(value: context.read<ProductsBloc>()),
+                        BlocProvider.value(value: context.read<ProjectsBloc>()),
+                        BlocProvider.value(value: context.read<WarehousesBloc>()),
+                      ],
+                      child: MobileSupplierReturnFormScreen(existing: item),
+                    ),
+                  ),
                 ).then((_) {
                   _fetchFilteredSupplierReturns();
                 });
@@ -260,7 +274,18 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
           onFabPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const MobileSupplierReturnFormScreen()),
+              MaterialPageRoute(
+                builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider.value(value: context.read<SupplierReturnsBloc>()),
+                    BlocProvider.value(value: context.read<SuppliersBloc>()),
+                    BlocProvider.value(value: context.read<ProductsBloc>()),
+                    BlocProvider.value(value: context.read<ProjectsBloc>()),
+                    BlocProvider.value(value: context.read<WarehousesBloc>()),
+                  ],
+                  child: const MobileSupplierReturnFormScreen(),
+                ),
+              ),
             ).then((_) {
               _fetchFilteredSupplierReturns();
             });

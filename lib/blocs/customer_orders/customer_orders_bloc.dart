@@ -261,8 +261,8 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
 
   Future<void> _onDeleteCustomerOrder(DeleteCustomerOrder event, Emitter<CustomerOrdersState> emit) async {
     try {
-      await _dbHelper.softDelete('customer_orders', event.orderId);
-      add(LoadCustomerOrders());
+      await FirestoreRepository.instance.softDeleteDocument('customer_orders', event.orderId);
+      add(const LoadFirstCustomerOrders());
     } catch (e) {
       emit(CustomerOrdersError(e.toString()));
     }

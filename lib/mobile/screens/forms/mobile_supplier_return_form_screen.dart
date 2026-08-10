@@ -8,7 +8,11 @@ import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../models/supplier_return.dart';
 import '../../../../models/supplier.dart';
 import '../../../../models/project.dart';
-import '../../../../blocs/stock/stock_bloc.dart';
+import '../../../../blocs/products/products_bloc.dart';
+import '../../../../models/product.dart';
+import '../../../../blocs/warehouses/warehouses_bloc.dart';
+import '../../../../blocs/warehouses/warehouses_state.dart';
+import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
@@ -37,6 +41,7 @@ class _MobileSupplierReturnFormScreenState extends State<MobileSupplierReturnFor
   bool _isLoading = false;
 
   String? _selectedSupplierId;
+  String? _selectedSupplierName;
   String? _selectedProjectId;
   String? _selectedWarehouseId;
   List<SupplierReturnItem> _items = [];
@@ -89,14 +94,13 @@ class _MobileSupplierReturnFormScreenState extends State<MobileSupplierReturnFor
     super.initState();
     context.read<SuppliersBloc>().add(LoadSuppliers());
     context.read<ProjectsBloc>().add(LoadProjects());
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
 
     if (widget.existing != null) {
       final n = widget.existing!;
       _date = n.date;
       _selectedSupplierId = n.supplierId;
+      _selectedSupplierName = n.supplierName;
       _status = n.status;
       _notes = n.reason ?? '';
       _conditions = n.reason ?? '';
@@ -130,7 +134,19 @@ class _MobileSupplierReturnFormScreenState extends State<MobileSupplierReturnFor
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
         final seq = await DatabaseHelper.instance.getNextSupplierReturnSequence();
-        number = generateDocNumber('BRF', seq);
+        number = generateDocNumber(DocPrefix.supplierReturn, seq);
+      }
+
+      String? suppName;
+      final suppState = context.read<SuppliersBloc>().state;
+      if (suppState is SuppliersLoaded) {
+        final found = suppState.suppliers.firstWhere(
+          (s) => s.id == _selectedSupplierId,
+          orElse: () => Supplier(id: '', code: '', name: 'Fournisseur Inconnu'),
+        );
+        suppName = found.companyName?.isNotEmpty == true
+            ? found.companyName
+            : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
       }
 
       final noteId = widget.existing?.id ?? _uuid.v4();
@@ -138,6 +154,7 @@ class _MobileSupplierReturnFormScreenState extends State<MobileSupplierReturnFor
         id: noteId,
         number: number,
         supplierId: _selectedSupplierId!,
+        supplierName: suppName ?? _selectedSupplierName,
         date: _date,
         status: _status,
         reason: _notes.isNotEmpty ? _notes : null,
@@ -285,7 +302,7 @@ class _MobileSupplierReturnFormScreenState extends State<MobileSupplierReturnFor
                         height: 50,
                         child: ElevatedButton(
                           onPressed: () async {
-                            final newId = await showDialog<String>(
+                            final res = await showDialog(
                               context: context,
                               barrierDismissible: false,
                               builder: (_) => BlocProvider.value(
@@ -293,10 +310,17 @@ class _MobileSupplierReturnFormScreenState extends State<MobileSupplierReturnFor
                                 child: SupplierDialog(existing: null),
                               ),
                             );
-                            if (newId != null && mounted) {
-                              setState(() {
-                                _selectedSupplierId = newId;
-                              });
+                            if (res != null && mounted) {
+                              if (res is Supplier) {
+                                setState(() {
+                                  _selectedSupplierId = res.id;
+                                  _selectedSupplierName = res.companyName?.isNotEmpty == true
+                                      ? res.companyName!
+                                      : (res.responsibleName?.isNotEmpty == true ? res.responsibleName! : res.name);
+                                });
+                              } else if (res is String) {
+                                setState(() => _selectedSupplierId = res);
+                              }
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -336,9 +360,9 @@ class _MobileSupplierReturnFormScreenState extends State<MobileSupplierReturnFor
                   },
                 ),
                 SizedBox(height: 16),
-                BlocBuilder<StockBloc, StockState>(
+                BlocBuilder<WarehousesBloc, WarehousesState>(
                   builder: (context, state) {
-                    final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                    final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                     final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                     final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 

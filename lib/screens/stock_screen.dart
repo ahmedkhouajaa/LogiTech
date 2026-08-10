@@ -500,11 +500,35 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                             ? m.notes!
                             : (m.referenceType != null && m.referenceId != null ? '${m.referenceType}: ${m.referenceId}' : '—');
 
+                        String displayProdName = m.productName ?? '';
+                        if (displayProdName.isEmpty) {
+                          try {
+                            final pState = context.read<ProductsBloc>().state;
+                            if (pState is ProductsLoaded) {
+                              final foundProd = pState.products.cast<Product?>().firstWhere((p) => p?.id == m.productId, orElse: () => null);
+                              if (foundProd != null) displayProdName = foundProd.name;
+                            }
+                          } catch (_) {}
+                        }
+                        if (displayProdName.isEmpty) displayProdName = '—';
+
+                        String displayWhName = m.warehouseName ?? '';
+                        if (displayWhName.isEmpty) {
+                          if (m.warehouseId == 'default_warehouse') {
+                            displayWhName = 'Entrepôt principal';
+                          } else {
+                            try {
+                              displayWhName = state.warehouses.firstWhere((w) => w.id == m.warehouseId).name;
+                            } catch (_) {}
+                          }
+                        }
+                        if (displayWhName.isEmpty) displayWhName = '—';
+
                         return [
                           DataCell(SizedBox(width: 160, child: Text(m.referenceId ?? '—', style: isCancelled ? TextStyle(color: AppColors.textTertiary) : TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)))),
                           DataCell(Text(formatDate(m.date), style: isCancelled ? TextStyle(color: AppColors.textTertiary) : const TextStyle(fontWeight: FontWeight.w500))),
-                          DataCell(SizedBox(width: 160, child: Text(m.productName ?? '—', style: isCancelled ? TextStyle(color: AppColors.textTertiary) : const TextStyle(fontWeight: FontWeight.bold)))),
-                          DataCell(SizedBox(width: 160, child: Text(m.warehouseName ?? '—', style: textStyle))),
+                          DataCell(SizedBox(width: 160, child: Text(displayProdName, style: isCancelled ? TextStyle(color: AppColors.textTertiary) : const TextStyle(fontWeight: FontWeight.bold)))),
+                          DataCell(SizedBox(width: 160, child: Text(displayWhName, style: textStyle))),
                           DataCell(
                             Row(
                               mainAxisSize: MainAxisSize.min,

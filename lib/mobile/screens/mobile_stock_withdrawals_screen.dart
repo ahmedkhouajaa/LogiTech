@@ -10,6 +10,9 @@ import '../../widgets/sidebar_menu.dart';
 import '../../blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
 import '../../blocs/exit_vouchers/exit_vouchers_bloc.dart';
 import '../../blocs/customers/customers_bloc.dart';
+import '../../blocs/products/products_bloc.dart';
+import '../../blocs/projects/projects_bloc.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../models/customer.dart';
 import '../../services/sync_service.dart';
 import 'forms/mobile_exit_voucher_form_screen.dart';
@@ -242,6 +245,9 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
                 BlocProvider.value(value: context.read<ExitVouchersBloc>()),
                 BlocProvider.value(value: context.read<StockWithdrawalsBloc>()),
                 BlocProvider.value(value: context.read<CustomersBloc>()),
+                BlocProvider.value(value: context.read<ProductsBloc>()),
+                BlocProvider.value(value: context.read<ProjectsBloc>()),
+                BlocProvider.value(value: context.read<WarehousesBloc>()),
               ],
               child: MobileExitVoucherFormScreen(
                 existing: item,
@@ -336,6 +342,9 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
               BlocProvider.value(value: context.read<ExitVouchersBloc>()),
               BlocProvider.value(value: context.read<StockWithdrawalsBloc>()),
               BlocProvider.value(value: context.read<CustomersBloc>()),
+              BlocProvider.value(value: context.read<ProductsBloc>()),
+              BlocProvider.value(value: context.read<ProjectsBloc>()),
+              BlocProvider.value(value: context.read<WarehousesBloc>()),
             ],
             child: MobileExitVoucherFormScreen(isExitVoucher: _isExitVoucher),
           )),

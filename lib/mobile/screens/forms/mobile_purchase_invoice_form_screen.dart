@@ -7,11 +7,15 @@ import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../models/purchase_invoice.dart';
 import '../../../../models/supplier.dart';
 import '../../../../models/project.dart';
-import '../../../../blocs/stock/stock_bloc.dart';
 import '../../../../blocs/products/products_bloc.dart';
+import '../../../../models/product.dart';
+import '../../../../blocs/warehouses/warehouses_bloc.dart';
+import '../../../../blocs/warehouses/warehouses_state.dart';
+import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
+import '../../../../database/database_helper.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
@@ -37,6 +41,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
   bool _isLoading = false;
 
   String? _selectedSupplierId;
+  String? _selectedSupplierName;
   String? _selectedProjectId;
   String? _selectedWarehouseId;
   List<PurchaseInvoiceItem> _items = [];
@@ -90,15 +95,14 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
     super.initState();
     context.read<SuppliersBloc>().add(LoadSuppliers());
     context.read<ProjectsBloc>().add(LoadProjects());
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
 
     if (widget.existing != null) {
       final inv = widget.existing!;
       _date = inv.date;
       _dueDate = inv.dueDate;
       _selectedSupplierId = inv.supplierId;
+      _selectedSupplierName = inv.supplierName;
       _selectedProjectId = inv.projectId;
       _pricingModeHT = inv.pricingMode == 'ht';
       _withGlobalDiscount = inv.globalDiscountPercent > 0;
@@ -138,15 +142,30 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
       
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
-        number = generateDocNumber('FA', DateTime.now().millisecondsSinceEpoch % 1000000);
+        final seq = await DatabaseHelper.instance.getNextPurchaseInvoiceSequence();
+        number = generateDocNumber(DocPrefix.purchaseInvoice, seq);
       }
 
-      // Need supplier name
-      String supplierName = '';
-      final state = context.read<SuppliersBloc>().state;
-      if (state is SuppliersLoaded) {
-        final supplier = state.suppliers.firstWhere((s) => s.id == _selectedSupplierId);
-        supplierName = supplier.name;
+      String? suppName;
+      final suppState = context.read<SuppliersBloc>().state;
+      if (suppState is SuppliersLoaded) {
+        final found = suppState.suppliers.firstWhere(
+          (s) => s.id == _selectedSupplierId,
+          orElse: () => Supplier(id: '', code: '', name: 'Fournisseur Inconnu'),
+        );
+        suppName = found.companyName?.isNotEmpty == true
+            ? found.companyName
+            : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
+      }
+
+      String? projName;
+      final projState = context.read<ProjectsBloc>().state;
+      if (_selectedProjectId != null && projState is ProjectsLoaded) {
+        final found = projState.projects.firstWhere(
+          (p) => p.id == _selectedProjectId,
+          orElse: () => Project(id: '', name: '', startDate: DateTime.now()),
+        );
+        projName = found.name;
       }
 
       final invoiceId = widget.existing?.id ?? _uuid.v4();
@@ -154,8 +173,9 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
         id: invoiceId,
         number: number,
         supplierId: _selectedSupplierId!,
-        supplierName: supplierName,
+        supplierName: suppName ?? _selectedSupplierName,
         projectId: _selectedProjectId,
+        projectName: projName,
         warehouseId: _selectedWarehouseId,
         date: _date,
         dueDate: _dueDate,
@@ -190,9 +210,6 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
       } else {
         bloc.add(AddPurchaseInvoice(invoice));
       }
-
-      context.read<StockBloc>().add(LoadStock());
-      context.read<ProductsBloc>().add(const ResetProductsPagination());
 
       if (mounted) {
         Navigator.pop(context);
@@ -326,7 +343,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
                         height: 50,
                         child: ElevatedButton(
                           onPressed: () async {
-                            final newId = await showDialog<String>(
+                            final res = await showDialog(
                               context: context,
                               barrierDismissible: false,
                               builder: (_) => BlocProvider.value(
@@ -334,10 +351,17 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
                                 child: SupplierDialog(existing: null),
                               ),
                             );
-                            if (newId != null && mounted) {
-                              setState(() {
-                                _selectedSupplierId = newId;
-                              });
+                            if (res != null && mounted) {
+                              if (res is Supplier) {
+                                setState(() {
+                                  _selectedSupplierId = res.id;
+                                  _selectedSupplierName = res.companyName?.isNotEmpty == true
+                                      ? res.companyName!
+                                      : (res.responsibleName?.isNotEmpty == true ? res.responsibleName! : res.name);
+                                });
+                              } else if (res is String) {
+                                setState(() => _selectedSupplierId = res);
+                              }
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -377,9 +401,9 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
                   },
                 ),
                 SizedBox(height: 16),
-                BlocBuilder<StockBloc, StockState>(
+                BlocBuilder<WarehousesBloc, WarehousesState>(
                   builder: (context, state) {
-                    final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                    final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                     final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                     final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -461,8 +485,31 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
                       IconButton(
                         icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
                         tooltip: 'Créer un nouvel article',
-                        onPressed: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
+                        onPressed: () async {
+                          final newProd = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => BlocProvider.value(
+                                value: context.read<ProductsBloc>(),
+                                child: const MobileProductFormScreen(),
+                              ),
+                            ),
+                          );
+                          if (newProd != null && newProd is Product && mounted) {
+                            setState(() {
+                              _items.add(PurchaseInvoiceItem(
+                                id: _uuid.v4(),
+                                purchaseInvoiceId: widget.existing?.id ?? '',
+                                productId: newProd.id,
+                                productName: newProd.name,
+                                description: newProd.name,
+                                quantity: 1,
+                                unitPrice: newProd.purchasePrice > 0 ? newProd.purchasePrice : newProd.sellingPrice,
+                                tvaRate: newProd.tvaRate,
+                                showDescription: true,
+                              ));
+                            });
+                          }
                         },
                       ),
                     ],

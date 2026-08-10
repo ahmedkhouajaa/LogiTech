@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/supplier_order.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 
 // ─── Events ────────────────────────────────────────────────────────
 abstract class SupplierOrdersEvent {}
@@ -153,13 +154,7 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
   }
 
   Future<void> _onLoadSupplierOrders(LoadSupplierOrders event, Emitter<SupplierOrdersState> emit) async {
-    emit(SupplierOrdersLoading());
-    try {
-      final orders = await _dbHelper.getSupplierOrders();
-      emit(SupplierOrdersLoaded(orders, totalCount: orders.length));
-    } catch (e) {
-      emit(SupplierOrdersError(e.toString()));
-    }
+    await _onLoadFirstSupplierOrders(LoadFirstSupplierOrders(), emit);
   }
 
   Future<void> _onLoadFirstSupplierOrders(LoadFirstSupplierOrders event, Emitter<SupplierOrdersState> emit) async {
@@ -241,8 +236,8 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
 
   Future<void> _onAddSupplierOrder(AddSupplierOrder event, Emitter<SupplierOrdersState> emit) async {
     try {
-      await _dbHelper.insertSupplierOrder(event.order);
-      add(LoadSupplierOrders());
+      await FirestoreRepository.instance.saveSupplierOrder(event.order);
+      add(LoadFirstSupplierOrders());
     } catch (e) {
       emit(SupplierOrdersError(e.toString()));
     }
@@ -250,8 +245,8 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
 
   Future<void> _onUpdateSupplierOrder(UpdateSupplierOrder event, Emitter<SupplierOrdersState> emit) async {
     try {
-      await _dbHelper.updateSupplierOrder(event.order);
-      add(LoadSupplierOrders());
+      await FirestoreRepository.instance.saveSupplierOrder(event.order);
+      add(LoadFirstSupplierOrders());
     } catch (e) {
       emit(SupplierOrdersError(e.toString()));
     }
@@ -259,35 +254,19 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
 
   Future<void> _onDeleteSupplierOrder(DeleteSupplierOrder event, Emitter<SupplierOrdersState> emit) async {
     try {
-      await _dbHelper.softDelete('supplier_orders', event.orderId);
-      add(LoadSupplierOrders());
+      await FirestoreRepository.instance.softDeleteDocument('supplier_orders', event.orderId);
+      add(LoadFirstSupplierOrders());
     } catch (e) {
       emit(SupplierOrdersError(e.toString()));
     }
   }
 
   Future<void> _onFilterSupplierOrders(FilterSupplierOrders event, Emitter<SupplierOrdersState> emit) async {
-    try {
-      final allOrders = await _dbHelper.getSupplierOrders(
-        status: event.status,
-        startDate: event.dateFrom,
-        endDate: event.dateTo,
-      );
-
-      var filtered = allOrders;
-      if (event.supplierId != null && event.supplierId!.isNotEmpty) {
-        filtered = filtered.where((o) => o.supplierId == event.supplierId).toList();
-      }
-
-      emit(SupplierOrdersLoaded(
-        filtered,
-        supplierFilter: event.supplierId,
-        dateFromFilter: event.dateFrom,
-        dateToFilter: event.dateTo,
-        statusFilter: event.status,
-      ));
-    } catch (e) {
-      emit(SupplierOrdersError(e.toString()));
-    }
+    add(LoadFirstSupplierOrders(
+      supplierId: event.supplierId,
+      dateFrom: event.dateFrom,
+      dateTo: event.dateTo,
+      status: event.status,
+    ));
   }
 }

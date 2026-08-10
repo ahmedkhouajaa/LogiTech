@@ -7,8 +7,11 @@ import '../../../../blocs/suppliers/suppliers_bloc.dart';
 import '../../../../models/payment_model.dart';
 import '../../../../models/customer.dart';
 import '../../../../models/supplier.dart';
+import '../../../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
+import '../../../../models/treasury_account.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
+import '../../../../database/database_helper.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
@@ -37,6 +40,9 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
   String _direction = 'encaissement'; // encaissement / decaissement
   String _contactType = 'customer'; // customer / supplier
   String? _selectedContactId;
+  String? _selectedContactName;
+  String? _selectedAccountId;
+  String? _selectedAccountName;
   String _method = 'especes'; // especes, cheque, virement, carte
   double _amount = 0;
   DateTime _paymentDate = DateTime.now();
@@ -51,12 +57,16 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
     super.initState();
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<SuppliersBloc>().add(LoadSuppliers());
+    context.read<TreasuryAccountsBloc>().add(LoadTreasuryAccounts());
 
     if (widget.existing != null) {
       final p = widget.existing!;
       _direction = p.direction;
       _contactType = p.contactType;
       _selectedContactId = p.contactId;
+      _selectedContactName = p.contactName;
+      _selectedAccountId = p.accountId;
+      _selectedAccountName = p.accountName;
       _method = p.method;
       _amount = p.amount;
       _paymentDate = p.paymentDate;
@@ -84,8 +94,38 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
       
       String number = widget.existing?.paymentNumber ?? '';
       if (number.isEmpty) {
-        String prefix = _direction == 'encaissement' ? 'REC' : 'PAY';
-        number = generateDocNumber(prefix, DateTime.now().millisecondsSinceEpoch % 1000000);
+        final seq = await DatabaseHelper.instance.getNextPaymentSequence();
+        number = _direction == 'encaissement'
+            ? generateDocNumber(DocPrefix.paymentIn, seq)
+            : generateDocNumber(DocPrefix.paymentOut, seq);
+      }
+
+      String? contactName = _selectedContactName;
+      if (_contactType == 'customer') {
+        final custState = context.read<CustomersBloc>().state;
+        if (custState is CustomersLoaded) {
+          final found = custState.customers.firstWhere((c) => c.id == _selectedContactId, orElse: () => Customer(id: '', name: '', code: ''));
+          if (found.id.isNotEmpty) {
+            contactName = found.companyName?.isNotEmpty == true ? found.companyName! : found.name;
+          }
+        }
+      } else {
+        final suppState = context.read<SuppliersBloc>().state;
+        if (suppState is SuppliersLoaded) {
+          final found = suppState.suppliers.firstWhere((s) => s.id == _selectedContactId, orElse: () => Supplier(id: '', code: '', name: ''));
+          if (found.id.isNotEmpty) {
+            contactName = found.companyName?.isNotEmpty == true ? found.companyName! : (found.responsibleName?.isNotEmpty == true ? found.responsibleName! : found.name);
+          }
+        }
+      }
+
+      String? accountName = _selectedAccountName;
+      final tState = context.read<TreasuryAccountsBloc>().state;
+      if (tState is TreasuryAccountsLoaded) {
+        final found = tState.accounts.firstWhere((a) => a.id == _selectedAccountId, orElse: () => TreasuryAccount(id: '', name: '', type: 'cash'));
+        if (found.id.isNotEmpty) {
+          accountName = found.name;
+        }
       }
 
       final paymentId = widget.existing?.id ?? _uuid.v4();
@@ -95,12 +135,17 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
         direction: _direction,
         contactId: _selectedContactId!,
         contactType: _contactType,
+        contactName: contactName,
         amount: _amount,
         method: _method,
+        accountId: _selectedAccountId,
+        accountName: accountName,
         reference: _reference.trim().isEmpty ? null : _reference.trim(),
         paymentDate: _paymentDate,
         notes: _notes.trim().isEmpty ? null : _notes.trim(),
         status: _status,
+        createdAt: widget.existing?.createdAt ?? DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
       if (_isEditing) {
@@ -387,6 +432,45 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
                       }
                     },
                   ),
+                ),
+                SizedBox(height: 16),
+                BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+                  builder: (context, state) {
+                    List<TreasuryAccount> tAccounts = [];
+                    if (state is TreasuryAccountsLoaded) {
+                      tAccounts = state.accounts;
+                    }
+                    final selectedAcc = tAccounts.cast<TreasuryAccount?>().firstWhere(
+                      (a) => a?.id == _selectedAccountId,
+                      orElse: () => null,
+                    );
+                    final displayName = selectedAcc != null
+                        ? '${selectedAcc.name} (${formatCurrencyDT(selectedAcc.balance)})'
+                        : _selectedAccountName;
+
+                    return AbsorbPointer(
+                      absorbing: widget.isReadOnly,
+                      child: SmartSearchableSelector(
+                        label: 'Compte de trésorerie',
+                        hint: 'Sélectionner un compte',
+                        selectedText: displayName,
+                        onTap: () async {
+                          final res = await showTreasuryAccountSelectDialog(
+                            context,
+                            tAccounts,
+                            selectedAccountId: _selectedAccountId,
+                          );
+                          if (res != null && mounted) {
+                            final found = tAccounts.firstWhere((a) => a.id == res, orElse: () => TreasuryAccount(id: '', name: '', type: 'cash'));
+                            setState(() {
+                              _selectedAccountId = res;
+                              _selectedAccountName = found.name;
+                            });
+                          }
+                        },
+                      ),
+                    );
+                  },
                 ),
                 SizedBox(height: 16),
                 AbsorbPointer(

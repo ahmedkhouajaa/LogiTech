@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../database/database_helper.dart';
 import '../../models/credit_note.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 
 abstract class CreditNotesEvent extends Equatable {
   const CreditNotesEvent();
@@ -152,13 +153,7 @@ class CreditNotesBloc extends Bloc<CreditNotesEvent, CreditNotesState> {
   }
 
   Future<void> _onLoad(LoadCreditNotes event, Emitter<CreditNotesState> emit) async {
-    emit(CreditNotesLoading());
-    try {
-      final creditNotes = await DatabaseHelper.instance.getCreditNotes();
-      emit(CreditNotesLoaded(creditNotes, totalCount: creditNotes.length));
-    } catch (e) {
-      emit(CreditNotesError(e.toString()));
-    }
+    await _onLoadFirstCreditNotes(const LoadFirstCreditNotes(), emit);
   }
 
   Future<void> _onLoadFirstCreditNotes(LoadFirstCreditNotes event, Emitter<CreditNotesState> emit) async {
@@ -240,8 +235,8 @@ class CreditNotesBloc extends Bloc<CreditNotesEvent, CreditNotesState> {
 
   Future<void> _onAdd(AddCreditNote event, Emitter<CreditNotesState> emit) async {
     try {
-      await DatabaseHelper.instance.insertCreditNote(event.creditNote);
-      add(LoadCreditNotes());
+      await FirestoreRepository.instance.saveCreditNote(event.creditNote);
+      add(const LoadFirstCreditNotes());
     } catch (e) {
       emit(CreditNotesError(e.toString()));
     }
@@ -249,8 +244,8 @@ class CreditNotesBloc extends Bloc<CreditNotesEvent, CreditNotesState> {
 
   Future<void> _onUpdate(UpdateCreditNote event, Emitter<CreditNotesState> emit) async {
     try {
-      await DatabaseHelper.instance.updateCreditNote(event.creditNote);
-      add(LoadCreditNotes());
+      await FirestoreRepository.instance.saveCreditNote(event.creditNote);
+      add(const LoadFirstCreditNotes());
     } catch (e) {
       emit(CreditNotesError(e.toString()));
     }
@@ -258,8 +253,8 @@ class CreditNotesBloc extends Bloc<CreditNotesEvent, CreditNotesState> {
 
   Future<void> _onDelete(DeleteCreditNote event, Emitter<CreditNotesState> emit) async {
     try {
-      await DatabaseHelper.instance.softDelete('credit_notes', event.id);
-      add(LoadCreditNotes());
+      await FirestoreRepository.instance.softDeleteDocument('credit_notes', event.id);
+      add(const LoadFirstCreditNotes());
     } catch (e) {
       emit(CreditNotesError(e.toString()));
     }

@@ -73,8 +73,9 @@ class PurchaseInvoice {
 
   Map<String, dynamic> toMap() => {
         'id': id, 'number': number, 'supplier_id': supplierId,
+        'supplier_name': supplierName,
         'order_id': orderId, 'delivery_note_id': deliveryNoteId,
-        'project_id': projectId, 'devis_id': devisId,
+        'project_id': projectId, 'project_name': projectName, 'devis_id': devisId,
         'receiving_voucher_id': receivingVoucherId,
         'warehouse_id': warehouseId,
         'date': date.toIso8601String(), 'due_date': dueDate.toIso8601String(),
@@ -230,6 +231,7 @@ class PurchaseInvoiceItem {
 
   Map<String, dynamic> toMap() => {
         'id': id, 'invoice_id': purchaseInvoiceId, 'product_id': productId,
+        'product_name': productName,
         'description': description, 'quantity': quantity,
         'unit_price': unitPrice, 'tva_rate': tvaRate,
         'discount_percent': discountPercent, 'total_ht': computedTotalHT,

@@ -10,6 +10,8 @@ import '../utils/helpers.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/stock/stock_bloc.dart';
 import '../models/stock_movement.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/enterprise_service.dart';
 import 'create_article_screen.dart';
 import '../mobile/screens/forms/mobile_product_form_screen.dart';
 import '../widgets/article_selection_modal.dart';
@@ -76,25 +78,57 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
   }
 
   Future<void> _loadWarehouses() async {
-    final warehouses = await DatabaseHelper.instance.getWarehouses();
-    setState(() {
-      _warehouses = warehouses;
-      if (!isEdit && warehouses.isNotEmpty) {
-        _sourceWarehouseId = warehouses.first.id;
-        if (warehouses.length > 1) {
-          _destWarehouseId = warehouses[1].id;
-        } else {
-          _destWarehouseId = warehouses.first.id;
+    List<Warehouse> warehouses = [];
+    try {
+      final stockState = context.read<StockBloc>().state;
+      if (stockState is StockLoaded && stockState.warehouses.isNotEmpty) {
+        warehouses = stockState.warehouses;
+      } else {
+        final entId = EnterpriseService.instance.currentEnterpriseId;
+        Query query = FirebaseFirestore.instance.collection('warehouses');
+        if (entId != null && entId.isNotEmpty) {
+          query = query.where('enterprise_id', isEqualTo: entId);
         }
+        final snap = await query.get();
+        warehouses = snap.docs.map((doc) {
+          final data = Map<String, dynamic>.from(doc.data() as Map);
+          data['id'] = doc.id;
+          return Warehouse.fromMap(data);
+        }).where((w) => !w.isDeleted).toList();
       }
-    });
+    } catch (_) {
+      warehouses = await DatabaseHelper.instance.getWarehouses();
+    }
+
+    if (warehouses.isEmpty) {
+      warehouses = [
+        Warehouse(id: 'default_warehouse', name: 'Entrepôt principal', isDefault: true)
+      ];
+    }
+
+    if (mounted) {
+      setState(() {
+        _warehouses = warehouses;
+        if (!isEdit) {
+          if (_sourceWarehouseId == null && warehouses.isNotEmpty) {
+            _sourceWarehouseId = warehouses.first.id;
+          }
+          if (_destWarehouseId == null || _destWarehouseId == _sourceWarehouseId) {
+            final otherWarehouses = warehouses.where((w) => w.id != _sourceWarehouseId).toList();
+            _destWarehouseId = otherWarehouses.isNotEmpty ? otherWarehouses.first.id : null;
+          }
+        } else if (_sourceWarehouseId == _destWarehouseId) {
+          _destWarehouseId = null;
+        }
+      });
+    }
   }
 
   void _onWarehouseChanged() {
     setState(() {});
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     
     final validItems = _items.where((i) => i.productId.isNotEmpty).toList();
@@ -115,7 +149,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
 
     if (_sourceWarehouseId == null || _destWarehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner les entrepôts'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Veuillez sélectionner l\'entrepôt source et destination'), backgroundColor: AppColors.error),
       );
       return;
     }
@@ -127,7 +161,11 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
       return;
     }
 
-    final number = isEdit ? widget.existing!.number : '';
+    String number = isEdit ? widget.existing!.number : '';
+    if (number.isEmpty) {
+      final seq = await DatabaseHelper.instance.getNextStockTransferSequence();
+      number = generateDocNumber(DocPrefix.stockTransfer, seq);
+    }
     final transferId = isEdit ? widget.existing!.id : const Uuid().v4();
 
     final transfer = StockTransfer(
@@ -156,8 +194,11 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
       context.read<StockTransfersBloc>().add(AddStockTransfer(transfer));
     }
     
-    context.read<StockBloc>().add(LoadStock());
-    Navigator.pop(context);
+    if (mounted) {
+      context.read<StockBloc>().add(LoadStock());
+      context.read<ProductsBloc>().add(LoadProducts());
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -323,7 +364,14 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
       hint: 'Sélectionner...',
       selectedText: sourceWarehouseName,
       onTap: () async {
-        final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _sourceWarehouseId);
+        final available = _warehouses.where((w) => w.id != _destWarehouseId).toList();
+        if (available.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Aucun autre entrepôt disponible')),
+          );
+          return;
+        }
+        final res = await showWarehouseSelectDialog(context, available, selectedWarehouseId: _sourceWarehouseId);
         if (res != null && mounted) {
           setState(() {
             _sourceWarehouseId = res;
@@ -341,7 +389,14 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
       hint: 'Sélectionner...',
       selectedText: destWarehouseName,
       onTap: () async {
-        final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _destWarehouseId);
+        final available = _warehouses.where((w) => w.id != _sourceWarehouseId).toList();
+        if (available.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Aucun autre entrepôt disponible pour la destination')),
+          );
+          return;
+        }
+        final res = await showWarehouseSelectDialog(context, available, selectedWarehouseId: _destWarehouseId);
         if (res != null && mounted) {
           setState(() {
             _destWarehouseId = res;

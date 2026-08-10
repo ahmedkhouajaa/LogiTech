@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../database/database_helper.dart';
 import '../../models/return_note.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 import 'return_notes_event.dart';
 import 'return_notes_state.dart';
 
@@ -20,17 +21,7 @@ class ReturnNotesBloc extends Bloc<ReturnNotesEvent, ReturnNotesState> {
   }
 
   Future<void> _onLoadReturnNotes(LoadReturnNotes event, Emitter<ReturnNotesState> emit) async {
-    emit(ReturnNotesLoading());
-    try {
-      final notes = await DatabaseHelper.instance.getReturnNotes(
-        status: event.status,
-        startDate: event.startDate,
-        endDate: event.endDate,
-      );
-      emit(ReturnNotesLoaded(notes, totalCount: notes.length));
-    } catch (e) {
-      emit(ReturnNotesError('Erreur de chargement: $e'));
-    }
+    await _onLoadFirstReturnNotes(LoadFirstReturnNotes(), emit);
   }
 
   Future<void> _onLoadFirstReturnNotes(LoadFirstReturnNotes event, Emitter<ReturnNotesState> emit) async {
@@ -121,8 +112,8 @@ class ReturnNotesBloc extends Bloc<ReturnNotesEvent, ReturnNotesState> {
 
   Future<void> _onAddReturnNote(AddReturnNote event, Emitter<ReturnNotesState> emit) async {
     try {
-      await DatabaseHelper.instance.insertReturnNote(event.note);
-      add(const LoadReturnNotes());
+      await FirestoreRepository.instance.saveReturnNote(event.note);
+      add(LoadFirstReturnNotes());
     } catch (e) {
       emit(ReturnNotesError('Erreur d\'ajout: $e'));
     }
@@ -130,8 +121,8 @@ class ReturnNotesBloc extends Bloc<ReturnNotesEvent, ReturnNotesState> {
 
   Future<void> _onUpdateReturnNote(UpdateReturnNote event, Emitter<ReturnNotesState> emit) async {
     try {
-      await DatabaseHelper.instance.updateReturnNote(event.note);
-      add(const LoadReturnNotes());
+      await FirestoreRepository.instance.saveReturnNote(event.note);
+      add(LoadFirstReturnNotes());
     } catch (e) {
       emit(ReturnNotesError('Erreur de modification: $e'));
     }
@@ -139,8 +130,8 @@ class ReturnNotesBloc extends Bloc<ReturnNotesEvent, ReturnNotesState> {
 
   Future<void> _onDeleteReturnNote(DeleteReturnNote event, Emitter<ReturnNotesState> emit) async {
     try {
-      await DatabaseHelper.instance.deleteReturnNote(event.id);
-      add(const LoadReturnNotes());
+      await FirestoreRepository.instance.softDeleteDocument('return_notes', event.id);
+      add(LoadFirstReturnNotes());
     } catch (e) {
       emit(ReturnNotesError('Erreur de suppression: $e'));
     }

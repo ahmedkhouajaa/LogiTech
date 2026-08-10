@@ -79,24 +79,29 @@ class StockEntry {
       'is_deleted': isDeleted ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+      'items': items.map((i) => i.toMap()).toList(),
     };
   }
 
   factory StockEntry.fromMap(Map<String, dynamic> map, [List<StockEntryItem>? items]) {
+    List<StockEntryItem> parsedItems = items ?? const [];
+    if (parsedItems.isEmpty && map['items'] != null && map['items'] is List) {
+      parsedItems = (map['items'] as List).map((i) => StockEntryItem.fromMap(Map<String, dynamic>.from(i))).toList();
+    }
     return StockEntry(
-      id: map['id'],
-      number: map['number'],
-      warehouseId: map['warehouse_id'],
-      date: DateTime.parse(map['date']),
-      supplierId: map['supplier_id'],
-      reason: map['reason'],
-      notes: map['notes'],
-      status: map['status'] ?? 'draft',
-      firebaseUid: map['firebase_uid'],
-      isDeleted: map['is_deleted'] == 1,
-      createdAt: DateTime.parse(map['created_at']),
-      updatedAt: DateTime.parse(map['updated_at']),
-      items: items ?? [],
+      id: map['id']?.toString() ?? '',
+      number: map['number']?.toString() ?? '',
+      warehouseId: map['warehouse_id']?.toString() ?? '',
+      date: map['date'] != null ? (DateTime.tryParse(map['date'].toString()) ?? DateTime.now()) : DateTime.now(),
+      supplierId: map['supplier_id']?.toString(),
+      reason: map['reason']?.toString(),
+      notes: map['notes']?.toString(),
+      status: map['status']?.toString() ?? 'draft',
+      firebaseUid: map['firebase_uid']?.toString(),
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true || map['is_deleted'] == '1',
+      createdAt: map['created_at'] != null ? (DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()) : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? (DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now()) : DateTime.now(),
+      items: parsedItems,
     );
   }
 }

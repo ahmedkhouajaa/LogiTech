@@ -11,6 +11,8 @@ import '../../blocs/supplier_credit_notes/supplier_credit_notes_state.dart';
 import '../../blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
 import '../../blocs/suppliers/suppliers_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
+import '../../blocs/projects/projects_bloc.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../models/supplier.dart';
 import 'forms/mobile_supplier_credit_note_form_screen.dart';
 import 'mobile_supplier_credit_note_detail_screen.dart';
@@ -216,7 +218,18 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
               onEdit: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobileSupplierCreditNoteFormScreen(existing: item)),
+                  MaterialPageRoute(
+                    builder: (_) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider.value(value: context.read<SupplierCreditNotesBloc>()),
+                        BlocProvider.value(value: context.read<SuppliersBloc>()),
+                        BlocProvider.value(value: context.read<ProductsBloc>()),
+                        BlocProvider.value(value: context.read<ProjectsBloc>()),
+                        BlocProvider.value(value: context.read<WarehousesBloc>()),
+                      ],
+                      child: MobileSupplierCreditNoteFormScreen(existing: item),
+                    ),
+                  ),
                 ).then((_) {
                   _fetchFilteredCreditNotes();
                 });
@@ -291,7 +304,18 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
           onFabPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const MobileSupplierCreditNoteFormScreen()),
+              MaterialPageRoute(
+                builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider.value(value: context.read<SupplierCreditNotesBloc>()),
+                    BlocProvider.value(value: context.read<SuppliersBloc>()),
+                    BlocProvider.value(value: context.read<ProductsBloc>()),
+                    BlocProvider.value(value: context.read<ProjectsBloc>()),
+                    BlocProvider.value(value: context.read<WarehousesBloc>()),
+                  ],
+                  child: const MobileSupplierCreditNoteFormScreen(),
+                ),
+              ),
             ).then((_) {
               _fetchFilteredCreditNotes();
             });

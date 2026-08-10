@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/receiving_voucher.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 
 // ─── Events ────────────────────────────────────────────────────────
 abstract class ReceivingVouchersEvent {}
@@ -129,13 +130,7 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
   }
 
   Future<void> _onLoadReceivingVouchers(LoadReceivingVouchers event, Emitter<ReceivingVouchersState> emit) async {
-    emit(ReceivingVouchersLoading());
-    try {
-      final vouchers = await _dbHelper.getReceivingVouchers();
-      emit(ReceivingVouchersLoaded(vouchers, totalCount: vouchers.length));
-    } catch (e) {
-      emit(ReceivingVouchersError(e.toString()));
-    }
+    await _onLoadFirstReceivingVouchers(LoadFirstReceivingVouchers(), emit);
   }
 
   Future<void> _onLoadFirstReceivingVouchers(LoadFirstReceivingVouchers event, Emitter<ReceivingVouchersState> emit) async {
@@ -217,11 +212,8 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
 
   Future<void> _onAddReceivingVoucher(AddReceivingVoucher event, Emitter<ReceivingVouchersState> emit) async {
     try {
-      await _dbHelper.insertReceivingVoucher(
-        event.voucher.toMap(),
-        event.voucher.items.map((i) => i.toMap()).toList(),
-      );
-      add(LoadReceivingVouchers());
+      await FirestoreRepository.instance.saveReceivingVoucher(event.voucher);
+      add(LoadFirstReceivingVouchers());
     } catch (e) {
       emit(ReceivingVouchersError(e.toString()));
     }
@@ -229,11 +221,8 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
 
   Future<void> _onUpdateReceivingVoucher(UpdateReceivingVoucher event, Emitter<ReceivingVouchersState> emit) async {
     try {
-      await _dbHelper.updateReceivingVoucher(
-        event.voucher.toMap(),
-        event.voucher.items.map((i) => i.toMap()).toList(),
-      );
-      add(LoadReceivingVouchers());
+      await FirestoreRepository.instance.saveReceivingVoucher(event.voucher);
+      add(LoadFirstReceivingVouchers());
     } catch (e) {
       emit(ReceivingVouchersError(e.toString()));
     }
@@ -241,8 +230,8 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
 
   Future<void> _onDeleteReceivingVoucher(DeleteReceivingVoucher event, Emitter<ReceivingVouchersState> emit) async {
     try {
-      await _dbHelper.softDelete('receiving_vouchers', event.id);
-      add(LoadReceivingVouchers());
+      await FirestoreRepository.instance.softDeleteDocument('receiving_vouchers', event.id);
+      add(LoadFirstReceivingVouchers());
     } catch (e) {
       emit(ReceivingVouchersError(e.toString()));
     }

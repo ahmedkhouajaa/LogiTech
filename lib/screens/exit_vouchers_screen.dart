@@ -5,6 +5,7 @@ import '../models/product.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
 import '../models/stock_withdrawal.dart';
 import '../models/customer.dart';
 import '../utils/constants.dart';
@@ -50,7 +51,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<ExitVouchersBloc>().add(LoadExitVouchers());
+    context.read<ExitVouchersBloc>().add(LoadFirstExitVouchers());
     context.read<CustomersBloc>().add(LoadCustomers());
   }
 
@@ -120,6 +121,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
             BlocProvider.value(value: context.read<CustomersBloc>()),
             BlocProvider.value(value: context.read<ProductsBloc>()),
             BlocProvider.value(value: context.read<ProjectsBloc>()),
+            BlocProvider.value(value: context.read<WarehousesBloc>()),
           ],
           child: CreateExitVoucherScreen(existing: existing),
         ),

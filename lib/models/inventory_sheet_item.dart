@@ -21,18 +21,20 @@ class InventorySheetItem {
         'id': id,
         'inventory_id': inventoryId,
         'product_id': productId,
+        'product_name': productName,
+        'product_sku': productSku,
         'theoretical_qty': theoreticalQty,
         'actual_qty': actualQty,
       };
 
   factory InventorySheetItem.fromMap(Map<String, dynamic> map, {String? productName, String? productSku}) => InventorySheetItem(
         id: map['id'] as String,
-        inventoryId: map['inventory_id'] as String,
-        productId: map['product_id'] as String,
-        productName: productName,
-        productSku: productSku,
-        theoreticalQty: (map['theoretical_qty'] as num).toDouble(),
-        actualQty: (map['actual_qty'] as num).toDouble(),
+        inventoryId: (map['inventory_id'] ?? '') as String,
+        productId: (map['product_id'] ?? '') as String,
+        productName: productName ?? map['product_name'] as String?,
+        productSku: productSku ?? map['product_sku'] as String?,
+        theoreticalQty: (map['theoretical_qty'] as num?)?.toDouble() ?? 0.0,
+        actualQty: (map['actual_qty'] as num?)?.toDouble() ?? 0.0,
       );
 
   InventorySheetItem copyWith({

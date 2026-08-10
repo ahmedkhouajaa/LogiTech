@@ -5,6 +5,7 @@ import '../blocs/invoices/invoices_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
 import '../models/invoice.dart';
 import '../models/customer.dart';
 import '../utils/constants.dart';
@@ -91,6 +92,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                         BlocProvider.value(value: context.read<CustomersBloc>()),
                         BlocProvider.value(value: context.read<ProductsBloc>()),
                         BlocProvider.value(value: context.read<ProjectsBloc>()),
+                        BlocProvider.value(value: context.read<WarehousesBloc>()),
                       ],
                       child: const CreateInvoiceScreen(),
                     ),
@@ -400,7 +402,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                     _statusFilter = null;
                     _currentPage = 0;
                   });
-                  context.read<InvoicesBloc>().add(LoadInvoices());
+                  context.read<InvoicesBloc>().add(const ResetInvoicesPagination());
                 },
                 icon: Icon(Icons.refresh_rounded, size: 16),
                 label: Text('Réinitialiser les filtres'),
@@ -969,7 +971,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
               if (context.mounted) {
                 context.read<CreditNotesBloc>().add(LoadCreditNotes());
-                context.read<InvoicesBloc>().add(LoadInvoices());
+                context.read<InvoicesBloc>().add(const ResetInvoicesPagination());
                 context.read<StockBloc>().add(LoadStock());
                 context.read<ProductsBloc>().add(const ResetProductsPagination());
                 
@@ -1026,6 +1028,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 BlocProvider.value(value: context.read<CustomersBloc>()),
                 BlocProvider.value(value: context.read<ProductsBloc>()),
                 BlocProvider.value(value: context.read<ProjectsBloc>()),
+                BlocProvider.value(value: context.read<WarehousesBloc>()),
               ],
               child: CreateInvoiceScreen(existing: inv),
             ),
@@ -1055,7 +1058,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           ),
         ).then((created) {
           if (created == true && context.mounted) {
-            context.read<InvoicesBloc>().add(LoadInvoices());
+            context.read<InvoicesBloc>().add(const ResetInvoicesPagination());
           }
         });
         break;

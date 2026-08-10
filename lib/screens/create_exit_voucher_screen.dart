@@ -12,7 +12,9 @@ import '../models/stock_withdrawal.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/project.dart';
-import '../blocs/stock/stock_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
+import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
@@ -84,15 +86,14 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
 
     if (widget.existing != null) {
       final n = widget.existing!;
       _date = n.date;
       _selectedCustomerId = n.customerId;
       _selectedProjectId = n.projectId;
+      _selectedWarehouseId = n.warehouseId;
       _status = DocumentStatus.values.firstWhere((e) => e.name == n.status, orElse: () => DocumentStatus.draft);
       _pricingModeHT = n.pricingMode == 'ht';
       _globalDiscountPercent = n.globalDiscountPercent;
@@ -164,6 +165,7 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
       customerId: _selectedCustomerId!,
       customerName: custName,
       projectId: _selectedProjectId,
+      warehouseId: _selectedWarehouseId,
       date: _date,
       status: _status.name,
       timbreFiscal: _timbreFiscal,
@@ -531,8 +533,8 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                           child: Tooltip(
                             message: 'Créer un nouveau client',
                             child: ElevatedButton(
-                              onPressed: () async {
-                                final newId = await showDialog<String>(
+                               onPressed: () async {
+                                final res = await showDialog(
                                   context: context,
                                   barrierDismissible: false,
                                   builder: (_) => BlocProvider.value(
@@ -540,8 +542,12 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
                                     child: const CustomerDialog(existing: null),
                                   ),
                                 );
-                                if (newId != null && mounted) {
-                                  setState(() => _selectedCustomerId = newId);
+                                if (res != null && mounted) {
+                                  if (res is Customer) {
+                                    setState(() => _selectedCustomerId = res.id);
+                                  } else if (res is String) {
+                                    setState(() => _selectedCustomerId = res);
+                                  }
                                 }
                               },
                               style: ElevatedButton.styleFrom(
@@ -597,9 +603,9 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
             children: [
               Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
-              BlocBuilder<StockBloc, StockState>(
+              BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
-                  final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                  final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                   final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                   final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -1063,8 +1069,21 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
           tooltip: 'Créer un nouvel article',
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          onPressed: () async {
+            final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+            if (res != null && res is Product && mounted) {
+              setState(() {
+                _items.add(ExitVoucherItemUI(
+                  id: _uuid.v4(),
+                  productId: res.id,
+                  productName: res.name,
+                  quantity: 1,
+                  unitPrice: res.sellingPrice,
+                  tvaRate: res.tvaRate,
+                  discountPercent: 0,
+                ));
+              });
+            }
           },
           splashRadius: 24,
         ),

@@ -14,6 +14,8 @@ import '../../models/inventory_sheet_item.dart';
 import '../../models/product.dart';
 import '../../models/stock_movement.dart' show Warehouse;
 import '../../utils/constants.dart';
+import '../../utils/helpers.dart';
+import '../../database/database_helper.dart';
 import '../../services/enterprise_service.dart';
 import '../mobile/screens/forms/mobile_product_form_screen.dart';
 import '../widgets/article_selection_modal.dart';
@@ -103,20 +105,15 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
     super.dispose();
   }
 
-  void _save(bool isDraft) {
+  Future<void> _save({bool isDraft = false}) async {
     if (_warehouseId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un entrepôt')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un entrepôt.')));
       return;
     }
+
     if (_items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez ajouter au moins un article')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez ajouter au moins un article.')));
       return;
-    }
-    for (var item in _items) {
-      if (item.productId.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un produit pour chaque ligne')));
-        return;
-      }
     }
 
     final uniqueProductIds = _items.map((i) => i.productId).toSet();
@@ -125,17 +122,23 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
       return;
     }
 
+    String sheetNumber = _number;
+    if (sheetNumber.isEmpty) {
+      final seq = await DatabaseHelper.instance.getNextInventorySheetSequence();
+      sheetNumber = generateDocNumber(DocPrefix.inventorySheet, seq);
+    }
+
     final currentEntId = EnterpriseService.instance.currentEnterpriseId;
     final newSheet = InventorySheet(
       id: _id,
-      number: _number,
+      number: sheetNumber,
       date: _date,
       inventoryDate: _inventoryDate,
       warehouseId: _warehouseId!,
       countedBy: _countedByController.text,
       reason: _reasonController.text,
       notes: _notesController.text,
-      status: 'validated',
+      status: isDraft ? 'draft' : 'validated',
       enterpriseId: currentEntId,
       items: _items,
       createdAt: widget.sheet?.createdAt,
@@ -147,12 +150,11 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
       context.read<InventorySheetsBloc>().add(InventorySheetUpdated(newSheet));
     }
 
-    if (!isDraft) {
-      // Reload stock to reflect adjustments
+    if (mounted) {
       context.read<StockBloc>().add(LoadStock());
+      context.read<ProductsBloc>().add(LoadProducts());
+      Navigator.pop(context);
     }
-
-    Navigator.pop(context);
   }
 
   @override
@@ -248,7 +250,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => _save(false),
+                        onPressed: () => _save(isDraft: false),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,

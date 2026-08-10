@@ -105,6 +105,7 @@ class ReturnNote extends Equatable {
   final String? conditions;
   final String status;
   final List<ReturnNoteItem> items;
+  final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -122,6 +123,7 @@ class ReturnNote extends Equatable {
     this.conditions,
     this.status = 'draft',
     this.items = const [],
+    this.isDeleted = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -168,6 +170,8 @@ class ReturnNote extends Equatable {
       'id': id,
       'return_number': returnNumber,
       'customer_id': customerId,
+      'customer_name': customerName,
+      'customer_company': customerCompany,
       'delivery_note_id': deliveryNoteId,
       'date_emission': dateEmission.toIso8601String(),
       'subtotal_ht': subtotalHT,
@@ -175,6 +179,7 @@ class ReturnNote extends Equatable {
       'notes': notes,
       'conditions': conditions,
       'status': status,
+      'is_deleted': isDeleted ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'items': items.map((i) => i.toMap()).toList(),
@@ -203,6 +208,7 @@ class ReturnNote extends Equatable {
       notes: map['notes']?.toString(),
       conditions: map['conditions']?.toString(),
       status: map['status']?.toString() ?? 'draft',
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
       createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
       updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
       items: parsedItems,

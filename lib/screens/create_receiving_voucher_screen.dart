@@ -10,7 +10,9 @@ import '../models/supplier_order.dart';
 import '../models/supplier.dart';
 import '../models/product.dart';
 import '../models/project.dart';
-import '../blocs/stock/stock_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
+import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
@@ -111,9 +113,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
     context.read<SuppliersBloc>().add(LoadSuppliers());
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
 
     if (widget.existing != null) {
       final n = widget.existing!;
@@ -171,11 +171,24 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
       number = generateDocNumber(DocPrefix.receivingVoucher, seq);
     }
 
+    final suppState = context.read<SuppliersBloc>().state;
+    String? suppName;
+    if (suppState is SuppliersLoaded) {
+      final found = suppState.suppliers.firstWhere(
+        (s) => s.id == _selectedSupplierId,
+        orElse: () => Supplier(id: '', code: '', name: 'Fournisseur Inconnu'),
+      );
+      suppName = found.companyName?.isNotEmpty == true
+          ? found.companyName
+          : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
+    }
+
     final orderId = widget.existing?.id ?? _uuid.v4();
     final order = ReceivingVoucher(
       id: orderId,
       number: number,
       supplierId: _selectedSupplierId!,
+      supplierName: suppName,
       date: _date,
       status: _status.name,
       pricingMode: _pricingModeHT ? 'ht' : 'ttc',
@@ -189,6 +202,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
         voucherId: orderId,
         id: item.id,
         productId: item.productId,
+        productName: item.productName,
         quantityExpected: item.quantityExpected,
         quantityReceived: item.quantityReceived,
         unitPrice: item.unitPrice,
@@ -434,8 +448,8 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                             child: Tooltip(
                               message: 'Créer un nouveau fournisseur',
                               child: ElevatedButton(
-                                onPressed: () {
-                                  showDialog(
+                                onPressed: () async {
+                                  final res = await showDialog(
                                     context: context,
                                     barrierDismissible: false,
                                     builder: (_) => BlocProvider.value(
@@ -443,6 +457,13 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                                       child: SupplierDialog(existing: null),
                                     ),
                                   );
+                                  if (res != null && mounted) {
+                                    if (res is Supplier) {
+                                      setState(() => _selectedSupplierId = res.id);
+                                    } else if (res is String) {
+                                      setState(() => _selectedSupplierId = res);
+                                    }
+                                  }
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary.withValues(alpha: 0.1),
@@ -498,9 +519,9 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
             children: [
               Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
-              BlocBuilder<StockBloc, StockState>(
+              BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
-                  final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                  final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                   final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                   final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -854,7 +875,9 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                         voucherId: widget.existing?.id ?? '',
                         productId: product.id,
                         productName: product.name,
-                        unitPrice: product.purchasePrice,
+                        quantityExpected: 1,
+                        quantityReceived: 1,
+                        unitPrice: product.purchasePrice > 0 ? product.purchasePrice : product.sellingPrice,
                         tvaRate: product.tvaRate,
                       ));
                     });
@@ -868,8 +891,21 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
           tooltip: 'Créer un nouvel article',
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          onPressed: () async {
+            final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+            if (res != null && res is Product && mounted) {
+              setState(() {
+                _items.add(ReceivingVoucherItem(
+                  voucherId: widget.existing?.id ?? '',
+                  productId: res.id,
+                  productName: res.name,
+                  quantityExpected: 1,
+                  quantityReceived: 1,
+                  unitPrice: res.purchasePrice > 0 ? res.purchasePrice : res.sellingPrice,
+                  tvaRate: res.tvaRate,
+                ));
+              });
+            }
           },
           splashRadius: 24,
         ),

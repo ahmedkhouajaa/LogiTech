@@ -12,8 +12,11 @@ import '../models/return_note.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/project.dart';
-import '../blocs/stock/stock_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
+import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
+import '../screens/customers_screen.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../database/database_helper.dart';
@@ -91,9 +94,7 @@ class _CreateReturnNoteScreenState
     context.read<CustomersBloc>().add(LoadCustomers());
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
 
     if (widget.existing != null) {
       final n = widget.existing!;
@@ -145,7 +146,19 @@ class _CreateReturnNoteScreenState
     String number = widget.existing?.returnNumber ?? '';
     if (number.isEmpty) {
       final seq = await DatabaseHelper.instance.getNextReturnNoteSequence();
-      number = generateDocNumber('BL', seq);
+      number = generateDocNumber('BR', seq);
+    }
+
+    final custState = context.read<CustomersBloc>().state;
+    String? custName;
+    if (custState is CustomersLoaded) {
+      final found = custState.customers.firstWhere(
+        (c) => c.id == _selectedCustomerId,
+        orElse: () => Customer(id: '', code: '', name: 'Client Inconnu'),
+      );
+      custName = found.companyName?.isNotEmpty == true
+          ? found.companyName
+          : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
     }
 
     final noteId = widget.existing?.id ?? _uuid.v4();
@@ -153,6 +166,7 @@ class _CreateReturnNoteScreenState
       id: noteId,
       returnNumber: number,
       customerId: _selectedCustomerId!,
+      customerName: custName,
       dateEmission: _date,
       status: _status.name,
       notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
@@ -380,80 +394,85 @@ class _CreateReturnNoteScreenState
                         final selectedCustomer = customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null);
 
                         final displayName = selectedCustomer != null
-
                             ? (selectedCustomer.companyName?.isNotEmpty == true
-
                                 ? selectedCustomer.companyName!
-
                                 : (selectedCustomer.responsibleName?.isNotEmpty == true
-
                                     ? selectedCustomer.responsibleName!
-
                                     : selectedCustomer.name))
-
                             : null;
 
-
-                        return FormField<String>(
-
-                          initialValue: _selectedCustomerId,
-
-                          validator: (v) => _selectedCustomerId == null ? 'Requis' : null,
-
-                          builder: (field) {
-
-                            return Column(
-
-                              crossAxisAlignment: CrossAxisAlignment.start,
-
-                              children: [
-
-                                SearchableSelectorField(
-
-                                  hint: 'Rechercher des clients...',
-
-                                  selectedText: displayName,
-
-                                  hasError: field.hasError,
-
-                                  onTap: () async {
-
-                                    final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
-
-                                    if (res != null) {
-
-                                      setState(() => _selectedCustomerId = res);
-
-                                      field.didChange(res);
-
-                                    }
-
-                                  },
-
-                                ),
-
-                                if (field.hasError) ...[
-
-                                  SizedBox(height: 4),
-
-                                  Padding(
-
-                                    padding: EdgeInsets.only(left: 4),
-
-                                    child: Text(field.errorText!, style: TextStyle(color: AppColors.error, fontSize: 11)),
-
+                        return Row(
+                      children: [
+                        Expanded(
+                          child: FormField<String>(
+                            initialValue: _selectedCustomerId,
+                            validator: (v) => _selectedCustomerId == null ? 'Requis' : null,
+                            builder: (field) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SearchableSelectorField(
+                                    hint: 'Rechercher des clients...',
+                                    selectedText: displayName,
+                                    hasError: field.hasError,
+                                    onTap: () async {
+                                      final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
+                                      if (res != null) {
+                                        setState(() => _selectedCustomerId = res);
+                                        field.didChange(res);
+                                      }
+                                    },
                                   ),
-
+                                  if (field.hasError) ...[
+                                    SizedBox(height: 4),
+                                    Padding(
+                                      padding: EdgeInsets.only(left: 4),
+                                      child: Text(field.errorText!, style: TextStyle(color: AppColors.error, fontSize: 11)),
+                                    ),
+                                  ],
                                 ],
-
-                              ],
-
-                            );
-
-                          },
-
-                        );
-                      },
+                              );
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        SizedBox(
+                          height: 48,
+                          child: Tooltip(
+                            message: 'Créer un nouveau client',
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final res = await showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => BlocProvider.value(
+                                    value: context.read<CustomersBloc>(),
+                                    child: const CustomerDialog(existing: null),
+                                  ),
+                                );
+                                if (res != null && mounted) {
+                                  if (res is Customer) {
+                                    setState(() => _selectedCustomerId = res.id);
+                                  } else if (res is String) {
+                                    setState(() => _selectedCustomerId = res);
+                                  }
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                foregroundColor: AppColors.primary,
+                                elevation: 0,
+                                padding: EdgeInsets.symmetric(horizontal: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
+                              ),
+                              child: Icon(Icons.person_add_alt_1_rounded, size: 20),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                     ),
                   ],
                 ),
@@ -510,9 +529,9 @@ class _CreateReturnNoteScreenState
             children: [
               Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
-              BlocBuilder<StockBloc, StockState>(
+              BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
-                  final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                  final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                   final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                   final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -963,8 +982,22 @@ class _CreateReturnNoteScreenState
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
           tooltip: 'Créer un nouvel article',
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          onPressed: () async {
+            final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+            if (res != null && res is Product && mounted) {
+              setState(() {
+                _items.add(ReturnNoteItem(
+                  id: _uuid.v4(),
+                  returnNoteId: widget.existing?.id ?? '',
+                  productId: res.id,
+                  designation: res.name,
+                  quantity: -1,
+                  unitPrice: res.sellingPrice,
+                  tvaRate: res.tvaRate,
+                  totalHT: -1 * res.sellingPrice,
+                ));
+              });
+            }
           },
           splashRadius: 24,
         ),

@@ -22,6 +22,7 @@ class CustomerOrder {
   final String? convertedToInvoiceId;
   final bool isConvertedToDelivery;
   final String? convertedToDeliveryId;
+  final String? warehouseId;
   final String? firebaseUid;
   final String? enterpriseId;
   final bool isDeleted;
@@ -37,6 +38,7 @@ class CustomerOrder {
     this.customerCompany,
     this.projectId,
     this.projectName,
+    this.warehouseId,
     this.quoteId,
     required this.date,
     this.deliveryDate,
@@ -179,7 +181,11 @@ class CustomerOrder {
       'id': id,
       'number': number,
       'customer_id': customerId,
+      'customer_name': customerName,
+      'customer_company': customerCompany,
       'project_id': projectId,
+      'project_name': projectName,
+      'warehouse_id': warehouseId,
       'quote_id': quoteId,
       'date': date.toIso8601String(),
       'delivery_date': deliveryDate?.toIso8601String(),
@@ -215,6 +221,7 @@ class CustomerOrder {
       customerCompany: map['customer_company'],
       projectId: map['project_id'],
       projectName: map['project_name'],
+      warehouseId: map['warehouse_id'] as String?,
       quoteId: map['quote_id'],
       date: DateTime.parse(map['date']),
       deliveryDate: map['delivery_date'] != null ? DateTime.parse(map['delivery_date']) : null,
@@ -234,7 +241,12 @@ class CustomerOrder {
       isDeleted: map['is_deleted'] == 1,
       createdAt: DateTime.parse(map['created_at']),
       updatedAt: DateTime.parse(map['updated_at']),
-      items: items,
+      items: items.isNotEmpty
+          ? items
+          : ((map['items'] as List<dynamic>?)
+                  ?.map((i) => CustomerOrderItem.fromMap(Map<String, dynamic>.from(i as Map)))
+                  .toList() ??
+              const []),
       dbTotalHT: map['total_ht'] != null ? (map['total_ht'] as num).toDouble() : null,
       dbTotalTVA: map['total_tva'] != null ? (map['total_tva'] as num).toDouble() : null,
       dbTotalTTC: map['total_ttc'] != null ? (map['total_ttc'] as num).toDouble() : null,

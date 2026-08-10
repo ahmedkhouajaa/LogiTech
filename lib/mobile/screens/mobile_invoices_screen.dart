@@ -9,7 +9,7 @@ import '../../blocs/invoices/invoices_bloc.dart';
 import '../../blocs/customers/customers_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
 import '../../blocs/projects/projects_bloc.dart';
-import '../../blocs/stock/stock_bloc.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../models/customer.dart';
 import 'forms/mobile_invoice_form_screen.dart';
 import 'mobile_invoice_detail_screen.dart';
@@ -61,7 +61,13 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
   }
 
   void _fetchFilteredInvoices() {
-    context.read<InvoicesBloc>().add(LoadInvoices());
+    context.read<InvoicesBloc>().add(LoadFirstInvoices(
+      searchQuery: _searchQuery,
+      customerId: _selectedCustomerId,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      status: _selectedStatus,
+    ));
   }
 
   void _onSearchChanged(String query) {
@@ -176,7 +182,7 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
                         BlocProvider.value(value: context.read<CustomersBloc>()),
                         BlocProvider.value(value: context.read<ProductsBloc>()),
                         BlocProvider.value(value: context.read<ProjectsBloc>()),
-                        BlocProvider.value(value: context.read<StockBloc>()),
+                        BlocProvider.value(value: context.read<WarehousesBloc>()),
                       ],
                       child: MobileInvoiceFormScreen(existing: item),
                     ),
@@ -195,7 +201,13 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
           activeModule: AppModule.invoices,
           onModuleSelected: (module) {},
           onRefresh: () async {
-            context.read<InvoicesBloc>().add(LoadInvoices());
+            context.read<InvoicesBloc>().add(ResetInvoicesPagination(
+              searchQuery: _searchQuery,
+              customerId: _selectedCustomerId,
+              dateFrom: _dateFrom,
+              dateTo: _dateTo,
+              status: _selectedStatus,
+            ));
             context.read<CustomersBloc>().add(LoadCustomers());
           },
           onSearchChanged: _onSearchChanged,
@@ -255,7 +267,7 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
                     BlocProvider.value(value: context.read<CustomersBloc>()),
                     BlocProvider.value(value: context.read<ProductsBloc>()),
                     BlocProvider.value(value: context.read<ProjectsBloc>()),
-                    BlocProvider.value(value: context.read<StockBloc>()),
+                    BlocProvider.value(value: context.read<WarehousesBloc>()),
                   ],
                   child: const MobileInvoiceFormScreen(),
                 ),

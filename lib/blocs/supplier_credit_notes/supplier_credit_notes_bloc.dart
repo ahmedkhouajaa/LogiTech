@@ -2,14 +2,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../database/database_helper.dart';
 import '../../models/supplier_credit_note.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 import 'supplier_credit_notes_event.dart';
 import 'supplier_credit_notes_state.dart';
 
 class SupplierCreditNotesBloc extends Bloc<SupplierCreditNotesEvent, SupplierCreditNotesState> {
   static const int pageSize = 10;
-  final DatabaseHelper dbHelper;
 
-  SupplierCreditNotesBloc(this.dbHelper) : super(SupplierCreditNotesInitial()) {
+  SupplierCreditNotesBloc() : super(SupplierCreditNotesInitial()) {
     on<LoadSupplierCreditNotes>(_onLoadSupplierCreditNotes);
     on<LoadFirstSupplierCreditNotes>(_onLoadFirstSupplierCreditNotes);
     on<LoadNextSupplierCreditNotes>(_onLoadNextSupplierCreditNotes);
@@ -21,13 +21,7 @@ class SupplierCreditNotesBloc extends Bloc<SupplierCreditNotesEvent, SupplierCre
   }
 
   Future<void> _onLoadSupplierCreditNotes(LoadSupplierCreditNotes event, Emitter<SupplierCreditNotesState> emit) async {
-    emit(SupplierCreditNotesLoading());
-    try {
-      final creditNotes = await dbHelper.getSupplierCreditNotes();
-      emit(SupplierCreditNotesLoaded(creditNotes, totalCount: creditNotes.length));
-    } catch (e) {
-      emit(SupplierCreditNotesError(e.toString()));
-    }
+    await _onLoadFirstSupplierCreditNotes(const LoadFirstSupplierCreditNotes(), emit);
   }
 
   Future<void> _onLoadFirstSupplierCreditNotes(LoadFirstSupplierCreditNotes event, Emitter<SupplierCreditNotesState> emit) async {
@@ -109,8 +103,8 @@ class SupplierCreditNotesBloc extends Bloc<SupplierCreditNotesEvent, SupplierCre
 
   Future<void> _onAddSupplierCreditNote(AddSupplierCreditNote event, Emitter<SupplierCreditNotesState> emit) async {
     try {
-      await dbHelper.insertSupplierCreditNote(event.supplierCreditNote);
-      add(LoadSupplierCreditNotes());
+      await FirestoreRepository.instance.saveSupplierCreditNote(event.supplierCreditNote);
+      add(const LoadFirstSupplierCreditNotes());
     } catch (e) {
       emit(SupplierCreditNotesError(e.toString()));
     }
@@ -118,8 +112,8 @@ class SupplierCreditNotesBloc extends Bloc<SupplierCreditNotesEvent, SupplierCre
 
   Future<void> _onUpdateSupplierCreditNote(UpdateSupplierCreditNote event, Emitter<SupplierCreditNotesState> emit) async {
     try {
-      await dbHelper.updateSupplierCreditNote(event.supplierCreditNote);
-      add(LoadSupplierCreditNotes());
+      await FirestoreRepository.instance.saveSupplierCreditNote(event.supplierCreditNote);
+      add(const LoadFirstSupplierCreditNotes());
     } catch (e) {
       emit(SupplierCreditNotesError(e.toString()));
     }
@@ -127,8 +121,8 @@ class SupplierCreditNotesBloc extends Bloc<SupplierCreditNotesEvent, SupplierCre
 
   Future<void> _onDeleteSupplierCreditNote(DeleteSupplierCreditNote event, Emitter<SupplierCreditNotesState> emit) async {
     try {
-      await dbHelper.deleteSupplierCreditNote(event.id);
-      add(LoadSupplierCreditNotes());
+      await FirestoreRepository.instance.softDeleteDocument('supplier_credit_notes', event.id);
+      add(const LoadFirstSupplierCreditNotes());
     } catch (e) {
       emit(SupplierCreditNotesError(e.toString()));
     }

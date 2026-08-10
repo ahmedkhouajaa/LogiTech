@@ -5,6 +5,7 @@ import '../blocs/purchase_invoices/purchase_invoices_bloc.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
 import '../models/purchase_invoice.dart';
 import '../models/supplier.dart';
 import '../utils/constants.dart';
@@ -45,17 +46,20 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
+    context.read<PurchaseInvoicesBloc>().add(const LoadFirstPurchaseInvoices());
     context.read<SuppliersBloc>().add(LoadSuppliers());
   }
 
   void _applyFilters() {
-    context.read<PurchaseInvoicesBloc>().add(FilterPurchaseInvoices(
-      clientId: _selectedClientId,
+    context.read<PurchaseInvoicesBloc>().add(LoadFirstPurchaseInvoices(
+      supplierId: _selectedClientId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
-      status: _statusFilter,
+      status: _statusFilter?.name,
     ));
+    setState(() {
+      _currentPage = 0;
+    });
   }
 
   @override
@@ -92,6 +96,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                         BlocProvider.value(value: context.read<SuppliersBloc>()),
                         BlocProvider.value(value: context.read<ProductsBloc>()),
                         BlocProvider.value(value: context.read<ProjectsBloc>()),
+                        BlocProvider.value(value: context.read<WarehousesBloc>()),
                       ],
                       child: const CreatePurchaseInvoiceScreen(),
                     ),

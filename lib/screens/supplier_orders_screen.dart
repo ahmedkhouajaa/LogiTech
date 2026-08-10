@@ -9,6 +9,7 @@ import '../blocs/supplier_orders/supplier_orders_bloc.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
 import '../models/supplier_order.dart';
 import '../models/supplier.dart';
 import '../utils/constants.dart';
@@ -47,12 +48,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<SupplierOrdersBloc>().add(LoadSupplierOrders());
+    context.read<SupplierOrdersBloc>().add(LoadFirstSupplierOrders());
     context.read<SuppliersBloc>().add(LoadSuppliers());
   }
 
   void _applyFilters() {
-    context.read<SupplierOrdersBloc>().add(FilterSupplierOrders(
+    context.read<SupplierOrdersBloc>().add(LoadFirstSupplierOrders(
       supplierId: _selectedSupplierId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
@@ -97,6 +98,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                         BlocProvider.value(value: context.read<SuppliersBloc>()),
                         BlocProvider.value(value: context.read<ProductsBloc>()),
                         BlocProvider.value(value: context.read<ProjectsBloc>()),
+                        BlocProvider.value(value: context.read<WarehousesBloc>()),
                       ],
                       child: const CreateSupplierOrderScreen(),
                     ),

@@ -7,7 +7,11 @@ import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../models/supplier_order.dart';
 import '../../../../models/supplier.dart';
 import '../../../../models/project.dart';
-import '../../../../blocs/stock/stock_bloc.dart';
+import '../../../../models/product.dart';
+import '../../../../blocs/products/products_bloc.dart';
+import '../../../../blocs/warehouses/warehouses_bloc.dart';
+import '../../../../blocs/warehouses/warehouses_state.dart';
+import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
@@ -36,6 +40,7 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
   bool _isLoading = false;
 
   String? _selectedSupplierId;
+  String? _selectedSupplierName;
   String? _selectedProjectId;
   String? _selectedWarehouseId;
   List<SupplierOrderItem> _items = [];
@@ -88,14 +93,13 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
     super.initState();
     context.read<SuppliersBloc>().add(LoadSuppliers());
     context.read<ProjectsBloc>().add(LoadProjects());
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
 
     if (widget.existing != null) {
       final n = widget.existing!;
       _date = n.date;
       _selectedSupplierId = n.supplierId;
+      _selectedSupplierName = n.supplierName;
       _selectedProjectId = n.projectId;
       _pricingModeHT = n.pricingMode == 'ht';
       _withGlobalDiscount = n.globalDiscountPercent > 0;
@@ -142,12 +146,36 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
         number = generateDocNumber(DocPrefix.supplierOrder, seq);
       }
 
+      final suppState = context.read<SuppliersBloc>().state;
+      String? suppName;
+      if (suppState is SuppliersLoaded) {
+        final found = suppState.suppliers.firstWhere(
+          (s) => s.id == _selectedSupplierId,
+          orElse: () => Supplier(id: '', code: '', name: 'Fournisseur Inconnu'),
+        );
+        suppName = found.companyName?.isNotEmpty == true
+            ? found.companyName
+            : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
+      }
+
+      final projState = context.read<ProjectsBloc>().state;
+      String? projName;
+      if (_selectedProjectId != null && projState is ProjectsLoaded) {
+        final found = projState.projects.firstWhere(
+          (p) => p.id == _selectedProjectId,
+          orElse: () => Project(id: '', name: '', startDate: DateTime.now()),
+        );
+        projName = found.name;
+      }
+
       final orderId = widget.existing?.id ?? _uuid.v4();
       final order = SupplierOrder(
         id: orderId,
         number: number,
         supplierId: _selectedSupplierId!,
+        supplierName: suppName ?? _selectedSupplierName,
         projectId: _selectedProjectId,
+        projectName: projName,
         date: _date,
         status: _status.name,
         pricingMode: _pricingModeHT ? 'ht' : 'ttc',
@@ -301,20 +329,27 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                         height: 50,
                         child: ElevatedButton(
                           onPressed: () async {
-                             final newId = await showDialog<String>(
-                               context: context,
-                               barrierDismissible: false,
-                               builder: (_) => BlocProvider.value(
-                                 value: context.read<SuppliersBloc>(),
-                                 child: SupplierDialog(existing: null),
-                               ),
-                             );
-                             if (newId != null && mounted) {
-                               setState(() {
-                                 _selectedSupplierId = newId;
-                               });
-                             }
-                           },
+                            final res = await showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => BlocProvider.value(
+                                value: context.read<SuppliersBloc>(),
+                                child: SupplierDialog(existing: null),
+                              ),
+                            );
+                            if (res != null && mounted) {
+                              if (res is Supplier) {
+                                setState(() {
+                                  _selectedSupplierId = res.id;
+                                  _selectedSupplierName = res.companyName?.isNotEmpty == true
+                                      ? res.companyName!
+                                      : (res.responsibleName?.isNotEmpty == true ? res.responsibleName! : res.name);
+                                });
+                              } else if (res is String) {
+                                setState(() => _selectedSupplierId = res);
+                              }
+                            }
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary.withOpacity(0.1),
                             foregroundColor: AppColors.primary,
@@ -352,9 +387,9 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                   },
                 ),
                 SizedBox(height: 16),
-                BlocBuilder<StockBloc, StockState>(
+                BlocBuilder<WarehousesBloc, WarehousesState>(
                   builder: (context, state) {
-                    final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                    final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                     final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                     final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -436,8 +471,30 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
                       IconButton(
                         icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 28),
                         tooltip: 'Créer un nouvel article',
-                        onPressed: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const MobileProductFormScreen()));
+                        onPressed: () async {
+                          final newProd = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => BlocProvider.value(
+                                value: context.read<ProductsBloc>(),
+                                child: const MobileProductFormScreen(),
+                              ),
+                            ),
+                          );
+                          if (newProd != null && newProd is Product && mounted) {
+                            setState(() {
+                              _items.add(SupplierOrderItem(
+                                id: _uuid.v4(),
+                                orderId: widget.existing?.id ?? '',
+                                productId: newProd.id,
+                                description: newProd.name,
+                                quantity: 1,
+                                unitPrice: newProd.purchasePrice > 0 ? newProd.purchasePrice : newProd.sellingPrice,
+                                tvaRate: newProd.tvaRate,
+                                showDescription: true,
+                              ));
+                            });
+                          }
                         },
                       ),
                     ],

@@ -8,6 +8,9 @@ import '../widgets/mobile_advanced_filter_panel.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/supplier_orders/supplier_orders_bloc.dart';
 import '../../blocs/suppliers/suppliers_bloc.dart';
+import '../../blocs/products/products_bloc.dart';
+import '../../blocs/projects/projects_bloc.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../models/supplier.dart';
 import 'forms/mobile_supplier_order_form_screen.dart';
 import 'mobile_supplier_order_detail_screen.dart';
@@ -178,7 +181,16 @@ class _MobileSupplierOrdersScreenState extends State<MobileSupplierOrdersScreen>
               onEdit: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobileSupplierOrderFormScreen(existing: item)),
+                  MaterialPageRoute(builder: (_) => MultiBlocProvider(
+                    providers: [
+                      BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
+                      BlocProvider.value(value: context.read<SuppliersBloc>()),
+                      BlocProvider.value(value: context.read<ProductsBloc>()),
+                      BlocProvider.value(value: context.read<ProjectsBloc>()),
+                      BlocProvider.value(value: context.read<WarehousesBloc>()),
+                    ],
+                    child: MobileSupplierOrderFormScreen(existing: item),
+                  )),
                 ).then((_) {
                   _fetchFilteredOrders();
                 });
@@ -253,7 +265,16 @@ class _MobileSupplierOrdersScreenState extends State<MobileSupplierOrdersScreen>
           onFabPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const MobileSupplierOrderFormScreen()),
+              MaterialPageRoute(builder: (_) => MultiBlocProvider(
+                providers: [
+                  BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
+                  BlocProvider.value(value: context.read<SuppliersBloc>()),
+                  BlocProvider.value(value: context.read<ProductsBloc>()),
+                  BlocProvider.value(value: context.read<ProjectsBloc>()),
+                  BlocProvider.value(value: context.read<WarehousesBloc>()),
+                ],
+                child: const MobileSupplierOrderFormScreen(),
+              )),
             ).then((_) {
               _fetchFilteredOrders();
             });

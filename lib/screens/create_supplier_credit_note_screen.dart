@@ -12,7 +12,9 @@ import '../models/supplier_credit_note.dart';
 import '../models/supplier.dart';
 import '../models/product.dart';
 import '../models/project.dart';
-import '../blocs/stock/stock_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
+import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
@@ -108,9 +110,7 @@ class _CreateSupplierCreditNoteScreenState
     context.read<SuppliersBloc>().add(LoadSuppliers());
     context.read<ProductsBloc>().add(LoadProducts());
     context.read<ProjectsBloc>().add(LoadProjects());
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
+    context.read<WarehousesBloc>().add(LoadWarehouses());
 
     if (widget.existing != null) {
       final n = widget.existing!;
@@ -162,7 +162,19 @@ class _CreateSupplierCreditNoteScreenState
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
       final seq = await DatabaseHelper.instance.getNextSupplierCreditNoteSequence();
-      number = generateDocNumber('AVF', seq);
+      number = generateDocNumber(DocPrefix.supplierCreditNote, seq);
+    }
+
+    final suppState = context.read<SuppliersBloc>().state;
+    String? suppName;
+    if (suppState is SuppliersLoaded) {
+      final found = suppState.suppliers.firstWhere(
+        (s) => s.id == _selectedsupplierId,
+        orElse: () => Supplier(id: '', code: '', name: 'Fournisseur Inconnu'),
+      );
+      suppName = found.companyName?.isNotEmpty == true
+          ? found.companyName
+          : (found.responsibleName?.isNotEmpty == true ? found.responsibleName : found.name);
     }
 
     final noteId = widget.existing?.id ?? const Uuid().v4();
@@ -170,6 +182,7 @@ class _CreateSupplierCreditNoteScreenState
       id: noteId,
       number: number,
       supplierId: _selectedsupplierId!,
+      supplierName: suppName,
       date: _date,
       status: _status.name,
       reason: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
@@ -184,7 +197,7 @@ class _CreateSupplierCreditNoteScreenState
         totalHT: item.totalHT,
       )).toList(),
       isDeleted: false,
-      createdAt: DateTime.now(),
+      createdAt: widget.existing?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
@@ -194,13 +207,15 @@ class _CreateSupplierCreditNoteScreenState
       bloc.add(AddSupplierCreditNote(note));
     }
 
-    nav.pop();
-    messenger.showSnackBar(SnackBar(
-      content: Text(_isEditing
-          ? 'Avoir ${note.number} mis à jour'
-          : 'Avoir ${note.number} créé avec succès'),
-      backgroundColor: AppColors.success,
-    ));
+    if (mounted) {
+      nav.pop();
+      messenger.showSnackBar(SnackBar(
+        content: Text(_isEditing
+            ? 'Avoir ${note.number} mis à jour'
+            : 'Avoir ${note.number} créé avec succès'),
+        backgroundColor: AppColors.success,
+      ));
+    }
   }
 
   @override
@@ -478,9 +493,9 @@ class _CreateSupplierCreditNoteScreenState
             children: [
               Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               SizedBox(height: 6),
-              BlocBuilder<StockBloc, StockState>(
+              BlocBuilder<WarehousesBloc, WarehousesState>(
                 builder: (context, state) {
-                  final warehouses = state is StockLoaded ? state.warehouses : <Warehouse>[];
+                  final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
                   final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                   final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 
@@ -929,8 +944,22 @@ class _CreateSupplierCreditNoteScreenState
         IconButton(
           icon: Icon(Icons.add_circle_outline, color: AppColors.primary, size: 24),
           tooltip: 'Créer un nouvel article',
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+          onPressed: () async {
+            final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateArticleScreen()));
+            if (res != null && res is Product && mounted) {
+              setState(() {
+                _items.add(SupplierCreditNoteItem(
+                  id: _uuid.v4(),
+                  supplierCreditNoteId: widget.existing?.id ?? '',
+                  productId: res.id,
+                  designation: res.name,
+                  quantity: -1,
+                  unitPrice: res.purchasePrice > 0 ? res.purchasePrice : res.sellingPrice,
+                  tvaRate: res.tvaRate,
+                  totalHT: -1 * (res.purchasePrice > 0 ? res.purchasePrice : res.sellingPrice),
+                ));
+              });
+            }
           },
           splashRadius: 24,
         ),

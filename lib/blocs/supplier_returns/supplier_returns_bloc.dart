@@ -2,14 +2,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../database/database_helper.dart';
 import '../../models/supplier_return.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
 import 'supplier_returns_event.dart';
 import 'supplier_returns_state.dart';
 
 class SupplierReturnsBloc extends Bloc<SupplierReturnsEvent, SupplierReturnsState> {
   static const int pageSize = 10;
-  final DatabaseHelper dbHelper;
 
-  SupplierReturnsBloc(this.dbHelper) : super(SupplierReturnsInitial()) {
+  SupplierReturnsBloc() : super(SupplierReturnsInitial()) {
     on<LoadSupplierReturns>(_onLoadSupplierReturns);
     on<LoadFirstSupplierReturns>(_onLoadFirstSupplierReturns);
     on<LoadNextSupplierReturns>(_onLoadNextSupplierReturns);
@@ -21,13 +21,7 @@ class SupplierReturnsBloc extends Bloc<SupplierReturnsEvent, SupplierReturnsStat
   }
 
   Future<void> _onLoadSupplierReturns(LoadSupplierReturns event, Emitter<SupplierReturnsState> emit) async {
-    emit(SupplierReturnsLoading());
-    try {
-      final returns = await dbHelper.getSupplierReturns();
-      emit(SupplierReturnsLoaded(returns, totalCount: returns.length));
-    } catch (e) {
-      emit(SupplierReturnsError(e.toString()));
-    }
+    await _onLoadFirstSupplierReturns(const LoadFirstSupplierReturns(), emit);
   }
 
   Future<void> _onLoadFirstSupplierReturns(LoadFirstSupplierReturns event, Emitter<SupplierReturnsState> emit) async {
@@ -109,8 +103,8 @@ class SupplierReturnsBloc extends Bloc<SupplierReturnsEvent, SupplierReturnsStat
 
   Future<void> _onAddSupplierReturn(AddSupplierReturn event, Emitter<SupplierReturnsState> emit) async {
     try {
-      await dbHelper.insertSupplierReturn(event.supplierReturn);
-      add(LoadSupplierReturns());
+      await FirestoreRepository.instance.saveSupplierReturn(event.supplierReturn);
+      add(const LoadFirstSupplierReturns());
     } catch (e) {
       emit(SupplierReturnsError(e.toString()));
     }
@@ -118,8 +112,8 @@ class SupplierReturnsBloc extends Bloc<SupplierReturnsEvent, SupplierReturnsStat
 
   Future<void> _onUpdateSupplierReturn(UpdateSupplierReturn event, Emitter<SupplierReturnsState> emit) async {
     try {
-      await dbHelper.updateSupplierReturn(event.supplierReturn);
-      add(LoadSupplierReturns());
+      await FirestoreRepository.instance.saveSupplierReturn(event.supplierReturn);
+      add(const LoadFirstSupplierReturns());
     } catch (e) {
       emit(SupplierReturnsError(e.toString()));
     }
@@ -127,8 +121,8 @@ class SupplierReturnsBloc extends Bloc<SupplierReturnsEvent, SupplierReturnsStat
 
   Future<void> _onDeleteSupplierReturn(DeleteSupplierReturn event, Emitter<SupplierReturnsState> emit) async {
     try {
-      await dbHelper.deleteSupplierReturn(event.id);
-      add(LoadSupplierReturns());
+      await FirestoreRepository.instance.softDeleteDocument('supplier_returns', event.id);
+      add(const LoadFirstSupplierReturns());
     } catch (e) {
       emit(SupplierReturnsError(e.toString()));
     }

@@ -75,8 +75,10 @@ class Invoice {
 
   Map<String, dynamic> toMap() => {
         'id': id, 'number': number, 'customer_id': customerId,
+        'customer_name': customerName,
         'order_id': orderId, 'delivery_note_id': deliveryNoteId,
-        'project_id': projectId, 'devis_id': devisId, 'warehouse_id': warehouseId,
+        'project_id': projectId, 'project_name': projectName,
+        'devis_id': devisId, 'warehouse_id': warehouseId,
         'date': date.toIso8601String(), 'due_date': dueDate.toIso8601String(),
         'status': status.name, 'total_ht': totalHT, 'total_tva': totalTva,
         'total_ttc': totalTTC, 'amount_paid': amountPaid, 'stamp_tax': stampTax,

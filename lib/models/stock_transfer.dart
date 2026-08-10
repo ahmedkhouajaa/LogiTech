@@ -52,20 +52,26 @@ class StockTransfer {
   }
 
   factory StockTransfer.fromMap(Map<String, dynamic> map, [List<StockTransferItem>? items]) {
+    List<StockTransferItem> parsedItems = items ?? [];
+    if ((items == null || items.isEmpty) && map['items'] != null && map['items'] is List) {
+      parsedItems = (map['items'] as List)
+          .map((i) => StockTransferItem.fromMap(Map<String, dynamic>.from(i as Map)))
+          .toList();
+    }
     return StockTransfer(
       id: map['id'],
-      number: map['number'],
-      date: DateTime.parse(map['date']),
-      sourceWarehouseId: map['source_warehouse_id'],
-      destinationWarehouseId: map['destination_warehouse_id'],
+      number: map['number'] ?? '',
+      date: map['date'] != null ? DateTime.parse(map['date']) : DateTime.now(),
+      sourceWarehouseId: map['source_warehouse_id'] ?? '',
+      destinationWarehouseId: map['destination_warehouse_id'] ?? '',
       status: map['status'] ?? 'draft',
       reason: map['reason'],
       notes: map['notes'],
       firebaseUid: map['firebase_uid'],
-      isDeleted: map['is_deleted'] == 1,
-      createdAt: DateTime.parse(map['created_at']),
-      updatedAt: DateTime.parse(map['updated_at']),
-      items: items ?? [],
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
+      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : DateTime.now(),
+      items: parsedItems,
     );
   }
 
@@ -124,18 +130,20 @@ class StockTransferItem {
       'id': id,
       'transfer_id': transferId,
       'product_id': productId,
+      'product_name': productName,
+      'product_sku': productSku,
       'quantity_to_transfer': quantityToTransfer,
     };
   }
 
   factory StockTransferItem.fromMap(Map<String, dynamic> map, {String? productName, String? productSku}) {
     return StockTransferItem(
-      id: map['id'],
-      transferId: map['transfer_id'],
-      productId: map['product_id'],
-      productName: productName,
-      productSku: productSku,
-      quantityToTransfer: map['quantity_to_transfer'],
+      id: map['id'] ?? const Uuid().v4(),
+      transferId: map['transfer_id'] ?? '',
+      productId: map['product_id'] ?? '',
+      productName: productName ?? map['product_name'],
+      productSku: productSku ?? map['product_sku'],
+      quantityToTransfer: (map['quantity_to_transfer'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

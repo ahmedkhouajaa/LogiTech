@@ -16,15 +16,7 @@ service cloud.firestore {
     }
 
     match /{collectionName}/{docId} {
-      allow read: if isAuthenticated() && (
-        !('userId' in resource.data) || resource.data.userId == request.auth.uid
-      );
-      allow create: if isAuthenticated() && (
-        !('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid
-      );
-      allow update, delete: if isAuthenticated() && (
-        !('userId' in resource.data) || resource.data.userId == request.auth.uid
-      );
+      allow read, write: if isAuthenticated();
     }
   }
 }

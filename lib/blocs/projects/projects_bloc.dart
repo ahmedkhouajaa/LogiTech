@@ -32,11 +32,10 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     final currentEntId = EnterpriseService.instance.currentEnterpriseId;
     Query query = FirebaseFirestore.instance.collection('projects').where('is_deleted', isEqualTo: 0);
-    if (uid != null && uid.isNotEmpty) {
-      query = query.where('userId', isEqualTo: uid);
-    }
     if (currentEntId != null && currentEntId.isNotEmpty) {
       query = query.where('enterprise_id', isEqualTo: currentEntId);
+    } else if (uid != null && uid.isNotEmpty) {
+      query = query.where('userId', isEqualTo: uid);
     }
     return query;
   }

@@ -67,6 +67,8 @@ class DatabaseHelper {
   Future<void> deleteInvoice(String id) async {}
   Future<Invoice?> getInvoice(String id) async => null;
   Future<dynamic> convertInvoiceToCreditNote(dynamic inv, [dynamic arg2]) async => null;
+  Future<int> getNextInvoiceSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'invoices');
+  Future<int> getNextCreditNoteSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'credit_notes');
 
   // Purchase Invoices
   Future<List<PurchaseInvoice>> getPurchaseInvoices() async => [];
@@ -77,6 +79,7 @@ class DatabaseHelper {
   Future<void> deletePurchaseInvoice(String id) async {}
   Future<PurchaseInvoice?> getPurchaseInvoice(String id) async => null;
   Future<dynamic> convertPurchaseInvoiceToCreditNote(dynamic inv, [dynamic arg2]) async => null;
+  Future<int> getNextPurchaseInvoiceSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'purchase_invoices');
 
   // Customer orders
   Future<List<CustomerOrder>> getCustomerOrders({String? status, String? customerId, DateTime? startDate, DateTime? endDate}) async => [];
@@ -238,36 +241,34 @@ class DatabaseHelper {
     String entId = currentEntId ?? currentEnterpriseId ?? 'default';
     if (entId.isEmpty) entId = 'default';
     final counterRef = _firestore.collection('enterprises').doc(entId).collection('counters').doc(docCollection);
-    
-    try {
-      // 1. Ensure counter is initialized if it doesn't exist
-      final counterSnap = await counterRef.get(const GetOptions(source: Source.server));
-      if (!counterSnap.exists) {
-        int maxNum = 0;
-        final querySnap = await _firestore.collection(docCollection)
-            .where('enterprise_id', isEqualTo: entId)
-            .get(const GetOptions(source: Source.server));
-            
-        for (var doc in querySnap.docs) {
-          final data = doc.data();
-          final number = (data['number'] ?? '').toString();
-          final parts = number.split('-');
-          if (parts.length >= 3) {
-            final num = int.tryParse(parts.last) ?? 0;
-            if (num > maxNum && num < 1000000) maxNum = num;
-          }
-        }
-        await counterRef.set({'count': maxNum}, SetOptions(merge: true));
-      }
 
-      // 2. Atomically increment and get the exact unique code
+    try {
       return await _firestore.runTransaction((transaction) async {
         final snapshot = await transaction.get(counterRef);
         int currentCount = 0;
-        if (snapshot.exists && snapshot.data() != null) {
-          currentCount = snapshot.data()!['count'] as int? ?? 0;
+
+        if (snapshot.exists && snapshot.data() != null && snapshot.data()!['count'] != null) {
+          currentCount = (snapshot.data()!['count'] as num).toInt();
+        } else {
+          // Counter document does not exist yet. Initialize from existing records if any
+          final querySnap = await _firestore
+              .collection(docCollection)
+              .where('enterprise_id', isEqualTo: entId)
+              .get(const GetOptions(source: Source.server));
+
+          for (var doc in querySnap.docs) {
+            final data = doc.data();
+            final number = (data['number'] ?? '').toString();
+            final parts = number.split('-');
+            if (parts.length >= 3) {
+              final numVal = int.tryParse(parts.last) ?? 0;
+              if (numVal > currentCount && numVal < 100000) {
+                currentCount = numVal;
+              }
+            }
+          }
         }
-        
+
         final nextCount = currentCount + 1;
         transaction.set(counterRef, {'count': nextCount}, SetOptions(merge: true));
         return nextCount;
@@ -479,6 +480,10 @@ class DatabaseHelper {
   Future<void> softDeletePayment(String id) async {}
   Future<List<PaymentAccount>> getPaymentAccounts() async => [];
   Future<void> insertPaymentAccount(dynamic item) async {}
+  Future<int> getNextPaymentSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'paiements');
+  Future<int> getNextStockEntrySequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'stock_entries');
+  Future<int> getNextStockTransferSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'stock_transfers');
+  Future<int> getNextInventorySheetSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'inventory_sheets');
 
   // Stock Movements & Warehouses
   Future<List<StockMovement>> getStockMovements() async => [];

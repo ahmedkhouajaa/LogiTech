@@ -1,8 +1,12 @@
 import '../../models/stock_entry.dart';
 
-abstract class StockEntriesEvent {}
+abstract class StockEntriesEvent {
+  const StockEntriesEvent();
+}
 
-class LoadStockEntries extends StockEntriesEvent {}
+class LoadStockEntries extends StockEntriesEvent {
+  const LoadStockEntries();
+}
 
 class LoadFirstStockEntries extends StockEntriesEvent {
   final String? searchQuery;
@@ -11,7 +15,7 @@ class LoadFirstStockEntries extends StockEntriesEvent {
   final DateTime? dateTo;
   final String? status;
 
-  LoadFirstStockEntries({
+  const LoadFirstStockEntries({
     this.searchQuery,
     this.supplierId,
     this.dateFrom,
