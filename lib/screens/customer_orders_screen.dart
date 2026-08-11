@@ -1188,7 +1188,8 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
   Future<void> _convertOrderToInvoice(BuildContext context, CustomerOrder order) async {
     final invoiceId = const Uuid().v4();
-    final invoiceNumber = generateDocNumber(DocPrefix.invoice, DateTime.now().millisecondsSinceEpoch % 1000000);
+    final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
+    final invoiceNumber = generateDocNumber('FA', seq);
     
     final invoiceItems = order.items.map((qi) => InvoiceItem(
       id: const Uuid().v4(),
@@ -1315,7 +1316,8 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
   Future<void> _convertOrderToDelivery(BuildContext context, CustomerOrder order) async {
     final deliveryId = const Uuid().v4();
-    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, DateTime.now().millisecondsSinceEpoch % 1000000);
+    final seq = await DatabaseHelper.instance.getNextDeliveryNoteSequence();
+    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq);
     
     final deliveryItems = order.items.map((qi) => DeliveryNoteItem(
       id: const Uuid().v4(),

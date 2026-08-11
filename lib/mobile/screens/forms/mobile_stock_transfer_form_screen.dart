@@ -9,7 +9,16 @@ import '../../../../models/stock_transfer.dart';
 import '../../../../models/product.dart';
 import '../../../../models/stock_movement.dart';
 import '../../../../database/database_helper.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../utils/constants.dart';
+import '../../../../utils/helpers.dart';
+import '../../../../services/enterprise_service.dart';
+import '../../../../widgets/searchable_dropdown_field.dart';
+import '../../../../blocs/warehouses/warehouses_bloc.dart';
+import '../../../../blocs/warehouses/warehouses_state.dart';
+import '../../../../blocs/warehouses/warehouses_event.dart';
+import '../../../../services/enterprise_service.dart';
+import '../../../../widgets/searchable_dropdown_field.dart';
 
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
@@ -33,7 +42,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
   String? _destWarehouseId;
   String _notes = '';
   String _reason = '';
-  List<StockTransferItem> _items = [];
+  List<StockTransferItem> _items = [StockTransferItem(transferId: '', productId: '', quantityToTransfer: 0)];
 
   List<Warehouse> _warehouses = [];
 
@@ -47,6 +56,9 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
     }
     if (context.read<StockBloc>().state is! StockLoaded) {
       context.read<StockBloc>().add(LoadStock());
+    }
+    if (context.read<WarehousesBloc>().state is! WarehousesLoaded) {
+      context.read<WarehousesBloc>().add(LoadWarehouses());
     }
     _loadWarehouses();
 
@@ -62,18 +74,48 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
   }
 
   Future<void> _loadWarehouses() async {
-    final warehouses = await DatabaseHelper.instance.getWarehouses();
-    setState(() {
-      _warehouses = warehouses;
-      if (!_isEditing && warehouses.isNotEmpty) {
-        _sourceWarehouseId = warehouses.first.id;
-        if (warehouses.length > 1) {
-          _destWarehouseId = warehouses[1].id;
-        } else {
-          _destWarehouseId = warehouses.first.id;
+    List<Warehouse> warehouses = [];
+    try {
+      final stockState = context.read<StockBloc>().state;
+      if (stockState is StockLoaded && stockState.warehouses.isNotEmpty) {
+        warehouses = stockState.warehouses;
+      } else {
+        final entId = EnterpriseService.instance.currentEnterpriseId;
+        Query query = FirebaseFirestore.instance.collection('warehouses');
+        if (entId != null && entId.isNotEmpty) {
+          query = query.where('enterprise_id', isEqualTo: entId);
         }
+        final snap = await query.get();
+        warehouses = snap.docs.map((doc) {
+          final data = Map<String, dynamic>.from(doc.data() as Map);
+          data['id'] = doc.id;
+          return Warehouse.fromMap(data);
+        }).where((w) => !w.isDeleted).toList();
       }
-    });
+    } catch (_) {
+      warehouses = await DatabaseHelper.instance.getWarehouses();
+    }
+
+    if (warehouses.isEmpty) {
+      warehouses = [
+        Warehouse(id: 'default_warehouse', name: 'Entrepôt principal', isDefault: true)
+      ];
+    }
+
+    if (mounted) {
+      setState(() {
+        _warehouses = warehouses;
+        if (!_isEditing) {
+          if (_sourceWarehouseId == null && warehouses.isNotEmpty) {
+            _sourceWarehouseId = warehouses.first.id;
+          }
+          if (_destWarehouseId == null || _destWarehouseId == _sourceWarehouseId) {
+            final otherWarehouses = warehouses.where((w) => w.id != _sourceWarehouseId).toList();
+            _destWarehouseId = otherWarehouses.isNotEmpty ? otherWarehouses.first.id : null;
+          }
+        }
+      });
+    }
   }
 
   Future<void> _save() async {
@@ -104,6 +146,10 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
       final bloc = context.read<StockTransfersBloc>();
       
       String number = widget.existing?.number ?? '';
+      if (number.isEmpty) {
+        final seq = await DatabaseHelper.instance.getNextStockTransferSequence();
+        number = generateDocNumber(DocPrefix.stockTransfer, seq);
+      }
 
       final transferId = widget.existing?.id ?? _uuid.v4();
       final transfer = StockTransfer(
@@ -153,37 +199,75 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
     }
   }
 
-  void _showAddArticleDialog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return _AddTransferArticleSheet(
-          sourceWarehouseId: _sourceWarehouseId,
-          destWarehouseId: _destWarehouseId,
-          warehouses: _warehouses,
-          onAdd: (item) {
-            setState(() {
-              _items.add(item);
-            });
-          },
-        );
-      },
+  Widget _buildMetricBox(String label, double value, {bool isInput = false, ValueChanged<String>? onChanged, bool isError = false}) {
+    if (isInput) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+          SizedBox(height: 4),
+          SizedBox(
+            height: 40,
+            child: TextFormField(
+              initialValue: value == 0 ? '' : (value.toInt() == value ? value.toInt().toString() : value.toStringAsFixed(2)),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppColors.background,
+                contentPadding: EdgeInsets.zero,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+              ),
+              onChanged: onChanged,
+            ),
+          ),
+        ],
+      );
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+        SizedBox(height: 4),
+        Container(
+          height: 40,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isInput ? AppColors.background : (isError ? AppColors.error.withValues(alpha: 0.05) : AppColors.surfaceAlt),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: isInput ? AppColors.border : Colors.transparent),
+          ),
+          child: Text(
+            value.toInt() == value ? value.toInt().toString() : value.toStringAsFixed(2),
+            style: TextStyle(
+              fontSize: 13, 
+              fontWeight: FontWeight.bold, 
+              color: isError ? AppColors.error : (isInput ? AppColors.primary : AppColors.success),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return MobileFormScreen(
-      title: _isEditing ? 'Modifier le transfert' : 'Nouveau transfert',
-      statusLabel: 'Validé',
-      statusColor: AppColors.success,
-      isLoading: _isLoading,
-      saveLabel: 'Valider',
-      onCancel: () => Navigator.pop(context),
-      onSave: _save,
-      children: [
+    return BlocBuilder<WarehousesBloc, WarehousesState>(
+      builder: (context, whState) {
+        final currentWarehouses = whState is WarehousesLoaded && whState.warehouses.isNotEmpty ? whState.warehouses : _warehouses;
+
+        return MobileFormScreen(
+          title: _isEditing ? 'Modifier le transfert' : 'Nouveau transfert',
+          statusLabel: 'Validé',
+          statusColor: AppColors.success,
+          isLoading: _isLoading,
+          saveLabel: 'Valider',
+          onCancel: () => Navigator.pop(context),
+          onSave: _save,
+          children: [
         MobileFormSection(
           title: 'Informations',
           icon: Icons.info_outline_rounded,
@@ -198,20 +282,42 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                   onChanged: (v) => setState(() => _date = v),
                 ),
                 SizedBox(height: 16),
-                SmartDropdown<String>(
+                SmartSearchableSelector(
                   label: 'Entrepôt Source',
-                  value: _sourceWarehouseId,
-                  items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
-                  onChanged: (v) => setState(() => _sourceWarehouseId = v),
                   hint: 'Sélectionner l\'entrepôt source...',
+                  selectedText: currentWarehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _sourceWarehouseId, orElse: () => null)?.name ?? 'Sélectionner l\'entrepôt source...',
+                  onTap: () async {
+                    final available = currentWarehouses.where((w) => w.id != _destWarehouseId).toList();
+                    if (available.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Aucun autre entrepôt disponible')),
+                      );
+                      return;
+                    }
+                    final res = await showWarehouseSelectDialog(context, available, selectedWarehouseId: _sourceWarehouseId);
+                    if (res != null && mounted) {
+                      setState(() => _sourceWarehouseId = res);
+                    }
+                  },
                 ),
                 SizedBox(height: 16),
-                SmartDropdown<String>(
+                SmartSearchableSelector(
                   label: 'Entrepôt Destination',
-                  value: _destWarehouseId,
-                  items: _warehouses.map((w) => DropdownMenuItem(value: w.id, child: Text(w.name))).toList(),
-                  onChanged: (v) => setState(() => _destWarehouseId = v),
                   hint: 'Sélectionner l\'entrepôt destination...',
+                  selectedText: currentWarehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _destWarehouseId, orElse: () => null)?.name ?? 'Sélectionner l\'entrepôt destination...',
+                  onTap: () async {
+                    final available = currentWarehouses.where((w) => w.id != _sourceWarehouseId).toList();
+                    if (available.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Aucun autre entrepôt disponible pour la destination')),
+                      );
+                      return;
+                    }
+                    final res = await showWarehouseSelectDialog(context, available, selectedWarehouseId: _destWarehouseId);
+                    if (res != null && mounted) {
+                      setState(() => _destWarehouseId = res);
+                    }
+                  },
                 ),
                 SizedBox(height: 16),
                 SmartTextInput(
@@ -255,14 +361,14 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
 
                         double sourceStock = 0.0;
                         double destStock = 0.0;
-                        if (stockState is StockLoaded) {
+                        if (stockState is StockLoaded && item.productId.isNotEmpty) {
                           bool sourceIsDefault = false;
                           bool destIsDefault = false;
                           try {
-                            sourceIsDefault = _warehouses.firstWhere((w) => w.id == _sourceWarehouseId).isDefault;
+                            sourceIsDefault = currentWarehouses.firstWhere((w) => w.id == _sourceWarehouseId).isDefault;
                           } catch (_) {}
                           try {
-                            destIsDefault = _warehouses.firstWhere((w) => w.id == _destWarehouseId).isDefault;
+                            destIsDefault = currentWarehouses.firstWhere((w) => w.id == _destWarehouseId).isDefault;
                           } catch (_) {}
 
                           for (var m in stockState.movements) {
@@ -302,124 +408,103 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                                      child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 18),
-                                    ),
-                                    SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(item.productName ?? 'Article', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                          if (item.productSku != null && item.productSku!.isNotEmpty)
-                                            Text(item.productSku!, style: TextStyle(color: AppColors.textTertiary, fontSize: 11)),
-                                        ],
-                                      ),
-                                    ),
+                                    Text('Produit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                                     IconButton(
                                       icon: Icon(Icons.delete_outline, color: AppColors.error, size: 20),
                                       onPressed: () => setState(() => _items.removeAt(index)),
-                                    ),
-                                  ],
-                                ),
-                                Divider(height: 16, color: AppColors.border),
-
-                                // Source Stock metrics
-                                Text('Stock Source', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-                                SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                        decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Qté stock src', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
-                                            SizedBox(height: 2),
-                                            Text('${sourceStock.toInt() == sourceStock ? sourceStock.toInt() : sourceStock.toStringAsFixed(2)}',
-                                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.success)),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(6)),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Qté à transfér.', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
-                                            SizedBox(height: 2),
-                                            Text('${item.quantityToTransfer.toInt() == item.quantityToTransfer ? item.quantityToTransfer.toInt() : item.quantityToTransfer.toStringAsFixed(2)}',
-                                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Expanded(
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                        decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Qté fin. src', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
-                                            SizedBox(height: 2),
-                                            Text('${finalSourceStock.toInt() == finalSourceStock ? finalSourceStock.toInt() : finalSourceStock.toStringAsFixed(2)}',
-                                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: finalSourceStock < 0 ? AppColors.error : AppColors.success)),
-                                          ],
-                                        ),
-                                      ),
+                                      constraints: BoxConstraints(),
+                                      padding: EdgeInsets.zero,
                                     ),
                                   ],
                                 ),
                                 SizedBox(height: 8),
+                                SearchableSelectorField(
+                                  hint: 'Sélectionner un article',
+                                  selectedText: item.productId.isNotEmpty ? (item.productName ?? 'Article') : null,
+                                  onTap: () async {
+                                    final productsState = context.read<ProductsBloc>().state;
+                                    List<Product> products = [];
+                                    if (productsState is ProductsLoaded) {
+                                      products = productsState.products;
+                                    }
 
-                                // Destination Stock metrics
-                                Text('Stock Destination', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-                                SizedBox(height: 6),
+                                    final stockMap = <String, double>{};
+                                    if (stockState is StockLoaded) {
+                                      bool sourceIsDefault = false;
+                                      try {
+                                        sourceIsDefault = currentWarehouses.firstWhere((w) => w.id == _sourceWarehouseId).isDefault;
+                                      } catch (_) {}
+                                      for (var p in products) {
+                                        double pStock = 0.0;
+                                        for (var m in stockState.movements) {
+                                          if (m.productId == p.id) {
+                                            final isSourceMatch = m.warehouseId == _sourceWarehouseId || (m.warehouseId == 'default_warehouse' && sourceIsDefault);
+                                            if (isSourceMatch) {
+                                              if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
+                                                pStock += m.quantity;
+                                              } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
+                                                pStock -= m.quantity;
+                                              }
+                                            }
+                                          }
+                                        }
+                                        stockMap[p.id] = pStock;
+                                      }
+                                    }
+
+                                    final res = await showProductSelectDialog(
+                                      context, 
+                                      products, 
+                                      selectedProductId: item.productId,
+                                      warehouseId: _sourceWarehouseId,
+                                      warehouseStockMap: stockMap,
+                                    );
+                                    if (res != null) {
+                                      final p = products.firstWhere((element) => element.id == res);
+                                      setState(() {
+                                        _items[index] = StockTransferItem(
+                                          id: item.id,
+                                          transferId: item.transferId,
+                                          productId: p.id,
+                                          productName: p.name,
+                                          productSku: p.reference,
+                                          quantityToTransfer: item.quantityToTransfer,
+                                        );
+                                      });
+                                    }
+                                  },
+                                ),
+                                SizedBox(height: 12),
                                 Row(
                                   children: [
-                                    Expanded(
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                        decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Qté stock dest.', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
-                                            SizedBox(height: 2),
-                                            Text('${destStock.toInt() == destStock ? destStock.toInt() : destStock.toStringAsFixed(2)}',
-                                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
+                                    Expanded(child: _buildMetricBox('En stock', sourceStock, isInput: false)),
                                     SizedBox(width: 8),
-                                    Expanded(
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(6)),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Qté fin. dest.', style: TextStyle(fontSize: 10, color: AppColors.textTertiary)),
-                                            SizedBox(height: 2),
-                                            Text('${finalDestStock.toInt() == finalDestStock ? finalDestStock.toInt() : finalDestStock.toStringAsFixed(2)}',
-                                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.success)),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
+                                    Expanded(child: _buildMetricBox('Qté à transférer', item.quantityToTransfer, isInput: true, onChanged: (v) {
+                                      setState(() {
+                                        _items[index] = StockTransferItem(
+                                          id: item.id,
+                                          transferId: item.transferId,
+                                          productId: item.productId,
+                                          productName: item.productName,
+                                          productSku: item.productSku,
+                                          quantityToTransfer: double.tryParse(v) ?? 0.0,
+                                        );
+                                      });
+                                    })),
+                                    SizedBox(width: 8),
+                                    Expanded(child: _buildMetricBox('Qté fin. src', finalSourceStock, isInput: false, isError: finalSourceStock < 0)),
+                                  ],
+                                ),
+                                SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Expanded(child: _buildMetricBox('En stock dest.', destStock, isInput: false)),
+                                    SizedBox(width: 8),
+                                    Expanded(child: _buildMetricBox('Qté fin. dest.', finalDestStock, isInput: false)),
+                                    SizedBox(width: 8),
+                                    Expanded(child: SizedBox()),
                                   ],
                                 ),
                               ],
@@ -428,16 +513,34 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                         );
                       }),
                     SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      onPressed: _showAddArticleDialog,
-                      icon: Icon(Icons.add_rounded),
-                      label: Text('Ajouter un article'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: BorderSide(color: AppColors.primary),
-                        padding: EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _items.add(StockTransferItem(transferId: '', productId: '', quantityToTransfer: 0));
+                            });
+                          },
+                          icon: Icon(Icons.add, size: 18),
+                          label: Text('Ajouter une ligne'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textPrimary,
+                            side: BorderSide(color: AppColors.border),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        IconButton(
+                          icon: Icon(Icons.add_circle_outline, color: AppColors.primary),
+                          onPressed: () {
+                             setState(() {
+                               _items.add(StockTransferItem(transferId: '', productId: '', quantityToTransfer: 0));
+                             });
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 );
@@ -447,218 +550,9 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
         ),
       ],
     );
-  }
-}
-
-class _AddTransferArticleSheet extends StatefulWidget {
-  final String? sourceWarehouseId;
-  final String? destWarehouseId;
-  final List<Warehouse> warehouses;
-  final Function(StockTransferItem) onAdd;
-
-  const _AddTransferArticleSheet({
-    required this.sourceWarehouseId,
-    required this.destWarehouseId,
-    required this.warehouses,
-    required this.onAdd,
-  });
-
-  @override
-  State<_AddTransferArticleSheet> createState() => _AddTransferArticleSheetState();
-}
-
-class _AddTransferArticleSheetState extends State<_AddTransferArticleSheet> {
-  Product? _selectedProduct;
-  double _quantity = 1.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        left: 24,
-        right: 24,
-        top: 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Ajouter un article', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              IconButton(
-                icon: Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          BlocBuilder<ProductsBloc, ProductsState>(
-            builder: (context, state) {
-              List<Product> products = [];
-              if (state is ProductsLoaded) {
-                products = state.products;
-              }
-              return Autocomplete<Product>(
-                optionsBuilder: (TextEditingValue textEditingValue) {
-                  if (textEditingValue.text.isEmpty) return const Iterable<Product>.empty();
-                  final search = textEditingValue.text.toLowerCase();
-                  return products.where((p) => 
-                    p.name.toLowerCase().contains(search) || 
-                    p.code.toLowerCase().contains(search) ||
-                    (p.reference?.toLowerCase().contains(search) ?? false)
-                  );
-                },
-                displayStringForOption: (Product option) => option.name,
-                fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                  return TextFormField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    decoration: InputDecoration(
-                      labelText: 'Rechercher un produit',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      prefixIcon: Icon(Icons.search),
-                    ),
-                  );
-                },
-                onSelected: (p) => setState(() => _selectedProduct = p),
-              );
-            },
-          ),
-          SizedBox(height: 16),
-
-          if (_selectedProduct != null)
-            BlocBuilder<StockBloc, StockState>(
-              builder: (context, stockState) {
-                double sourceStock = 0.0;
-                double destStock = 0.0;
-
-                if (stockState is StockLoaded) {
-                  bool sourceIsDefault = false;
-                  bool destIsDefault = false;
-                  try {
-                    sourceIsDefault = widget.warehouses.firstWhere((w) => w.id == widget.sourceWarehouseId).isDefault;
-                  } catch (_) {}
-                  try {
-                    destIsDefault = widget.warehouses.firstWhere((w) => w.id == widget.destWarehouseId).isDefault;
-                  } catch (_) {}
-
-                  for (var m in stockState.movements) {
-                    if (m.productId == _selectedProduct!.id) {
-                      final isSourceMatch = m.warehouseId == widget.sourceWarehouseId || (m.warehouseId == 'default_warehouse' && sourceIsDefault);
-                      final isDestMatch = m.warehouseId == widget.destWarehouseId || (m.warehouseId == 'default_warehouse' && destIsDefault);
-
-                      if (isSourceMatch) {
-                        if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
-                          sourceStock += m.quantity;
-                        } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
-                          sourceStock -= m.quantity;
-                        }
-                      }
-                      if (isDestMatch) {
-                        if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) {
-                          destStock += m.quantity;
-                        } else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) {
-                          destStock -= m.quantity;
-                        }
-                      }
-                    }
-                  }
-                }
-
-                final finalSourceStock = sourceStock - _quantity;
-                final finalDestStock = destStock + _quantity;
-
-                return Container(
-                  margin: EdgeInsets.only(bottom: 16),
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceAlt,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Qté stock source:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                          Text('${sourceStock.toInt() == sourceStock ? sourceStock.toInt() : sourceStock.toStringAsFixed(2)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.success)),
-                        ],
-                      ),
-                      SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Qté finale source:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                          Text('${finalSourceStock.toInt() == finalSourceStock ? finalSourceStock.toInt() : finalSourceStock.toStringAsFixed(2)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: finalSourceStock < 0 ? AppColors.error : AppColors.success)),
-                        ],
-                      ),
-                      Divider(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Qté stock dest.:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                          Text('${destStock.toInt() == destStock ? destStock.toInt() : destStock.toStringAsFixed(2)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                        ],
-                      ),
-                      SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Qté finale dest.:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                          Text('${finalDestStock.toInt() == finalDestStock ? finalDestStock.toInt() : finalDestStock.toStringAsFixed(2)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.success)),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-
-          SmartTextInput(
-            label: 'Quantité à transférer',
-            initialValue: '1',
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (v) => setState(() => _quantity = double.tryParse(v) ?? 1.0),
-          ),
-          SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {
-              if (_selectedProduct == null) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sélectionnez un produit')));
-                return;
-              }
-              if (_quantity <= 0) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quantité invalide')));
-                return;
-              }
-              
-              widget.onAdd(StockTransferItem(
-                id: const Uuid().v4(),
-                transferId: '',
-                productId: _selectedProduct!.id,
-                productName: _selectedProduct!.name,
-                productSku: _selectedProduct!.reference,
-                quantityToTransfer: _quantity,
-              ));
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              padding: EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-            ),
-            child: Text('Ajouter', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+      },
     );
   }
 }
+
+

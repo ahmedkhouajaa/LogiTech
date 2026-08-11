@@ -159,7 +159,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.stockWithdrawal:
         return const StockWithdrawalsScreen();
       case AppModule.stockTransfer:
-        return const StockTransfersScreen();
+        return const MobileStockTransfersScreen();
       case AppModule.inventorySheet:
         return const InventorySheetsScreen();
       case AppModule.returnVouchers:

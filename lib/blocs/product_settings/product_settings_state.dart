@@ -14,17 +14,19 @@ class ProductSettingsLoading extends ProductSettingsState {}
 
 class ProductSettingsLoaded extends ProductSettingsState {
   final List<ProductFamily> families;
+  final DateTime timestamp;
+
   // Computed property to get only root families (no parentId)
   List<ProductFamily> get rootFamilies => families.where((f) => f.parentId == null).toList();
 
-  const ProductSettingsLoaded({required this.families});
+  ProductSettingsLoaded({required this.families}) : timestamp = DateTime.now();
 
   List<ProductFamily> getSubFamilies(String familyId) {
     return families.where((f) => f.parentId == familyId).toList();
   }
 
   @override
-  List<Object> get props => [families];
+  List<Object> get props => [timestamp];
 }
 
 class ProductSettingsError extends ProductSettingsState {

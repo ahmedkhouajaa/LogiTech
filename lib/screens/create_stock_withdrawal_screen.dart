@@ -106,8 +106,10 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
 
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextStockWithdrawalSequence();
-      number = generateDocNumber(DocPrefix.stockWithdrawal, seq);
+      final seq = widget.isExitVoucher 
+          ? await DatabaseHelper.instance.getNextExitVoucherSequence()
+          : await DatabaseHelper.instance.getNextStockWithdrawalSequence();
+      number = generateDocNumber(widget.isExitVoucher ? DocPrefix.exitVoucher : DocPrefix.stockWithdrawal, seq);
     }
 
     final entry = StockWithdrawal(

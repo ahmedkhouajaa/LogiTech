@@ -4,6 +4,8 @@ import '../../models/treasury_transaction.dart';
 import '../../models/transaction_category.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/firestore_repository.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Events
 abstract class TreasuryTransactionsEvent extends Equatable {
@@ -149,8 +151,10 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
   Future<void> _onLoadTransactions(LoadTreasuryTransactions event, Emitter<TreasuryTransactionsState> emit) async {
     emit(TreasuryTransactionsLoading());
     try {
-      final txMaps = await databaseHelper.getTreasuryTransactions();
-      var transactions = txMaps.map((e) => TreasuryTransaction.fromMap(e)).toList();
+      final txs = await FirestorePaginationService.instance.getFirstTreasuryTransactions(
+        pageSize: 500, // Load all for desktop
+      );
+      var transactions = txs.toList();
       
       // Calculate running balance chronologically
       transactions.sort((a, b) => a.dateTransaction.compareTo(b.dateTransaction));
@@ -243,7 +247,29 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
 
   Future<void> _onCreateTransaction(CreateTreasuryTransaction event, Emitter<TreasuryTransactionsState> emit) async {
     try {
-      await databaseHelper.createTreasuryTransaction(event.transaction.toMap());
+      final seq = await databaseHelper.getNextTreasuryTransactionSequence();
+      final prefix = event.transaction.transactionNumber.contains('-') 
+          ? event.transaction.transactionNumber.split('-').first 
+          : 'TR';
+      final year = DateTime.now().year;
+      final newNumber = '$prefix-$year-${seq.toString().padLeft(6, '0')}';
+      
+      final updatedTx = event.transaction.copyWith(transactionNumber: newNumber);
+
+      await FirestoreRepository.instance.saveDocument('treasury_transactions', updatedTx.id, updatedTx.toMap());
+      
+      // Update the associated treasury account balance
+      final accountRef = FirebaseFirestore.instance.collection('treasury_accounts').doc(updatedTx.accountId);
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final snapshot = await transaction.get(accountRef);
+        if (snapshot.exists) {
+          final double currentBalance = double.tryParse(snapshot.data()?['balance']?.toString() ?? '0') ?? 0.0;
+          final double amount = updatedTx.amount;
+          final double newBalance = updatedTx.type == 'income' ? currentBalance + amount : currentBalance - amount;
+          transaction.update(accountRef, {'balance': newBalance});
+        }
+      });
+
       if (state is TreasuryTransactionsLoaded) {
         final s = state as TreasuryTransactionsLoaded;
         add(LoadFirstTreasuryTransactions(searchQuery: s.searchQuery, typeFilter: s.activeTypeFilter));
@@ -257,7 +283,29 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
 
   Future<void> _onDeleteTransaction(DeleteTreasuryTransaction event, Emitter<TreasuryTransactionsState> emit) async {
     try {
-      await databaseHelper.deleteTreasuryTransaction(event.id);
+      // First fetch the transaction to know its amount and type
+      final docSnap = await FirebaseFirestore.instance.collection('treasury_transactions').doc(event.id).get();
+      if (docSnap.exists) {
+        final data = docSnap.data() as Map<String, dynamic>;
+        final type = data['type']?.toString();
+        final amount = double.tryParse(data['amount']?.toString() ?? '0') ?? 0.0;
+        final accountId = data['account_id']?.toString();
+
+        if (accountId != null && accountId.isNotEmpty) {
+          final accountRef = FirebaseFirestore.instance.collection('treasury_accounts').doc(accountId);
+          await FirebaseFirestore.instance.runTransaction((transaction) async {
+            final accSnap = await transaction.get(accountRef);
+            if (accSnap.exists) {
+              final double currentBalance = double.tryParse(accSnap.data()?['balance']?.toString() ?? '0') ?? 0.0;
+              // Reverse the operation: if it was income, subtract it; if expense, add it back.
+              final double newBalance = type == 'income' ? currentBalance - amount : currentBalance + amount;
+              transaction.update(accountRef, {'balance': newBalance});
+            }
+          });
+        }
+      }
+
+      await FirestoreRepository.instance.softDeleteDocument('treasury_transactions', event.id);
       if (state is TreasuryTransactionsLoaded) {
         final s = state as TreasuryTransactionsLoaded;
         add(LoadFirstTreasuryTransactions(searchQuery: s.searchQuery, typeFilter: s.activeTypeFilter));

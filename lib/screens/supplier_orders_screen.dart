@@ -1099,11 +1099,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     );
   }
 
-  void _convertToInvoice(BuildContext context, SupplierOrder order) {
+  Future<void> _convertToInvoice(BuildContext context, SupplierOrder order) async {
     final invoiceId = const Uuid().v4();
+    final seq = await DatabaseHelper.instance.getNextPurchaseInvoiceSequence();
     final newInvoice = PurchaseInvoice(
       id: invoiceId,
-      number: 'FA-${order.number.replaceAll("CMD-", "")}',
+      number: generateDocNumber(DocPrefix.purchaseInvoice, seq),
       supplierId: order.supplierId,
       supplierName: order.supplierName,
       orderId: order.id,

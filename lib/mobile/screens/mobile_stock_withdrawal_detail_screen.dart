@@ -13,6 +13,8 @@ import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
 import '../../database/database_helper.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
+import '../../blocs/warehouses/warehouses_state.dart';
 
 import '../../screens/document_preview_screen.dart';
 import 'forms/mobile_exit_voucher_form_screen.dart';
@@ -34,7 +36,6 @@ class MobileStockWithdrawalDetailScreen extends StatefulWidget {
 class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawalDetailScreen> {
   late StockWithdrawal currentWithdrawal;
   Map<String, Product> _dbProducts = {};
-  String? _warehouseName;
 
   @override
   void initState() {
@@ -42,23 +43,9 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
     currentWithdrawal = widget.withdrawal;
     _loadFullWithdrawal();
     _loadProducts();
-    _loadWarehouseName();
   }
 
-  Future<void> _loadWarehouseName() async {
-    try {
-      final warehouses = await DatabaseHelper.instance.getWarehouses();
-      final match = warehouses.firstWhere(
-        (w) => w.id == currentWithdrawal.warehouseId,
-        orElse: () => warehouses.firstWhere((w) => w.isDefault, orElse: () => warehouses.first),
-      );
-      if (mounted) {
-        setState(() {
-          _warehouseName = match.name;
-        });
-      }
-    } catch (_) {}
-  }
+  // removed _loadWarehouseName()
 
   Future<void> _loadProducts() async {
     try {
@@ -131,6 +118,21 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
 
   @override
   Widget build(BuildContext context) {
+    final wState = context.watch<WarehousesBloc>().state;
+    String getWhName(String? id) {
+      if (id == null || id.isEmpty) return 'Entrepôt par défaut';
+      if (id == 'default_warehouse') return 'Entrepôt par défaut';
+      if (wState is WarehousesLoaded) {
+        final match = wState.warehouses.cast<dynamic>().firstWhere(
+          (w) => w.id == id, 
+          orElse: () => null
+        );
+        if (match != null) return match.name;
+      }
+      return 'Entrepôt par défaut';
+    }
+    final String warehouseName = getWhName(currentWithdrawal.warehouseId);
+
     return BlocListener<StockWithdrawalsBloc, StockWithdrawalsState>(
       listener: (context, state) {
         if (state is StockWithdrawalsLoaded) {
@@ -206,7 +208,7 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                       SizedBox(height: 16),
                       _buildInfoRow('Date', formatDateTimeLong(currentWithdrawal.date)),
                       SizedBox(height: 8),
-                      _buildInfoRow('Entrepôt', _warehouseName ?? 'Entrepôt par défaut'),
+                      _buildInfoRow('Entrepôt', warehouseName),
                       if (currentWithdrawal.projectName != null) ...[
                         SizedBox(height: 8),
                         _buildInfoRow('Projet', currentWithdrawal.projectName!),

@@ -14,6 +14,9 @@ import '../models/treasury_transaction.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../database/database_helper.dart';
+import '../services/enterprise_service.dart';
+import '../services/firestore_repository.dart';
+import '../services/firestore_pagination_service.dart';
 import '../widgets/searchable_dropdown_field.dart';
 
 class InvoicePaymentDialog extends StatefulWidget {
@@ -82,11 +85,15 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
   
   Future<void> _loadTreasuryAccounts() async {
     try {
-      final maps = await DatabaseHelper.instance.getTreasuryAccounts();
+      final accounts = await FirestorePaginationService.instance.getFirstTreasuryAccounts(pageSize: 100);
       if (mounted) {
         setState(() {
-          _treasuryAccounts = maps.map((e) => TreasuryAccount.fromMap(e)).toList();
+          _treasuryAccounts = accounts;
           _isLoadingAccounts = false;
+          if (_selectedAccountId == null && _treasuryAccounts.isNotEmpty) {
+            final defAcc = _treasuryAccounts.firstWhere((a) => a.isDefault, orElse: () => _treasuryAccounts.first);
+            _selectedAccountId = defAcc.id;
+          }
         });
       }
     } catch (e) {
@@ -114,56 +121,42 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
     super.dispose();
   }
 
-  Future<void> _pushToFirestore(String collection, String id, Map<String, dynamic> data) async {
-    try {
-      final Map<String, dynamic> firestoreData = Map.from(data);
-      firestoreData['updated_at'] = DateTime.now().toUtc().toIso8601String();
-      await FirebaseFirestore.instance.collection(collection).doc(id).set(firestoreData, SetOptions(merge: true));
-    } catch (e) {
-      print("Error pushing directly to Firestore: $e");
-    }
-  }
 
-  Future<String> _getOrCreateRSAccount(String accountName) async {
-    final db = await DatabaseHelper.instance.database;
-    final existing = await db.query('payment_accounts', where: "name = ?", whereArgs: [accountName]);
-    if (existing.isNotEmpty) {
-      return existing.first['id'] as String;
-    } else {
-      final id = const Uuid().v4();
-      final accountData = {
-        'id': id,
-        'name': accountName,
-        'type': 'bank',
-        'balance': 0.0,
-        'is_default': 0,
-        'created_at': DateTime.now().millisecondsSinceEpoch,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
-      };
-      await db.insert('payment_accounts', accountData);
-      await _pushToFirestore('payment_accounts', id, accountData);
-      return id;
-    }
-  }
 
   void _save() async {
     if (_selectedAccountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
+      if (_treasuryAccounts.isNotEmpty) {
+        _selectedAccountId = _treasuryAccounts.firstWhere((a) => a.isDefault, orElse: () => _treasuryAccounts.first).id;
+      } else {
+        final state = context.read<TreasuryAccountsBloc>().state;
+        if (state is TreasuryAccountsLoaded && state.accounts.isNotEmpty) {
+          _selectedAccountId = state.accounts.firstWhere((a) => a.isDefault, orElse: () => state.accounts.first).id;
+        }
+      }
+    }
+
+    if (_selectedAccountId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.error,
+      ));
       return;
     }
 
     double parsedAmount = double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 0.0;
-    if (parsedAmount <= 0) return;
+    if (parsedAmount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Veuillez saisir un montant valide', style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
 
     final db = context.read<PaymentsBloc>();
     final now = DateTime.now();
     final paymentNumber = 'PAI-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
 
-    // Determine the account ID for withholding tax
-    String rsAccountId = _selectedAccountId!;
-    if (_applyWithholdingTax) {
-      rsAccountId = await _getOrCreateRSAccount('RS Vente');
-    }
+
 
     final payment = Payment(
       id: const Uuid().v4(),
@@ -184,8 +177,9 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
       updatedAt: now,
     );
 
+    // Save payment using FirestoreRepository to 'paiements' and update treasury balance
+    await FirestoreRepository.instance.savePayment(payment);
     db.add(AddPayment(payment));
-    await _pushToFirestore('payments', payment.id, payment.toMap());
 
     // Create TreasuryTransaction to increase caisse
     final treasuryTx = TreasuryTransaction(
@@ -202,9 +196,8 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
       updatedAt: now,
     );
     context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(treasuryTx));
-    await _pushToFirestore('treasury_transactions', treasuryTx.id, treasuryTx.toMap());
 
-    // Update Invoice status and amount paid
+    // Handle Withholding Tax (Retenue à la source)
     double taxAmount = _applyWithholdingTax ? ((widget.invoice.totalTTC + widget.invoice.timbreFiscal) * _withholdingTaxRate) / 100 : 0;
 
     if (_applyWithholdingTax && taxAmount > 0) {
@@ -219,7 +212,6 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
         contactName: widget.invoice.customerName,
         amount: taxAmount,
         method: 'retenue_source',
-        accountId: rsAccountId,
         reference: widget.invoice.number,
         paymentDate: _withholdingTaxDate,
         notes: 'Retenue à la source ($_withholdingTaxRate%)',
@@ -229,26 +221,8 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
         updatedAt: now.add(const Duration(seconds: 1)),
       );
       
+      await FirestoreRepository.instance.savePayment(rsPayment);
       db.add(AddPayment(rsPayment));
-      await _pushToFirestore('payments', rsPayment.id, rsPayment.toMap());
-
-      final rsTreasuryTx = TreasuryTransaction(
-        id: const Uuid().v4(),
-        transactionNumber: 'TR-RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0'),
-        accountId: rsAccountId,
-        amount: taxAmount,
-        type: 'income',
-        category: 'Retenue à la source (Ventes)',
-        dateTransaction: _withholdingTaxDate,
-        description: 'Retenue à la source ($_withholdingTaxRate%) pour la facture ${widget.invoice.number}',
-        paymentId: rsPayment.id,
-        withholdingTax: taxAmount,
-        withholdingTaxRate: _withholdingTaxRate,
-        createdAt: now.add(const Duration(seconds: 1)),
-        updatedAt: now.add(const Duration(seconds: 1)),
-      );
-      context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(rsTreasuryTx));
-      await _pushToFirestore('treasury_transactions', rsTreasuryTx.id, rsTreasuryTx.toMap());
     }
 
     double newAmountPaid = widget.invoice.amountPaid + parsedAmount + taxAmount;
@@ -267,9 +241,11 @@ class _InvoicePaymentDialogState extends State<InvoicePaymentDialog>
       status: newStatus,
     );
     context.read<InvoicesBloc>().add(UpdateInvoice(updatedInvoice));
-    await _pushToFirestore('invoices', updatedInvoice.id, updatedInvoice.toMap());
+    await FirestoreRepository.instance.saveDocument('invoices', updatedInvoice.id, updatedInvoice.toMap());
 
-    Navigator.pop(context, true);
+    if (mounted) {
+      Navigator.pop(context, true);
+    }
   }
 
   @override

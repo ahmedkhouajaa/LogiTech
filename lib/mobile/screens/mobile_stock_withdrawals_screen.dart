@@ -13,6 +13,7 @@ import '../../blocs/customers/customers_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
 import '../../blocs/projects/projects_bloc.dart';
 import '../../blocs/warehouses/warehouses_bloc.dart';
+import '../../blocs/warehouses/warehouses_state.dart';
 import '../../models/customer.dart';
 import '../../services/sync_service.dart';
 import 'forms/mobile_exit_voucher_form_screen.dart';
@@ -143,6 +144,7 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
   @override
   Widget build(BuildContext context) {
     final customersState = context.watch<CustomersBloc>().state;
+    final wState = context.watch<WarehousesBloc>().state;
     List<Customer> customersList = [];
     if (customersState is CustomersLoaded) {
       customersList = customersState.customers;
@@ -160,7 +162,7 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
             isLoadingMore = state.isLoadingMore;
             totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
           }
-          return _buildListScreen(items, isLoading, isLoadingMore, totalMatchingCount, customersList);
+          return _buildListScreen(items, isLoading, isLoadingMore, totalMatchingCount, customersList, wState);
         },
       );
     } else {
@@ -175,13 +177,26 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
             isLoadingMore = state.isLoadingMore;
             totalMatchingCount = state.totalCount > 0 ? state.totalCount : items.length;
           }
-          return _buildListScreen(items, isLoading, isLoadingMore, totalMatchingCount, customersList);
+          return _buildListScreen(items, isLoading, isLoadingMore, totalMatchingCount, customersList, wState);
         },
       );
     }
   }
 
-  Widget _buildListScreen(List<StockWithdrawal> items, bool isLoading, bool isLoadingMore, int totalMatchingCount, List<Customer> customersList) {
+  Widget _buildListScreen(List<StockWithdrawal> items, bool isLoading, bool isLoadingMore, int totalMatchingCount, List<Customer> customersList, WarehousesState wState) {
+    String getWhName(String? id) {
+      if (id == null || id.isEmpty) return 'Entrepôt par défaut';
+      if (id == 'default_warehouse') return 'Entrepôt par défaut';
+      if (wState is WarehousesLoaded) {
+        final match = wState.warehouses.cast<dynamic>().firstWhere(
+          (w) => w.id == id, 
+          orElse: () => null
+        );
+        if (match != null) return match.name;
+      }
+      return 'Entrepôt par défaut';
+    }
+
     final filteredItems = items.where((item) {
       String reference = item.number;
       String name = item.customerName ?? item.customerCompany ?? '';
@@ -227,6 +242,8 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
         status: item.status,
         name: item.customerName ?? item.customerCompany ?? 'Client non spécifié',
         nameIcon: Icons.person_outline,
+        subtitle: getWhName(item.warehouseId),
+        subtitleIcon: Icons.storefront_outlined,
         date: item.date,
         amount: item.totalTTC,
         onTap: () {

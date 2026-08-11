@@ -6,6 +6,7 @@ import '../../models/treasury_transaction.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../blocs/treasury_transactions/treasury_transactions_bloc.dart';
+import '../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import 'forms/mobile_transaction_form_screen.dart';
 
 class MobileTreasuryTransactionDetailScreen extends StatefulWidget {
@@ -148,7 +149,19 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
                       SizedBox(height: 16),
                       _buildDetailRow('Date et heure', DateFormat('dd MMM yyyy - HH:mm').format(currentTransaction.dateTransaction)),
                       Divider(height: 24),
-                      _buildDetailRow('Compte', currentTransaction.accountName ?? currentTransaction.accountId),
+                      BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+                        builder: (context, accountState) {
+                          String displayName = currentTransaction.accountName ?? currentTransaction.accountId;
+                          if (accountState is TreasuryAccountsLoaded) {
+                            final acc = accountState.accounts.cast<dynamic>().firstWhere(
+                              (a) => a?.id == currentTransaction.accountId, 
+                              orElse: () => null
+                            );
+                            if (acc != null) displayName = acc.name;
+                          }
+                          return _buildDetailRow('Compte', displayName);
+                        },
+                      ),
                       SizedBox(height: 12),
                       _buildDetailRow('Montant', formatCurrency(currentTransaction.amount)),
                       if (currentTransaction.category != null) ...[

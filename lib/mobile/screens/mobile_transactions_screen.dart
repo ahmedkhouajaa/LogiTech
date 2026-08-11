@@ -5,6 +5,7 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_transaction_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/treasury_transactions/treasury_transactions_bloc.dart';
+import '../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import 'forms/mobile_transaction_form_screen.dart';
 import 'mobile_treasury_transaction_detail_screen.dart';
 
@@ -76,19 +77,28 @@ class _MobileTreasuryTransactionsScreenState extends State<MobileTreasuryTransac
           isLoadingMore = state.isLoadingMore;
           
           cards = items.map((item) {
-            return MobileTransactionCard(
-              transaction: item,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => MobileTreasuryTransactionDetailScreen(transaction: item)),
-                ).then((_) {
-                  if (mounted) {
-                    context.read<TreasuryTransactionsBloc>().add(
-                      ResetTreasuryTransactionsPagination(searchQuery: _searchQuery, typeFilter: _selectedFilter)
-                    );
-                  }
-                });
+            return BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+              builder: (context, accountState) {
+                final accounts = accountState is TreasuryAccountsLoaded ? accountState.accounts : [];
+                final account = accounts.cast<dynamic>().firstWhere((a) => a?.id == item.accountId, orElse: () => null);
+                final accountName = account?.name ?? item.accountName ?? '—';
+                final updatedItem = item.copyWith(accountName: accountName);
+                
+                return MobileTransactionCard(
+                  transaction: updatedItem,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => MobileTreasuryTransactionDetailScreen(transaction: updatedItem)),
+                    ).then((_) {
+                      if (mounted) {
+                        context.read<TreasuryTransactionsBloc>().add(
+                          ResetTreasuryTransactionsPagination(searchQuery: _searchQuery, typeFilter: _selectedFilter)
+                        );
+                      }
+                    });
+                  },
+                );
               },
             );
           }).toList();

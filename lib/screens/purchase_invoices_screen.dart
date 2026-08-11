@@ -934,8 +934,8 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
 
               final now = DateTime.now();
               final String cnId = const Uuid().v4();
-
-              final String cnNumber = 'AVF-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
+              final seq = await DatabaseHelper.instance.getNextSupplierCreditNoteSequence();
+              final String cnNumber = generateDocNumber(DocPrefix.supplierCreditNote, seq);
               
               final creditNote = SupplierCreditNote(
                 id: cnId,
@@ -956,11 +956,12 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                 updatedAt: now,
               );
 
-              await DatabaseHelper.instance.convertPurchaseInvoiceToCreditNote(inv, creditNote);
+              context.read<SupplierCreditNotesBloc>().add(AddSupplierCreditNote(creditNote));
+
+              final updatedInvoice = inv.copyWith(creditNoteId: creditNote.id);
+              context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedInvoice));
 
               if (context.mounted) {
-                context.read<SupplierCreditNotesBloc>().add(LoadSupplierCreditNotes());
-                context.read<PurchaseInvoicesBloc>().add(LoadPurchaseInvoices());
                 context.read<StockBloc>().add(LoadStock());
                 context.read<ProductsBloc>().add(const ResetProductsPagination());
 
@@ -978,6 +979,23 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _openConvertedCreditNote(BuildContext context, String? creditNoteId) async {
+    if (creditNoteId == null) return;
+    
+    final creditNote = await DatabaseHelper.instance.getSupplierCreditNoteById(creditNoteId);
+    if (!mounted) return;
+    if (creditNote == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Avoir fournisseur introuvable'),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
+
+    final doc = DocumentWrapper.fromSupplierCreditNote(creditNote);
+    Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
   }
 
   PopupMenuItem<String> _buildMenuItem(
@@ -1053,7 +1071,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         _createCreditNoteFromPurchaseInvoice(context, inv);
         break;
       case 'view_credit_note':
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Affichage de l\'avoir non implementé')));
+        _openConvertedCreditNote(context, inv.creditNoteId);
         break;
       case 'delete':
         _confirmDelete(inv);

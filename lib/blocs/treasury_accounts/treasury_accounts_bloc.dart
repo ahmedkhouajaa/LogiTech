@@ -140,7 +140,13 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
       try {
         final cacheSnap = await query.get(const GetOptions(source: Source.cache));
         if (cacheSnap.docs.isNotEmpty && !emit.isDone) {
-          final accounts = cacheSnap.docs.map((d) => TreasuryAccount.fromMap(d.data() as Map<String, dynamic>)).toList();
+          final accounts = cacheSnap.docs
+              .where((d) {
+                final data = d.data() as Map<String, dynamic>;
+                return data['is_deleted'] != 1 && data['is_deleted'] != true && data['is_deleted'] != '1';
+              })
+              .map((d) => TreasuryAccount.fromMap(d.data() as Map<String, dynamic>))
+              .toList();
           emit(TreasuryAccountsLoaded(accounts, totalCount: accounts.length, hasMore: false));
           shownFromCache = true;
         }
@@ -148,7 +154,13 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
 
       try {
         final serverSnap = await query.get(const GetOptions(source: Source.server));
-        List<TreasuryAccount> accounts = serverSnap.docs.map((d) => TreasuryAccount.fromMap(d.data() as Map<String, dynamic>)).toList();
+        List<TreasuryAccount> accounts = serverSnap.docs
+            .where((d) {
+              final data = d.data() as Map<String, dynamic>;
+              return data['is_deleted'] != 1 && data['is_deleted'] != true && data['is_deleted'] != '1';
+            })
+            .map((d) => TreasuryAccount.fromMap(d.data() as Map<String, dynamic>))
+            .toList();
         
         if (accounts.isEmpty) {
           final defaultAccount = TreasuryAccount(

@@ -7,7 +7,8 @@ import '../../models/product.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../database/database_helper.dart';
-
+import '../../blocs/warehouses/warehouses_bloc.dart';
+import '../../blocs/warehouses/warehouses_state.dart';
 import 'forms/mobile_stock_transfer_form_screen.dart';
 
 class MobileStockTransferDetailScreen extends StatefulWidget {
@@ -22,29 +23,11 @@ class MobileStockTransferDetailScreen extends StatefulWidget {
 class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDetailScreen> {
   late StockTransfer currentTransfer;
   Map<String, Product> _dbProducts = {};
-  String? _sourceWarehouseName;
-  String? _destWarehouseName;
-
   @override
   void initState() {
     super.initState();
     currentTransfer = widget.transfer;
     _loadProducts();
-    _loadWarehouseNames();
-  }
-
-  Future<void> _loadWarehouseNames() async {
-    try {
-      final warehouses = await DatabaseHelper.instance.getWarehouses();
-      final srcMatch = warehouses.firstWhere((w) => w.id == currentTransfer.sourceWarehouseId, orElse: () => warehouses.first);
-      final destMatch = warehouses.firstWhere((w) => w.id == currentTransfer.destinationWarehouseId, orElse: () => warehouses.first);
-      if (mounted) {
-        setState(() {
-          _sourceWarehouseName = srcMatch.name;
-          _destWarehouseName = destMatch.name;
-        });
-      }
-    } catch (_) {}
   }
 
   Future<void> _loadProducts() async {
@@ -73,6 +56,22 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
 
   @override
   Widget build(BuildContext context) {
+    final wState = context.watch<WarehousesBloc>().state;
+    String getWhName(String id) {
+      if (id == 'default_warehouse') return 'Entrepôt par défaut';
+      if (wState is WarehousesLoaded) {
+        final match = wState.warehouses.cast<dynamic>().firstWhere(
+          (w) => w.id == id, 
+          orElse: () => null
+        );
+        if (match != null) return match.name;
+      }
+      return 'Entrepôt par défaut';
+    }
+
+    final String srcName = getWhName(currentTransfer.sourceWarehouseId);
+    final String destName = getWhName(currentTransfer.destinationWarehouseId);
+
     return BlocListener<StockTransfersBloc, StockTransfersState>(
       listener: (context, state) {
         if (state is StockTransfersLoaded) {
@@ -139,9 +138,9 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
                       SizedBox(height: 16),
                       _buildInfoRow('Date', formatDateTimeLong(currentTransfer.date)),
                       SizedBox(height: 8),
-                      _buildInfoRow('Source', _sourceWarehouseName ?? 'Entrepôt source'),
+                      _buildInfoRow('Source', srcName),
                       SizedBox(height: 8),
-                      _buildInfoRow('Destination', _destWarehouseName ?? 'Entrepôt destination'),
+                      _buildInfoRow('Destination', destName),
                     ],
                   ),
                 ),

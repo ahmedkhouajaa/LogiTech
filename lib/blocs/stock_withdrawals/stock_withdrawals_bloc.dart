@@ -347,11 +347,13 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
 
   Future<void> _onDelete(DeleteStockWithdrawal event, Emitter<StockWithdrawalsState> emit) async {
     try {
-      await FirestoreRepository.instance.softDeleteDocument('bons_sortie', event.withdrawalId);
-      add(LoadFirstStockWithdrawals());
-    } catch (e) {
-      emit(StockWithdrawalsError("Erreur lors de la suppression: $e"));
+      await FirestoreRepository.instance.softDeleteDocument('bons_prelevement', event.withdrawalId);
+    } catch (_) {
+      try {
+        await FirestoreRepository.instance.deleteDocument('bons_prelevement', event.withdrawalId);
+      } catch (_) {}
     }
+    add(LoadFirstStockWithdrawals());
   }
 
   Future<void> _onFilter(FilterStockWithdrawals event, Emitter<StockWithdrawalsState> emit) async {

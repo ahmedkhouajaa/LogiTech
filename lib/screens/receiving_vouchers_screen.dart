@@ -1080,9 +1080,10 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     );
   }
 
-  void _executeConversion(ReceivingVoucher voucher) {
+  Future<void> _executeConversion(ReceivingVoucher voucher) async {
     final newInvoiceId = const Uuid().v4();
-    final invoiceNumber = 'FA-${voucher.number.replaceAll("BR-", "")}';
+    final seq = await DatabaseHelper.instance.getNextPurchaseInvoiceSequence();
+    final invoiceNumber = generateDocNumber(DocPrefix.purchaseInvoice, seq);
 
     List<PurchaseInvoiceItem> newItems = [];
 

@@ -9,6 +9,8 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/stock/stock_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
 import '../models/stock_movement.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/enterprise_service.dart';
@@ -322,6 +324,23 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
     );
   }
 
+  String _resolveWarehouseName(String? id) {
+    if (id == null || id.isEmpty) return 'Sélectionner...';
+    if (id == 'default_warehouse') return 'Entrepôt principal';
+    try {
+      final w = _warehouses.firstWhere((w) => w.id == id);
+      return w.name;
+    } catch (_) {}
+    try {
+      final state = context.read<WarehousesBloc>().state;
+      if (state is WarehousesLoaded) {
+        final w = state.warehouses.firstWhere((w) => w.id == id);
+        return w.name;
+      }
+    } catch (_) {}
+    return 'Sélectionner...';
+  }
+
   Widget _buildInformationsSection() {
     final dateField = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,8 +375,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
       ],
     );
 
-    final selectedSourceWarehouse = _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _sourceWarehouseId, orElse: () => null);
-    final sourceWarehouseName = selectedSourceWarehouse != null ? selectedSourceWarehouse.name : 'Sélectionner...';
+    final sourceWarehouseName = _resolveWarehouseName(_sourceWarehouseId);
 
     final sourceField = SmartSearchableSelector(
       label: 'Entrepôt Source',
@@ -375,14 +393,21 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
         if (res != null && mounted) {
           setState(() {
             _sourceWarehouseId = res;
+            final whBlocState = context.read<WarehousesBloc>().state;
+            if (whBlocState is WarehousesLoaded) {
+              for (var w in whBlocState.warehouses) {
+                if (!_warehouses.any((item) => item.id == w.id)) {
+                  _warehouses.add(w);
+                }
+              }
+            }
           });
           _onWarehouseChanged();
         }
       },
     );
 
-    final selectedDestWarehouse = _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _destWarehouseId, orElse: () => null);
-    final destWarehouseName = selectedDestWarehouse != null ? selectedDestWarehouse.name : 'Sélectionner...';
+    final destWarehouseName = _resolveWarehouseName(_destWarehouseId);
 
     final destField = SmartSearchableSelector(
       label: 'Entrepôt Destination',
@@ -400,6 +425,14 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
         if (res != null && mounted) {
           setState(() {
             _destWarehouseId = res;
+            final whBlocState = context.read<WarehousesBloc>().state;
+            if (whBlocState is WarehousesLoaded) {
+              for (var w in whBlocState.warehouses) {
+                if (!_warehouses.any((item) => item.id == w.id)) {
+                  _warehouses.add(w);
+                }
+              }
+            }
           });
           _onWarehouseChanged();
         }

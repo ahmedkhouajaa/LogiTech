@@ -116,8 +116,16 @@ class TreasuryTransaction {
       withholdingTax: map['withholding_tax']?.toDouble() ?? 0.0,
       withholdingTaxRate: map['withholding_tax_rate']?.toDouble() ?? 0.0,
       paymentId: map['payment_id'],
-      createdAt: map['created_at'] != null ? DateTime.fromMillisecondsSinceEpoch(map['created_at']) : DateTime.now(),
-      updatedAt: map['updated_at'] != null ? DateTime.fromMillisecondsSinceEpoch(map['updated_at']) : DateTime.now(),
+      createdAt: map['created_at'] != null
+          ? (map['created_at'] is int
+              ? DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int)
+              : DateTime.parse(map['created_at'].toString()))
+          : DateTime.now(),
+      updatedAt: map['updated_at'] != null
+          ? (map['updated_at'] is int
+              ? DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int)
+              : DateTime.parse(map['updated_at'].toString()))
+          : DateTime.now(),
       accountName: map['account_name'],
       projectName: map['project_name'],
     );

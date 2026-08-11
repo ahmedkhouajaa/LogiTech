@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/stock_transfer.dart';
 import '../../models/stock_movement.dart';
 import '../../utils/constants.dart';
+import '../../utils/helpers.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
@@ -215,7 +216,13 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
 
   Future<void> _onAdd(AddStockTransfer event, Emitter<StockTransfersState> emit) async {
     try {
-      await FirestoreRepository.instance.saveStockTransfer(event.transfer);
+      String number = event.transfer.number;
+      if (number.isEmpty) {
+        final seq = await DatabaseHelper.instance.getNextStockTransferSequence();
+        number = generateDocNumber(DocPrefix.stockTransfer, seq);
+      }
+      final transferToSave = event.transfer.copyWith(number: number);
+      await FirestoreRepository.instance.saveStockTransfer(transferToSave);
 
       for (var item in event.transfer.items) {
         if (item.productId.isNotEmpty && item.quantityToTransfer > 0) {

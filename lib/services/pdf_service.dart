@@ -20,7 +20,8 @@ class PdfService {
   PdfService._();
 
   Future<Uint8List> generateDocumentBytes(DocumentWrapper document, {DocumentTemplate? template}) async {
-    final companySettings = await DatabaseHelper.instance.getCompanySettings();
+    final rawSettings = await DatabaseHelper.instance.getCompanySettings();
+    final CompanySettings companySettings = (rawSettings is CompanySettings) ? rawSettings : CompanySettings();
 
     // Fetch product references for all items if available
     final db = DatabaseHelper.instance;

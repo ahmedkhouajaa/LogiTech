@@ -511,7 +511,8 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
 
   Future<void> _convertQuoteToInvoice(BuildContext context, Quote quote) async {
     final invoiceId = const Uuid().v4();
-    final invoiceNumber = generateDocNumber(DocPrefix.invoice, DateTime.now().millisecondsSinceEpoch % 1000000);
+    final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
+    final invoiceNumber = generateDocNumber('FA', seq);
     final invoiceItems = quote.items.map((qi) => InvoiceItem(
       id: const Uuid().v4(), invoiceId: invoiceId, productId: qi.productId, productName: qi.productName,
       description: qi.description, quantity: qi.quantity, unitPrice: qi.unitPrice, tvaRate: qi.tvaRate,
@@ -531,7 +532,8 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
 
   Future<void> _convertQuoteToOrder(BuildContext context, Quote quote) async {
     final orderId = const Uuid().v4();
-    final orderNumber = generateDocNumber(DocPrefix.customerOrder, DateTime.now().millisecondsSinceEpoch % 1000000);
+    final seq = await DatabaseHelper.instance.getNextCustomerOrderSequence();
+    final orderNumber = generateDocNumber(DocPrefix.customerOrder, seq);
     final orderItems = quote.items.map((qi) => CustomerOrderItem(
       id: const Uuid().v4(), orderId: orderId, productId: qi.productId, description: qi.description,
       quantity: qi.quantity, unitPrice: qi.unitPrice, tvaRate: qi.tvaRate, discountPercent: qi.discountPercent,
@@ -548,7 +550,8 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
 
   Future<void> _convertQuoteToDelivery(BuildContext context, Quote quote) async {
     final deliveryId = const Uuid().v4();
-    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, DateTime.now().millisecondsSinceEpoch % 1000000);
+    final seq = await DatabaseHelper.instance.getNextDeliveryNoteSequence();
+    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq);
     final deliveryItems = quote.items.map((qi) => DeliveryNoteItem(
       id: const Uuid().v4(), deliveryNoteId: deliveryId, productId: qi.productId, description: qi.description,
       quantity: qi.quantity, unitPrice: qi.unitPrice, tvaRate: qi.tvaRate, discountPercent: qi.discountPercent,

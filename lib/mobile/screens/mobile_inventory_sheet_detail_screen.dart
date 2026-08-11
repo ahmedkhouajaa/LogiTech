@@ -10,6 +10,8 @@ import '../../models/product.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../database/database_helper.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
+import '../../blocs/warehouses/warehouses_state.dart';
 
 import 'forms/mobile_inventory_sheet_form_screen.dart';
 
@@ -28,14 +30,11 @@ class MobileInventorySheetDetailScreen extends StatefulWidget {
 class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetDetailScreen> {
   late InventorySheet currentSheet;
   Map<String, Product> _dbProducts = {};
-  String? _warehouseName;
-
   @override
   void initState() {
     super.initState();
     currentSheet = widget.sheet;
     _loadProducts();
-    _loadWarehouseName();
   }
 
   Future<void> _loadProducts() async {
@@ -49,20 +48,7 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
     } catch (_) {}
   }
 
-  Future<void> _loadWarehouseName() async {
-    try {
-      final warehouses = await DatabaseHelper.instance.getWarehouses();
-      final match = warehouses.firstWhere(
-        (w) => w.id == currentSheet.warehouseId,
-        orElse: () => warehouses.firstWhere((w) => w.isDefault, orElse: () => warehouses.first),
-      );
-      if (mounted) {
-        setState(() {
-          _warehouseName = match.name;
-        });
-      }
-    } catch (_) {}
-  }
+  // removed _loadWarehouseName()
 
   Product? _getProduct(String id) {
     if (_dbProducts.containsKey(id)) {
@@ -116,6 +102,29 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
 
   @override
   Widget build(BuildContext context) {
+    final wState = context.watch<WarehousesBloc>().state;
+    String getWhName(String id) {
+      if (id == 'default_warehouse') return 'Entrepôt par défaut';
+      if (wState is WarehousesLoaded) {
+        final match = wState.warehouses.cast<dynamic>().firstWhere(
+          (w) => w.id == id, 
+          orElse: () => null
+        );
+        if (match != null) return match.name;
+      }
+      return 'Entrepôt par défaut';
+    }
+    final String warehouseName = getWhName(currentSheet.warehouseId);
+
+    final totalSurplus = currentSheet.items.fold(0.0, (sum, item) {
+      final diff = item.actualQty - item.theoreticalQty;
+      return diff > 0 ? sum + diff : sum;
+    });
+    final totalMissing = currentSheet.items.fold(0.0, (sum, item) {
+      final diff = item.actualQty - item.theoreticalQty;
+      return diff < 0 ? sum + diff.abs() : sum;
+    });
+
     return BlocListener<InventorySheetsBloc, InventorySheetsState>(
       listener: (context, state) {
         if (state is InventorySheetsLoaded) {
@@ -183,7 +192,9 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                       const SizedBox(height: 16),
                       _buildInfoRow('Date', formatDateTimeLong(currentSheet.date)),
                       const SizedBox(height: 8),
-                      _buildInfoRow('Entrepôt', _warehouseName ?? 'Entrepôt par défaut'),
+                      _buildInfoRow('Référence', currentSheet.number),
+                      const SizedBox(height: 8),
+                      _buildInfoRow('Entrepôt', warehouseName),
                       if (currentSheet.reason != null && currentSheet.reason!.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         _buildInfoRow('Motif', currentSheet.reason!),
@@ -191,6 +202,36 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                       if (currentSheet.notes != null && currentSheet.notes!.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         _buildInfoRow('Notes', currentSheet.notes!),
+                      ],
+                      if (totalSurplus > 0 || totalMissing > 0) ...[
+                        const SizedBox(height: 12),
+                        const Divider(height: 1),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            Column(
+                              children: [
+                                Text('Surplus', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  totalSurplus > 0 ? '+${totalSurplus.toStringAsFixed(1)}' : '—',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: totalSurplus > 0 ? AppColors.success : AppColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                            Column(
+                              children: [
+                                Text('Manquant', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  totalMissing > 0 ? '-${totalMissing.toStringAsFixed(1)}' : '—',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: totalMissing > 0 ? AppColors.error : AppColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ],
                     ],
                   ),
@@ -242,7 +283,12 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                                   Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
                                 ],
                                 const SizedBox(height: 4),
-                                Text(actualQtyText, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                Row(
+                                  children: [
+                                    Text(actualQtyText, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                    const Spacer(),
+                                  ],
+                                ),
                               ],
                             ),
                           ),

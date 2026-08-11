@@ -16,6 +16,9 @@ import '../models/treasury_transaction.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../database/database_helper.dart';
+import '../services/enterprise_service.dart';
+import '../services/firestore_repository.dart';
+import '../services/firestore_pagination_service.dart';
 import '../widgets/searchable_dropdown_field.dart';
 
 class ReceivingVoucherPaymentDialog extends StatefulWidget {
@@ -27,9 +30,14 @@ class ReceivingVoucherPaymentDialog extends StatefulWidget {
   State<ReceivingVoucherPaymentDialog> createState() => _ReceivingVoucherPaymentDialogState();
 }
 
-class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentDialog> {
+class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentDialog>
+    with SingleTickerProviderStateMixin {
   int _selectedTab = 0; // 0: Nouveau, 1: Existant, 2: Avoir
   bool _applyWithholdingTax = false;
+  
+  // Treasury accounts loaded directly from DB
+  List<TreasuryAccount> _treasuryAccounts = [];
+  bool _isLoadingAccounts = true;
   
   // Tax state
   double _withholdingTaxRate = 1.0;
@@ -43,6 +51,9 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
   DateTime _paymentDate = DateTime.now();
   final _notesCtrl = TextEditingController();
 
+  late AnimationController _animController;
+  late Animation<double> _fadeAnim;
+
   final List<Map<String, dynamic>> _taxRates = [
     {'rate': 1.0, 'label': 'Achats (supérieurs à 1000DT)', 'category': 'Acquisitions des marchandises, matériel équipements et de services'},
     {'rate': 1.5, 'label': 'Achats (supérieurs à 1000DT)', 'category': 'Acquisitions des marchandises, matériel équipements et de services'},
@@ -52,42 +63,52 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
     {'rate': 10.0, 'label': 'Loyers', 'category': 'Loyers'},
   ];
 
+  static const _paymentMethods = [
+    {'value': 'especes', 'label': 'Espèces', 'icon': Icons.payments_outlined},
+    {'value': 'cheque', 'label': 'Chèque', 'icon': Icons.description_outlined},
+    {'value': 'virement', 'label': 'Virement', 'icon': Icons.account_balance_outlined},
+    {'value': 'carte', 'label': 'Carte', 'icon': Icons.credit_card_outlined},
+  ];
+
+  double get _calculatedTotalTTC => widget.receivingVoucher.computedTotalTTC;
+
   @override
   void initState() {
     super.initState();
     context.read<TreasuryAccountsBloc>().add(LoadTreasuryAccounts());
     _updateAmountField();
+    _loadTreasuryAccounts();
+    
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
+    _animController.forward();
   }
   
-  double _calculatedTotalTTC = 0.0;
-  
-  void _calculateTotal() {
-    final productsState = context.read<ProductsBloc>().state;
-    List<Product> products = [];
-    if (productsState is ProductsLoaded) {
-      products = productsState.products;
+  Future<void> _loadTreasuryAccounts() async {
+    try {
+      final accounts = await FirestorePaginationService.instance.getFirstTreasuryAccounts(pageSize: 100);
+      if (mounted) {
+        setState(() {
+          _treasuryAccounts = accounts;
+          _isLoadingAccounts = false;
+          if (_selectedAccountId == null && _treasuryAccounts.isNotEmpty) {
+            final defAcc = _treasuryAccounts.firstWhere((a) => a.isDefault, orElse: () => _treasuryAccounts.first);
+            _selectedAccountId = defAcc.id;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingAccounts = false);
+      }
     }
-
-    double totalHT = 0;
-    double totalTva = 0;
-
-    for (var vItem in widget.receivingVoucher.items) {
-      if (vItem.quantityReceived <= 0) continue;
-      final product = products.where((p) => p.id == vItem.productId).firstOrNull;
-      final price = product?.purchasePrice ?? 0;
-      final tvaRate = product?.tvaRate ?? 19;
-      final lineHT = vItem.quantityReceived * price;
-      final lineTva = lineHT * (tvaRate / 100);
-      totalHT += lineHT;
-      totalTva += lineTva;
-    }
-    final timbreFiscal = 1.0;
-    _calculatedTotalTTC = totalHT + totalTva + timbreFiscal;
   }
 
   void _updateAmountField() {
-    _calculateTotal();
-    double amount = _calculatedTotalTTC;
+    double amount = _calculatedTotalTTC - widget.receivingVoucher.amountPaid;
     if (_applyWithholdingTax) {
       double taxAmount = (_calculatedTotalTTC * _withholdingTaxRate) / 100;
       amount -= taxAmount;
@@ -100,59 +121,46 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
     _amountCtrl.dispose();
     _referenceCtrl.dispose();
     _notesCtrl.dispose();
+    _animController.dispose();
     super.dispose();
   }
 
-  Future<void> _pushToFirestore(String collection, String id, Map<String, dynamic> data) async {
-    try {
-      final Map<String, dynamic> firestoreData = Map.from(data);
-      firestoreData['updated_at'] = DateTime.now().toUtc().toIso8601String();
-      await FirebaseFirestore.instance.collection(collection).doc(id).set(firestoreData, SetOptions(merge: true));
-    } catch (e) {
-      print("Error pushing directly to Firestore: $e");
-    }
-  }
 
-  Future<String> _getOrCreateRSAccount(String accountName) async {
-    final db = await DatabaseHelper.instance.database;
-    final existing = await db.query('payment_accounts', where: "name = ?", whereArgs: [accountName]);
-    if (existing.isNotEmpty) {
-      return existing.first['id'] as String;
-    } else {
-      final id = const Uuid().v4();
-      final accountData = {
-        'id': id,
-        'name': accountName,
-        'type': 'bank',
-        'balance': 0.0,
-        'is_default': 0,
-        'created_at': DateTime.now().millisecondsSinceEpoch,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
-      };
-      await db.insert('payment_accounts', accountData);
-      await _pushToFirestore('payment_accounts', id, accountData);
-      return id;
-    }
-  }
 
   void _save() async {
     if (_selectedAccountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
+      if (_treasuryAccounts.isNotEmpty) {
+        _selectedAccountId = _treasuryAccounts.firstWhere((a) => a.isDefault, orElse: () => _treasuryAccounts.first).id;
+      } else {
+        final state = context.read<TreasuryAccountsBloc>().state;
+        if (state is TreasuryAccountsLoaded && state.accounts.isNotEmpty) {
+          _selectedAccountId = state.accounts.firstWhere((a) => a.isDefault, orElse: () => state.accounts.first).id;
+        }
+      }
+    }
+
+    if (_selectedAccountId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.error,
+      ));
       return;
     }
 
     double parsedAmount = double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 0.0;
-    if (parsedAmount <= 0) return;
+    if (parsedAmount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Veuillez saisir un montant valide', style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
 
     final db = context.read<PaymentsBloc>();
     final now = DateTime.now();
     final paymentNumber = 'PAI-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
 
-    // Determine the account ID for withholding tax
-    String rsAccountId = _selectedAccountId!;
-    if (_applyWithholdingTax) {
-      rsAccountId = await _getOrCreateRSAccount('RS Achat');
-    }
+
 
     final payment = Payment(
       id: const Uuid().v4(),
@@ -168,13 +176,12 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
       paymentDate: _paymentDate,
       notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
       status: 'paid',
-      
       createdAt: now,
       updatedAt: now,
     );
 
+    await FirestoreRepository.instance.savePayment(payment);
     db.add(AddPayment(payment));
-    await _pushToFirestore('payments', payment.id, payment.toMap());
 
     // Create TreasuryTransaction to decrease caisse (expense)
     final treasuryTx = TreasuryTransaction(
@@ -191,7 +198,7 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
       updatedAt: now,
     );
     context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(treasuryTx));
-    await _pushToFirestore('treasury_transactions', treasuryTx.id, treasuryTx.toMap());
+    await FirestoreRepository.instance.saveDocument('treasury_transactions', treasuryTx.id, treasuryTx.toMap());
 
     // Update ReceivingVoucher status and amount paid
     double taxAmount = _applyWithholdingTax ? (_calculatedTotalTTC * _withholdingTaxRate) / 100 : 0;
@@ -208,36 +215,16 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
         contactName: widget.receivingVoucher.supplierName,
         amount: taxAmount,
         method: 'retenue_source',
-        accountId: rsAccountId,
         reference: widget.receivingVoucher.number,
         paymentDate: _withholdingTaxDate,
         notes: 'Retenue à la source ($_withholdingTaxRate%)',
         status: 'paid',
-        
         createdAt: now.add(const Duration(seconds: 1)),
         updatedAt: now.add(const Duration(seconds: 1)),
       );
       
+      await FirestoreRepository.instance.savePayment(rsPayment);
       db.add(AddPayment(rsPayment));
-      await _pushToFirestore('payments', rsPayment.id, rsPayment.toMap());
-
-      final rsTreasuryTx = TreasuryTransaction(
-        id: const Uuid().v4(),
-        transactionNumber: 'TR-RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0'),
-        accountId: rsAccountId,
-        amount: taxAmount,
-        type: 'expense',
-        category: 'Retenue à la source (Achats)',
-        dateTransaction: _withholdingTaxDate,
-        description: 'Retenue à la source ($_withholdingTaxRate%) pour le bon de réception ${widget.receivingVoucher.number}',
-        paymentId: rsPayment.id,
-        withholdingTax: taxAmount,
-        withholdingTaxRate: _withholdingTaxRate,
-        createdAt: now.add(const Duration(seconds: 1)),
-        updatedAt: now.add(const Duration(seconds: 1)),
-      );
-      context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(rsTreasuryTx));
-      await _pushToFirestore('treasury_transactions', rsTreasuryTx.id, rsTreasuryTx.toMap());
     }
 
     double newAmountPaid = 0.0 + parsedAmount + taxAmount;
@@ -253,7 +240,7 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
       status: newStatus,
     );
     context.read<ReceivingVouchersBloc>().add(UpdateReceivingVoucher(updatedReceivingVoucher));
-    await _pushToFirestore('receiving_vouchers', updatedReceivingVoucher.id, updatedReceivingVoucher.toMap());
+    await FirestoreRepository.instance.saveDocument('receiving_vouchers', updatedReceivingVoucher.id, updatedReceivingVoucher.toMap());
 
     Navigator.pop(context, true);
   }

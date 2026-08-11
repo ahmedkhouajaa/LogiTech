@@ -358,28 +358,34 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: DataTableWidget<TreasuryTransaction>(
-                      columns: const ['Reference', 'Compte', 'Debit', 'Credit', 'Solde', 'Motif', 'Actions'],
-                      rows: filtered,
-                      emptyMessage: 'Aucune transaction trouvee',
-                      cellBuilder: (tx) {
-                        final isDebit = tx.type == 'income'; // Encaissement (incoming) = Debit transaction
-                        final isCredit = tx.type == 'expense'; // Decaissement (outgoing) = Credit transaction
-                        
-                        final balance = tx.balance ?? 0.0;
-                        final balanceColor = balance < 0 ? AppColors.error : AppColors.textPrimary;
+                    child: BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
+                      builder: (context, accountState) {
+                        final accounts = accountState is TreasuryAccountsLoaded ? accountState.accounts : <TreasuryAccount>[];
+                        return DataTableWidget<TreasuryTransaction>(
+                          columns: const ['Reference', 'Compte', 'Debit', 'Credit', 'Solde', 'Motif', 'Actions'],
+                          rows: filtered,
+                          emptyMessage: 'Aucune transaction trouvee',
+                          cellBuilder: (tx) {
+                            final isDebit = tx.type == 'income'; // Encaissement (incoming) = Debit transaction
+                            final isCredit = tx.type == 'expense'; // Decaissement (outgoing) = Credit transaction
+                            
+                            final balance = tx.balance ?? 0.0;
+                            final balanceColor = balance < 0 ? AppColors.error : AppColors.textPrimary;
+                            
+                            final account = accounts.cast<TreasuryAccount?>().firstWhere((a) => a?.id == tx.accountId, orElse: () => null);
+                            final accountName = account?.name ?? tx.accountName ?? '—';
 
-                        return [
-                          DataCell(Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(tx.transactionNumber, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
-                              Text(DateFormat('dd MMM yyyy - HH:mm', 'fr_FR').format(tx.dateTransaction), style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
-                            ],
-                          )),
-                          DataCell(Text(tx.accountName ?? '—', style: TextStyle(fontSize: 13, color: AppColors.textSecondary))),
-                          DataCell(
+                            return [
+                              DataCell(Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(tx.transactionNumber, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
+                                  Text(DateFormat('dd MMM yyyy - HH:mm', 'fr_FR').format(tx.dateTransaction), style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                                ],
+                              )),
+                              DataCell(Text(accountName, style: TextStyle(fontSize: 13, color: AppColors.textSecondary))),
+                              DataCell(
                             isDebit 
                               ? Text('+ ${formatCurrencyDT(tx.amount)}', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.w600))
                               : Text('-', style: TextStyle(color: AppColors.textTertiary)),
@@ -404,10 +410,12 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                           ),
                         ];
                       },
-                    ),
-                  ),
-                );
-              }
+                    );
+                  },
+                ),
+              ),
+            );
+          }
               return const SizedBox();
             },
           ),

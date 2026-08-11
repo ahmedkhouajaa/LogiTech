@@ -45,10 +45,13 @@ class AuthService {
     }
   }
 
+  /*
+  // Offline mode disabled - pure 100% Firebase mode
   Future<void> enableOfflineMode() async {
     _offlineMode = true;
-    _currentUserUid = 'local-user';
+    _currentUserUid = FirebaseAuth.instance.currentUser?.uid;
   }
+  */
 
   Future<void> logout() async {
     _offlineMode = false;

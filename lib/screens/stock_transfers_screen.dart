@@ -13,6 +13,8 @@ import '../models/stock_movement.dart';
 import '../database/database_helper.dart';
 import '../widgets/custom_date_range_picker.dart';
 import '../widgets/searchable_dropdown_field.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
 
 class StockTransfersScreen extends StatefulWidget {
   const StockTransfersScreen({super.key});
@@ -39,8 +41,15 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
   }
 
   Future<void> _loadWarehouses() async {
-    final ws = await DatabaseHelper.instance.getWarehouses();
-    if (mounted) setState(() => _warehouses = ws);
+    final bloc = context.read<WarehousesBloc>();
+    if (bloc.state is WarehousesLoaded) {
+      if (mounted) setState(() => _warehouses = (bloc.state as WarehousesLoaded).warehouses.cast<Warehouse>());
+    }
+    bloc.stream.listen((state) {
+      if (state is WarehousesLoaded && mounted) {
+        setState(() => _warehouses = state.warehouses.cast<Warehouse>());
+      }
+    });
   }
 
   String _getWarehouseName(String id) {

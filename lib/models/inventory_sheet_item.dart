@@ -1,3 +1,5 @@
+import 'package:uuid/uuid.dart';
+
 class InventorySheetItem {
   final String id;
   final String inventoryId;
@@ -28,11 +30,11 @@ class InventorySheetItem {
       };
 
   factory InventorySheetItem.fromMap(Map<String, dynamic> map, {String? productName, String? productSku}) => InventorySheetItem(
-        id: map['id'] as String,
-        inventoryId: (map['inventory_id'] ?? '') as String,
-        productId: (map['product_id'] ?? '') as String,
-        productName: productName ?? map['product_name'] as String?,
-        productSku: productSku ?? map['product_sku'] as String?,
+        id: map['id']?.toString() ?? const Uuid().v4(),
+        inventoryId: map['inventory_id']?.toString() ?? '',
+        productId: map['product_id']?.toString() ?? '',
+        productName: productName ?? map['product_name']?.toString(),
+        productSku: productSku ?? map['product_sku']?.toString(),
         theoreticalQty: (map['theoretical_qty'] as num?)?.toDouble() ?? 0.0,
         actualQty: (map['actual_qty'] as num?)?.toDouble() ?? 0.0,
       );

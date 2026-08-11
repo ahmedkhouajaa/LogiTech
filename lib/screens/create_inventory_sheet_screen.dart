@@ -80,7 +80,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
       _items = List.from(widget.sheet!.items);
     } else {
       _id = _uuid.v4();
-      _number = 'FI-${DateTime.now().year}-${_uuid.v4().substring(0, 6).toUpperCase()}';
+      _number = '';
       _date = DateTime.now();
       _inventoryDate = DateTime.now();
       _items = [

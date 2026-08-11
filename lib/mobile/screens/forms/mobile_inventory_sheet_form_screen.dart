@@ -100,7 +100,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
     setState(() => _isLoading = true);
 
     try {
-      final number = widget.existing?.number ?? 'FI-${DateTime.now().year}-${_uuid.v4().substring(0, 6).toUpperCase()}';
+      final number = widget.existing?.number ?? '';
 
       final currentEntId = EnterpriseService.instance.currentEnterpriseId;
       final sheet = InventorySheet(

@@ -159,7 +159,7 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
     try {
       FirestorePaginationService.instance.resetPaymentsPagination();
       final paymentsFuture = FirestorePaginationService.instance.getFirstPayments(
-        pageSize: 10,
+        pageSize: 100,
         searchQuery: event.searchQuery,
         status: _mapStatusFilter(event.statusFilter),
       );
@@ -178,7 +178,7 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
         payments,
         accounts,
         totalCount: totalCount > payments.length ? totalCount : payments.length,
-        hasMore: payments.length >= 10,
+        hasMore: payments.length >= 100,
         activeStatusFilter: event.statusFilter ?? 'Tous',
       ));
     } catch (e) {
@@ -194,7 +194,7 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
 
     try {
       final nextPayments = await FirestorePaginationService.instance.getNextPayments(
-        pageSize: 10,
+        pageSize: 100,
         currentOffset: currentState.payments.length,
         searchQuery: event.searchQuery,
         status: _mapStatusFilter(event.statusFilter),
@@ -202,7 +202,7 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
 
       emit(currentState.copyWith(
         payments: [...currentState.payments, ...nextPayments],
-        hasMore: nextPayments.length >= 10,
+        hasMore: nextPayments.length >= 100,
         isLoadingMore: false,
       ));
     } catch (e) {
@@ -214,7 +214,7 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
     try {
       FirestorePaginationService.instance.resetPaymentsPagination();
       final paymentsFuture = FirestorePaginationService.instance.getFirstPayments(
-        pageSize: 10,
+        pageSize: 100,
         searchQuery: event.searchQuery,
         status: _mapStatusFilter(event.statusFilter),
       );
@@ -233,7 +233,7 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
         payments,
         accounts,
         totalCount: totalCount > payments.length ? totalCount : payments.length,
-        hasMore: payments.length >= 10,
+        hasMore: payments.length >= 100,
         activeStatusFilter: event.statusFilter ?? 'Tous',
       ));
     } catch (e) {

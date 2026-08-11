@@ -20,7 +20,8 @@ import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import '../mobile/screens/mobile_inventory_sheet_detail_screen.dart';
 import '../widgets/searchable_dropdown_field.dart';
-
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
 
 enum InventorySheetStatus {
   draft('Validé'),
@@ -67,8 +68,15 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
   }
 
   Future<void> _loadWarehouses() async {
-    final ws = await DatabaseHelper.instance.getWarehouses();
-    if (mounted) setState(() => _warehouses = ws);
+    final bloc = context.read<WarehousesBloc>();
+    if (bloc.state is WarehousesLoaded) {
+      if (mounted) setState(() => _warehouses = (bloc.state as WarehousesLoaded).warehouses.cast<Warehouse>());
+    }
+    bloc.stream.listen((state) {
+      if (state is WarehousesLoaded && mounted) {
+        setState(() => _warehouses = state.warehouses.cast<Warehouse>());
+      }
+    });
   }
 
   String _getWarehouseName(String id) {

@@ -268,10 +268,12 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
   Future<void> _onDelete(DeleteExitVoucher event, Emitter<ExitVouchersState> emit) async {
     try {
       await FirestoreRepository.instance.softDeleteDocument('bons_sortie', event.withdrawalId);
-      add(LoadFirstExitVouchers());
-    } catch (e) {
-      emit(ExitVouchersError("Erreur lors de la suppression: $e"));
+    } catch (_) {
+      try {
+        await FirestoreRepository.instance.deleteDocument('bons_sortie', event.withdrawalId);
+      } catch (_) {}
     }
+    add(LoadFirstExitVouchers());
   }
 
   Future<void> _onFilter(FilterExitVouchers event, Emitter<ExitVouchersState> emit) async {

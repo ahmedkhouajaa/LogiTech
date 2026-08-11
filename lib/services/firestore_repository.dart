@@ -65,11 +65,21 @@ class FirestoreRepository {
   }
 
   Future<void> softDeleteDocument(String collection, String id) async {
-    await _firestore.collection(collection).doc(id).update({
-      'is_deleted': 1,
-      'updated_at': DateTime.now().toIso8601String(),
-      if (currentUid != null) 'userId': currentUid,
-    });
+    try {
+      await _firestore.collection(collection).doc(id).update({
+        'is_deleted': 1,
+        'updated_at': DateTime.now().toIso8601String(),
+        if (currentUid != null) 'userId': currentUid,
+      });
+    } catch (e) {
+      if (e.toString().contains('permission-denied') || e.toString().contains('not-found')) {
+        // If the document is already deleted on the server, update() might throw permission-denied or not-found.
+        // We call delete() to forcefully wipe it from the local Firestore cache.
+        await _firestore.collection(collection).doc(id).delete();
+      } else {
+        rethrow;
+      }
+    }
   }
 
   Future<void> deleteDocument(String collection, String id) async {
@@ -114,7 +124,8 @@ class FirestoreRepository {
 
   Future<void> saveStockWithdrawal(StockWithdrawal withdrawal) async {
     final map = withdrawal.toMap();
-    await saveDocument('bons_sortie', withdrawal.id, map);
+    final collection = withdrawal.number.startsWith('BP-') ? 'bons_prelevement' : 'bons_sortie';
+    await saveDocument(collection, withdrawal.id, map);
   }
 
   Future<void> saveStockTransfer(StockTransfer transfer) async {

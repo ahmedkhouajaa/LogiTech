@@ -11,6 +11,8 @@ import '../../models/document_wrapper.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../database/database_helper.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
+import '../../blocs/warehouses/warehouses_state.dart';
 
 import '../../screens/create_stock_entry_screen.dart';
 import '../../screens/document_preview_screen.dart';
@@ -26,15 +28,11 @@ class MobileStockEntryDetailScreen extends StatefulWidget {
 
 class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScreen> {
   late StockEntry currentEntry;
-  String? _warehouseName;
-
   Map<String, Product> _dbProducts = {};
-
   @override
   void initState() {
     super.initState();
     currentEntry = widget.entry;
-    _loadWarehouseName();
     _loadProducts();
   }
 
@@ -49,17 +47,7 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
     } catch (_) {}
   }
 
-  Future<void> _loadWarehouseName() async {
-    try {
-      final warehouses = await DatabaseHelper.instance.getWarehouses();
-      final match = warehouses.firstWhere((w) => w.id == currentEntry.warehouseId);
-      if (mounted) {
-        setState(() {
-          _warehouseName = match.name;
-        });
-      }
-    } catch (_) {}
-  }
+  // removed _loadWarehouseName()
 
   Product? _getProduct(String id) {
     if (_dbProducts.containsKey(id)) {
@@ -103,7 +91,18 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
       }).toList(),
       customData: {
         'warehouseId': entry.warehouseId,
-        'warehouseName': _warehouseName ?? 'Entrepôt par défaut',
+        'warehouseName': () {
+          if (entry.warehouseId == 'default_warehouse') return 'Entrepôt par défaut';
+          final wState = context.read<WarehousesBloc>().state;
+          if (wState is WarehousesLoaded) {
+            final match = wState.warehouses.cast<dynamic>().firstWhere(
+              (w) => w.id == entry.warehouseId, 
+              orElse: () => null
+            );
+            if (match != null) return match.name;
+          }
+          return 'Entrepôt par défaut';
+        }(),
         'reason': entry.reason,
       },
     );
@@ -111,6 +110,20 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
 
   @override
   Widget build(BuildContext context) {
+    final wState = context.watch<WarehousesBloc>().state;
+    String getWhName(String id) {
+      if (id == 'default_warehouse') return 'Entrepôt par défaut';
+      if (wState is WarehousesLoaded) {
+        final match = wState.warehouses.cast<dynamic>().firstWhere(
+          (w) => w.id == id, 
+          orElse: () => null
+        );
+        if (match != null) return match.name;
+      }
+      return 'Entrepôt par défaut';
+    }
+    final String warehouseName = getWhName(currentEntry.warehouseId);
+
     return BlocListener<StockEntriesBloc, StockEntriesState>(
       listener: (context, state) {
         if (state is StockEntriesLoaded) {
@@ -182,7 +195,7 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
                       const SizedBox(height: 16),
                       _buildInfoRow('Date', formatDateTimeLong(currentEntry.date)),
                       const SizedBox(height: 8),
-                      _buildInfoRow('Entrepôt', _warehouseName ?? 'Entrepôt par défaut'),
+                      _buildInfoRow('Entrepôt', warehouseName),
                       if (currentEntry.reason != null && currentEntry.reason!.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         _buildInfoRow('Motif', currentEntry.reason!),

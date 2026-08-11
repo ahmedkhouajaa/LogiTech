@@ -12,6 +12,8 @@ import '../../blocs/inventory_sheets/inventory_sheets_event.dart';
 import '../../blocs/inventory_sheets/inventory_sheets_state.dart';
 import '../../database/database_helper.dart';
 import '../../services/sync_service.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
+import '../../blocs/warehouses/warehouses_state.dart';
 import 'forms/mobile_inventory_sheet_form_screen.dart';
 import 'mobile_inventory_sheet_detail_screen.dart';
 import '../../models/inventory_sheet.dart';
@@ -33,7 +35,6 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
   String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<SyncStatus>? _syncSubscription;
-  List<dynamic> _warehouses = [];
 
   @override
   void initState() {
@@ -41,7 +42,6 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
     _config = MobileModuleConfig.getConfig(widget.activeModule);
     FirestorePaginationService.instance.enablePersistence();
     _fetchFilteredSheets();
-    _loadWarehouses();
     _scrollController.addListener(_onScroll);
 
     _syncSubscription = SyncService.instance.onSyncStatusChanged.listen((status) {
@@ -79,17 +79,16 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
     ));
   }
 
-  Future<void> _loadWarehouses() async {
-    final ws = await DatabaseHelper.instance.getWarehouses();
-    if (mounted) setState(() => _warehouses = ws);
-  }
+  // removed _loadWarehouses()
 
-  String _getWarehouseName(String id) {
+  String _getWarehouseName(WarehousesState wState, String id) {
     if (id == 'default_warehouse') return 'Entrepôt par défaut';
-    try {
-      final match = _warehouses.firstWhere((w) => w.id == id, orElse: () => null);
-      if (match != null) return match.name;
-    } catch (_) {}
+    if (wState is WarehousesLoaded) {
+      try {
+        final match = wState.warehouses.cast<dynamic>().firstWhere((w) => w.id == id, orElse: () => null);
+        if (match != null) return match.name;
+      } catch (_) {}
+    }
     return 'Entrepôt par défaut';
   }
 
@@ -102,6 +101,7 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
 
   @override
   Widget build(BuildContext context) {
+    final wState = context.watch<WarehousesBloc>().state;
     return BlocBuilder<InventorySheetsBloc, InventorySheetsState>(
       builder: (context, state) {
         bool isLoading = state is InventorySheetsLoading || state is InventorySheetsInitial;
@@ -151,7 +151,7 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
           listItems = filteredItems.map((item) {
             return _InventorySheetCard(
               sheet: item,
-              warehouseName: _getWarehouseName(item.warehouseId),
+              warehouseName: _getWarehouseName(wState, item.warehouseId),
               onTap: () {
                 Navigator.push(
                   context,
@@ -212,7 +212,6 @@ class _MobileInventorySheetsScreenState extends State<MobileInventorySheetsScree
               dateTo: _dateTo,
               status: _selectedStatus,
             ));
-            _loadWarehouses();
           },
           scrollController: _scrollController,
           emptyMessage: 'Aucune fiche trouvée.',
@@ -258,9 +257,18 @@ class _InventorySheetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('[FI-CARD] ${sheet.number} items=${sheet.items.length}, items_data=${sheet.items.map((i) => "actual=${i.actualQty} theo=${i.theoreticalQty}").toList()}');
     final statusColor = _getStatusColor(sheet.status.toString());
     final statusText = translateStatus(sheet.status.toString());
-    
+    final totalSurplus = sheet.items.fold(0.0, (sum, item) {
+      final diff = item.actualQty - item.theoreticalQty;
+      return diff > 0 ? sum + diff : sum;
+    });
+    final totalMissing = sheet.items.fold(0.0, (sum, item) {
+      final diff = item.actualQty - item.theoreticalQty;
+      return diff < 0 ? sum + diff.abs() : sum;
+    });
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
@@ -338,7 +346,7 @@ class _InventorySheetCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
 
-                // Row 2: Warehouse / Agent Name on left + Article count on right
+                // Row 2: Warehouse / Agent Name on left + Surplus/Manquant + Article count on right
                 Row(
                   children: [
                     Icon(Icons.store_rounded, size: 14, color: AppColors.textSecondary),
@@ -352,6 +360,32 @@ class _InventorySheetCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    if (totalSurplus > 0)
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '+${totalSurplus.toStringAsFixed(1)}',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.success),
+                        ),
+                      ),
+                    if (totalMissing > 0)
+                      Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '-${totalMissing.toStringAsFixed(1)}',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.error),
+                        ),
+                      ),
                     Text(
                       '${sheet.items.length} article${sheet.items.length > 1 ? 's' : ''}',
                       style: TextStyle(

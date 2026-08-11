@@ -510,8 +510,8 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
 
               final now = DateTime.now();
               final String cnId = const Uuid().v4();
-
-              final String cnNumber = 'AV-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
+              final seq = await DatabaseHelper.instance.getNextCreditNoteSequence();
+              final String cnNumber = generateDocNumber(DocPrefix.creditNote, seq);
               
               final creditNoteItems = inv.items.map((i) => CreditNoteItem(
                 id: const Uuid().v4(),
@@ -538,15 +538,12 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                 updatedAt: now,
               );
 
-              await DatabaseHelper.instance.convertInvoiceToCreditNote(inv, creditNote);
+              context.read<CreditNotesBloc>().add(AddCreditNote(creditNote));
               
+              final updatedInvoice = inv.copyWith(creditNoteId: creditNote.id);
+              context.read<InvoicesBloc>().add(UpdateInvoice(updatedInvoice));
+
               if (!mounted) return;
-              try {
-                context.read<CreditNotesBloc>().add(LoadCreditNotes());
-              } catch (_) {}
-              try {
-                context.read<InvoicesBloc>().add(LoadInvoices());
-              } catch (_) {}
               try {
                 context.read<StockBloc>().add(LoadStock());
               } catch (_) {}

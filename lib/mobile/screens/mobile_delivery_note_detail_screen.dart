@@ -533,11 +533,10 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
     );
   }
 
-  void _convertDeliveryToInvoice(BuildContext context, DeliveryNote note) {
+  Future<void> _convertDeliveryToInvoice(BuildContext context, DeliveryNote note) async {
     final now = DateTime.now();
-    final year = now.year;
-    final seq = now.millisecondsSinceEpoch % 100000;
-    final invoiceNumber = 'FAC-$year-${seq.toString().padLeft(5, '0')}';
+    final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
+    final invoiceNumber = generateDocNumber('FA', seq);
 
     final invoiceItems = note.items.map((i) => InvoiceItem(
       id: const Uuid().v4(),

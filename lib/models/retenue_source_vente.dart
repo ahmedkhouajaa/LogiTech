@@ -18,15 +18,22 @@ class RetenueSourceVente {
   });
 
   factory RetenueSourceVente.fromMap(Map<String, dynamic> map, String documentId) {
+    DateTime parsedDate = DateTime.now();
+    if (map['payment_date'] != null) {
+      if (map['payment_date'] is Timestamp) {
+        parsedDate = (map['payment_date'] as Timestamp).toDate();
+      } else if (map['payment_date'] is int) {
+        parsedDate = DateTime.fromMillisecondsSinceEpoch(map['payment_date'] as int);
+      } else {
+        parsedDate = DateTime.tryParse(map['payment_date'].toString()) ?? DateTime.now();
+      }
+    }
+
     return RetenueSourceVente(
       id: documentId,
       invoiceReference: map['reference'] ?? map['payment_number'] ?? '',
       clientName: map['contact_name'] ?? '',
-      date: map['payment_date'] != null
-          ? (map['payment_date'] is int
-              ? DateTime.fromMillisecondsSinceEpoch(map['payment_date'] as int)
-              : DateTime.parse(map['payment_date'].toString()))
-          : DateTime.now(),
+      date: parsedDate,
       amount: (map['amount'] as num?)?.toDouble() ?? 0,
       status: (map['status'] == 'paid' || map['status'] == 'payee') ? 'Payé' : (map['status'] == 'cancelled' ? 'Annulé' : 'En attente'),
     );

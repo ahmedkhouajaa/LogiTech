@@ -56,11 +56,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
     
     // Refresh accounts list to reflect any balance changes
     if (context.mounted) {
-      Future.delayed(Duration(milliseconds: 200), () {
-        if (context.mounted) {
-          context.read<TreasuryAccountsBloc>().add(LoadTreasuryAccounts());
-        }
-      });
+      context.read<TreasuryAccountsBloc>().add(LoadTreasuryAccounts());
     }
   }
 
@@ -627,6 +623,8 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
   bool _applyWithholdingTax = false;
   String? _selectedProjectId;
 
+  bool _isSaving = false;
+
   Map<String, String> _categories = {};
 
   @override
@@ -658,6 +656,7 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
 
   void _save() {
     if (_formKey.currentState!.validate() && _selectedAccountId != null) {
+      setState(() => _isSaving = true);
       final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 0.0;
       final rate = _applyWithholdingTax ? (double.tryParse(_withholdingTaxRateCtrl.text.replaceAll(',', '.')) ?? 0.0) : 0.0;
 
@@ -675,7 +674,6 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
       );
 
       context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(transaction));
-      Navigator.pop(context);
     }
   }
 
@@ -693,49 +691,63 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-      child: Container(
-        width: 500,
-        padding: EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Nouvelle Dépense',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmall = screenWidth < 600;
+
+    return BlocListener<TreasuryTransactionsBloc, TreasuryTransactionsState>(
+      listener: (context, state) {
+        if (_isSaving) {
+          if (state is TreasuryTransactionsLoaded || state is TreasuryTransactionsError) {
+            setState(() => _isSaving = false);
+            Navigator.pop(context);
+          }
+        }
+      },
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+        child: Container(
+          width: isSmall ? screenWidth * 0.95 : 500,
+          padding: EdgeInsets.all(isSmall ? 16 : 24),
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Nouvelle Dépense',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 16),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: () => Navigator.pop(context),
-                          icon: Icon(Icons.close_rounded, size: 16),
-                          label: Text('Fermer'),
-                        ),
-                        SizedBox(width: 8),
-                        ElevatedButton.icon(
-                          onPressed: _save,
-                          icon: Icon(Icons.save_rounded, size: 16),
-                          label: Text('Créer'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                SizedBox(height: 24),
+                      SizedBox(width: 16),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: _isSaving ? null : () => Navigator.pop(context),
+                            icon: Icon(Icons.close_rounded, size: 16),
+                            label: Text('Fermer'),
+                          ),
+                          SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: _isSaving ? null : _save,
+                            icon: _isSaving
+                                ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : Icon(Icons.save_rounded, size: 16),
+                            label: Text(_isSaving ? 'Création...' : 'Créer'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                SizedBox(height: 16),
 
                 // Amount and Date
                 Row(
@@ -765,7 +777,7 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                         ],
                       ),
                     ),
-                    SizedBox(width: 16),
+                    SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -775,7 +787,7 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                           InkWell(
                             onTap: _pickDate,
                             child: Container(
-                              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(AppRadius.md),
                                 border: Border.all(color: AppColors.border),
@@ -784,7 +796,14 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(DateFormat('dd MMM yyyy', 'fr_FR').format(_date), style: TextStyle(fontSize: 13)),
+                                  Expanded(
+                                    child: Text(
+                                      DateFormat('dd/MM/yyyy').format(_date), 
+                                      style: TextStyle(fontSize: 13), 
+                                      overflow: TextOverflow.ellipsis
+                                    ),
+                                  ),
+                                  SizedBox(width: 4),
                                   Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
                                 ],
                               ),
@@ -807,6 +826,7 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                       accounts = state.accounts;
                     }
                     return DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: _selectedAccountId,
                       hint: Text('Sélectionner un compte de trésorerie', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
                       icon: Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textTertiary),
@@ -822,7 +842,7 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                     );
                   },
                 ),
-                SizedBox(height: 24),
+                SizedBox(height: 16),
 
                 // Category
                 Row(
@@ -859,30 +879,21 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                     runSpacing: 8,
                     children: _categories.keys.map((k) => IntrinsicWidth(child: _buildCategoryButton(k))).toList(),
                   ),
-                SizedBox(height: 24),
+                SizedBox(height: 16),
                 Divider(),
-                SizedBox(height: 24),
+                SizedBox(height: 16),
 
                 // Withholding Tax
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      flex: 2,
                       child: Text('Appliquer une retenue à la source ?', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
                     ),
-                    Expanded(
-                      flex: 3,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _buildTypeButton('Non', false, !_applyWithholdingTax, () => setState(() => _applyWithholdingTax = false)),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: _buildTypeButton('Oui', true, _applyWithholdingTax, () => setState(() => _applyWithholdingTax = true)),
-                          ),
-                        ],
-                      ),
+                    Switch(
+                      value: _applyWithholdingTax,
+                      onChanged: (v) => setState(() => _applyWithholdingTax = v),
+                      activeColor: AppColors.primary,
                     ),
                   ],
                 ),
@@ -907,7 +918,7 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                     },
                   ),
                 ],
-                SizedBox(height: 24),
+                SizedBox(height: 16),
 
                 // Project
                 Text('Projet (Optionnel)', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textSecondary)),
@@ -919,6 +930,7 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                       projects = state.projects;
                     }
                     return DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: _selectedProjectId,
                       hint: Text('Sélectionner un projet', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
                       icon: Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
@@ -951,6 +963,7 @@ class _CreateExpenseDialogState extends State<_CreateExpenseDialog> {
                   maxLines: 3,
                 ),
               ],
+            ),
             ),
           ),
         ),

@@ -941,8 +941,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
               final now = DateTime.now();
               final String cnId = const Uuid().v4();
-
-              final String cnNumber = 'AV-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
+              final seq = await DatabaseHelper.instance.getNextCreditNoteSequence();
+              final String cnNumber = generateDocNumber(DocPrefix.creditNote, seq);
               
               final creditNote = CreditNote(
                 id: cnId,
@@ -967,11 +967,12 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 updatedAt: now,
               );
 
-              await DatabaseHelper.instance.convertInvoiceToCreditNote(inv, creditNote);
+              context.read<CreditNotesBloc>().add(AddCreditNote(creditNote));
+              
+              final updatedInvoice = inv.copyWith(creditNoteId: creditNote.id);
+              context.read<InvoicesBloc>().add(UpdateInvoice(updatedInvoice));
 
               if (context.mounted) {
-                context.read<CreditNotesBloc>().add(LoadCreditNotes());
-                context.read<InvoicesBloc>().add(const ResetInvoicesPagination());
                 context.read<StockBloc>().add(LoadStock());
                 context.read<ProductsBloc>().add(const ResetProductsPagination());
                 
@@ -989,6 +990,23 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _openConvertedCreditNote(BuildContext context, String? creditNoteId) async {
+    if (creditNoteId == null) return;
+    
+    final creditNote = await DatabaseHelper.instance.getCreditNote(creditNoteId);
+    if (!mounted) return;
+    if (creditNote == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Avoir introuvable'),
+        backgroundColor: AppColors.error,
+      ));
+      return;
+    }
+
+    final doc = DocumentWrapper.fromCreditNote(creditNote);
+    Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
   }
 
   PopupMenuItem<String> _buildMenuItem(
@@ -1066,7 +1084,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         _createCreditNoteFromInvoice(context, inv);
         break;
       case 'view_credit_note':
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Affichage de l\'avoir non implementé')));
+        _openConvertedCreditNote(context, inv.creditNoteId);
         break;
       case 'delete':
         _confirmDelete(inv);

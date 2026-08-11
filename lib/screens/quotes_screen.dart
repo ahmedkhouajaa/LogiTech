@@ -1213,7 +1213,8 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
   Future<void> _convertQuoteToInvoice(BuildContext context, Quote quote) async {
     final invoiceId = const Uuid().v4();
-    final invoiceNumber = generateDocNumber(DocPrefix.invoice, DateTime.now().millisecondsSinceEpoch % 1000000);
+    final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
+    final invoiceNumber = generateDocNumber('FA', seq);
     
     // Map Quote Items to Invoice Items
     final invoiceItems = quote.items.map((qi) => InvoiceItem(
@@ -1362,7 +1363,8 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
   Future<void> _convertQuoteToOrder(BuildContext context, Quote quote) async {
     final orderId = const Uuid().v4();
-    final orderNumber = generateDocNumber(DocPrefix.customerOrder, DateTime.now().millisecondsSinceEpoch % 1000000);
+    final seq = await DatabaseHelper.instance.getNextCustomerOrderSequence();
+    final orderNumber = generateDocNumber(DocPrefix.customerOrder, seq);
     
     // Map Quote Items to CustomerOrder Items
     final orderItems = quote.items.map((qi) => CustomerOrderItem(
@@ -1492,7 +1494,8 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
   Future<void> _convertQuoteToDelivery(BuildContext context, Quote quote) async {
     final deliveryId = const Uuid().v4();
-    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, DateTime.now().millisecondsSinceEpoch % 1000000);
+    final seq = await DatabaseHelper.instance.getNextDeliveryNoteSequence();
+    final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq);
     
     // Map Quote Items to DeliveryNote Items
     final deliveryItems = quote.items.map((qi) => DeliveryNoteItem(

@@ -13,6 +13,10 @@ import 'forms/mobile_stock_transfer_form_screen.dart';
 import 'mobile_stock_transfer_detail_screen.dart';
 import '../../models/stock_transfer.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../database/database_helper.dart';
+import '../../models/stock_movement.dart';
+import '../../blocs/warehouses/warehouses_bloc.dart';
+import '../../blocs/warehouses/warehouses_state.dart';
 
 class MobileStockTransfersScreen extends StatefulWidget {
   final AppModule activeModule;
@@ -30,7 +34,6 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
   String? _selectedStatus;
   late MobileModuleConfig _config;
   StreamSubscription<SyncStatus>? _syncSubscription;
-
   @override
   void initState() {
     super.initState();
@@ -44,6 +47,20 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
         _fetchFilteredTransfers();
       }
     });
+  }
+
+  Future<void> _loadWarehouses() async {
+    // Left empty, using WarehousesBloc instead
+  }
+
+  String _getWarehouseName(WarehousesState wState, String id) {
+    if (id == 'default_warehouse') return 'Entrepôt par défaut';
+    if (wState is WarehousesLoaded) {
+      try {
+        return wState.warehouses.firstWhere((w) => w.id == id).name;
+      } catch (_) {}
+    }
+    return 'Entrepôt par défaut';
   }
 
   @override
@@ -106,6 +123,7 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
 
   @override
   Widget build(BuildContext context) {
+    final wState = context.watch<WarehousesBloc>().state;
     return BlocBuilder<StockTransfersBloc, StockTransfersState>(
       builder: (context, state) {
         bool isLoading = state is StockTransfersLoading || state is StockTransfersInitial;
@@ -160,6 +178,8 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
           cards = filteredItems.map((item) {
             return _MobileStockTransferCard(
               transfer: item,
+              sourceWarehouseName: _getWarehouseName(wState, item.sourceWarehouseId),
+              destWarehouseName: _getWarehouseName(wState, item.destinationWarehouseId),
               onTap: () {
                 Navigator.push(
                   context,
@@ -186,12 +206,15 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
           activeModule: widget.activeModule,
           onModuleSelected: (module) {},
           onRefresh: () async {
-            context.read<StockTransfersBloc>().add(ResetStockTransfersPagination(
-              searchQuery: _searchQuery,
-              dateFrom: _dateFrom,
-              dateTo: _dateTo,
-              status: _selectedStatus,
-            ));
+            await SyncService.instance.triggerSync();
+            if (mounted) {
+              context.read<StockTransfersBloc>().add(ResetStockTransfersPagination(
+                searchQuery: _searchQuery,
+                dateFrom: _dateFrom,
+                dateTo: _dateTo,
+                status: _selectedStatus,
+              ));
+            }
           },
           onSearchChanged: _onSearchChanged,
           filterOptions: const [],
@@ -261,12 +284,16 @@ class _MobileStockTransfersScreenState extends State<MobileStockTransfersScreen>
 
 class _MobileStockTransferCard extends StatelessWidget {
   final StockTransfer transfer;
+  final String sourceWarehouseName;
+  final String destWarehouseName;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _MobileStockTransferCard({
     required this.transfer,
+    required this.sourceWarehouseName,
+    required this.destWarehouseName,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
@@ -343,6 +370,21 @@ class _MobileStockTransferCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
               ],
+              Row(
+                children: [
+                  Icon(Icons.storefront_outlined, size: 14, color: AppColors.textSecondary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '$sourceWarehouseName \u2192 $destWarehouseName',
+                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
               Row(
                 children: [
                   Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),

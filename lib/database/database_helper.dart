@@ -23,6 +23,7 @@ import '../models/stock_movement.dart';
 import '../models/treasury_account.dart';
 import '../models/treasury_transaction.dart';
 import '../models/payment_model.dart';
+import '../models/project.dart';
 import '../models/check_traite.dart';
 import '../models/project.dart';
 import '../models/document_template.dart';
@@ -123,20 +124,41 @@ class DatabaseHelper {
   Future<List<StockWithdrawal>> getStockWithdrawalsPaginated({int limit = 10, int offset = 0, String? searchQuery, DateTime? dateFrom, DateTime? dateTo, String? status, String? customerId, String? numberPrefix, DateTime? startDate, DateTime? endDate}) async => [];
   Future<int> getStockWithdrawalsCount({String? searchQuery, DateTime? dateFrom, DateTime? dateTo, String? status, String? customerId, String? numberPrefix, DateTime? startDate, DateTime? endDate}) async => 0;
   Future<StockWithdrawal?> getStockWithdrawal(String id) async => null;
-  Future<int> getNextStockWithdrawalSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'bons_sortie');
+  Future<int> getNextStockWithdrawalSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'bons_prelevement');
+  Future<int> getNextExitVoucherSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'bons_sortie');
 
   // Credit Notes & Return Notes
   Future<List<CreditNote>> getCreditNotes() async => [];
   Future<List<CreditNote>> getCreditNotesPaginated({int limit = 10, int offset = 0, String? searchQuery, String? customerId, DateTime? dateFrom, DateTime? dateTo, String? status, String? numberPrefix}) async => [];
   Future<int> getCreditNotesCount({String? searchQuery, String? customerId, DateTime? dateFrom, DateTime? dateTo, String? status, String? numberPrefix}) async => 0;
-  Future<CreditNote?> getCreditNote(String id) async => null;
+  Future<CreditNote?> getCreditNote(String id) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('credit_notes').doc(id).get();
+      if (doc.exists && doc.data() != null) {
+        final data = Map<String, dynamic>.from(doc.data()!);
+        data['id'] = doc.id;
+        return CreditNote.fromMap(data);
+      }
+    } catch (_) {}
+    return null;
+  }
   Future<void> insertCreditNote(dynamic item) async {}
   Future<void> updateCreditNote(dynamic item) async {}
 
   Future<List<SupplierCreditNote>> getSupplierCreditNotes() async => [];
   Future<List<SupplierCreditNote>> getSupplierCreditNotesPaginated({int limit = 10, int offset = 0, String? searchQuery, String? supplierId, DateTime? dateFrom, DateTime? dateTo, String? status, String? numberPrefix}) async => [];
   Future<int> getSupplierCreditNotesCount({String? searchQuery, String? supplierId, DateTime? dateFrom, DateTime? dateTo, String? status, String? numberPrefix}) async => 0;
-  Future<SupplierCreditNote?> getSupplierCreditNoteById(String id) async => null;
+  Future<SupplierCreditNote?> getSupplierCreditNoteById(String id) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('supplier_credit_notes').doc(id).get();
+      if (doc.exists && doc.data() != null) {
+        final data = Map<String, dynamic>.from(doc.data()!);
+        data['id'] = doc.id;
+        return SupplierCreditNote.fromMap(data);
+      }
+    } catch (_) {}
+    return null;
+  }
   Future<void> insertSupplierCreditNote(dynamic item) async {}
   Future<void> updateSupplierCreditNote(dynamic item) async {}
   Future<void> deleteSupplierCreditNote(String id) async {}
@@ -258,7 +280,7 @@ class DatabaseHelper {
 
           for (var doc in querySnap.docs) {
             final data = doc.data();
-            final number = (data['number'] ?? '').toString();
+            final number = (data['number'] ?? data['transaction_number'] ?? data['transactionNumber'] ?? '').toString();
             final parts = number.split('-');
             if (parts.length >= 3) {
               final numVal = int.tryParse(parts.last) ?? 0;
@@ -481,6 +503,7 @@ class DatabaseHelper {
   Future<List<PaymentAccount>> getPaymentAccounts() async => [];
   Future<void> insertPaymentAccount(dynamic item) async {}
   Future<int> getNextPaymentSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'paiements');
+  Future<int> getNextTreasuryTransactionSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'treasury_transactions');
   Future<int> getNextStockEntrySequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'stock_entries');
   Future<int> getNextStockTransferSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'stock_transfers');
   Future<int> getNextInventorySheetSequence() async => await generateNextDocSequenceAtomic(currentEnterpriseId, 'inventory_sheets');
@@ -525,7 +548,25 @@ class DatabaseHelper {
   Future<List<Invoice>> getRecentInvoices({int? limit}) async => [];
 
   Future<List<dynamic>> getTreasuryAccounts() async => [];
-  Future<dynamic> getCompanySettings() async => null;
+  Future<CompanySettings> getCompanySettings() async {
+    try {
+      final currentEnt = EnterpriseService.instance.currentEnterprise;
+      if (currentEnt != null) {
+        return CompanySettings(
+          id: currentEnt.id,
+          name: currentEnt.name,
+          phone: currentEnt.phone,
+          email: currentEnt.email,
+          website: currentEnt.website,
+          taxId: currentEnt.taxId,
+          rcNumber: currentEnt.rcNumber,
+          address: currentEnt.address,
+          rib: currentEnt.rib,
+        );
+      }
+    } catch (_) {}
+    return CompanySettings();
+  }
   Future<void> updateCompanySettings(dynamic settings) async {}
   Future<dynamic> getDefaultTemplate(String type) async => null;
   Future<List<dynamic>> getPendingSyncItems() async => [];

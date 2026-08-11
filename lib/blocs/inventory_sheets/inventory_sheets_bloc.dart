@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../utils/helpers.dart';
 import 'package:uuid/uuid.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'inventory_sheets_event.dart';
@@ -108,9 +109,15 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
 
   Future<void> _onSheetAdded(InventorySheetAdded event, Emitter<InventorySheetsState> emit) async {
     try {
-      await FirestoreRepository.instance.saveInventorySheet(event.sheet);
+      String number = event.sheet.number;
+      if (number.isEmpty) {
+        final seq = await DatabaseHelper.instance.getNextInventorySheetSequence();
+        number = generateDocNumber(DocPrefix.inventorySheet, seq);
+      }
+      final sheetToSave = event.sheet.copyWith(number: number);
+      await FirestoreRepository.instance.saveInventorySheet(sheetToSave);
 
-      for (var item in event.sheet.items) {
+      for (var item in sheetToSave.items) {
         final diff = item.actualQty - item.theoreticalQty;
         if (item.productId.isNotEmpty && diff != 0) {
           String? prodName;
@@ -128,7 +135,7 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
           } catch (_) {}
 
           String? whName;
-          final whId = event.sheet.warehouseId;
+          final whId = sheetToSave.warehouseId;
           try {
             if (whId.isNotEmpty) {
               final whRef = FirebaseFirestore.instance.collection('warehouses').doc(whId);
@@ -149,9 +156,9 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
             type: MovementType.adjustment,
             quantity: diff.abs(),
             referenceType: 'inventory_sheet',
-            referenceId: event.sheet.number.isNotEmpty ? event.sheet.number : event.sheet.id,
-            date: event.sheet.date,
-            notes: event.sheet.notes ?? 'Ajustement d\'inventaire (${diff > 0 ? "+$diff" : "$diff"})',
+            referenceId: sheetToSave.number.isNotEmpty ? sheetToSave.number : sheetToSave.id,
+            date: sheetToSave.date,
+            notes: sheetToSave.notes ?? 'Ajustement d\'inventaire (${diff > 0 ? "+$diff" : "$diff"})',
             enterpriseId: EnterpriseService.instance.currentEnterpriseId,
           );
           await FirestoreRepository.instance.saveDocument('stock_movements', mov.id, mov.toMap());

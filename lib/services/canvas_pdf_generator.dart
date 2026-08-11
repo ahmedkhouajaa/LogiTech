@@ -12,7 +12,8 @@ import '../database/database_helper.dart';
 
 class CanvasPdfGenerator {
   static Future<Uint8List> generateDocumentBytes(DocumentWrapper document, CanvasDocument doc) async {
-    final companySettings = await DatabaseHelper.instance.getCompanySettings();
+    final rawSettings = await DatabaseHelper.instance.getCompanySettings();
+    final CompanySettings companySettings = (rawSettings is CompanySettings) ? rawSettings : CompanySettings();
     final pdf = pw.Document();
     
     // 1mm = 2.83465 pt in PDF
@@ -385,19 +386,20 @@ class CanvasPdfGenerator {
     );
   }
 
-  static String _resolveDynamicValue(DynamicFieldElement el, DocumentWrapper document, CompanySettings company) {
-    final currency = company.currency == 'DZD' || company.currency.isEmpty ? 'TND' : company.currency;
+  static String _resolveDynamicValue(DynamicFieldElement el, DocumentWrapper document, CompanySettings? company) {
+    final comp = company ?? CompanySettings();
+    final currency = comp.currency == 'DZD' || comp.currency.isEmpty ? 'TND' : comp.currency;
     switch (el.fieldType) {
       case DynamicFieldType.companyName:
-        return company.name;
+        return comp.name;
       case DynamicFieldType.companyAddress:
-        return [company.address, company.city].where((s) => s != null && s.isNotEmpty).join(', ');
+        return [comp.address, comp.city].where((s) => s != null && s.isNotEmpty).join(', ');
       case DynamicFieldType.companyPhone:
-        return company.phone ?? '';
+        return comp.phone ?? '';
       case DynamicFieldType.companyEmail:
-        return company.email ?? '';
+        return comp.email ?? '';
       case DynamicFieldType.companyVat:
-        return company.taxId ?? '';
+        return comp.taxId ?? '';
       case DynamicFieldType.clientName:
         return document.customerName ?? '';
       case DynamicFieldType.clientAddress:
