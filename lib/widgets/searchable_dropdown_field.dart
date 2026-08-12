@@ -10,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/stock/stock_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
+import '../blocs/products/products_bloc.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
 import '../blocs/warehouses/warehouses_event.dart';
@@ -736,14 +737,41 @@ Future<String?> showProductSelectDialog(
     } catch (_) {}
   }
 
+  try {
+    context.read<ProductsBloc>().add(LoadProducts());
+  } catch (_) {}
+
   return showDialog<String?>(
     context: context,
     builder: (context) {
       String search = '';
       return StatefulBuilder(
         builder: (context, setDialogState) {
-          final query = search.trim().toLowerCase();
-          final filtered = products.where((p) {
+          return BlocBuilder<ProductsBloc, ProductsState>(
+            builder: (context, state) {
+              final isLoaded = state is ProductsLoaded;
+              final currentProducts = isLoaded ? state.products : products;
+
+              if (!isLoaded) {
+                return Dialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                  backgroundColor: AppColors.surface,
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: AppColors.primary),
+                        SizedBox(height: 16),
+                        Text("Chargement des articles...", style: TextStyle(color: AppColors.textPrimary)),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              final query = search.trim().toLowerCase();
+              final filtered = currentProducts.where((p) {
             if (query.isEmpty) return true;
             final nameMatch = p.name.toLowerCase().contains(query);
             final codeMatch = p.code.toLowerCase().contains(query);
@@ -909,6 +937,8 @@ Future<String?> showProductSelectDialog(
                 ],
               ),
             ),
+          );
+            },
           );
         },
       );
@@ -1259,7 +1289,8 @@ Future<String?> showWarehouseSelectDialog(
         builder: (context, setDialogState) {
           return BlocBuilder<WarehousesBloc, WarehousesState>(
             builder: (context, state) {
-              final warehouses = state is WarehousesLoaded ? state.warehouses : initialWarehouses;
+              final warehouses = List<Warehouse>.from(state is WarehousesLoaded ? state.warehouses : initialWarehouses)
+                ..sort((a, b) => a.name.compareTo(b.name));
               final query = search.trim().toLowerCase();
               final filtered = warehouses.where((w) {
             if (query.isEmpty) return true;

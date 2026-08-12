@@ -5,6 +5,7 @@ import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import 'supplier_credit_notes_event.dart';
 import 'supplier_credit_notes_state.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class SupplierCreditNotesBloc extends Bloc<SupplierCreditNotesEvent, SupplierCreditNotesState> {
   static const int pageSize = 10;
@@ -54,7 +55,7 @@ class SupplierCreditNotesBloc extends Bloc<SupplierCreditNotesEvent, SupplierCre
         hasMore: creditNotes.length >= pageSize,
       ));
     } catch (e) {
-      emit(SupplierCreditNotesError(e.toString()));
+      emit(SupplierCreditNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -106,7 +107,7 @@ class SupplierCreditNotesBloc extends Bloc<SupplierCreditNotesEvent, SupplierCre
       await FirestoreRepository.instance.saveSupplierCreditNote(event.supplierCreditNote);
       add(const LoadFirstSupplierCreditNotes());
     } catch (e) {
-      emit(SupplierCreditNotesError(e.toString()));
+      emit(SupplierCreditNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -115,7 +116,7 @@ class SupplierCreditNotesBloc extends Bloc<SupplierCreditNotesEvent, SupplierCre
       await FirestoreRepository.instance.saveSupplierCreditNote(event.supplierCreditNote);
       add(const LoadFirstSupplierCreditNotes());
     } catch (e) {
-      emit(SupplierCreditNotesError(e.toString()));
+      emit(SupplierCreditNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -124,7 +125,7 @@ class SupplierCreditNotesBloc extends Bloc<SupplierCreditNotesEvent, SupplierCre
       await FirestoreRepository.instance.softDeleteDocument('supplier_credit_notes', event.id);
       add(const LoadFirstSupplierCreditNotes());
     } catch (e) {
-      emit(SupplierCreditNotesError(e.toString()));
+      emit(SupplierCreditNotesError(ErrorHandler.parseError(e)));
     }
   }
 

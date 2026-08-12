@@ -4,6 +4,7 @@ import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import '../../services/sync_service.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ────────────────────────────────────────────────────────
 abstract class CustomerOrdersEvent { const CustomerOrdersEvent(); }
@@ -160,7 +161,7 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
       final orders = await _dbHelper.getCustomerOrders();
       emit(CustomerOrdersLoaded(orders, totalCount: orders.length));
     } catch (e) {
-      emit(CustomerOrdersError(e.toString()));
+      emit(CustomerOrdersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -194,7 +195,7 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
         hasMore: orders.length >= pageSize,
       ));
     } catch (e) {
-      emit(CustomerOrdersError(e.toString()));
+      emit(CustomerOrdersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -246,7 +247,7 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
       await FirestoreRepository.instance.saveCustomerOrder(event.order);
       add(const LoadFirstCustomerOrders());
     } catch (e) {
-      emit(CustomerOrdersError(e.toString()));
+      emit(CustomerOrdersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -255,7 +256,7 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
       await FirestoreRepository.instance.saveCustomerOrder(event.order);
       add(const LoadFirstCustomerOrders());
     } catch (e) {
-      emit(CustomerOrdersError(e.toString()));
+      emit(CustomerOrdersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -264,7 +265,7 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
       await FirestoreRepository.instance.softDeleteDocument('customer_orders', event.orderId);
       add(const LoadFirstCustomerOrders());
     } catch (e) {
-      emit(CustomerOrdersError(e.toString()));
+      emit(CustomerOrdersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -289,7 +290,7 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
         statusFilter: event.status,
       ));
     } catch (e) {
-      emit(CustomerOrdersError(e.toString()));
+      emit(CustomerOrdersError(ErrorHandler.parseError(e)));
     }
   }
 }

@@ -4,6 +4,7 @@ import '../../database/database_helper.dart';
 import '../../models/product.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class ProductsEvent extends Equatable {
   const ProductsEvent();
@@ -232,7 +233,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
       await FirestoreRepository.instance.saveProduct(event.product);
       add(const LoadFirstProducts());
     } catch (e) {
-      emit(ProductsError(e.toString()));
+      emit(ProductsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -241,7 +242,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
       await FirestoreRepository.instance.saveProduct(event.product);
       add(const LoadFirstProducts());
     } catch (e) {
-      emit(ProductsError(e.toString()));
+      emit(ProductsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -250,7 +251,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
       await FirestoreRepository.instance.softDeleteDocument('articles', event.id);
       add(const LoadFirstProducts());
     } catch (e) {
-      emit(ProductsError(e.toString()));
+      emit(ProductsError(ErrorHandler.parseError(e)));
     }
   }
 }

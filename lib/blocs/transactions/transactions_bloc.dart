@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import '../../database/database_helper.dart';
 import '../../models/transaction_model.dart';
 import '../../models/check_traite.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class TransactionsEvent extends Equatable { const TransactionsEvent(); @override List<Object?> get props => []; }
 class LoadTransactions extends TransactionsEvent {}
@@ -39,22 +40,22 @@ class TransactionsBloc extends Bloc<TransactionsEvent, TransactionsState> {
       final checks = await DatabaseHelper.instance.getChecksTraites();
       final accounts = await DatabaseHelper.instance.getAccounts();
       emit(TransactionsLoaded(txns, checks, accounts));
-    } catch (e) { emit(TransactionsError(e.toString())); }
+    } catch (e) { emit(TransactionsError(ErrorHandler.parseError(e))); }
   }
 
   Future<void> _onAddTxn(AddTransaction event, Emitter<TransactionsState> emit) async {
-    try { await DatabaseHelper.instance.insertTransaction(event.txn); add(LoadTransactions()); } catch (e) { emit(TransactionsError(e.toString())); }
+    try { await DatabaseHelper.instance.insertTransaction(event.txn); add(LoadTransactions()); } catch (e) { emit(TransactionsError(ErrorHandler.parseError(e))); }
   }
 
   Future<void> _onAddCheck(AddCheckTraite event, Emitter<TransactionsState> emit) async {
-    try { await DatabaseHelper.instance.insertCheckTraite(event.ct); add(LoadTransactions()); } catch (e) { emit(TransactionsError(e.toString())); }
+    try { await DatabaseHelper.instance.insertCheckTraite(event.ct); add(LoadTransactions()); } catch (e) { emit(TransactionsError(ErrorHandler.parseError(e))); }
   }
 
   Future<void> _onUpdateCheck(UpdateCheckTraite event, Emitter<TransactionsState> emit) async {
-    try { await DatabaseHelper.instance.update('checks_traites', event.ct.toMap()); add(LoadTransactions()); } catch (e) { emit(TransactionsError(e.toString())); }
+    try { await DatabaseHelper.instance.update('checks_traites', event.ct.toMap()); add(LoadTransactions()); } catch (e) { emit(TransactionsError(ErrorHandler.parseError(e))); }
   }
 
   Future<void> _onAddAccount(AddAccount event, Emitter<TransactionsState> emit) async {
-    try { await DatabaseHelper.instance.insertAccount(event.account); add(LoadTransactions()); } catch (e) { emit(TransactionsError(e.toString())); }
+    try { await DatabaseHelper.instance.insertAccount(event.account); add(LoadTransactions()); } catch (e) { emit(TransactionsError(ErrorHandler.parseError(e))); }
   }
 }

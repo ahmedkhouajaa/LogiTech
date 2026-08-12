@@ -5,6 +5,7 @@ import '../../models/invoice.dart';
 import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class InvoicesEvent extends Equatable {
   const InvoicesEvent();
@@ -209,7 +210,7 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
       final invoices = await DatabaseHelper.instance.getInvoices();
       emit(InvoicesLoaded(invoices, invoices, totalCount: invoices.length));
     } catch (e) {
-      emit(InvoicesError(e.toString()));
+      emit(InvoicesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -244,7 +245,7 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
         hasMore: invoices.length >= pageSize,
       ));
     } catch (e) {
-      emit(InvoicesError(e.toString()));
+      emit(InvoicesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -297,7 +298,7 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
       await FirestoreRepository.instance.saveInvoice(event.invoice);
       add(const LoadFirstInvoices());
     } catch (e) {
-      emit(InvoicesError(e.toString()));
+      emit(InvoicesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -306,7 +307,7 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
       await FirestoreRepository.instance.saveInvoice(event.invoice);
       add(const LoadFirstInvoices());
     } catch (e) {
-      emit(InvoicesError(e.toString()));
+      emit(InvoicesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -315,7 +316,7 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
       await FirestoreRepository.instance.softDeleteDocument('invoices', event.id);
       add(const LoadFirstInvoices());
     } catch (e) {
-      emit(InvoicesError(e.toString()));
+      emit(InvoicesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -329,7 +330,7 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
         add(LoadInvoices());
       }
     } catch (e) {
-      emit(InvoicesError(e.toString()));
+      emit(InvoicesError(ErrorHandler.parseError(e)));
     }
   }
 

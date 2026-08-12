@@ -11,6 +11,7 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
 import 'create_article_screen.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -82,7 +83,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               return BlocBuilder<ProductsBloc, ProductsState>(
                 builder: (context, state) {
                   if (state is ProductsLoading) return Center(child: CircularProgressIndicator());
-                  if (state is ProductsError) return Center(child: Text('Erreur: ${state.message}'));
+                  if (state is ProductsError) return AppErrorWidget(message: state.message);
                   if (state is ProductsLoaded) {
                 final filtered = _search.isEmpty ? state.products
                     : state.products.where((p) => 

@@ -30,6 +30,7 @@ import 'create_quote_screen.dart';
 import '../models/document_wrapper.dart';
 import '../services/pdf_service.dart';
 import 'document_preview_screen.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class QuotesScreen extends StatefulWidget {
   const QuotesScreen({super.key});
@@ -688,8 +689,8 @@ class _QuotesScreenState extends State<QuotesScreen> {
           return Center(child: CircularProgressIndicator());
         }
         if (state is QuotesError) {
-          return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
-        }
+            return AppErrorWidget(message: state.message);
+          }
         if (state is QuotesLoaded) {
           List<Quote> filteredOrders = state.quotes;
           

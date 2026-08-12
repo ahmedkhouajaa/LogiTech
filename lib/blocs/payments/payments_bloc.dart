@@ -4,6 +4,7 @@ import '../../database/database_helper.dart';
 import '../../models/payment_model.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ─────────────────────────────────────────────────────────────────
 abstract class PaymentsEvent extends Equatable {
@@ -182,7 +183,7 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
         activeStatusFilter: event.statusFilter ?? 'Tous',
       ));
     } catch (e) {
-      emit(PaymentsError(e.toString()));
+      emit(PaymentsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -237,7 +238,7 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
         activeStatusFilter: event.statusFilter ?? 'Tous',
       ));
     } catch (e) {
-      emit(PaymentsError(e.toString()));
+      emit(PaymentsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -246,7 +247,7 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
       await FirestoreRepository.instance.savePayment(event.payment);
       add(LoadFirstPayments(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
     } catch (e) {
-      emit(PaymentsError(e.toString()));
+      emit(PaymentsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -255,7 +256,7 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
       await FirestoreRepository.instance.savePayment(event.payment);
       add(LoadFirstPayments(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
     } catch (e) {
-      emit(PaymentsError(e.toString()));
+      emit(PaymentsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -264,7 +265,7 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
       await FirestoreRepository.instance.softDeleteDocument('paiements', event.id);
       add(LoadFirstPayments(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
     } catch (e) {
-      emit(PaymentsError(e.toString()));
+      emit(PaymentsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -273,7 +274,7 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
       await DatabaseHelper.instance.insertPaymentAccount(event.account);
       add(ResetPaymentsPagination(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
     } catch (e) {
-      emit(PaymentsError(e.toString()));
+      emit(PaymentsError(ErrorHandler.parseError(e)));
     }
   }
 }

@@ -22,6 +22,7 @@ import '../utils/helpers.dart';
 import '../widgets/dashboard_card.dart';
 import '../screens/customers_screen.dart';
 import '../services/enterprise_service.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
   final Invoice? existing;
@@ -1096,9 +1097,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: ${e.toString()}'), backgroundColor: AppColors.error),
-        );
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {

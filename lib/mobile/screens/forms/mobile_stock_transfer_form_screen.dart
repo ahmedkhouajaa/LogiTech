@@ -23,6 +23,7 @@ import '../../../../widgets/searchable_dropdown_field.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class MobileStockTransferFormScreen extends StatefulWidget {
   final StockTransfer? existing;
@@ -187,10 +188,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: AppColors.error,
-        ));
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {

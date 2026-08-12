@@ -14,6 +14,7 @@ import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import 'document_preview_screen.dart';
 import 'create_credit_note_screen.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class CreditNotesScreen extends StatefulWidget {
   const CreditNotesScreen({super.key});
@@ -673,8 +674,8 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
           return Center(child: CircularProgressIndicator());
         }
         if (state is CreditNotesError) {
-          return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
-        }
+            return AppErrorWidget(message: state.message);
+          }
         if (state is CreditNotesLoaded) {
           List<CreditNote> filteredNotes = state.creditNotes;
           

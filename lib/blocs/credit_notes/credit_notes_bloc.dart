@@ -4,6 +4,7 @@ import '../../database/database_helper.dart';
 import '../../models/credit_note.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class CreditNotesEvent extends Equatable {
   const CreditNotesEvent();
@@ -186,7 +187,7 @@ class CreditNotesBloc extends Bloc<CreditNotesEvent, CreditNotesState> {
         hasMore: creditNotes.length >= pageSize,
       ));
     } catch (e) {
-      emit(CreditNotesError(e.toString()));
+      emit(CreditNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -238,7 +239,7 @@ class CreditNotesBloc extends Bloc<CreditNotesEvent, CreditNotesState> {
       await FirestoreRepository.instance.saveCreditNote(event.creditNote);
       add(const LoadFirstCreditNotes());
     } catch (e) {
-      emit(CreditNotesError(e.toString()));
+      emit(CreditNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -247,7 +248,7 @@ class CreditNotesBloc extends Bloc<CreditNotesEvent, CreditNotesState> {
       await FirestoreRepository.instance.saveCreditNote(event.creditNote);
       add(const LoadFirstCreditNotes());
     } catch (e) {
-      emit(CreditNotesError(e.toString()));
+      emit(CreditNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -256,7 +257,7 @@ class CreditNotesBloc extends Bloc<CreditNotesEvent, CreditNotesState> {
       await FirestoreRepository.instance.softDeleteDocument('credit_notes', event.id);
       add(const LoadFirstCreditNotes());
     } catch (e) {
-      emit(CreditNotesError(e.toString()));
+      emit(CreditNotesError(ErrorHandler.parseError(e)));
     }
   }
 }

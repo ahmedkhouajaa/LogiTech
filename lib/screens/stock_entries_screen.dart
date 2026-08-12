@@ -18,6 +18,7 @@ import '../mobile/screens/mobile_stock_entry_detail_screen.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 enum StockEntryStatus {
   draft('Brouillon'),
@@ -890,8 +891,8 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
                   return Center(child: CircularProgressIndicator());
                 }
                 if (state is StockEntriesError) {
-                  return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
-                }
+            return AppErrorWidget(message: state.message);
+          }
                 if (state is StockEntriesLoaded) {
                   if (entries.isEmpty) {
                     return Center(

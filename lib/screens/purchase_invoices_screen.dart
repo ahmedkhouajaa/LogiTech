@@ -25,6 +25,7 @@ import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import '../database/database_helper.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class PurchaseInvoicesScreen extends StatefulWidget {
   const PurchaseInvoicesScreen({super.key});
@@ -638,7 +639,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
     return BlocBuilder<PurchaseInvoicesBloc, PurchaseInvoicesState>(
       builder: (context, state) {
         if (state is PurchaseInvoicesLoading) return Center(child: CircularProgressIndicator());
-        if (state is PurchaseInvoicesError) return Center(child: Text('Erreur: ${state.message}'));
+        if (state is PurchaseInvoicesError) return AppErrorWidget(message: state.message);
         if (state is PurchaseInvoicesLoaded) {
           final purchaseInvoices = state.filteredPurchaseInvoices;
           final totalRows = purchaseInvoices.length;

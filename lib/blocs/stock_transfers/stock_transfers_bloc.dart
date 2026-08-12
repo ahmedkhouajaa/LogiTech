@@ -9,6 +9,7 @@ import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
 abstract class StockTransfersEvent {}
@@ -167,7 +168,7 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
         hasMore: transfers.length >= pageSize,
       ));
     } catch (e) {
-      emit(StockTransfersError(e.toString()));
+      emit(StockTransfersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -297,7 +298,7 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
 
       add(LoadFirstStockTransfers());
     } catch (e) {
-      emit(StockTransfersError("Erreur lors de l'ajout: $e"));
+      emit(StockTransfersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -306,7 +307,7 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
       await FirestoreRepository.instance.saveStockTransfer(event.transfer);
       add(LoadFirstStockTransfers());
     } catch (e) {
-      emit(StockTransfersError("Erreur lors de la mise à jour: $e"));
+      emit(StockTransfersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -315,7 +316,7 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
       await FirestoreRepository.instance.softDeleteDocument('stock_transfers', event.transferId);
       add(LoadFirstStockTransfers());
     } catch (e) {
-      emit(StockTransfersError("Erreur lors de la suppression: $e"));
+      emit(StockTransfersError(ErrorHandler.parseError(e)));
     }
   }
 }

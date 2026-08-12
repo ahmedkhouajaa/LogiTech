@@ -7,6 +7,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../models/invoice.dart';
 import '../models/check_traite.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -19,8 +20,8 @@ class DashboardScreen extends StatelessWidget {
           return Center(child: CircularProgressIndicator());
         }
         if (state is DashboardError) {
-          return Center(child: Text('Erreur: ${state.message}'));
-        }
+            return AppErrorWidget(message: state.message);
+          }
         if (state is DashboardLoaded) {
           print('DashboardScreen: received DashboardLoaded!');
           return _buildDashboard(context, state);

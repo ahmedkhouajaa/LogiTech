@@ -5,6 +5,7 @@ import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import 'supplier_returns_event.dart';
 import 'supplier_returns_state.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class SupplierReturnsBloc extends Bloc<SupplierReturnsEvent, SupplierReturnsState> {
   static const int pageSize = 10;
@@ -54,7 +55,7 @@ class SupplierReturnsBloc extends Bloc<SupplierReturnsEvent, SupplierReturnsStat
         hasMore: returns.length >= pageSize,
       ));
     } catch (e) {
-      emit(SupplierReturnsError(e.toString()));
+      emit(SupplierReturnsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -106,7 +107,7 @@ class SupplierReturnsBloc extends Bloc<SupplierReturnsEvent, SupplierReturnsStat
       await FirestoreRepository.instance.saveSupplierReturn(event.supplierReturn);
       add(const LoadFirstSupplierReturns());
     } catch (e) {
-      emit(SupplierReturnsError(e.toString()));
+      emit(SupplierReturnsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -115,7 +116,7 @@ class SupplierReturnsBloc extends Bloc<SupplierReturnsEvent, SupplierReturnsStat
       await FirestoreRepository.instance.saveSupplierReturn(event.supplierReturn);
       add(const LoadFirstSupplierReturns());
     } catch (e) {
-      emit(SupplierReturnsError(e.toString()));
+      emit(SupplierReturnsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -124,7 +125,7 @@ class SupplierReturnsBloc extends Bloc<SupplierReturnsEvent, SupplierReturnsStat
       await FirestoreRepository.instance.softDeleteDocument('supplier_returns', event.id);
       add(const LoadFirstSupplierReturns());
     } catch (e) {
-      emit(SupplierReturnsError(e.toString()));
+      emit(SupplierReturnsError(ErrorHandler.parseError(e)));
     }
   }
 

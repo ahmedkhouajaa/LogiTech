@@ -4,6 +4,7 @@ import '../blocs/dashboard/dashboard_bloc.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../models/invoice.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class MobileDashboardScreen extends StatelessWidget {
   const MobileDashboardScreen({super.key});
@@ -16,23 +17,11 @@ class MobileDashboardScreen extends StatelessWidget {
           return Center(child: CircularProgressIndicator(color: AppColors.primary));
         }
         if (state is DashboardError) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
-                SizedBox(height: 12),
-                Text('Erreur: ${state.message}', style: TextStyle(color: AppColors.textSecondary)),
-                SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () => context.read<DashboardBloc>().add(DashboardRefreshRequested()),
-                  icon: Icon(Icons.refresh_rounded, size: 18),
-                  label: Text('Reessayer'),
-                ),
-              ],
-            ),
-          );
-        }
+            return AppErrorWidget(
+              message: state.message,
+              onRetry: () => context.read<DashboardBloc>().add(DashboardRefreshRequested()),
+            );
+          }
         if (state is DashboardLoaded) {
           return _buildDashboard(context, state);
         }

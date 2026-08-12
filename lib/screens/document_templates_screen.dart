@@ -8,6 +8,7 @@ import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
 import 'document_template_editor_screen.dart';
 import 'designer/invoice_designer_screen.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class DocumentTemplatesScreen extends StatelessWidget {
   const DocumentTemplatesScreen({super.key});
@@ -20,8 +21,8 @@ class DocumentTemplatesScreen extends StatelessWidget {
           return Center(child: CircularProgressIndicator(color: AppColors.primary));
         }
         if (state is DocumentTemplatesError) {
-          return Center(child: Text('Erreur: ${state.message}'));
-        }
+            return AppErrorWidget(message: state.message);
+          }
         final templates = state is DocumentTemplatesLoaded ? state.templates : <DocumentTemplate>[];
         return _DocumentTemplatesBody(templates: templates);
       },

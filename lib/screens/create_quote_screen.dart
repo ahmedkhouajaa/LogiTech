@@ -21,6 +21,7 @@ import 'customers_screen.dart';
 import '../database/database_helper.dart';
 import '../widgets/dashboard_card.dart';
 import 'create_article_screen.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class CreateQuoteScreen extends StatefulWidget {
   final Quote? existing;
@@ -226,10 +227,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
       ));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: AppColors.error,
-        ));
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {

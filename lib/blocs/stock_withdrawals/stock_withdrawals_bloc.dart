@@ -8,6 +8,7 @@ import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
 abstract class StockWithdrawalsEvent {}
@@ -178,7 +179,7 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
         hasMore: items.length >= pageSize,
       ));
     } catch (e) {
-      emit(StockWithdrawalsError("Erreur lors du chargement: $e"));
+      emit(StockWithdrawalsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -286,7 +287,7 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
 
       add(LoadFirstStockWithdrawals());
     } catch (e) {
-      emit(StockWithdrawalsError("Erreur lors de l'ajout: $e"));
+      emit(StockWithdrawalsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -341,7 +342,7 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
 
       add(LoadFirstStockWithdrawals());
     } catch (e) {
-      emit(StockWithdrawalsError("Erreur lors de la mise à jour: $e"));
+      emit(StockWithdrawalsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -378,7 +379,7 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
         totalCount: filtered.length,
       ));
     } catch (e) {
-      emit(StockWithdrawalsError(e.toString()));
+      emit(StockWithdrawalsError(ErrorHandler.parseError(e)));
     }
   }
 }

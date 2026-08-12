@@ -5,6 +5,7 @@ import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import 'return_notes_event.dart';
 import 'return_notes_state.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class ReturnNotesBloc extends Bloc<ReturnNotesEvent, ReturnNotesState> {
   static const int pageSize = 10;
@@ -54,7 +55,7 @@ class ReturnNotesBloc extends Bloc<ReturnNotesEvent, ReturnNotesState> {
         hasMore: notes.length >= pageSize,
       ));
     } catch (e) {
-      emit(ReturnNotesError('Erreur de chargement: $e'));
+      emit(ReturnNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -115,7 +116,7 @@ class ReturnNotesBloc extends Bloc<ReturnNotesEvent, ReturnNotesState> {
       await FirestoreRepository.instance.saveReturnNote(event.note);
       add(LoadFirstReturnNotes());
     } catch (e) {
-      emit(ReturnNotesError('Erreur d\'ajout: $e'));
+      emit(ReturnNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -124,7 +125,7 @@ class ReturnNotesBloc extends Bloc<ReturnNotesEvent, ReturnNotesState> {
       await FirestoreRepository.instance.saveReturnNote(event.note);
       add(LoadFirstReturnNotes());
     } catch (e) {
-      emit(ReturnNotesError('Erreur de modification: $e'));
+      emit(ReturnNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -133,7 +134,7 @@ class ReturnNotesBloc extends Bloc<ReturnNotesEvent, ReturnNotesState> {
       await FirestoreRepository.instance.softDeleteDocument('return_notes', event.id);
       add(LoadFirstReturnNotes());
     } catch (e) {
-      emit(ReturnNotesError('Erreur de suppression: $e'));
+      emit(ReturnNotesError(ErrorHandler.parseError(e)));
     }
   }
 }

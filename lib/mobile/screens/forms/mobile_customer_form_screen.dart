@@ -9,6 +9,7 @@ import '../../../../services/enterprise_service.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class MobileCustomerFormScreen extends StatefulWidget {
   final Customer? existing;
@@ -134,10 +135,7 @@ class _MobileCustomerFormScreenState extends State<MobileCustomerFormScreen> {
         backgroundColor: AppColors.success,
       ));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur: ${e.toString()}'),
-        backgroundColor: AppColors.error,
-      ));
+      ErrorHandler.showErrorSnackBar(context, e);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

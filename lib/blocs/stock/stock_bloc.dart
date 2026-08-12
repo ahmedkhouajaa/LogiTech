@@ -5,6 +5,7 @@ import '../../database/database_helper.dart';
 import '../../models/stock_movement.dart';
 import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class StockEvent extends Equatable { const StockEvent(); @override List<Object?> get props => []; }
 class LoadStock extends StockEvent {}
@@ -97,7 +98,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
 
       emit(StockLoaded(movements, warehouses, totalStockValue));
     } catch (e) {
-      emit(StockError(e.toString()));
+      emit(StockError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -106,7 +107,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
       await FirestoreRepository.instance.saveDocument('stock_movements', event.movement.id, event.movement.toMap());
       add(LoadStock());
     } catch (e) {
-      emit(StockError(e.toString()));
+      emit(StockError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -115,7 +116,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
       await FirestoreRepository.instance.saveDocument('warehouses', event.warehouse.id, event.warehouse.toMap());
       add(LoadStock());
     } catch (e) {
-      emit(StockError(e.toString()));
+      emit(StockError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -124,7 +125,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
       await FirestoreRepository.instance.saveDocument('warehouses', event.warehouse.id, event.warehouse.toMap());
       add(LoadStock());
     } catch (e) {
-      emit(StockError(e.toString()));
+      emit(StockError(ErrorHandler.parseError(e)));
     }
   }
 }

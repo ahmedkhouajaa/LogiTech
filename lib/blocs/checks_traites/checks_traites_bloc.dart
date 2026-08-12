@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../models/check_traite.dart';
 import '../../database/database_helper.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // Events
 abstract class ChecksTraitesEvent extends Equatable {
@@ -76,7 +77,7 @@ class ChecksTraitesBloc extends Bloc<ChecksTraitesEvent, ChecksTraitesState> {
       final documents = await databaseHelper.getChecksTraites();
       emit(ChecksTraitesLoaded(documents));
     } catch (e) {
-      emit(ChecksTraitesError(e.toString()));
+      emit(ChecksTraitesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -85,7 +86,7 @@ class ChecksTraitesBloc extends Bloc<ChecksTraitesEvent, ChecksTraitesState> {
       await databaseHelper.insertCheckTraite(event.document);
       add(LoadChecksTraites());
     } catch (e) {
-      emit(ChecksTraitesError(e.toString()));
+      emit(ChecksTraitesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -94,7 +95,7 @@ class ChecksTraitesBloc extends Bloc<ChecksTraitesEvent, ChecksTraitesState> {
       await databaseHelper.updateCheckTraiteStatus(event.id, event.status, paymentId: event.paymentId);
       add(LoadChecksTraites());
     } catch (e) {
-      emit(ChecksTraitesError(e.toString()));
+      emit(ChecksTraitesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -103,7 +104,7 @@ class ChecksTraitesBloc extends Bloc<ChecksTraitesEvent, ChecksTraitesState> {
       await databaseHelper.deleteCheckTraite(event.id);
       add(LoadChecksTraites());
     } catch (e) {
-      emit(ChecksTraitesError(e.toString()));
+      emit(ChecksTraitesError(ErrorHandler.parseError(e)));
     }
   }
 }

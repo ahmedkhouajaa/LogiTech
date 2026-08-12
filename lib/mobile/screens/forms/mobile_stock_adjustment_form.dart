@@ -11,6 +11,7 @@ import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../widgets/searchable_dropdown_field.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class MobileStockAdjustmentForm extends StatefulWidget {
   const MobileStockAdjustmentForm({super.key});
@@ -146,9 +147,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
         SnackBar(content: Text('Ajustement de stock enregistré avec succès'), backgroundColor: AppColors.success),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: ${e.toString()}'), backgroundColor: AppColors.error),
-      );
+      ErrorHandler.showErrorSnackBar(context, e);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

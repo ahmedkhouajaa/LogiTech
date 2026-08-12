@@ -19,6 +19,7 @@ import '../mobile/screens/mobile_stock_withdrawal_detail_screen.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 enum StockWithdrawalStatus {
   draft('Brouillon'),
@@ -350,8 +351,8 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                     return Center(child: CircularProgressIndicator());
                   }
                   if (state is StockWithdrawalsError) {
-                    return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
-                  }
+            return AppErrorWidget(message: state.message);
+          }
                   if (state is StockWithdrawalsLoaded) {
                     if (entries.isEmpty) {
                       return Center(
@@ -873,8 +874,8 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                   return Center(child: CircularProgressIndicator());
                 }
                 if (state is StockWithdrawalsError) {
-                  return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
-                }
+            return AppErrorWidget(message: state.message);
+          }
                 if (state is StockWithdrawalsLoaded) {
                   if (entries.isEmpty) {
                     return Center(

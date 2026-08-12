@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../models/retenue_source_vente.dart';
 import '../../services/firestore_pagination_service.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // Events
 abstract class RetenueSourceVenteEvent extends Equatable {
@@ -157,7 +158,7 @@ class RetenueSourceVenteBloc extends Bloc<RetenueSourceVenteEvent, RetenueSource
         searchQuery: event.searchQuery ?? '',
       ));
     } catch (e) {
-      emit(RetenueSourceVenteError("Erreur lors du chargement des retenues à la source"));
+      emit(RetenueSourceVenteError(ErrorHandler.parseError(e)));
     }
   }
 

@@ -8,6 +8,7 @@ import '../../database/database_helper.dart';
 import '../../models/supplier.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class SuppliersEvent extends Equatable {
   const SuppliersEvent();
@@ -238,7 +239,7 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
         hasMore: suppliers.length >= 10,
       ));
     } catch (e) {
-      emit(SuppliersError(e.toString()));
+      emit(SuppliersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -286,7 +287,7 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
         hasMore: suppliers.length >= 10,
       ));
     } catch (e) {
-      emit(SuppliersError(e.toString()));
+      emit(SuppliersError(ErrorHandler.parseError(e)));
     }
   }
 

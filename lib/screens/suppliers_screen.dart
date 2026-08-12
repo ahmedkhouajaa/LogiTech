@@ -8,6 +8,7 @@ import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class SuppliersScreen extends StatefulWidget {
   const SuppliersScreen({super.key});
@@ -71,7 +72,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           child: BlocBuilder<SuppliersBloc, SuppliersState>(
             builder: (context, state) {
               if (state is SuppliersLoading) return Center(child: CircularProgressIndicator());
-              if (state is SuppliersError) return Center(child: Text('Erreur: ${state.message}'));
+              if (state is SuppliersError) return AppErrorWidget(message: state.message);
               if (state is SuppliersLoaded) {
                 final filtered = _search.isEmpty ? state.suppliers
                     : state.suppliers.where((s) => s.name.toLowerCase().contains(_search) || s.code.toLowerCase().contains(_search)).toList();

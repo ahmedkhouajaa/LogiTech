@@ -6,6 +6,7 @@ import '../models/check_traite.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/data_table_widget.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class ChecksTraitesScreen extends StatefulWidget {
   const ChecksTraitesScreen({super.key});
@@ -95,7 +96,7 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
           child: BlocBuilder<ChecksTraitesBloc, ChecksTraitesState>(
             builder: (context, state) {
               if (state is ChecksTraitesLoading) return Center(child: CircularProgressIndicator());
-              if (state is ChecksTraitesError) return Center(child: Text('Erreur: ${state.message}'));
+              if (state is ChecksTraitesError) return AppErrorWidget(message: state.message);
               if (state is ChecksTraitesLoaded) {
                 final filtered = state.documents.where((doc) {
                   final matchesSearch = doc.documentNumber.toLowerCase().contains(_search) ||

@@ -27,6 +27,7 @@ import 'mobile_product_form_screen.dart';
 import '../../../../screens/customers_screen.dart';
 import '../../../../services/enterprise_service.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class MobileInvoiceFormScreen extends StatefulWidget {
   final Invoice? existing;
@@ -219,10 +220,7 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: AppColors.error,
-        ));
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {
@@ -391,7 +389,7 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
                 SizedBox(height: 16),
                 BlocBuilder<WarehousesBloc, WarehousesState>(
                   builder: (context, state) {
-                    final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
+                    final warehouses = state is WarehousesLoaded ? (List.of(state.warehouses)..sort((a,b) => a.name.compareTo(b.name))) : <Warehouse>[];
                     final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                     final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 

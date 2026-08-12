@@ -7,6 +7,7 @@ import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // Events
 abstract class TreasuryAccountsEvent extends Equatable {
@@ -189,7 +190,7 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
       }
     } catch (e) {
       if (!emit.isDone) {
-        emit(TreasuryAccountsError(e.toString()));
+        emit(TreasuryAccountsError(ErrorHandler.parseError(e)));
       }
     }
   }
@@ -216,7 +217,7 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
         hasMore: accounts.length >= 10,
       ));
     } catch (e) {
-      emit(TreasuryAccountsError(e.toString()));
+      emit(TreasuryAccountsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -264,7 +265,7 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
         hasMore: accounts.length >= 10,
       ));
     } catch (e) {
-      emit(TreasuryAccountsError(e.toString()));
+      emit(TreasuryAccountsError(ErrorHandler.parseError(e)));
     }
   }
 

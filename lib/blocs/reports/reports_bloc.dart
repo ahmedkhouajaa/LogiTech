@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../models/report_data.dart';
 import '../../repositories/report_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ────────────────────────────────────────────────────────
 abstract class ReportsEvent extends Equatable {
@@ -112,7 +113,7 @@ class ReportsBloc extends Bloc<ReportsEvent, ReportsState> {
         supplierPerformance: supplierPerformance,
       ));
     } catch (e) {
-      emit(ReportsError(e.toString()));
+      emit(ReportsError(ErrorHandler.parseError(e)));
     }
   }
 }

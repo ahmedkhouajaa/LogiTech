@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../database/database_helper.dart';
 import '../../models/document_template.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ───────────────────────────────────────────────────────
 
@@ -95,7 +96,7 @@ class DocumentTemplatesBloc
       final templates = await DatabaseHelper.instance.getDocumentTemplates();
       emit(DocumentTemplatesLoaded(templates));
     } catch (e) {
-      emit(DocumentTemplatesError(e.toString()));
+      emit(DocumentTemplatesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -105,7 +106,7 @@ class DocumentTemplatesBloc
       await DatabaseHelper.instance.insertDocumentTemplate(event.template);
       add(LoadDocumentTemplates());
     } catch (e) {
-      emit(DocumentTemplatesError(e.toString()));
+      emit(DocumentTemplatesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -115,7 +116,7 @@ class DocumentTemplatesBloc
       await DatabaseHelper.instance.updateDocumentTemplate(event.template);
       add(LoadDocumentTemplates());
     } catch (e) {
-      emit(DocumentTemplatesError(e.toString()));
+      emit(DocumentTemplatesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -125,7 +126,7 @@ class DocumentTemplatesBloc
       await DatabaseHelper.instance.deleteDocumentTemplate(event.id);
       add(LoadDocumentTemplates());
     } catch (e) {
-      emit(DocumentTemplatesError(e.toString()));
+      emit(DocumentTemplatesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -143,7 +144,7 @@ class DocumentTemplatesBloc
       await DatabaseHelper.instance.insertDocumentTemplate(duplicate);
       add(LoadDocumentTemplates());
     } catch (e) {
-      emit(DocumentTemplatesError(e.toString()));
+      emit(DocumentTemplatesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -154,7 +155,7 @@ class DocumentTemplatesBloc
           .setDefaultTemplate(event.id, event.documentType);
       add(LoadDocumentTemplates());
     } catch (e) {
-      emit(DocumentTemplatesError(e.toString()));
+      emit(DocumentTemplatesError(ErrorHandler.parseError(e)));
     }
   }
 }

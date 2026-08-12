@@ -7,6 +7,7 @@ import '../../../../utils/constants.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class MobileProductFormScreen extends StatefulWidget {
   final Product? existing;
@@ -117,10 +118,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
         backgroundColor: AppColors.success,
       ));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur: ${e.toString()}'),
-        backgroundColor: AppColors.error,
-      ));
+      ErrorHandler.showErrorSnackBar(context, e);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

@@ -12,6 +12,7 @@ import '../models/project.dart';
 import '../services/expense_category_service.dart';
 import 'package:intl/intl.dart';
 import '../mobile/screens/mobile_treasury_accounts_screen.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class TreasuryAccountsScreen extends StatefulWidget {
   const TreasuryAccountsScreen({super.key});
@@ -157,7 +158,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
           child: BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
             builder: (context, state) {
               if (state is TreasuryAccountsLoading) return Center(child: CircularProgressIndicator());
-              if (state is TreasuryAccountsError) return Center(child: Text('Erreur: ${state.message}'));
+              if (state is TreasuryAccountsError) return AppErrorWidget(message: state.message);
               if (state is TreasuryAccountsLoaded) {
                 final filtered = _search.isEmpty
                     ? state.accounts

@@ -7,6 +7,7 @@ import '../blocs/product_settings/product_settings_state.dart';
 import '../models/product.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class CreateArticleScreen extends StatefulWidget {
   final Product? existing;
@@ -746,10 +747,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
       ));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: AppColors.error,
-        ));
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     }
   }

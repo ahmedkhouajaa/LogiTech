@@ -11,6 +11,7 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
 import '../services/enterprise_service.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -74,7 +75,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
           child: BlocBuilder<CustomersBloc, CustomersState>(
             builder: (context, state) {
               if (state is CustomersLoading) return Center(child: CircularProgressIndicator());
-              if (state is CustomersError) return Center(child: Text('Erreur: ${state.message}'));
+              if (state is CustomersError) return AppErrorWidget(message: state.message);
               if (state is CustomersLoaded) {
                 final filtered = _search.isEmpty
                     ? state.customers

@@ -33,6 +33,7 @@ import '../widgets/receiving_voucher_payment_dialog.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 enum ReceivingVoucherStatus {
   draft('Brouillon'),
   validated('Validé'),
@@ -709,8 +710,8 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
           return Center(child: CircularProgressIndicator());
         }
         if (state is ReceivingVouchersError) {
-          return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
-        }
+            return AppErrorWidget(message: state.message);
+          }
         if (state is ReceivingVouchersLoaded) {
           // Local filtering
           var filteredVouchers = state.vouchers.where((v) {

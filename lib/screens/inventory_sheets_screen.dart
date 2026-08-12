@@ -22,6 +22,7 @@ import '../mobile/screens/mobile_inventory_sheet_detail_screen.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 enum InventorySheetStatus {
   draft('Validé'),
@@ -884,8 +885,8 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                   return Center(child: CircularProgressIndicator());
                 }
                 if (state is InventorySheetsError) {
-                  return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
-                }
+            return AppErrorWidget(message: state.message);
+          }
                 if (state is InventorySheetsLoaded) {
                   if (entries.isEmpty) {
                     return Center(

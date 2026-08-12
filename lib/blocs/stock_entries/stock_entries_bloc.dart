@@ -9,6 +9,7 @@ import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
 import 'stock_entries_event.dart';
 import 'stock_entries_state.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
   static const int pageSize = 10;
@@ -55,7 +56,7 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
         hasMore: entries.length >= pageSize,
       ));
     } catch (e) {
-      emit(StockEntriesError("Erreur lors du chargement des bons d'entree: $e"));
+      emit(StockEntriesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -165,7 +166,7 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
 
       add(const LoadFirstStockEntries());
     } catch (e) {
-      emit(StockEntriesError("Erreur lors de l'ajout: $e"));
+      emit(StockEntriesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -194,7 +195,7 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
 
       add(const LoadFirstStockEntries());
     } catch (e) {
-      emit(StockEntriesError('Erreur lors de la mise a jour: $e'));
+      emit(StockEntriesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -203,7 +204,7 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
       await FirestoreRepository.instance.softDeleteDocument('stock_entries', event.entryId);
       add(const LoadFirstStockEntries());
     } catch (e) {
-      emit(StockEntriesError('Erreur lors de la suppression: $e'));
+      emit(StockEntriesError(ErrorHandler.parseError(e)));
     }
   }
 

@@ -13,6 +13,7 @@ import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../services/stock_export_service.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class StockScreen extends StatefulWidget {
   const StockScreen({super.key});
@@ -33,7 +34,7 @@ class _StockScreenState extends State<StockScreen> {
     return BlocBuilder<StockBloc, StockState>(
       builder: (context, state) {
         if (state is StockLoading) return const Center(child: CircularProgressIndicator());
-        if (state is StockError) return Center(child: Text('Erreur: ${state.message}'));
+        if (state is StockError) return AppErrorWidget(message: state.message);
         if (state is StockLoaded) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(AppSpacing.lg),

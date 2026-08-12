@@ -11,6 +11,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/searchable_dropdown_field.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class TreasuryTransactionsScreen extends StatefulWidget {
   const TreasuryTransactionsScreen({super.key});
@@ -341,7 +342,7 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
           child: BlocBuilder<TreasuryTransactionsBloc, TreasuryTransactionsState>(
             builder: (context, state) {
               if (state is TreasuryTransactionsLoading) return const Center(child: CircularProgressIndicator());
-              if (state is TreasuryTransactionsError) return Center(child: Text('Erreur: ${state.message}'));
+              if (state is TreasuryTransactionsError) return AppErrorWidget(message: state.message);
               if (state is TreasuryTransactionsLoaded) {
                 // Apply Dropdown Filters
                 final filtered = state.transactions.where((t) {

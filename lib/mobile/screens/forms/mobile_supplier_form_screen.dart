@@ -10,6 +10,7 @@ import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../../services/enterprise_service.dart';
 import '../../../../database/database_helper.dart';
 import 'package:provider/provider.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class MobileSupplierFormScreen extends StatefulWidget {
   final Supplier? existing;
@@ -94,10 +95,7 @@ class _MobileSupplierFormScreenState extends State<MobileSupplierFormScreen> {
         backgroundColor: AppColors.success,
       ));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur: ${e.toString()}'),
-        backgroundColor: AppColors.error,
-      ));
+      ErrorHandler.showErrorSnackBar(context, e);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

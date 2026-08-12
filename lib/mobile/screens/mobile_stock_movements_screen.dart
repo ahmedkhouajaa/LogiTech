@@ -12,6 +12,7 @@ import '../utils/mobile_module_config.dart';
 import 'forms/mobile_stock_adjustment_form.dart';
 import '../../services/sync_service.dart';
 import '../../widgets/custom_date_range_picker.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 class MobileStockMovementsScreen extends StatefulWidget {
   const MobileStockMovementsScreen({super.key});
 
@@ -46,7 +47,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
             return Center(child: CircularProgressIndicator());
           }
           if (state is StockError) {
-            return Center(child: Text('Erreur: ${state.message}'));
+            return AppErrorWidget(message: state.message);
           }
           if (state is StockLoaded) {
             final movements = List<StockMovement>.from(state.movements);

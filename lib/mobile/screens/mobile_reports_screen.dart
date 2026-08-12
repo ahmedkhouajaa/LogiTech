@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../utils/constants.dart';
 import '../../blocs/reports/reports_bloc.dart';
 import '../../models/report_data.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class MobileReportsScreen extends StatefulWidget {
   const MobileReportsScreen({super.key});
@@ -70,7 +71,7 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
           if (state is ReportsLoading) {
             return Center(child: CircularProgressIndicator());
           } else if (state is ReportsError) {
-            return Center(child: Text('Erreur: ${state.message}', style: TextStyle(color: AppColors.error)));
+            return AppErrorWidget(message: state.message);
           } else if (state is ReportsLoaded) {
             return RefreshIndicator(
               onRefresh: () async {

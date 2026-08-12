@@ -6,6 +6,7 @@ import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // Events
 abstract class TreasuryTransactionsEvent extends Equatable {
@@ -184,7 +185,7 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
       
       emit(TreasuryTransactionsLoaded(transactions: transactions, categories: categories));
     } catch (e) {
-      emit(TreasuryTransactionsError(e.toString()));
+      emit(TreasuryTransactionsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -212,7 +213,7 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
         searchQuery: event.searchQuery,
       ));
     } catch (e) {
-      emit(TreasuryTransactionsError(e.toString()));
+      emit(TreasuryTransactionsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -277,7 +278,7 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
         add(const LoadTreasuryTransactions());
       }
     } catch (e) {
-      emit(TreasuryTransactionsError(e.toString()));
+      emit(TreasuryTransactionsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -313,7 +314,7 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
         add(const LoadTreasuryTransactions());
       }
     } catch (e) {
-      emit(TreasuryTransactionsError(e.toString()));
+      emit(TreasuryTransactionsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -325,7 +326,7 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
         final categories = catMaps.map((e) => TransactionCategory.fromMap(e)).toList();
         emit(TreasuryTransactionsLoaded(transactions: currentState.transactions, categories: categories));
       } catch (e) {
-        emit(TreasuryTransactionsError(e.toString()));
+        emit(TreasuryTransactionsError(ErrorHandler.parseError(e)));
       }
     } else {
       add(const LoadTreasuryTransactions());
@@ -337,7 +338,7 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
       await databaseHelper.createTransactionCategory(event.category.toMap());
       add(LoadTransactionCategories());
     } catch (e) {
-      emit(TreasuryTransactionsError(e.toString()));
+      emit(TreasuryTransactionsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -346,7 +347,7 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
       await databaseHelper.deleteTransactionCategory(event.id);
       add(LoadTransactionCategories());
     } catch (e) {
-      emit(TreasuryTransactionsError(e.toString()));
+      emit(TreasuryTransactionsError(ErrorHandler.parseError(e)));
     }
   }
 }

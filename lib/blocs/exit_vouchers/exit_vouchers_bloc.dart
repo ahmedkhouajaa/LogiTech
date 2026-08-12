@@ -8,6 +8,7 @@ import '../../services/firestore_pagination_service.dart';
 import '../../services/sync_service.dart';
 import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
 abstract class ExitVouchersEvent {}
@@ -192,7 +193,7 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
         statusFilter: event.status,
       ));
     } catch (e) {
-      emit(ExitVouchersError("Erreur lors du chargement: $e"));
+      emit(ExitVouchersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -252,7 +253,7 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
       await FirestoreRepository.instance.saveStockWithdrawal(event.withdrawal);
       add(LoadFirstExitVouchers());
     } catch (e) {
-      emit(ExitVouchersError("Erreur lors de l'ajout: $e"));
+      emit(ExitVouchersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -261,7 +262,7 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
       await FirestoreRepository.instance.saveStockWithdrawal(event.withdrawal);
       add(LoadFirstExitVouchers());
     } catch (e) {
-      emit(ExitVouchersError("Erreur lors de la mise à jour: $e"));
+      emit(ExitVouchersError(ErrorHandler.parseError(e)));
     }
   }
 

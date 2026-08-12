@@ -3,6 +3,7 @@ import '../../models/delivery_note.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
 abstract class DeliveryNotesEvent { const DeliveryNotesEvent(); }
@@ -158,7 +159,7 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
       final notes = await _db.getDeliveryNotes();
       emit(DeliveryNotesLoaded(notes, totalCount: notes.length));
     } catch (e) {
-      emit(DeliveryNotesError(e.toString()));
+      emit(DeliveryNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -192,7 +193,7 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
         hasMore: notes.length >= pageSize,
       ));
     } catch (e) {
-      emit(DeliveryNotesError(e.toString()));
+      emit(DeliveryNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -244,7 +245,7 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
       await FirestoreRepository.instance.saveDeliveryNote(event.note);
       add(const LoadFirstDeliveryNotes());
     } catch (e) {
-      emit(DeliveryNotesError(e.toString()));
+      emit(DeliveryNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -253,7 +254,7 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
       await FirestoreRepository.instance.saveDeliveryNote(event.note);
       add(const LoadFirstDeliveryNotes());
     } catch (e) {
-      emit(DeliveryNotesError(e.toString()));
+      emit(DeliveryNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -262,7 +263,7 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
       await FirestoreRepository.instance.softDeleteDocument('delivery_notes', event.noteId);
       add(const LoadFirstDeliveryNotes());
     } catch (e) {
-      emit(DeliveryNotesError(e.toString()));
+      emit(DeliveryNotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -287,7 +288,7 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
         statusFilter: event.status,
       ));
     } catch (e) {
-      emit(DeliveryNotesError(e.toString()));
+      emit(DeliveryNotesError(ErrorHandler.parseError(e)));
     }
   }
 }

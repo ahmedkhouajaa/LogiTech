@@ -8,6 +8,7 @@ import '../../database/database_helper.dart';
 import '../../models/customer.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // Events
 abstract class CustomersEvent extends Equatable {
@@ -242,7 +243,7 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
         hasMore: clients.length >= 10,
       ));
     } catch (e) {
-      emit(CustomersError(e.toString()));
+      emit(CustomersError(ErrorHandler.parseError(e)));
     }
   }
 

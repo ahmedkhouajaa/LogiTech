@@ -12,6 +12,7 @@ import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import '../../../../services/enterprise_service.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class MobileProjectFormScreen extends StatefulWidget {
   final Project? existing;
@@ -97,10 +98,7 @@ class _MobileProjectFormScreenState extends State<MobileProjectFormScreen> {
         backgroundColor: AppColors.success,
       ));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur: ${e.toString()}'),
-        backgroundColor: AppColors.error,
-      ));
+      ErrorHandler.showErrorSnackBar(context, e);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

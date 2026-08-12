@@ -6,6 +6,7 @@ import '../../models/quote_status_history.dart';
 import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class QuotesEvent extends Equatable { const QuotesEvent(); @override List<Object?> get props => []; }
 class LoadQuotes extends QuotesEvent {}
@@ -172,7 +173,7 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
         hasMore: quotes.length >= pageSize,
       ));
     } catch (e) {
-      emit(QuotesError(e.toString()));
+      emit(QuotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -224,7 +225,7 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
       await FirestoreRepository.instance.saveQuote(event.quote);
       add(const LoadFirstDevis());
     } catch (e) {
-      emit(QuotesError(e.toString()));
+      emit(QuotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -233,7 +234,7 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
       await FirestoreRepository.instance.saveQuote(event.quote);
       add(const LoadFirstDevis());
     } catch (e) {
-      emit(QuotesError(e.toString()));
+      emit(QuotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -252,7 +253,7 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
       await FirestoreRepository.instance.saveDocument('quote_status_history', history.id, history.toMap());
       add(const LoadFirstDevis());
     } catch (e) {
-      emit(QuotesError(e.toString()));
+      emit(QuotesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -261,7 +262,7 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
       await FirestoreRepository.instance.softDeleteDocument('quotes', event.id);
       add(const LoadFirstDevis());
     } catch (e) {
-      emit(QuotesError(e.toString()));
+      emit(QuotesError(ErrorHandler.parseError(e)));
     }
   }
 }

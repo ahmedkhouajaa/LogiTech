@@ -14,6 +14,7 @@ import 'create_exit_voucher_screen.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import '../services/pdf_service.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 enum ExitVoucherStatus {
   draft('Brouillon'),
@@ -203,8 +204,8 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                     return Center(child: CircularProgressIndicator());
                   }
                   if (state is ExitVouchersError) {
-                    return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
-                  }
+            return AppErrorWidget(message: state.message);
+          }
                   if (state is ExitVouchersLoaded) {
                     final entries = state.withdrawals;
                     if (entries.isEmpty) {

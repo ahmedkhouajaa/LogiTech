@@ -11,6 +11,7 @@ import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsState> {
   static const int pageSize = 10;
@@ -60,7 +61,7 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
         hasMore: sheets.length >= pageSize,
       ));
     } catch (e) {
-      emit(InventorySheetsError(e.toString()));
+      emit(InventorySheetsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -167,7 +168,7 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
 
       add(LoadFirstInventorySheets());
     } catch (e) {
-      emit(InventorySheetsError("Erreur lors de l'ajout: $e"));
+      emit(InventorySheetsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -176,7 +177,7 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
       await FirestoreRepository.instance.saveInventorySheet(event.sheet);
       add(LoadFirstInventorySheets());
     } catch (e) {
-      emit(InventorySheetsError("Erreur lors de la mise à jour: $e"));
+      emit(InventorySheetsError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -185,7 +186,7 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
       await FirestoreRepository.instance.softDeleteDocument('inventory_sheets', event.sheetId);
       add(LoadFirstInventorySheets());
     } catch (e) {
-      emit(InventorySheetsError("Erreur lors de la suppression: $e"));
+      emit(InventorySheetsError(ErrorHandler.parseError(e)));
     }
   }
 }

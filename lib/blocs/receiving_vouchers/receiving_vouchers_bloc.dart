@@ -3,6 +3,7 @@ import '../../models/receiving_voucher.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ────────────────────────────────────────────────────────
 abstract class ReceivingVouchersEvent {}
@@ -163,7 +164,7 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
         hasMore: vouchers.length >= pageSize,
       ));
     } catch (e) {
-      emit(ReceivingVouchersError(e.toString()));
+      emit(ReceivingVouchersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -215,7 +216,7 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
       await FirestoreRepository.instance.saveReceivingVoucher(event.voucher);
       add(LoadFirstReceivingVouchers());
     } catch (e) {
-      emit(ReceivingVouchersError(e.toString()));
+      emit(ReceivingVouchersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -224,7 +225,7 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
       await FirestoreRepository.instance.saveReceivingVoucher(event.voucher);
       add(LoadFirstReceivingVouchers());
     } catch (e) {
-      emit(ReceivingVouchersError(e.toString()));
+      emit(ReceivingVouchersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -233,7 +234,7 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
       await FirestoreRepository.instance.softDeleteDocument('receiving_vouchers', event.id);
       add(LoadFirstReceivingVouchers());
     } catch (e) {
-      emit(ReceivingVouchersError(e.toString()));
+      emit(ReceivingVouchersError(ErrorHandler.parseError(e)));
     }
   }
 }

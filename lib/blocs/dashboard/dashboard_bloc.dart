@@ -7,6 +7,7 @@ import '../../models/invoice.dart';
 import '../../models/product.dart';
 import '../../models/check_traite.dart';
 import '../../models/project.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // Events
 abstract class DashboardEvent extends Equatable {
@@ -194,7 +195,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       ));
     } catch (e) {
       print('DashboardBloc: Error: $e');
-      emit(DashboardError(e.toString()));
+      emit(DashboardError(ErrorHandler.parseError(e)));
     }
   }
 }

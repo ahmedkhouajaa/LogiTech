@@ -8,6 +8,7 @@ import '../models/stock_movement.dart';
 import '../utils/constants.dart';
 import '../services/enterprise_service.dart';
 import '../widgets/custom_app_bar.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class WarehousesScreen extends StatefulWidget {
   const WarehousesScreen({super.key});
@@ -127,8 +128,8 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
         if (state is WarehousesLoading) {
           return Center(child: CircularProgressIndicator());
         } else if (state is WarehousesError) {
-          return Center(child: Text('Erreur: ${state.message}', style: TextStyle(color: AppColors.error)));
-        } else if (state is WarehousesLoaded) {
+            return AppErrorWidget(message: state.message);
+          } else if (state is WarehousesLoaded) {
           final warehouses = state.warehouses;
 
           if (warehouses.isEmpty) {

@@ -26,6 +26,7 @@ import '../../widgets/forms/mobile_totals_card.dart';
 import '../../../../screens/suppliers_screen.dart';
 import '../../../../services/enterprise_service.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 class MobilePurchaseInvoiceFormScreen extends StatefulWidget {
   final PurchaseInvoice? existing;
@@ -220,10 +221,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Erreur: ${e.toString()}'),
-          backgroundColor: AppColors.error,
-        ));
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {
@@ -403,7 +401,7 @@ class _MobilePurchaseInvoiceFormScreenState extends State<MobilePurchaseInvoiceF
                 SizedBox(height: 16),
                 BlocBuilder<WarehousesBloc, WarehousesState>(
                   builder: (context, state) {
-                    final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
+                    final warehouses = state is WarehousesLoaded ? (List.of(state.warehouses)..sort((a,b) => a.name.compareTo(b.name))) : <Warehouse>[];
                     final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                     final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 

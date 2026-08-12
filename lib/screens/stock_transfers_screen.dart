@@ -15,6 +15,7 @@ import '../widgets/custom_date_range_picker.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
 class StockTransfersScreen extends StatefulWidget {
   const StockTransfersScreen({super.key});
@@ -370,8 +371,8 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                     return Center(child: CircularProgressIndicator());
                   }
                   if (state is StockTransfersError) {
-                    return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
-                  }
+            return AppErrorWidget(message: state.message);
+          }
                   if (state is StockTransfersLoaded) {
                     if (entries.isEmpty) {
                       return Center(
@@ -769,8 +770,8 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                   return Center(child: CircularProgressIndicator());
                 }
                 if (state is StockTransfersError) {
-                  return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
-                }
+            return AppErrorWidget(message: state.message);
+          }
                 if (state is StockTransfersLoaded) {
                   if (entries.isEmpty) {
                     return Center(

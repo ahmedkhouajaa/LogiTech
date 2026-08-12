@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../services/auth_service.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // Events
 abstract class AuthEvent extends Equatable {
@@ -78,7 +79,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(const AuthError('Identifiants incorrects'));
       }
     } catch (e) {
-      emit(AuthError(e.toString()));
+      emit(AuthError(ErrorHandler.parseError(e)));
     }
   }
 

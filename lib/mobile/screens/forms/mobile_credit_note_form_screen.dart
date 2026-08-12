@@ -320,7 +320,7 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
                 SizedBox(height: 16),
                 BlocBuilder<WarehousesBloc, WarehousesState>(
                   builder: (context, state) {
-                    final warehouses = state is WarehousesLoaded ? state.warehouses : <Warehouse>[];
+                    final warehouses = state is WarehousesLoaded ? (List.of(state.warehouses)..sort((a,b) => a.name.compareTo(b.name))) : <Warehouse>[];
                     final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
                     final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
 

@@ -11,6 +11,7 @@ import 'forms/mobile_stock_adjustment_form.dart';
 import '../../services/sync_service.dart';
 import '../../screens/stock_screen.dart';
 import '../../services/stock_export_service.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 class MobileStockScreen extends StatefulWidget {
   const MobileStockScreen({super.key});
 
@@ -45,7 +46,7 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
             return Center(child: CircularProgressIndicator());
           }
           if (state is StockError) {
-            return Center(child: Text('Erreur: ${state.message}'));
+            return AppErrorWidget(message: state.message);
           }
           if (state is StockLoaded) {
             return RefreshIndicator(

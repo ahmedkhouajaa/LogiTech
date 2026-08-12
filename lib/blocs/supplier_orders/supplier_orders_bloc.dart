@@ -3,6 +3,7 @@ import '../../models/supplier_order.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ────────────────────────────────────────────────────────
 abstract class SupplierOrdersEvent {}
@@ -187,7 +188,7 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
         hasMore: orders.length >= pageSize,
       ));
     } catch (e) {
-      emit(SupplierOrdersError(e.toString()));
+      emit(SupplierOrdersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -239,7 +240,7 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
       await FirestoreRepository.instance.saveSupplierOrder(event.order);
       add(LoadFirstSupplierOrders());
     } catch (e) {
-      emit(SupplierOrdersError(e.toString()));
+      emit(SupplierOrdersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -248,7 +249,7 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
       await FirestoreRepository.instance.saveSupplierOrder(event.order);
       add(LoadFirstSupplierOrders());
     } catch (e) {
-      emit(SupplierOrdersError(e.toString()));
+      emit(SupplierOrdersError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -257,7 +258,7 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
       await FirestoreRepository.instance.softDeleteDocument('supplier_orders', event.orderId);
       add(LoadFirstSupplierOrders());
     } catch (e) {
-      emit(SupplierOrdersError(e.toString()));
+      emit(SupplierOrdersError(ErrorHandler.parseError(e)));
     }
   }
 

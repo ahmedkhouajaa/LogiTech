@@ -22,6 +22,7 @@ import 'create_invoice_screen.dart';
 import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
 class CustomerOrdersScreen extends StatefulWidget {
   const CustomerOrdersScreen({super.key});
   @override
@@ -678,8 +679,8 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
           return Center(child: CircularProgressIndicator());
         }
         if (state is CustomerOrdersError) {
-          return Center(child: Text(state.message, style: TextStyle(color: AppColors.error)));
-        }
+            return AppErrorWidget(message: state.message);
+          }
         if (state is CustomerOrdersLoaded) {
           final orders = state.orders;
 

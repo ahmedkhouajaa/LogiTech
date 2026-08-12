@@ -5,6 +5,7 @@ import '../../models/purchase_invoice.dart';
 import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class PurchaseInvoicesEvent extends Equatable {
   const PurchaseInvoicesEvent();
@@ -236,7 +237,7 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
         hasMore: invoices.length >= pageSize,
       ));
     } catch (e) {
-      emit(PurchaseInvoicesError(e.toString()));
+      emit(PurchaseInvoicesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -289,7 +290,7 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
       await FirestoreRepository.instance.savePurchaseInvoice(event.purchaseInvoice);
       add(const LoadFirstPurchaseInvoices());
     } catch (e, s) {
-      emit(PurchaseInvoicesError(e.toString()));
+      emit(PurchaseInvoicesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -298,7 +299,7 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
       await FirestoreRepository.instance.savePurchaseInvoice(event.purchaseInvoice);
       add(const LoadFirstPurchaseInvoices());
     } catch (e) {
-      emit(PurchaseInvoicesError(e.toString()));
+      emit(PurchaseInvoicesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -307,7 +308,7 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
       await FirestoreRepository.instance.softDeleteDocument('purchase_invoices', event.id);
       add(const LoadFirstPurchaseInvoices());
     } catch (e) {
-      emit(PurchaseInvoicesError(e.toString()));
+      emit(PurchaseInvoicesError(ErrorHandler.parseError(e)));
     }
   }
 
@@ -315,7 +316,7 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
     try {
       add(const LoadFirstPurchaseInvoices());
     } catch (e) {
-      emit(PurchaseInvoicesError(e.toString()));
+      emit(PurchaseInvoicesError(ErrorHandler.parseError(e)));
     }
   }
 
