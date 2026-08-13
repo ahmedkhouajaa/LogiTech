@@ -12,6 +12,8 @@ import '../../services/sync_service.dart';
 import '../../screens/stock_screen.dart';
 import '../../services/stock_export_service.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_card.dart';
 class MobileStockScreen extends StatefulWidget {
   const MobileStockScreen({super.key});
 
@@ -43,7 +45,23 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
       body: BlocBuilder<StockBloc, StockState>(
         builder: (context, state) {
           if (state is StockLoading || state is StockInitial) {
-            return Center(child: CircularProgressIndicator());
+            return AppShimmer(
+              child: SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: const [
+                    SizedBox(height: 16),
+                    ShimmerCard(refWidth: 140, statusWidth: 70, dateWidth: 90, clientWidth: 150, amountWidth: 80),
+                    ShimmerCard(refWidth: 120, statusWidth: 80, dateWidth: 100, clientWidth: 130, amountWidth: 75),
+                    ShimmerCard(refWidth: 150, statusWidth: 75, dateWidth: 95, clientWidth: 140, amountWidth: 85),
+                    ShimmerCard(refWidth: 130, statusWidth: 70, dateWidth: 105, clientWidth: 120, amountWidth: 90),
+                    ShimmerCard(refWidth: 145, statusWidth: 85, dateWidth: 90, clientWidth: 135, amountWidth: 70),
+                    ShimmerCard(refWidth: 125, statusWidth: 80, dateWidth: 100, clientWidth: 145, amountWidth: 80),
+                  ],
+                ),
+              ),
+            );
           }
           if (state is StockError) {
             return AppErrorWidget(message: state.message);

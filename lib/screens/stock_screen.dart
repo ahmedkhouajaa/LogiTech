@@ -14,6 +14,8 @@ import '../widgets/dashboard_card.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../services/stock_export_service.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 
 class StockScreen extends StatefulWidget {
   const StockScreen({super.key});
@@ -33,7 +35,21 @@ class _StockScreenState extends State<StockScreen> {
   Widget build(BuildContext context) {
     return BlocBuilder<StockBloc, StockState>(
       builder: (context, state) {
-        if (state is StockLoading) return const Center(child: CircularProgressIndicator());
+        if (state is StockLoading || state is StockInitial) {
+          return Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: ShimmerTable(
+              headerColumns: [
+                const SizedBox(width: 32),
+                Expanded(flex: 3, child: Text('Article', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text('Emplacement / Entrepot', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text('Quantite en Stock', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+              ],
+            ),
+          );
+        }
         if (state is StockError) return AppErrorWidget(message: state.message);
         if (state is StockLoaded) {
           return SingleChildScrollView(

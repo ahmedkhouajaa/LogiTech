@@ -31,6 +31,8 @@ import '../models/document_wrapper.dart';
 import '../services/pdf_service.dart';
 import 'document_preview_screen.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 
 class QuotesScreen extends StatefulWidget {
   const QuotesScreen({super.key});
@@ -682,11 +684,75 @@ class _QuotesScreenState extends State<QuotesScreen> {
     );
   }
 
+  Widget _buildTableShimmer() {
+    return Column(
+      key: const ValueKey('table_shimmer'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Table header
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: AppColors.border)),
+                      color: AppColors.background,
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 32),
+                        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                        Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)))),
+                        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                        SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      ],
+                    ),
+                  ),
+                  // Table body shimmer rows
+                  Expanded(
+                    child: AppShimmer(
+                      child: ListView.separated(
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: 6,
+                        separatorBuilder: (context, index) => Divider(height: 1, color: AppColors.border),
+                        itemBuilder: (context, index) {
+                          return ShimmerTableRow(
+                            isEven: index % 2 == 0,
+                            refWidth: index % 2 == 0 ? 120 : 135,
+                            dateWidth: index % 2 == 0 ? 140 : 125,
+                            clientWidth: index % 2 == 0 ? 150 : 120,
+                            statusWidth: index % 2 == 0 ? 75 : 65,
+                            amountWidth: index % 2 == 0 ? 95 : 85,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTable() {
     return BlocBuilder<QuotesBloc, QuotesState>(
       builder: (context, state) {
-        if (state is QuotesLoading) {
-          return Center(child: CircularProgressIndicator());
+        if (state is QuotesLoading || state is QuotesInitial) {
+          return _buildTableShimmer();
         }
         if (state is QuotesError) {
             return AppErrorWidget(message: state.message);

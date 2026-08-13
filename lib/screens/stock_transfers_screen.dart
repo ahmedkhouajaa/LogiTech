@@ -16,6 +16,8 @@ import '../widgets/searchable_dropdown_field.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 
 class StockTransfersScreen extends StatefulWidget {
   const StockTransfersScreen({super.key});
@@ -766,8 +768,17 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
             ),
             child: Builder(
               builder: (context) {
-                if (state is StockTransfersLoading) {
-                  return Center(child: CircularProgressIndicator());
+                if (state is StockTransfersLoading || state is StockTransfersInitial) {
+                  return ShimmerTable(
+                    headerColumns: [
+                      const SizedBox(width: 32),
+                      Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Entrepot Source', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Entrepot Destination', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                    ],
+                  );
                 }
                 if (state is StockTransfersError) {
             return AppErrorWidget(message: state.message);

@@ -351,15 +351,19 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
       ],
     );
 
-    final selectedWarehouse = _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _warehouseId, orElse: () => null);
-    final warehouseName = selectedWarehouse != null ? selectedWarehouse.name : 'Entrepôt Principal';
+    final defaultWh = _warehouses.cast<Warehouse?>().firstWhere(
+      (w) => w?.isDefault == true,
+      orElse: () => _warehouses.cast<Warehouse?>().firstWhere((w) => w?.name.toLowerCase().contains('défaut') == true || w?.name.toLowerCase().contains('defaut') == true, orElse: () => _warehouses.isNotEmpty ? _warehouses.first : null),
+    );
+    final selectedWarehouse = _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _warehouseId, orElse: () => defaultWh);
+    final warehouseName = selectedWarehouse?.name;
 
     final warehouseField = SmartSearchableSelector(
       label: 'Entrepôt',
       hint: 'Sélectionner un entrepôt',
       selectedText: warehouseName,
       onTap: () async {
-        final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _warehouseId);
+        final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _warehouseId ?? defaultWh?.id);
         if (res != null && mounted) {
           setState(() => _warehouseId = res);
         }

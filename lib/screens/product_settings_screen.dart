@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../widgets/shimmer_effect.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/product_settings/product_settings_bloc.dart';
 import '../blocs/product_settings/product_settings_event.dart';
@@ -165,10 +166,34 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
 
                   BlocBuilder<ProductSettingsBloc, ProductSettingsState>(
                     builder: (context, state) {
-                      if (state is ProductSettingsLoading) {
-                        return const Padding(
-                          padding: EdgeInsets.all(40),
-                          child: Center(child: CircularProgressIndicator()),
+                      if (state is ProductSettingsLoading || state is ProductSettingsInitial) {
+                        return AppShimmer(
+                          child: Column(
+                            children: List.generate(
+                              4,
+                              (index) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Container(
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    border: Border.all(color: AppColors.border),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Row(
+                                    children: const [
+                                      ShimmerBox(width: 24, height: 24, borderRadius: 6),
+                                      SizedBox(width: 12),
+                                      ShimmerBox(width: 150, height: 14, borderRadius: 4),
+                                      Spacer(),
+                                      ShimmerBox(width: 60, height: 24, borderRadius: 6),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         );
                       }
                       

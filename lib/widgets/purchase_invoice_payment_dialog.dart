@@ -18,6 +18,12 @@ import '../services/enterprise_service.dart';
 import '../services/firestore_repository.dart';
 import '../services/firestore_pagination_service.dart';
 import '../widgets/searchable_dropdown_field.dart';
+import '../models/stock_movement.dart';
+import '../models/product.dart';
+import '../blocs/products/products_bloc.dart';
+import '../blocs/stock/stock_bloc.dart';
+import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_state.dart';
 
 class PurchaseInvoicePaymentDialog extends StatefulWidget {
   final PurchaseInvoice purchaseInvoice;
@@ -242,6 +248,62 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
     );
     context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedInvoice));
     await FirestoreRepository.instance.saveDocument('invoices', updatedInvoice.id, updatedInvoice.toMap());
+
+    // Update stock and create stock movements when payment is created
+    for (var item in widget.purchaseInvoice.items) {
+      if (item.productId.isEmpty) continue;
+      
+      try {
+        final productDoc = await FirebaseFirestore.instance.collection('articles').doc(item.productId).get();
+        if (productDoc.exists && productDoc.data() != null) {
+          final productData = productDoc.data()!;
+          productData['id'] = productDoc.id;
+          final product = Product.fromMap(productData);
+          
+          final newStock = product.stockQty + item.quantity;
+          final updatedProduct = product.copyWith(stockQty: newStock, updatedAt: now);
+          
+          await FirestoreRepository.instance.saveDocument('articles', product.id, updatedProduct.toMap());
+          
+          String resolvedWarehouseId = widget.purchaseInvoice.warehouseId ?? product.defaultWarehouseId ?? '';
+          if (resolvedWarehouseId.isEmpty || resolvedWarehouseId == 'default') {
+            try {
+              final whState = context.read<WarehousesBloc>().state;
+              if (whState is WarehousesLoaded && whState.warehouses.isNotEmpty) {
+                final defWh = whState.warehouses.firstWhere((w) => w.isDefault, orElse: () => whState.warehouses.first);
+                resolvedWarehouseId = defWh.id;
+              }
+            } catch (_) {}
+          }
+          if (resolvedWarehouseId.isEmpty) resolvedWarehouseId = 'default';
+
+          final movement = StockMovement(
+            id: const Uuid().v4(),
+            productId: product.id,
+            productName: product.name,
+            warehouseId: resolvedWarehouseId,
+            type: MovementType.entry,
+            quantity: item.quantity,
+            referenceType: 'PurchaseInvoice',
+            referenceId: widget.purchaseInvoice.number,
+            date: now,
+            notes: 'Paiement de la facture ${widget.purchaseInvoice.number}',
+            enterpriseId: EnterpriseService.instance.currentEnterpriseId,
+          );
+          await FirestoreRepository.instance.saveDocument('stock_movements', movement.id, movement.toMap());
+        }
+      } catch (e) {
+        debugPrint('Error updating stock for purchase payment: $e');
+      }
+    }
+    if (mounted) {
+      try {
+        context.read<ProductsBloc>().add(LoadProducts());
+        context.read<StockBloc>().add(LoadStock());
+      } catch (e) {
+        debugPrint('Could not refresh products/stock blocs: $e');
+      }
+    }
 
     if (mounted) {
       Navigator.pop(context, true);

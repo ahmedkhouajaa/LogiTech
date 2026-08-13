@@ -251,7 +251,17 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
   Future<void> _onAdd(AddExitVoucher event, Emitter<ExitVouchersState> emit) async {
     try {
       await FirestoreRepository.instance.saveStockWithdrawal(event.withdrawal);
-      add(LoadFirstExitVouchers());
+      final currentState = state;
+      if (currentState is ExitVouchersLoaded) {
+        add(LoadFirstExitVouchers(
+          customerId: currentState.clientFilter,
+          dateFrom: currentState.dateFromFilter,
+          dateTo: currentState.dateToFilter,
+          status: currentState.statusFilter,
+        ));
+      } else {
+        add(LoadFirstExitVouchers());
+      }
     } catch (e) {
       emit(ExitVouchersError(ErrorHandler.parseError(e)));
     }
@@ -260,13 +270,32 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
   Future<void> _onUpdate(UpdateExitVoucher event, Emitter<ExitVouchersState> emit) async {
     try {
       await FirestoreRepository.instance.saveStockWithdrawal(event.withdrawal);
-      add(LoadFirstExitVouchers());
+      final currentState = state;
+      if (currentState is ExitVouchersLoaded) {
+        add(LoadFirstExitVouchers(
+          customerId: currentState.clientFilter,
+          dateFrom: currentState.dateFromFilter,
+          dateTo: currentState.dateToFilter,
+          status: currentState.statusFilter,
+        ));
+      } else {
+        add(LoadFirstExitVouchers());
+      }
     } catch (e) {
       emit(ExitVouchersError(ErrorHandler.parseError(e)));
     }
   }
 
   Future<void> _onDelete(DeleteExitVoucher event, Emitter<ExitVouchersState> emit) async {
+    final currentState = state;
+    if (currentState is ExitVouchersLoaded) {
+      final updatedList = currentState.withdrawals.where((w) => w.id != event.withdrawalId).toList();
+      emit(currentState.copyWith(
+        withdrawals: updatedList,
+        totalCount: currentState.totalCount > 0 ? currentState.totalCount - 1 : 0,
+      ));
+    }
+
     try {
       await FirestoreRepository.instance.softDeleteDocument('bons_sortie', event.withdrawalId);
     } catch (_) {
@@ -274,7 +303,19 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
         await FirestoreRepository.instance.deleteDocument('bons_sortie', event.withdrawalId);
       } catch (_) {}
     }
-    add(LoadFirstExitVouchers());
+
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    if (currentState is ExitVouchersLoaded) {
+      add(LoadFirstExitVouchers(
+        customerId: currentState.clientFilter,
+        dateFrom: currentState.dateFromFilter,
+        dateTo: currentState.dateToFilter,
+        status: currentState.statusFilter,
+      ));
+    } else {
+      add(LoadFirstExitVouchers());
+    }
   }
 
   Future<void> _onFilter(FilterExitVouchers event, Emitter<ExitVouchersState> emit) async {

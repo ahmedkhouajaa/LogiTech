@@ -308,7 +308,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                   SmartSearchableSelector(
                     label: 'Entrepôt',
                     hint: 'Sélectionner un entrepôt',
-                    selectedText: _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _warehouseId, orElse: () => null)?.name ?? 'Entrepôt Principal',
+                    selectedText: _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _warehouseId, orElse: () => _warehouses.cast<Warehouse?>().firstWhere((w) => w?.isDefault == true, orElse: () => _warehouses.isNotEmpty ? _warehouses.first : null))?.name,
                     onTap: () async {
                       if (widget.isViewOnly) return;
                       final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _warehouseId);
@@ -346,7 +346,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     child: SmartSearchableSelector(
                       label: 'Entrepôt',
                       hint: 'Sélectionner un entrepôt',
-                      selectedText: _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _warehouseId, orElse: () => null)?.name ?? 'Entrepôt Principal',
+                      selectedText: _warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _warehouseId, orElse: () => _warehouses.cast<Warehouse?>().firstWhere((w) => w?.isDefault == true, orElse: () => _warehouses.isNotEmpty ? _warehouses.first : null))?.name,
                       onTap: () async {
                         if (widget.isViewOnly) return;
                         final res = await showWarehouseSelectDialog(context, _warehouses, selectedWarehouseId: _warehouseId);

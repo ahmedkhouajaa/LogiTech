@@ -258,9 +258,24 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
   }
 
   Future<void> _onDelete(DeleteQuote event, Emitter<QuotesState> emit) async {
+    final currentState = state;
+    if (currentState is QuotesLoaded) {
+      final updatedList = currentState.quotes.where((q) => q.id != event.id).toList();
+      emit(currentState.copyWith(
+        quotes: updatedList,
+        totalCount: currentState.totalCount > 0 ? currentState.totalCount - 1 : 0,
+      ));
+    }
+
     try {
       await FirestoreRepository.instance.softDeleteDocument('quotes', event.id);
-      add(const LoadFirstDevis());
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      if (currentState is QuotesLoaded) {
+        add(const LoadFirstDevis());
+      } else {
+        add(const LoadFirstDevis());
+      }
     } catch (e) {
       emit(QuotesError(ErrorHandler.parseError(e)));
     }

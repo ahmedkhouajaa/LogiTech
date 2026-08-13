@@ -81,7 +81,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
       // 3. Calculate Stock Value
       double totalStockValue = 0;
       try {
-        Query query = FirebaseFirestore.instance.collection('products');
+        Query query = FirebaseFirestore.instance.collection('articles');
         if (entId != null && entId.isNotEmpty) {
           query = query.where('enterprise_id', isEqualTo: entId);
         }

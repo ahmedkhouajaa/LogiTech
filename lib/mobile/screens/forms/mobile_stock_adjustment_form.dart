@@ -274,8 +274,19 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                   });
                 }
 
-                final selectedWarehouse = stockState.warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
-                final warehouseName = selectedWarehouse != null ? selectedWarehouse.name : 'Entrepôt Principal';
+                final defaultWh = stockState.warehouses.cast<Warehouse?>().firstWhere(
+                  (w) => w?.isDefault == true,
+                  orElse: () => stockState.warehouses.cast<Warehouse?>().firstWhere((w) => w?.name.toLowerCase().contains('défaut') == true || w?.name.toLowerCase().contains('defaut') == true, orElse: () => stockState.warehouses.isNotEmpty ? stockState.warehouses.first : null),
+                );
+                if (_selectedWarehouseId == null && defaultWh != null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _selectedWarehouseId == null) {
+                      setState(() => _selectedWarehouseId = defaultWh.id);
+                    }
+                  });
+                }
+                final selectedWarehouse = stockState.warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == (_selectedWarehouseId ?? defaultWh?.id), orElse: () => defaultWh);
+                final warehouseName = selectedWarehouse?.name;
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,7 +296,7 @@ class _MobileStockAdjustmentFormState extends State<MobileStockAdjustmentForm> {
                       hint: 'Sélectionner un entrepôt',
                       selectedText: warehouseName,
                       onTap: () async {
-                        final res = await showWarehouseSelectDialog(context, stockState.warehouses, selectedWarehouseId: _selectedWarehouseId);
+                        final res = await showWarehouseSelectDialog(context, stockState.warehouses, selectedWarehouseId: _selectedWarehouseId ?? defaultWh?.id);
                         if (res != null && mounted) {
                           setState(() => _selectedWarehouseId = res);
                         }

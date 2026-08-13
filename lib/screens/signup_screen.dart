@@ -1,22 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/auth/auth_bloc.dart';
-import 'signup_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
+  
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  
+  bool _nameFocused = false;
   bool _emailFocused = false;
   bool _passwordFocused = false;
+  bool _confirmPasswordFocused = false;
+  
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -45,8 +52,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   void dispose() {
     _fadeController.dispose();
+    _nameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
     super.dispose();
   }
 
@@ -71,7 +80,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 backgroundColor: const Color(0xFFEF4444),
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                duration: const Duration(hours: 1),
                 margin: EdgeInsets.only(
                   bottom: MediaQuery.of(context).size.height - 100,
                   left: isMobile ? 16 : screenWidth * 0.3,
@@ -79,6 +87,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 ),
               ),
             );
+          } else if (state is AuthAuthenticated) {
+             Navigator.of(context).popUntil((route) => route.isFirst);
           }
         },
         child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
@@ -237,10 +247,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 child: SlideTransition(
                   position: _slideAnimation,
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 24),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 420),
-                      child: _buildLoginForm(isMobile: false),
+                      child: _buildSignUpForm(isMobile: false),
                     ),
                   ),
                 ),
@@ -334,7 +344,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           ),
                         ],
                       ),
-                      child: _buildLoginForm(isMobile: true),
+                      child: _buildSignUpForm(isMobile: true),
                     ),
                     const SizedBox(height: 32),
                     // Footer
@@ -356,15 +366,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
-  // ─── SHARED LOGIN FORM ─────────────────────────────────────────────
-  Widget _buildLoginForm({required bool isMobile}) {
+  // ─── SHARED SIGNUP FORM ─────────────────────────────────────────────
+  Widget _buildSignUpForm({required bool isMobile}) {
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Connexion',
+            'Inscription',
             style: TextStyle(
               fontSize: isMobile ? 22 : 28,
               fontWeight: FontWeight.w700,
@@ -374,14 +384,33 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
           const SizedBox(height: 6),
           Text(
-            'Connectez-vous à votre espace de travail',
+            'Créez votre espace de travail',
             style: TextStyle(
               fontSize: isMobile ? 13.5 : 15,
               color: const Color(0xFF64748B),
               height: 1.4,
             ),
           ),
-          SizedBox(height: isMobile ? 28 : 36),
+          SizedBox(height: isMobile ? 24 : 32),
+
+          // Name field
+          _buildFieldLabel('Nom complet'),
+          const SizedBox(height: 8),
+          Focus(
+            onFocusChange: (f) => setState(() => _nameFocused = f),
+            child: TextFormField(
+              controller: _nameCtrl,
+              keyboardType: TextInputType.name,
+              validator: (v) => v == null || v.trim().isEmpty ? 'Le nom est requis' : null,
+              style: const TextStyle(fontSize: 14.5, color: Color(0xFF0F172A), fontWeight: FontWeight.w500),
+              decoration: _inputDecoration(
+                hint: 'John Doe',
+                isFocused: _nameFocused,
+                prefixIcon: Icons.person_outline_rounded,
+              ),
+            ),
+          ),
+          SizedBox(height: isMobile ? 16 : 20),
 
           // Email field
           _buildFieldLabel('Adresse email'),
@@ -391,7 +420,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             child: TextFormField(
               controller: _emailCtrl,
               keyboardType: TextInputType.emailAddress,
-              validator: (v) => v == null || v.isEmpty ? 'L\'email est requis' : null,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'L\'email est requis';
+                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) {
+                  return 'Email invalide';
+                }
+                return null;
+              },
               style: const TextStyle(fontSize: 14.5, color: Color(0xFF0F172A), fontWeight: FontWeight.w500),
               decoration: _inputDecoration(
                 hint: 'votre@email.com',
@@ -400,7 +435,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
             ),
           ),
-          SizedBox(height: isMobile ? 18 : 22),
+          SizedBox(height: isMobile ? 16 : 20),
 
           // Password field
           _buildFieldLabel('Mot de passe'),
@@ -410,7 +445,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             child: TextFormField(
               controller: _passwordCtrl,
               obscureText: _obscurePassword,
-              validator: (v) => v == null || v.isEmpty ? 'Le mot de passe est requis' : null,
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Le mot de passe est requis';
+                if (v.length < 6) return 'Le mot de passe doit contenir au moins 6 caractères';
+                return null;
+              },
               style: const TextStyle(fontSize: 14.5, color: Color(0xFF0F172A), fontWeight: FontWeight.w500),
               decoration: _inputDecoration(
                 hint: '••••••••',
@@ -428,7 +467,39 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
             ),
           ),
-          SizedBox(height: isMobile ? 28 : 36),
+          SizedBox(height: isMobile ? 16 : 20),
+
+          // Confirm Password field
+          _buildFieldLabel('Confirmer le mot de passe'),
+          const SizedBox(height: 8),
+          Focus(
+            onFocusChange: (f) => setState(() => _confirmPasswordFocused = f),
+            child: TextFormField(
+              controller: _confirmPasswordCtrl,
+              obscureText: _obscureConfirmPassword,
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Veuillez confirmer le mot de passe';
+                if (v != _passwordCtrl.text) return 'Les mots de passe ne correspondent pas';
+                return null;
+              },
+              style: const TextStyle(fontSize: 14.5, color: Color(0xFF0F172A), fontWeight: FontWeight.w500),
+              decoration: _inputDecoration(
+                hint: '••••••••',
+                isFocused: _confirmPasswordFocused,
+                prefixIcon: Icons.lock_outline_rounded,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    size: 19,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                  onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                  splashRadius: 18,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: isMobile ? 24 : 32),
 
           // Submit button
           BlocBuilder<AuthBloc, AuthState>(
@@ -457,7 +528,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         ],
                       ),
                       child: ElevatedButton(
-                        onPressed: loading ? null : _handleLogin,
+                        onPressed: loading ? null : _handleSignUp,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
@@ -474,7 +545,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 ),
                               )
                             : const Text(
-                                'Se connecter',
+                                'S\'inscrire',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 15,
@@ -547,7 +618,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Pas de compte ?',
+                        'Déjà un compte ?',
                         style: TextStyle(
                           color: const Color(0xFF64748B),
                           fontSize: 14,
@@ -555,13 +626,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       ),
                       TextButton(
                         onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const SignUpScreen()),
-                          );
+                          Navigator.pop(context); // Go back to login screen
                         },
                         child: Text(
-                          'S\'inscrire',
+                          'Se connecter',
                           style: TextStyle(
                             color: const Color(0xFF3B82F6),
                             fontSize: 14,
@@ -671,9 +739,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   // ─── HANDLERS ──────────────────────────────────────────────────────
-  void _handleLogin() {
+  void _handleSignUp() {
     if (_formKey.currentState!.validate()) {
-      context.read<AuthBloc>().add(AuthLoginRequested(_emailCtrl.text.trim(), _passwordCtrl.text));
+      context.read<AuthBloc>().add(
+        AuthSignUpRequested(
+          _emailCtrl.text.trim(),
+          _passwordCtrl.text,
+          _nameCtrl.text.trim(),
+        )
+      );
     }
   }
 

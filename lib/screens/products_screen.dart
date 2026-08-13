@@ -12,6 +12,8 @@ import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
 import 'create_article_screen.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -82,7 +84,42 @@ class _ProductsScreenState extends State<ProductsScreen> {
               
               return BlocBuilder<ProductsBloc, ProductsState>(
                 builder: (context, state) {
-                  if (state is ProductsLoading) return Center(child: CircularProgressIndicator());
+                  if (state is ProductsLoading || state is ProductsInitial) {
+                    return AppShimmer(
+                      child: ListView.separated(
+                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                        itemCount: 6,
+                        separatorBuilder: (_, __) => SizedBox(height: 12),
+                        itemBuilder: (_, index) => Container(
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          padding: EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              ShimmerBox(width: 50, height: 50, borderRadius: 14),
+                              SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    ShimmerBox(width: 160, height: 14, borderRadius: 4),
+                                    SizedBox(height: 8),
+                                    ShimmerBox(width: 110, height: 11, borderRadius: 4),
+                                  ],
+                                ),
+                              ),
+                              ShimmerBox(width: 90, height: 24, borderRadius: 6),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
                   if (state is ProductsError) return AppErrorWidget(message: state.message);
                   if (state is ProductsLoaded) {
                 final filtered = _search.isEmpty ? state.products

@@ -20,6 +20,8 @@ import '../widgets/searchable_dropdown_field.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 
 enum StockWithdrawalStatus {
   draft('Brouillon'),
@@ -870,8 +872,17 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
             ),
             child: Builder(
               builder: (context) {
-                if (state is StockWithdrawalsLoading) {
-                  return Center(child: CircularProgressIndicator());
+                if (state is StockWithdrawalsLoading || state is StockWithdrawalsInitial) {
+                  return ShimmerTable(
+                    headerColumns: [
+                      const SizedBox(width: 32),
+                      Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 3, child: Text('Entrepot', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)))),
+                      Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                    ],
+                  );
                 }
                 if (state is StockWithdrawalsError) {
             return AppErrorWidget(message: state.message);

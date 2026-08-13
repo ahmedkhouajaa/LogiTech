@@ -9,6 +9,8 @@ import '../utils/constants.dart';
 import '../services/enterprise_service.dart';
 import '../widgets/custom_app_bar.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 
 class WarehousesScreen extends StatefulWidget {
   const WarehousesScreen({super.key});
@@ -125,8 +127,19 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
   Widget _buildWarehousesTab() {
     return BlocBuilder<WarehousesBloc, WarehousesState>(
       builder: (context, state) {
-        if (state is WarehousesLoading) {
-          return Center(child: CircularProgressIndicator());
+        if (state is WarehousesLoading || state is WarehousesInitial) {
+          return Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: ShimmerTable(
+              headerColumns: [
+                const SizedBox(width: 32),
+                Expanded(flex: 3, child: Text('Nom de l\'entrepot', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text('Emplacement', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+              ],
+            ),
+          );
         } else if (state is WarehousesError) {
             return AppErrorWidget(message: state.message);
           } else if (state is WarehousesLoaded) {

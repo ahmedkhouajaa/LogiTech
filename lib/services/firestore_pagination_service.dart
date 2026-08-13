@@ -1889,14 +1889,13 @@ class FirestorePaginationService {
       Query baseQuery = _applyEnterpriseFilter(_firestore.collection('bons_sortie'))
           .where('is_deleted', isEqualTo: 0);
 
-      String q = 'BS-';
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final search = searchQuery.trim().toUpperCase();
-        q = search.startsWith('BS-') ? search : 'BS-$search';
+        final q = search.startsWith('BS-') ? search : 'BS-$search';
+        baseQuery = baseQuery
+            .where('number', isGreaterThanOrEqualTo: q)
+            .where('number', isLessThanOrEqualTo: '$q\uf8ff');
       }
-      baseQuery = baseQuery
-          .where('number', isGreaterThanOrEqualTo: q)
-          .where('number', isLessThanOrEqualTo: '$q\uf8ff');
 
       if (customerId != null && customerId.isNotEmpty) {
         baseQuery = baseQuery.where('customer_id', isEqualTo: customerId);
@@ -2034,14 +2033,13 @@ class FirestorePaginationService {
       Query query = _applyEnterpriseFilter(_firestore.collection('bons_sortie'))
           .where('is_deleted', isEqualTo: 0);
 
-      String q = 'BS-';
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final search = searchQuery.trim().toUpperCase();
-        q = search.startsWith('BS-') ? search : 'BS-$search';
+        final q = search.startsWith('BS-') ? search : 'BS-$search';
+        query = query
+            .where('number', isGreaterThanOrEqualTo: q)
+            .where('number', isLessThanOrEqualTo: '$q\uf8ff');
       }
-      query = query
-          .where('number', isGreaterThanOrEqualTo: q)
-          .where('number', isLessThanOrEqualTo: '$q\uf8ff');
 
       if (customerId != null && customerId.isNotEmpty) {
         query = query.where('customer_id', isEqualTo: customerId);
@@ -2076,14 +2074,13 @@ class FirestorePaginationService {
         _firestore.collection('bons_prelevement'),
       );
 
-      String q = 'BP-';
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final search = searchQuery.trim().toUpperCase();
-        q = search.startsWith('BP-') ? search : 'BP-$search';
+        final q = search.startsWith('BP-') ? search : 'BP-$search';
+        query = query
+            .where('number', isGreaterThanOrEqualTo: q)
+            .where('number', isLessThanOrEqualTo: '$q\uf8ff');
       }
-      query = query
-          .where('number', isGreaterThanOrEqualTo: q)
-          .where('number', isLessThanOrEqualTo: '$q\uf8ff');
 
       if (customerId != null && customerId.isNotEmpty) {
         query = query.where('customer_id', isEqualTo: customerId);
@@ -2140,14 +2137,13 @@ class FirestorePaginationService {
         _firestore.collection('bons_prelevement'),
       );
 
-      String q = 'BP-';
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final search = searchQuery.trim().toUpperCase();
-        q = search.startsWith('BP-') ? search : 'BP-$search';
+        final q = search.startsWith('BP-') ? search : 'BP-$search';
+        query = query
+            .where('number', isGreaterThanOrEqualTo: q)
+            .where('number', isLessThanOrEqualTo: '$q\uf8ff');
       }
-      query = query
-          .where('number', isGreaterThanOrEqualTo: q)
-          .where('number', isLessThanOrEqualTo: '$q\uf8ff');
 
       if (customerId != null && customerId.isNotEmpty) {
         query = query.where('customer_id', isEqualTo: customerId);

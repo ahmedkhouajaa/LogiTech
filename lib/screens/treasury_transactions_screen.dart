@@ -12,6 +12,8 @@ import '../utils/helpers.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 
 class TreasuryTransactionsScreen extends StatefulWidget {
   const TreasuryTransactionsScreen({super.key});
@@ -341,7 +343,21 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
         Expanded(
           child: BlocBuilder<TreasuryTransactionsBloc, TreasuryTransactionsState>(
             builder: (context, state) {
-              if (state is TreasuryTransactionsLoading) return const Center(child: CircularProgressIndicator());
+              if (state is TreasuryTransactionsLoading || state is TreasuryTransactionsInitial) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  child: ShimmerTable(
+                    headerColumns: [
+                      const SizedBox(width: 32),
+                      Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 3, child: Text('Description / Categorie', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Type', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                    ],
+                  ),
+                );
+              }
               if (state is TreasuryTransactionsError) return AppErrorWidget(message: state.message);
               if (state is TreasuryTransactionsLoaded) {
                 // Apply Dropdown Filters

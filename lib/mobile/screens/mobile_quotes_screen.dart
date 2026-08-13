@@ -12,6 +12,9 @@ import '../../models/customer.dart';
 import 'forms/mobile_quote_form_screen.dart';
 import '../../services/firestore_pagination_service.dart';
 
+import '../widgets/shimmer_card.dart';
+import '../../widgets/shimmer_effect.dart';
+
 class MobileQuotesScreen extends StatefulWidget {
   const MobileQuotesScreen({super.key});
 
@@ -203,6 +206,22 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
           ),
           scrollController: _scrollController,
           isLoading: isLoading,
+          loadingWidget: AppShimmer(
+            child: SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: const [
+                  ShimmerCard(refWidth: 130, statusWidth: 80, dateWidth: 100, clientWidth: 140, amountWidth: 85),
+                  ShimmerCard(refWidth: 145, statusWidth: 70, dateWidth: 95, clientWidth: 110, amountWidth: 70),
+                  ShimmerCard(refWidth: 120, statusWidth: 85, dateWidth: 105, clientWidth: 150, amountWidth: 90),
+                  ShimmerCard(refWidth: 140, statusWidth: 75, dateWidth: 90, clientWidth: 130, amountWidth: 80),
+                  ShimmerCard(refWidth: 125, statusWidth: 80, dateWidth: 100, clientWidth: 120, amountWidth: 75),
+                  ShimmerCard(refWidth: 135, statusWidth: 70, dateWidth: 95, clientWidth: 135, amountWidth: 85),
+                ],
+              ),
+            ),
+          ),
           isEmpty: isEmpty,
           emptyMessage: 'Aucun devis trouvé.',
           itemCount: totalMatchingCount,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../models/document_wrapper.dart';
 import '../models/payment_model.dart';
@@ -273,8 +275,18 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                 padding: EdgeInsets.fromLTRB(24, 0, 24, 0),
                 child: AppCard(
                   padding: EdgeInsets.zero,
-                  child: state is PaymentsLoading
-                      ? Center(child: CircularProgressIndicator())
+                  child: state is PaymentsLoading || state is PaymentsInitial
+                      ? ShimmerTable(
+                          headerColumns: [
+                            const SizedBox(width: 32),
+                            Expanded(flex: 3, child: Text('Ref. Facture', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                            Expanded(flex: 3, child: Text('Tiers', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text('Taux R.S.', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text('Montant R.S.', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                            SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                          ],
+                        )
                       : filtered.isEmpty
                           ? _buildEmpty()
                           : Column(

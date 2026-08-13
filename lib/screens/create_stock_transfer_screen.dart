@@ -10,6 +10,7 @@ import '../utils/helpers.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/stock/stock_bloc.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
+import '../blocs/warehouses/warehouses_event.dart';
 import '../blocs/warehouses/warehouses_state.dart';
 import '../models/stock_movement.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -55,8 +56,8 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
     if (context.read<ProductsBloc>().state is! ProductsLoaded) {
       context.read<ProductsBloc>().add(LoadProducts());
     }
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
+    if (context.read<WarehousesBloc>().state is! WarehousesLoaded) {
+      context.read<WarehousesBloc>().add(LoadWarehouses());
     }
     _loadWarehouses();
     if (isEdit) {
@@ -342,187 +343,198 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
   }
 
   Widget _buildInformationsSection() {
-    final dateField = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Date', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-        SizedBox(height: 8),
-        InkWell(
-          onTap: () async {
-            final date = await showDatePicker(
-              context: context,
-              initialDate: _selectedDate,
-              firstDate: DateTime(2000),
-              lastDate: DateTime(2100),
-            );
-            if (date != null) setState(() => _selectedDate = date);
-          },
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(AppRadius.md),
+    return BlocBuilder<WarehousesBloc, WarehousesState>(
+      builder: (context, whState) {
+        List<Warehouse> warehouses = [];
+        if (whState is WarehousesLoaded && whState.warehouses.isNotEmpty) {
+          warehouses = whState.warehouses.where((w) => !w.isDeleted).toList();
+        } else if (_warehouses.isNotEmpty) {
+          warehouses = _warehouses.where((w) => !w.isDeleted).toList();
+        }
+
+        if (warehouses.isNotEmpty) {
+          if (_sourceWarehouseId == null || !warehouses.any((w) => w.id == _sourceWarehouseId)) {
+            final defaultW = warehouses.cast<Warehouse?>().firstWhere((w) => w?.isDefault == true, orElse: () => warehouses.first);
+            _sourceWarehouseId = defaultW?.id;
+          }
+          final availableForDest = warehouses.where((w) => w.id != _sourceWarehouseId).toList();
+          if (_destWarehouseId == null || _destWarehouseId == _sourceWarehouseId || !warehouses.any((w) => w.id == _destWarehouseId)) {
+            _destWarehouseId = availableForDest.isNotEmpty ? availableForDest.first.id : null;
+          }
+        } else {
+          _sourceWarehouseId = null;
+          _destWarehouseId = null;
+        }
+
+        final sourceWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _sourceWarehouseId, orElse: () => null);
+        final sourceWarehouseName = sourceWh?.name ?? 'Sélectionner...';
+
+        final destWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _destWarehouseId, orElse: () => null);
+        final destWarehouseName = destWh?.name ?? 'Sélectionner...';
+
+        final dateField = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Date', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            SizedBox(height: 8),
+            InkWell(
+              onTap: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: _selectedDate,
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime(2100),
+                );
+                if (date != null) setState(() => _selectedDate = date);
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(formatDateTimeLong(_selectedDate), style: TextStyle(fontSize: 14)),
+                    Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
+                  ],
+                ),
+              ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ],
+        );
+
+        final sourceField = SmartSearchableSelector(
+          label: 'Entrepôt Source',
+          hint: 'Sélectionner...',
+          selectedText: sourceWarehouseName,
+          onTap: () async {
+            final available = warehouses.where((w) => w.id != _destWarehouseId).toList();
+            if (available.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Aucun autre entrepôt disponible')),
+              );
+              return;
+            }
+            final res = await showWarehouseSelectDialog(context, available, selectedWarehouseId: _sourceWarehouseId);
+            if (res != null && mounted) {
+              setState(() {
+                _sourceWarehouseId = res;
+              });
+              _onWarehouseChanged();
+            }
+          },
+        );
+
+        final destField = SmartSearchableSelector(
+          label: 'Entrepôt Destination',
+          hint: 'Sélectionner...',
+          selectedText: destWarehouseName,
+          onTap: () async {
+            final available = warehouses.where((w) => w.id != _sourceWarehouseId).toList();
+            if (available.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Aucun autre entrepôt disponible pour la destination')),
+              );
+              return;
+            }
+            final res = await showWarehouseSelectDialog(context, available, selectedWarehouseId: _destWarehouseId);
+            if (res != null && mounted) {
+              setState(() {
+                _destWarehouseId = res;
+              });
+              _onWarehouseChanged();
+            }
+          },
+        );
+
+        final reasonField = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Raison (optionnel)', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            SizedBox(height: 8),
+            TextFormField(
+              controller: _reasonController,
+              decoration: InputDecoration(
+                hintText: 'Raison de l\'opération...',
+                filled: true,
+                fillColor: AppColors.surfaceAlt,
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        );
+
+        final notesField = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Notes (optionnel)', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            SizedBox(height: 8),
+            TextFormField(
+              controller: _notesController,
+              decoration: InputDecoration(
+                hintText: 'Notes additionnelles...',
+                filled: true,
+                fillColor: AppColors.surfaceAlt,
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        );
+
+        return Card(
+          color: AppColors.surface,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            side: BorderSide(color: AppColors.border),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(_isMobile ? 16.0 : AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(formatDateTimeLong(_selectedDate), style: TextStyle(fontSize: 14)),
-                Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
+                Text('Informations', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                SizedBox(height: 16),
+                if (_isMobile) ...[
+                  dateField,
+                  SizedBox(height: 16),
+                  sourceField,
+                  SizedBox(height: 16),
+                  destField,
+                  SizedBox(height: 16),
+                  reasonField,
+                  SizedBox(height: 16),
+                  notesField,
+                ] else ...[
+                  Row(
+                    children: [
+                      Expanded(child: dateField),
+                      SizedBox(width: 16),
+                      Expanded(child: sourceField),
+                      SizedBox(width: 16),
+                      Expanded(child: destField),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(child: reasonField),
+                      SizedBox(width: 16),
+                      Expanded(child: notesField),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
-        ),
-      ],
-    );
-
-    final sourceWarehouseName = _resolveWarehouseName(_sourceWarehouseId);
-
-    final sourceField = SmartSearchableSelector(
-      label: 'Entrepôt Source',
-      hint: 'Sélectionner...',
-      selectedText: sourceWarehouseName,
-      onTap: () async {
-        final available = _warehouses.where((w) => w.id != _destWarehouseId).toList();
-        if (available.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Aucun autre entrepôt disponible')),
-          );
-          return;
-        }
-        final res = await showWarehouseSelectDialog(context, available, selectedWarehouseId: _sourceWarehouseId);
-        if (res != null && mounted) {
-          setState(() {
-            _sourceWarehouseId = res;
-            final whBlocState = context.read<WarehousesBloc>().state;
-            if (whBlocState is WarehousesLoaded) {
-              for (var w in whBlocState.warehouses) {
-                if (!_warehouses.any((item) => item.id == w.id)) {
-                  _warehouses.add(w);
-                }
-              }
-            }
-          });
-          _onWarehouseChanged();
-        }
+        );
       },
-    );
-
-    final destWarehouseName = _resolveWarehouseName(_destWarehouseId);
-
-    final destField = SmartSearchableSelector(
-      label: 'Entrepôt Destination',
-      hint: 'Sélectionner...',
-      selectedText: destWarehouseName,
-      onTap: () async {
-        final available = _warehouses.where((w) => w.id != _sourceWarehouseId).toList();
-        if (available.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Aucun autre entrepôt disponible pour la destination')),
-          );
-          return;
-        }
-        final res = await showWarehouseSelectDialog(context, available, selectedWarehouseId: _destWarehouseId);
-        if (res != null && mounted) {
-          setState(() {
-            _destWarehouseId = res;
-            final whBlocState = context.read<WarehousesBloc>().state;
-            if (whBlocState is WarehousesLoaded) {
-              for (var w in whBlocState.warehouses) {
-                if (!_warehouses.any((item) => item.id == w.id)) {
-                  _warehouses.add(w);
-                }
-              }
-            }
-          });
-          _onWarehouseChanged();
-        }
-      },
-    );
-
-    final reasonField = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Raison (optionnel)', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-        SizedBox(height: 8),
-        TextFormField(
-          controller: _reasonController,
-          decoration: InputDecoration(
-            hintText: 'Raison de l\'opération...',
-            filled: true,
-            fillColor: AppColors.surfaceAlt,
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-          ),
-          maxLines: 2,
-        ),
-      ],
-    );
-
-    final notesField = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Notes (optionnel)', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-        SizedBox(height: 8),
-        TextFormField(
-          controller: _notesController,
-          decoration: InputDecoration(
-            hintText: 'Notes additionnelles...',
-            filled: true,
-            fillColor: AppColors.surfaceAlt,
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide.none),
-          ),
-          maxLines: 2,
-        ),
-      ],
-    );
-
-    return Card(
-      color: AppColors.surface,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        side: BorderSide(color: AppColors.border),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(_isMobile ? 16.0 : AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Informations', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            SizedBox(height: 16),
-            if (_isMobile) ...[
-              dateField,
-              SizedBox(height: 16),
-              sourceField,
-              SizedBox(height: 16),
-              destField,
-              SizedBox(height: 16),
-              reasonField,
-              SizedBox(height: 16),
-              notesField,
-            ] else ...[
-              Row(
-                children: [
-                  Expanded(child: dateField),
-                  SizedBox(width: 16),
-                  Expanded(child: sourceField),
-                  SizedBox(width: 16),
-                  Expanded(child: destField),
-                ],
-              ),
-              SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: reasonField),
-                  SizedBox(width: 16),
-                  Expanded(child: notesField),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
     );
   }
 

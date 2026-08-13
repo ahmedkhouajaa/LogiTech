@@ -4,6 +4,9 @@ import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import '../widgets/return_note_payment_dialog.dart';
 import '../blocs/payments/payments_bloc.dart';
 
+import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/return_notes/return_notes_bloc.dart';
 import '../blocs/return_notes/return_notes_event.dart';
@@ -702,11 +705,24 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
     );
   }
 
+  Widget _buildTableShimmer() {
+    return ShimmerTable(
+      headerColumns: [
+        const SizedBox(width: 32),
+        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+        SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+      ],
+    );
+  }
+
   Widget _buildTable() {
     return BlocBuilder<ReturnNotesBloc, ReturnNotesState>(
       builder: (context, state) {
-        if (state is ReturnNotesLoading) {
-          return Center(child: CircularProgressIndicator());
+        if (state is ReturnNotesLoading || state is ReturnNotesInitial) {
+          return _buildTableShimmer();
         }
         if (state is ReturnNotesError) {
           return Center(

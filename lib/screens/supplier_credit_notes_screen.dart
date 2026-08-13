@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 import '../blocs/supplier_credit_notes/supplier_credit_notes_bloc.dart';
 import '../blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
 import '../blocs/supplier_credit_notes/supplier_credit_notes_state.dart';
@@ -708,11 +710,24 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
     );
   }
 
+  Widget _buildTableShimmer() {
+    return ShimmerTable(
+      headerColumns: [
+        const SizedBox(width: 32),
+        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+        SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+      ],
+    );
+  }
+
   Widget _buildTable() {
     return BlocBuilder<SupplierCreditNotesBloc, SupplierCreditNotesState>(
       builder: (context, state) {
-        if (state is SupplierCreditNotesLoading) {
-          return Center(child: CircularProgressIndicator());
+        if (state is SupplierCreditNotesLoading || state is SupplierCreditNotesInitial) {
+          return _buildTableShimmer();
         }
         if (state is SupplierCreditNotesError) {
           return Center(

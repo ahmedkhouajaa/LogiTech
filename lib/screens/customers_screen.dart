@@ -12,6 +12,8 @@ import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
 import '../services/enterprise_service.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -74,7 +76,42 @@ class _CustomersScreenState extends State<CustomersScreen> {
         Expanded(
           child: BlocBuilder<CustomersBloc, CustomersState>(
             builder: (context, state) {
-              if (state is CustomersLoading) return Center(child: CircularProgressIndicator());
+              if (state is CustomersLoading || state is CustomersInitial) {
+                return AppShimmer(
+                  child: ListView.separated(
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                    itemCount: 6,
+                    separatorBuilder: (_, __) => SizedBox(height: 12),
+                    itemBuilder: (_, index) => Container(
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      padding: EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          ShimmerBox(width: 44, height: 44, borderRadius: 14),
+                          SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                ShimmerBox(width: 150, height: 14, borderRadius: 4),
+                                SizedBox(height: 8),
+                                ShimmerBox(width: 100, height: 11, borderRadius: 4),
+                              ],
+                            ),
+                          ),
+                          ShimmerBox(width: 80, height: 24, borderRadius: 6),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
               if (state is CustomersError) return AppErrorWidget(message: state.message);
               if (state is CustomersLoaded) {
                 final filtered = _search.isEmpty

@@ -7,6 +7,8 @@ import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -39,7 +41,21 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         Expanded(
           child: BlocBuilder<TransactionsBloc, TransactionsState>(
             builder: (context, state) {
-              if (state is TransactionsLoading) return Center(child: CircularProgressIndicator());
+              if (state is TransactionsLoading || state is TransactionsInitial) {
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  child: ShimmerTable(
+                    headerColumns: [
+                      const SizedBox(width: 32),
+                      Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Compte', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Type', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                    ],
+                  ),
+                );
+              }
               if (state is TransactionsLoaded) {
                 return Padding(
                   padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),

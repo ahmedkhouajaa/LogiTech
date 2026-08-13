@@ -104,12 +104,20 @@ class StockWithdrawalsLoaded extends StockWithdrawalsState {
   final int totalCount;
   final bool hasMore;
   final bool isLoadingMore;
+  final String? clientFilter;
+  final DateTime? dateFromFilter;
+  final DateTime? dateToFilter;
+  final String? statusFilter;
 
   StockWithdrawalsLoaded(
     this.withdrawals, {
     this.totalCount = 0,
     this.hasMore = false,
     this.isLoadingMore = false,
+    this.clientFilter,
+    this.dateFromFilter,
+    this.dateToFilter,
+    this.statusFilter,
   });
 
   StockWithdrawalsLoaded copyWith({
@@ -117,12 +125,20 @@ class StockWithdrawalsLoaded extends StockWithdrawalsState {
     int? totalCount,
     bool? hasMore,
     bool? isLoadingMore,
+    String? clientFilter,
+    DateTime? dateFromFilter,
+    DateTime? dateToFilter,
+    String? statusFilter,
   }) {
     return StockWithdrawalsLoaded(
       withdrawals ?? this.withdrawals,
       totalCount: totalCount ?? this.totalCount,
       hasMore: hasMore ?? this.hasMore,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      clientFilter: clientFilter ?? this.clientFilter,
+      dateFromFilter: dateFromFilter ?? this.dateFromFilter,
+      dateToFilter: dateToFilter ?? this.dateToFilter,
+      statusFilter: statusFilter ?? this.statusFilter,
     );
   }
 }
@@ -177,6 +193,10 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
         items,
         totalCount: totalCount > items.length ? totalCount : items.length,
         hasMore: items.length >= pageSize,
+        clientFilter: event.customerId,
+        dateFromFilter: event.dateFrom,
+        dateToFilter: event.dateTo,
+        statusFilter: event.status,
       ));
     } catch (e) {
       emit(StockWithdrawalsError(ErrorHandler.parseError(e)));
@@ -208,6 +228,10 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
           totalCount: currentState.totalCount > updatedList.length ? currentState.totalCount : updatedList.length,
           hasMore: nextItems.length >= pageSize,
           isLoadingMore: false,
+          clientFilter: event.customerId,
+          dateFromFilter: event.dateFrom,
+          dateToFilter: event.dateTo,
+          statusFilter: event.status,
         ));
       }
     } catch (e) {
@@ -285,7 +309,17 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
         }
       }
 
-      add(LoadFirstStockWithdrawals());
+      final currentState = state;
+      if (currentState is StockWithdrawalsLoaded) {
+        add(LoadFirstStockWithdrawals(
+          customerId: currentState.clientFilter,
+          dateFrom: currentState.dateFromFilter,
+          dateTo: currentState.dateToFilter,
+          status: currentState.statusFilter,
+        ));
+      } else {
+        add(LoadFirstStockWithdrawals());
+      }
     } catch (e) {
       emit(StockWithdrawalsError(ErrorHandler.parseError(e)));
     }
@@ -340,13 +374,32 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
         }
       }
 
-      add(LoadFirstStockWithdrawals());
+      final currentState = state;
+      if (currentState is StockWithdrawalsLoaded) {
+        add(LoadFirstStockWithdrawals(
+          customerId: currentState.clientFilter,
+          dateFrom: currentState.dateFromFilter,
+          dateTo: currentState.dateToFilter,
+          status: currentState.statusFilter,
+        ));
+      } else {
+        add(LoadFirstStockWithdrawals());
+      }
     } catch (e) {
       emit(StockWithdrawalsError(ErrorHandler.parseError(e)));
     }
   }
 
   Future<void> _onDelete(DeleteStockWithdrawal event, Emitter<StockWithdrawalsState> emit) async {
+    final currentState = state;
+    if (currentState is StockWithdrawalsLoaded) {
+      final updatedList = currentState.withdrawals.where((w) => w.id != event.withdrawalId).toList();
+      emit(currentState.copyWith(
+        withdrawals: updatedList,
+        totalCount: currentState.totalCount > 0 ? currentState.totalCount - 1 : 0,
+      ));
+    }
+
     try {
       await FirestoreRepository.instance.softDeleteDocument('bons_prelevement', event.withdrawalId);
     } catch (_) {
@@ -354,7 +407,19 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
         await FirestoreRepository.instance.deleteDocument('bons_prelevement', event.withdrawalId);
       } catch (_) {}
     }
-    add(LoadFirstStockWithdrawals());
+
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    if (currentState is StockWithdrawalsLoaded) {
+      add(LoadFirstStockWithdrawals(
+        customerId: currentState.clientFilter,
+        dateFrom: currentState.dateFromFilter,
+        dateTo: currentState.dateToFilter,
+        status: currentState.statusFilter,
+      ));
+    } else {
+      add(LoadFirstStockWithdrawals());
+    }
   }
 
   Future<void> _onFilter(FilterStockWithdrawals event, Emitter<StockWithdrawalsState> emit) async {

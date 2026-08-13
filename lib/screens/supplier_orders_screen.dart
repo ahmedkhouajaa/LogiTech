@@ -28,6 +28,8 @@ import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import '../models/receiving_voucher.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 
 class SupplierOrdersScreen extends StatefulWidget {
   const SupplierOrdersScreen({super.key});
@@ -677,11 +679,24 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     );
   }
 
+  Widget _buildTableShimmer() {
+    return ShimmerTable(
+      headerColumns: [
+        const SizedBox(width: 32),
+        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+        SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+      ],
+    );
+  }
+
   Widget _buildTable() {
     return BlocBuilder<SupplierOrdersBloc, SupplierOrdersState>(
       builder: (context, state) {
-        if (state is SupplierOrdersLoading) {
-          return Center(child: CircularProgressIndicator());
+        if (state is SupplierOrdersLoading || state is SupplierOrdersInitial) {
+          return _buildTableShimmer();
         }
         if (state is SupplierOrdersError) {
             return AppErrorWidget(message: state.message);

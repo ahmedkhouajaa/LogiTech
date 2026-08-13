@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 import '../blocs/projects/projects_bloc.dart';
 import '../models/project.dart';
 import '../utils/constants.dart';
@@ -109,7 +111,20 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         Expanded(
           child: BlocBuilder<ProjectsBloc, ProjectsState>(
             builder: (context, state) {
-              if (state is ProjectsLoading) return Center(child: CircularProgressIndicator());
+              if (state is ProjectsLoading || state is ProjectsInitial) {
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  child: ShimmerTable(
+                    headerColumns: [
+                      const SizedBox(width: 32),
+                      Expanded(flex: 3, child: Text('Nom du Projet', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Date de Creation', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                    ],
+                  ),
+                );
+              }
               if (state is ProjectsLoaded) {
                 return Padding(
                   padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),

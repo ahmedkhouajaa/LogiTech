@@ -5,6 +5,7 @@ import '../../blocs/customers/customers_bloc.dart';
 import '../../models/product.dart';
 import '../../blocs/products/products_bloc.dart';
 import '../../blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
+import '../../blocs/exit_vouchers/exit_vouchers_bloc.dart';
 
 import '../../models/stock_withdrawal.dart';
 import '../../models/document_wrapper.dart';
@@ -17,6 +18,7 @@ import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../blocs/warehouses/warehouses_state.dart';
 
 import '../../screens/document_preview_screen.dart';
+import '../../screens/create_stock_withdrawal_screen.dart';
 import 'forms/mobile_exit_voucher_form_screen.dart';
 
 class MobileStockWithdrawalDetailScreen extends StatefulWidget {
@@ -133,23 +135,47 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
     }
     final String warehouseName = getWhName(currentWithdrawal.warehouseId);
 
-    return BlocListener<StockWithdrawalsBloc, StockWithdrawalsState>(
-      listener: (context, state) {
-        if (state is StockWithdrawalsLoaded) {
-          try {
-            final updatedWithdrawal = state.withdrawals.firstWhere((q) => (q as StockWithdrawal).id == currentWithdrawal.id);
-            if ((updatedWithdrawal as StockWithdrawal).id == currentWithdrawal.id && mounted) {
-              setState(() {
-                currentWithdrawal = updatedWithdrawal.copyWith(items: currentWithdrawal.items);
-              });
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<StockWithdrawalsBloc, StockWithdrawalsState>(
+          listenWhen: (_, __) => !widget.isExitVoucher,
+          listener: (context, state) {
+            if (state is StockWithdrawalsLoaded) {
+              try {
+                final updatedWithdrawal = state.withdrawals.firstWhere((q) => (q as StockWithdrawal).id == currentWithdrawal.id);
+                if ((updatedWithdrawal as StockWithdrawal).id == currentWithdrawal.id && mounted) {
+                  setState(() {
+                    currentWithdrawal = updatedWithdrawal.copyWith(items: currentWithdrawal.items);
+                  });
+                }
+              } catch (_) {
+                if (mounted) {
+                  Navigator.pop(context);
+                }
+              }
             }
-          } catch (_) {
-            if (mounted) {
-              Navigator.pop(context);
+          },
+        ),
+        BlocListener<ExitVouchersBloc, ExitVouchersState>(
+          listenWhen: (_, __) => widget.isExitVoucher,
+          listener: (context, state) {
+            if (state is ExitVouchersLoaded) {
+              try {
+                final updatedWithdrawal = state.withdrawals.firstWhere((q) => q.id == currentWithdrawal.id);
+                if (updatedWithdrawal.id == currentWithdrawal.id && mounted) {
+                  setState(() {
+                    currentWithdrawal = updatedWithdrawal.copyWith(items: currentWithdrawal.items);
+                  });
+                }
+              } catch (_) {
+                if (mounted) {
+                  Navigator.pop(context);
+                }
+              }
             }
-          }
-        }
-      },
+          },
+        ),
+      ],
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
@@ -373,32 +399,53 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
         break;
       case 'edit':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MultiBlocProvider(
-              providers: [
-                BlocProvider.value(value: context.read<StockWithdrawalsBloc>()),
-                BlocProvider.value(value: context.read<CustomersBloc>()),
-                BlocProvider.value(value: context.read<ProductsBloc>()),
-              ],
-              child: MobileExitVoucherFormScreen(existing: withdrawal),
+        if (widget.isExitVoucher) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MultiBlocProvider(
+                providers: [
+                  BlocProvider.value(value: context.read<ExitVouchersBloc>()),
+                  BlocProvider.value(value: context.read<CustomersBloc>()),
+                  BlocProvider.value(value: context.read<ProductsBloc>()),
+                ],
+                child: MobileExitVoucherFormScreen(
+                  existing: withdrawal,
+                  isExitVoucher: true,
+                ),
+              ),
             ),
-          ),
-        );
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CreateStockWithdrawalScreen(
+                existing: withdrawal,
+                isExitVoucher: false,
+              ),
+            ),
+          );
+        }
         break;
       case 'delete':
         showDialog(
           context: context,
           builder: (dialogCtx) => AlertDialog(
             title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer ce bon de sortie ?'),
+            content: Text(widget.isExitVoucher 
+              ? 'Voulez-vous vraiment supprimer ce bon de sortie ?' 
+              : 'Voulez-vous vraiment supprimer ce bon de prélèvement ?'),
             actions: [
               TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogCtx);
-                  context.read<StockWithdrawalsBloc>().add(DeleteStockWithdrawal(withdrawal.id));
+                  if (widget.isExitVoucher) {
+                    context.read<ExitVouchersBloc>().add(DeleteExitVoucher(withdrawal.id));
+                  } else {
+                    context.read<StockWithdrawalsBloc>().add(DeleteStockWithdrawal(withdrawal.id));
+                  }
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
                 child: Text('Supprimer', style: TextStyle(color: Colors.white)),

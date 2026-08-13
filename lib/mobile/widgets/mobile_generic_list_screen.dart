@@ -6,6 +6,9 @@ import 'mobile_filter_chips.dart';
 import 'mobile_empty_state.dart';
 import '../../services/sync_service.dart';
 
+import 'shimmer_card.dart';
+import '../../widgets/shimmer_effect.dart';
+
 class MobileGenericListScreen extends StatelessWidget {
   final String title;
   final AppModule activeModule;
@@ -26,6 +29,8 @@ class MobileGenericListScreen extends StatelessWidget {
   final ScrollController? scrollController;
   final Widget? customFab;
   final String? subtitle;
+
+  final Widget? loadingWidget;
 
   const MobileGenericListScreen({
     super.key,
@@ -48,6 +53,7 @@ class MobileGenericListScreen extends StatelessWidget {
     this.scrollController,
     this.customFab,
     this.subtitle,
+    this.loadingWidget,
   });
 
   @override
@@ -104,7 +110,7 @@ class MobileGenericListScreen extends StatelessWidget {
           // Content Area
           Expanded(
             child: isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? (loadingWidget ?? _buildDefaultLoading())
                 : RefreshIndicator(
                     onRefresh: () async {
                       await SyncService.instance.triggerSync();
@@ -135,6 +141,25 @@ class MobileGenericListScreen extends StatelessWidget {
         label: Text(fabText!, style: TextStyle(color: Colors.white)),
         backgroundColor: AppColors.primary,
       ) : null),
+    );
+  }
+
+  Widget _buildDefaultLoading() {
+    return AppShimmer(
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: const [
+            ShimmerCard(refWidth: 130, statusWidth: 80, dateWidth: 100, clientWidth: 140, amountWidth: 85),
+            ShimmerCard(refWidth: 145, statusWidth: 70, dateWidth: 95, clientWidth: 110, amountWidth: 70),
+            ShimmerCard(refWidth: 120, statusWidth: 85, dateWidth: 105, clientWidth: 150, amountWidth: 90),
+            ShimmerCard(refWidth: 140, statusWidth: 75, dateWidth: 90, clientWidth: 130, amountWidth: 80),
+            ShimmerCard(refWidth: 125, statusWidth: 80, dateWidth: 100, clientWidth: 120, amountWidth: 75),
+            ShimmerCard(refWidth: 135, statusWidth: 70, dateWidth: 95, clientWidth: 135, amountWidth: 85),
+          ],
+        ),
+      ),
     );
   }
 }

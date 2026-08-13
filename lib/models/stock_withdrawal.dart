@@ -21,6 +21,8 @@ class StockWithdrawal {
   final String? createdBy;
   final String? warehouseId;
   final String? firebaseUid;
+  final String? userId;
+  final String? enterpriseId;
   final bool isDeleted;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -47,6 +49,8 @@ class StockWithdrawal {
     this.createdBy,
     this.warehouseId,
     this.firebaseUid,
+    this.userId,
+    this.enterpriseId,
     this.isDeleted = false,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -130,6 +134,8 @@ class StockWithdrawal {
     String? conditionsGenerales,
     String? warehouseId,
     String? firebaseUid,
+    String? userId,
+    String? enterpriseId,
     bool? isDeleted,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -156,6 +162,8 @@ class StockWithdrawal {
       createdBy: createdBy ?? this.createdBy,
       warehouseId: warehouseId ?? this.warehouseId,
       firebaseUid: firebaseUid ?? this.firebaseUid,
+      userId: userId ?? this.userId,
+      enterpriseId: enterpriseId ?? this.enterpriseId,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -187,6 +195,8 @@ class StockWithdrawal {
         'total_tva': totalTVA,
         'total_ttc': totalTTC,
         'firebase_uid': firebaseUid,
+        'userId': userId,
+        'enterprise_id': enterpriseId,
         'is_deleted': isDeleted ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
@@ -220,6 +230,8 @@ class StockWithdrawal {
       createdBy: map['created_by']?.toString() ?? map['createdBy']?.toString(),
       warehouseId: map['warehouse_id']?.toString() ?? map['warehouseId']?.toString(),
       firebaseUid: map['firebase_uid']?.toString(),
+      userId: map['userId']?.toString() ?? map['user_id']?.toString(),
+      enterpriseId: map['enterprise_id']?.toString() ?? map['enterpriseId']?.toString(),
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
       createdAt: map['created_at'] != null ? (map['created_at'] is DateTime ? map['created_at'] as DateTime : DateTime.parse(map['created_at'].toString())) : DateTime.now(),
       updatedAt: map['updated_at'] != null ? (map['updated_at'] is DateTime ? map['updated_at'] as DateTime : DateTime.parse(map['updated_at'].toString())) : DateTime.now(),

@@ -407,8 +407,19 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                 BlocBuilder<WarehousesBloc, WarehousesState>(
                   builder: (context, state) {
                     final warehouses = state is WarehousesLoaded ? (List.of(state.warehouses)..sort((a,b) => a.name.compareTo(b.name))) : <Warehouse>[];
-                    final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _selectedWarehouseId, orElse: () => null);
-                    final warehouseName = selectedWh != null ? selectedWh.name : 'Entrepôt Principal';
+                    final defaultWh = warehouses.cast<Warehouse?>().firstWhere(
+                      (w) => w?.isDefault == true,
+                      orElse: () => warehouses.cast<Warehouse?>().firstWhere((w) => w?.name.toLowerCase().contains('défaut') == true || w?.name.toLowerCase().contains('defaut') == true, orElse: () => warehouses.isNotEmpty ? warehouses.first : null),
+                    );
+                    if (_selectedWarehouseId == null && defaultWh != null) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted && _selectedWarehouseId == null) {
+                          setState(() => _selectedWarehouseId = defaultWh.id);
+                        }
+                      });
+                    }
+                    final selectedWh = warehouses.cast<Warehouse?>().firstWhere((w) => w?.id == (_selectedWarehouseId ?? defaultWh?.id), orElse: () => defaultWh);
+                    final warehouseName = selectedWh?.name;
 
                     return SmartSearchableSelector(
                       label: 'Entrepôt',
@@ -416,7 +427,7 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
                       selectedText: warehouseName,
                       onTap: () async {
                         if (widget.isReadOnly) return;
-                        final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId);
+                        final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId ?? defaultWh?.id);
                         if (res != null && mounted) {
                           setState(() => _selectedWarehouseId = res);
                         }

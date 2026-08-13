@@ -255,7 +255,24 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
   Widget build(BuildContext context) {
     return BlocBuilder<WarehousesBloc, WarehousesState>(
       builder: (context, whState) {
-        final currentWarehouses = whState is WarehousesLoaded && whState.warehouses.isNotEmpty ? whState.warehouses : _warehouses;
+        final currentWarehouses = (whState is WarehousesLoaded && whState.warehouses.isNotEmpty ? whState.warehouses : _warehouses).where((w) => !w.isDeleted).toList();
+
+        if (currentWarehouses.isNotEmpty) {
+          if (_sourceWarehouseId == null || !currentWarehouses.any((w) => w.id == _sourceWarehouseId)) {
+            final defaultW = currentWarehouses.cast<Warehouse?>().firstWhere((w) => w?.isDefault == true, orElse: () => currentWarehouses.first);
+            _sourceWarehouseId = defaultW?.id;
+          }
+          final availableForDest = currentWarehouses.where((w) => w.id != _sourceWarehouseId).toList();
+          if (_destWarehouseId == null || _destWarehouseId == _sourceWarehouseId || !currentWarehouses.any((w) => w.id == _destWarehouseId)) {
+            _destWarehouseId = availableForDest.isNotEmpty ? availableForDest.first.id : null;
+          }
+        } else {
+          _sourceWarehouseId = null;
+          _destWarehouseId = null;
+        }
+
+        final sourceWhName = currentWarehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _sourceWarehouseId, orElse: () => null)?.name ?? 'Sélectionner l\'entrepôt source...';
+        final destWhName = currentWarehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _destWarehouseId, orElse: () => null)?.name ?? 'Sélectionner l\'entrepôt destination...';
 
         return MobileFormScreen(
           title: _isEditing ? 'Modifier le transfert' : 'Nouveau transfert',
@@ -283,7 +300,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                 SmartSearchableSelector(
                   label: 'Entrepôt Source',
                   hint: 'Sélectionner l\'entrepôt source...',
-                  selectedText: currentWarehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _sourceWarehouseId, orElse: () => null)?.name ?? 'Sélectionner l\'entrepôt source...',
+                  selectedText: sourceWhName,
                   onTap: () async {
                     final available = currentWarehouses.where((w) => w.id != _destWarehouseId).toList();
                     if (available.isEmpty) {
@@ -302,7 +319,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                 SmartSearchableSelector(
                   label: 'Entrepôt Destination',
                   hint: 'Sélectionner l\'entrepôt destination...',
-                  selectedText: currentWarehouses.cast<Warehouse?>().firstWhere((w) => w?.id == _destWarehouseId, orElse: () => null)?.name ?? 'Sélectionner l\'entrepôt destination...',
+                  selectedText: destWhName,
                   onTap: () async {
                     final available = currentWarehouses.where((w) => w.id != _sourceWarehouseId).toList();
                     if (available.isEmpty) {

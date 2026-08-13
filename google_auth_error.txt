@@ -1,0 +1,99 @@
+Error: OpenIdException(invalid_request): client_secret is missing.
+Stack: #0      _processResponse (package:openid_client/src/http_util.dart:43:5)
+#1      post (package:openid_client/src/http_util.dart:26:10)
+<asynchronous suspension>
+#2      Flow._getToken (package:openid_client/src/openid.dart:545:14)
+<asynchronous suspension>
+#3      Flow.callback (package:openid_client/src/openid.dart:639:35)
+<asynchronous suspension>
+#4      AuthService.signInWithGoogle (package:business_manager_pro/services/auth_service.dart:108:27)
+<asynchronous suspension>
+#5      AuthBloc._onAuthGoogleSignInRequested (package:business_manager_pro/blocs/auth/auth_bloc.dart:116:23)
+<asynchronous suspension>
+#6      Bloc.on.<anonymous closure>.handleEvent (package:bloc/src/bloc.dart:226:13)
+<asynchronous suspension>
+
+Error: OpenIdException(invalid_request): client_secret is missing.
+Stack: #0      _processResponse (package:openid_client/src/http_util.dart:43:5)
+#1      post (package:openid_client/src/http_util.dart:26:10)
+<asynchronous suspension>
+#2      Flow._getToken (package:openid_client/src/openid.dart:545:14)
+<asynchronous suspension>
+#3      Flow.callback (package:openid_client/src/openid.dart:639:35)
+<asynchronous suspension>
+#4      AuthService.signInWithGoogle (package:business_manager_pro/services/auth_service.dart:108:27)
+<asynchronous suspension>
+#5      AuthBloc._onAuthGoogleSignInRequested (package:business_manager_pro/blocs/auth/auth_bloc.dart:116:23)
+<asynchronous suspension>
+#6      Bloc.on.<anonymous closure>.handleEvent (package:bloc/src/bloc.dart:226:13)
+<asynchronous suspension>
+
+Error: OpenIdException(invalid_request): client_secret is missing.
+Stack: #0      _processResponse (package:openid_client/src/http_util.dart:43:5)
+#1      post (package:openid_client/src/http_util.dart:26:10)
+<asynchronous suspension>
+#2      Flow._getToken (package:openid_client/src/openid.dart:545:14)
+<asynchronous suspension>
+#3      Flow.callback (package:openid_client/src/openid.dart:639:35)
+<asynchronous suspension>
+#4      AuthService.signInWithGoogle (package:business_manager_pro/services/auth_service.dart:108:27)
+<asynchronous suspension>
+#5      AuthBloc._onAuthGoogleSignInRequested (package:business_manager_pro/blocs/auth/auth_bloc.dart:116:23)
+<asynchronous suspension>
+#6      Bloc.on.<anonymous closure>.handleEvent (package:bloc/src/bloc.dart:226:13)
+<asynchronous suspension>
+
+Error: OpenIdException(invalid_request): client_secret is missing.
+Stack: #0      _processResponse (package:openid_client/src/http_util.dart:43:5)
+#1      post (package:openid_client/src/http_util.dart:26:10)
+<asynchronous suspension>
+#2      Flow._getToken (package:openid_client/src/openid.dart:545:14)
+<asynchronous suspension>
+#3      Flow.callback (package:openid_client/src/openid.dart:639:35)
+<asynchronous suspension>
+#4      AuthService.signInWithGoogle (package:business_manager_pro/services/auth_service.dart:108:27)
+<asynchronous suspension>
+#5      AuthBloc._onAuthGoogleSignInRequested (package:business_manager_pro/blocs/auth/auth_bloc.dart:116:23)
+<asynchronous suspension>
+#6      Bloc.on.<anonymous closure>.handleEvent (package:bloc/src/bloc.dart:226:13)
+<asynchronous suspension>
+
+Error: OpenIdException(invalid_request): client_secret is missing.
+Stack: #0      _processResponse (package:openid_client/src/http_util.dart:43:5)
+#1      post (package:openid_client/src/http_util.dart:26:10)
+<asynchronous suspension>
+#2      Flow._getToken (package:openid_client/src/openid.dart:545:14)
+<asynchronous suspension>
+#3      Flow.callback (package:openid_client/src/openid.dart:639:35)
+<asynchronous suspension>
+#4      AuthService.signInWithGoogle (package:business_manager_pro/services/auth_service.dart:108:27)
+<asynchronous suspension>
+#5      AuthBloc._onAuthGoogleSignInRequested (package:business_manager_pro/blocs/auth/auth_bloc.dart:116:23)
+<asynchronous suspension>
+#6      Bloc.on.<anonymous closure>.handleEvent (package:bloc/src/bloc.dart:226:13)
+<asynchronous suspension>
+
+Error: OpenIdException(invalid_request): client_secret is missing.
+Stack: #0      _processResponse (package:openid_client/src/http_util.dart:43:5)
+#1      post (package:openid_client/src/http_util.dart:26:10)
+<asynchronous suspension>
+#2      Flow._getToken (package:openid_client/src/openid.dart:545:14)
+<asynchronous suspension>
+#3      Flow.callback (package:openid_client/src/openid.dart:639:35)
+<asynchronous suspension>
+#4      AuthService.signInWithGoogle (package:business_manager_pro/services/auth_service.dart:108:27)
+<asynchronous suspension>
+#5      AuthBloc._onAuthGoogleSignInRequested (package:business_manager_pro/blocs/auth/auth_bloc.dart:116:23)
+<asynchronous suspension>
+#6      Bloc.on.<anonymous closure>.handleEvent (package:bloc/src/bloc.dart:226:13)
+<asynchronous suspension>
+
+Error: Null check operator used on a null value
+Stack: #0      TokenResponse.idToken (package:openid_client/src/model/token_response.dart:25:66)
+#1      AuthService.signInWithGoogle (package:business_manager_pro/services/auth_service.dart:112:39)
+<asynchronous suspension>
+#2      AuthBloc._onAuthGoogleSignInRequested (package:business_manager_pro/blocs/auth/auth_bloc.dart:116:23)
+<asynchronous suspension>
+#3      Bloc.on.<anonymous closure>.handleEvent (package:bloc/src/bloc.dart:226:13)
+<asynchronous suspension>
+

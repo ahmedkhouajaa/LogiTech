@@ -13,6 +13,8 @@ import '../services/expense_category_service.dart';
 import 'package:intl/intl.dart';
 import '../mobile/screens/mobile_treasury_accounts_screen.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 
 class TreasuryAccountsScreen extends StatefulWidget {
   const TreasuryAccountsScreen({super.key});
@@ -157,7 +159,20 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
         Expanded(
           child: BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
             builder: (context, state) {
-              if (state is TreasuryAccountsLoading) return Center(child: CircularProgressIndicator());
+              if (state is TreasuryAccountsLoading || state is TreasuryAccountsInitial) {
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  child: ShimmerTable(
+                    headerColumns: [
+                      const SizedBox(width: 32),
+                      Expanded(flex: 3, child: Text('Nom du Compte', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Banque / Type', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Solde Actuel', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                    ],
+                  ),
+                );
+              }
               if (state is TreasuryAccountsError) return AppErrorWidget(message: state.message);
               if (state is TreasuryAccountsLoaded) {
                 final filtered = _search.isEmpty

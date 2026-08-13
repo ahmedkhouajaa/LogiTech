@@ -9,6 +9,8 @@ import '../models/invoice.dart';
 import '../models/check_traite.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 
+import '../widgets/dashboard_shimmer_widget.dart';
+
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
@@ -17,7 +19,7 @@ class DashboardScreen extends StatelessWidget {
     return BlocBuilder<DashboardBloc, DashboardState>(
       builder: (context, state) {
         if (state is DashboardLoading || state is DashboardInitial) {
-          return Center(child: CircularProgressIndicator());
+          return const DashboardShimmerWidget();
         }
         if (state is DashboardError) {
             return AppErrorWidget(message: state.message);

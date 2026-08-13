@@ -12,6 +12,10 @@ class ErrorHandler {
       return "Une erreur inattendue s'est produite. Veuillez réessayer.";
     }
 
+    if (e is String) {
+      return e;
+    }
+
     String? code;
     String message = e.toString();
 

@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../blocs/payments/payments_bloc.dart';
+import '../widgets/shimmer_effect.dart';
+import '../widgets/shimmer_table_row.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
@@ -315,9 +317,18 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 padding: EdgeInsets.fromLTRB(24, 0, 24, 0),
                 child: AppCard(
                   padding: EdgeInsets.zero,
-                  child: state is PaymentsLoading
-                      ? Center(
-                          child: CircularProgressIndicator())
+                  child: state is PaymentsLoading || state is PaymentsInitial
+                      ? ShimmerTable(
+                          headerColumns: [
+                            const SizedBox(width: 32),
+                            Expanded(flex: 3, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                            Expanded(flex: 3, child: Text('Contact', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text('Mode', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                            SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                          ],
+                        )
                       : filtered.isEmpty
                           ? _buildEmpty()
                           : Column(

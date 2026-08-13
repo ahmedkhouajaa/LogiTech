@@ -20,6 +20,17 @@ class AuthLoginRequested extends AuthEvent {
   List<Object?> get props => [email, password];
 }
 
+class AuthSignUpRequested extends AuthEvent {
+  final String email;
+  final String password;
+  final String name;
+  const AuthSignUpRequested(this.email, this.password, this.name);
+  @override
+  List<Object?> get props => [email, password, name];
+}
+
+class AuthGoogleSignInRequested extends AuthEvent {}
+
 class AuthLogoutRequested extends AuthEvent {}
 
 class AuthOfflineModeRequested extends AuthEvent {}
@@ -56,6 +67,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<AuthLoginRequested>(_onAuthLoginRequested);
+    on<AuthSignUpRequested>(_onAuthSignUpRequested);
+    on<AuthGoogleSignInRequested>(_onAuthGoogleSignInRequested);
     on<AuthLogoutRequested>(_onAuthLogoutRequested);
     on<AuthOfflineModeRequested>(_onAuthOfflineModeRequested);
   }
@@ -77,6 +90,34 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
       } else {
         emit(const AuthError('Identifiants incorrects'));
+      }
+    } catch (e) {
+      emit(AuthError(ErrorHandler.parseError(e)));
+    }
+  }
+
+  Future<void> _onAuthSignUpRequested(AuthSignUpRequested event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      final success = await _authService.signUpWithEmail(event.email, event.password, event.name);
+      if (success) {
+        emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
+      } else {
+        emit(const AuthError('Erreur lors de l\'inscription'));
+      }
+    } catch (e) {
+      emit(AuthError(ErrorHandler.parseError(e)));
+    }
+  }
+
+  Future<void> _onAuthGoogleSignInRequested(AuthGoogleSignInRequested event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      final success = await _authService.signInWithGoogle();
+      if (success) {
+        emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
+      } else {
+        emit(const AuthError('Erreur lors de la connexion Google'));
       }
     } catch (e) {
       emit(AuthError(ErrorHandler.parseError(e)));
