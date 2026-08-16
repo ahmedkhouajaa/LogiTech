@@ -38,6 +38,7 @@ class Customer {
   final String? tvaEndDate;
   final String priceList;
   final String? privateNote;
+  final bool isDefault;
 
   final String? enterpriseId;
 
@@ -57,6 +58,7 @@ class Customer {
     this.firebaseUid,
     this.enterpriseId,
     this.isDeleted = false,
+    this.isDefault = false,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.customerType = 'entreprise',
@@ -122,6 +124,8 @@ class Customer {
         'tva_end_date': tvaEndDate,
         'price_list': priceList,
         'private_note': privateNote,
+        'is_default': isDefault ? 1 : 0,
+        'isDefault': isDefault,
       };
 
   factory Customer.fromMap(Map<String, dynamic> map) => Customer(
@@ -140,6 +144,7 @@ class Customer {
         firebaseUid: map['firebase_uid'] as String?,
         enterpriseId: map['enterprise_id'] as String?,
         isDeleted: map['is_deleted'] == 1,
+        isDefault: map['is_default'] == 1 || map['is_default'] == true || map['isDefault'] == true || map['name'] == 'Client passager',
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
         customerType: map['customer_type'] as String? ?? 'entreprise',
@@ -181,6 +186,7 @@ class Customer {
     String? firebaseUid,
     String? enterpriseId,
     bool? isDeleted,
+    bool? isDefault,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? customerType,
@@ -221,6 +227,7 @@ class Customer {
         firebaseUid: firebaseUid ?? this.firebaseUid,
         enterpriseId: enterpriseId ?? this.enterpriseId,
         isDeleted: isDeleted ?? this.isDeleted,
+        isDefault: isDefault ?? this.isDefault,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         customerType: customerType ?? this.customerType,

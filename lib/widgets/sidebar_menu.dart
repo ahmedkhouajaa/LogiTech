@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
-import '../database/database_helper.dart';
-import '../services/sync_service.dart';
+import '../services/permission_service.dart';
 import 'enterprise_switcher.dart';
 
 enum AppModule {
@@ -47,6 +46,7 @@ enum AppModule {
   settings,
   companyInfo,
   documentTemplates,
+  userManagement,
 }
 
 class SidebarMenu extends StatefulWidget {
@@ -72,105 +72,112 @@ class _SidebarMenuState extends State<SidebarMenu> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
-      width: widget.isCollapsed ? 64 : 256,
-      color: AppColors.sidebarBg,
-      child: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildItem(AppModule.dashboard, Icons.dashboard_rounded, 'Tableau de bord'),
-/*                   _buildItem(AppModule.reports, Icons.bar_chart_rounded, 'Rapports'),
- */                  const _SidebarDivider(),
-                  _buildGroup('ventes', Icons.shopping_cart_rounded, 'Ventes', [
-                    _buildSubItem(AppModule.quotes, 'Devis'),
-                    _buildSubItem(AppModule.customerOrders, 'Commandes'),
-                    _buildSubItem(AppModule.deliveryNotes, 'Bons de livraison'),
-                    _buildSubItem(AppModule.invoices, 'Factures'),
-                    _buildSubItem(AppModule.exitVouchers, 'Bons de sortie'),
-                    _buildSubItem(AppModule.creditNotes, 'Avoirs'),
-                    _buildSubItem(AppModule.returnVouchers, 'Bons de retour'),
-                  ]),
-                  _buildGroup('achats', Icons.local_shipping_rounded, 'Achats', [
-                    _buildSubItem(AppModule.supplierOrders, 'Commandes fournisseur'),
-                    _buildSubItem(AppModule.receivingVouchers, 'Bons de reception'),
-                    _buildSubItem(AppModule.purchaseInvoices, 'Factures d\'achat'),
-                    _buildSubItem(AppModule.supplierCreditNotes, 'Avoirs fournisseur'),
-                    _buildSubItem(AppModule.supplierReturns, 'Retours fournisseur'),
-                  ]),
-                  _buildGroup('paiements', Icons.account_balance_wallet_rounded, 'Paiements', [
-                    _buildSubItem(AppModule.payments, 'Paiements'),
-                  ]),
-                  _buildGroup('retenue_source', Icons.request_quote_rounded, 'Retenue à la source', [
-                    _buildSubItem(AppModule.withholdingTaxSales, 'RS vente'),
-                    _buildSubItem(AppModule.withholdingTaxPurchase, 'RS achat'),
-                  ]),
-                  _buildGroup('tresorerie', Icons.account_balance_rounded, 'Tresorerie', [
-                    _buildSubItem(AppModule.accounts, 'Comptes'),
-                    _buildSubItem(AppModule.transactions, 'Transactions'),
-                    _buildSubItem(AppModule.checksTraites, 'Cheques & Traites'),
-                  ]),
-                  const _SidebarDivider(),
-                  _buildItem(AppModule.customers, Icons.people_rounded, 'Clients'),
-                  _buildItem(AppModule.suppliers, Icons.factory_rounded, 'Fournisseurs'),
-                  _buildGroup('articles', Icons.inventory_2_rounded, 'Articles', [
-                    _buildSubItem(AppModule.products, 'Liste des articles'),
-                    _buildSubItem(AppModule.productSettings, 'Parametres des articles'),
-                  ]),
-                  const _SidebarDivider(),
-                  _buildGroup('stock', Icons.warehouse_rounded, 'Stock', [
-                    _buildSubItem(AppModule.stockDashboard, 'Vue d\'ensemble'),
-                    _buildSubItem(AppModule.stockMovements, 'Mouvements'),
-                    _buildSubItem(AppModule.stockEntry, 'Bons d\'entree'),
-                    _buildSubItem(AppModule.stockWithdrawal, 'Bons de prelevement'),
-                    _buildSubItem(AppModule.stockTransfer, 'Bons de transfert'),
-                    _buildSubItem(AppModule.inventorySheet, 'Fiche d\'inventaire'),
-                    _buildSubItem(AppModule.warehouses, 'Entrepots'),
-                  ]),
-                  const _SidebarDivider(),
-                  _buildItem(AppModule.projects, Icons.folder_rounded, 'Projets'),
-                  const _SidebarDivider(),
-                  _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
-                  _buildItem(AppModule.companyInfo, Icons.business_rounded, 'Informations de la societe'),
-                  _buildItem(AppModule.documentTemplates, Icons.description_rounded, 'Modeles de documents'),
-                  SizedBox(height: 16),
-                  
-                  // TEMP SYNC BUTTON
-                  if (!widget.isCollapsed)
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                        ),
-                        onPressed: () async {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Starting Force Sync... Please wait!')),
-                          );
-                          await DatabaseHelper.instance.forceSyncAllExistingDataWithItems();
-                          // Force upload to Firebase immediately!
-                          await SyncService.instance.triggerSync();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Force Sync Complete! Check Mobile now.')),
-                          );
-                        },
-                        icon: Icon(Icons.sync_problem),
-                        label: Text('FORCE SYNC FIX'),
-                      ),
-                    ),
-                    
-                ],
+    return ValueListenableBuilder<bool>(
+      valueListenable: PermissionService.instance.permissionsNotifier,
+      builder: (context, _, __) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          width: widget.isCollapsed ? 64 : 256,
+          color: AppColors.sidebarBg,
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildItem(AppModule.dashboard, Icons.dashboard_rounded, 'Tableau de bord'),
+                      const _SidebarDivider(),
+                      _buildGroup('ventes', Icons.shopping_cart_rounded, 'Ventes', [
+                        _buildSubItem(AppModule.quotes, 'Devis'),
+                        _buildSubItem(AppModule.customerOrders, 'Commandes'),
+                        _buildSubItem(AppModule.deliveryNotes, 'Bons de livraison'),
+                        _buildSubItem(AppModule.invoices, 'Factures'),
+                        _buildSubItem(AppModule.exitVouchers, 'Bons de sortie'),
+                        _buildSubItem(AppModule.creditNotes, 'Avoirs'),
+                        _buildSubItem(AppModule.returnVouchers, 'Bons de retour'),
+                      ]),
+                      _buildGroup('achats', Icons.local_shipping_rounded, 'Achats', [
+                        _buildSubItem(AppModule.supplierOrders, 'Commandes fournisseur'),
+                        _buildSubItem(AppModule.receivingVouchers, 'Bons de reception'),
+                        _buildSubItem(AppModule.purchaseInvoices, 'Factures d\'achat'),
+                        _buildSubItem(AppModule.supplierCreditNotes, 'Avoirs fournisseur'),
+                        _buildSubItem(AppModule.supplierReturns, 'Retours fournisseur'),
+                      ]),
+                      _buildGroup('paiements', Icons.account_balance_wallet_rounded, 'Paiements', [
+                        _buildSubItem(AppModule.payments, 'Paiements'),
+                      ]),
+                      _buildGroup('retenue_source', Icons.request_quote_rounded, 'Retenue à la source', [
+                        _buildSubItem(AppModule.withholdingTaxSales, 'RS vente'),
+                        _buildSubItem(AppModule.withholdingTaxPurchase, 'RS achat'),
+                      ]),
+                      _buildGroup('tresorerie', Icons.account_balance_rounded, 'Tresorerie', [
+                        _buildSubItem(AppModule.accounts, 'Comptes'),
+                        _buildSubItem(AppModule.transactions, 'Transactions'),
+                        _buildSubItem(AppModule.checksTraites, 'Cheques & Traites'),
+                      ]),
+                      const _SidebarDivider(),
+                      _buildItem(AppModule.customers, Icons.people_rounded, 'Clients'),
+                      _buildItem(AppModule.suppliers, Icons.factory_rounded, 'Fournisseurs'),
+                      _buildGroup('articles', Icons.inventory_2_rounded, 'Articles', [
+                        _buildSubItem(AppModule.products, 'Liste des articles'),
+                        _buildSubItem(AppModule.productSettings, 'Parametres des articles'),
+                      ]),
+                      const _SidebarDivider(),
+                      _buildGroup('stock', Icons.warehouse_rounded, 'Stock', [
+                        _buildSubItem(AppModule.stockDashboard, 'Vue d\'ensemble'),
+                        _buildSubItem(AppModule.stockMovements, 'Mouvements'),
+                        _buildSubItem(AppModule.stockEntry, 'Bons d\'entree'),
+                        _buildSubItem(AppModule.stockWithdrawal, 'Bons de prelevement'),
+                        _buildSubItem(AppModule.stockTransfer, 'Bons de transfert'),
+                        _buildSubItem(AppModule.inventorySheet, 'Fiche d\'inventaire'),
+                        _buildSubItem(AppModule.warehouses, 'Entrepots'),
+                      ]),
+                      const _SidebarDivider(),
+                      _buildItem(AppModule.projects, Icons.folder_rounded, 'Projets'),
+                      const _SidebarDivider(),
+                      _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
+                      _buildItem(AppModule.companyInfo, Icons.business_rounded, 'Informations de la societe'),
+                      // _buildItem(AppModule.documentTemplates, Icons.description_rounded, 'Modeles de documents'),
+                      if (PermissionService.instance.isAdmin)
+                        _buildItem(AppModule.userManagement, Icons.manage_accounts_rounded, 'Gestion des utilisateurs'),
+                      const SizedBox(height: 16),
+                      
+                      // // TEMP SYNC BUTTON - Temporarily hidden
+                      // if (!widget.isCollapsed)
+                      //   Padding(
+                      //     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      //     child: ElevatedButton.icon(
+                      //       style: ElevatedButton.styleFrom(
+                      //         backgroundColor: Colors.red,
+                      //         foregroundColor: Colors.white,
+                      //       ),
+                      //       onPressed: () async {
+                      //         ScaffoldMessenger.of(context).showSnackBar(
+                      //           const SnackBar(content: Text('Starting Force Sync... Please wait!')),
+                      //         );
+                      //         await DatabaseHelper.instance.forceSyncAllExistingDataWithItems();
+                      //         // Force upload to Firebase immediately!
+                      //         await SyncService.instance.triggerSync();
+                      //         if (context.mounted) {
+                      //           ScaffoldMessenger.of(context).showSnackBar(
+                      //             const SnackBar(content: Text('Force Sync Complete! Check Mobile now.')),
+                      //           );
+                      //         }
+                      //       },
+                      //       icon: const Icon(Icons.sync_problem),
+                      //       label: const Text('FORCE SYNC FIX'),
+                      //     ),
+                      //   ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -204,6 +211,9 @@ class _SidebarMenuState extends State<SidebarMenu> {
   }
 
   Widget _buildItem(AppModule module, IconData icon, String label) {
+    if (!PermissionService.instance.canAccessModule(module)) {
+      return const SizedBox.shrink();
+    }
     final isActive = widget.activeModule == module;
     return _SidebarItemWidget(
       icon: icon,
@@ -215,8 +225,20 @@ class _SidebarMenuState extends State<SidebarMenu> {
   }
 
   Widget _buildGroup(String groupKey, IconData icon, String label, List<Widget> children) {
+    // Filter visible children based on permission
+    final visibleChildren = children.where((w) {
+      if (w is _SidebarSubItemWidget) {
+        return PermissionService.instance.canAccessModule(w.module);
+      }
+      return true;
+    }).toList();
+
+    if (visibleChildren.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     final isExpanded = _expandedGroups.contains(groupKey);
-    final isGroupActive = false; // Could check if any child is active
+    const isGroupActive = false;
 
     if (widget.isCollapsed) {
       return _SidebarItemWidget(
@@ -242,11 +264,11 @@ class _SidebarMenuState extends State<SidebarMenu> {
           },
           child: Container(
             height: 42,
-            padding: EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
                 Icon(icon, color: AppColors.sidebarText, size: 18),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 Expanded(child: Text(label, style: TextStyle(color: AppColors.sidebarText, fontSize: 13, fontWeight: FontWeight.w500))),
                 Icon(
                   isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
@@ -257,19 +279,46 @@ class _SidebarMenuState extends State<SidebarMenu> {
             ),
           ),
         ),
-        if (isExpanded) ...children,
+        if (isExpanded) ...visibleChildren,
       ],
     );
   }
 
   Widget _buildSubItem(AppModule module, String label) {
+    if (!PermissionService.instance.canAccessModule(module)) {
+      return const SizedBox.shrink();
+    }
     final isActive = widget.activeModule == module;
-    return InkWell(
+    return _SidebarSubItemWidget(
+      module: module,
+      label: label,
+      isActive: isActive,
       onTap: () => widget.onModuleSelected(module),
+    );
+  }
+}
+
+class _SidebarSubItemWidget extends StatelessWidget {
+  final AppModule module;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _SidebarSubItemWidget({
+    required this.module,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
       child: AnimatedContainer(
-        duration: Duration(milliseconds: 150),
+        duration: const Duration(milliseconds: 150),
         height: 36,
-        padding: EdgeInsets.only(left: 40),
+        padding: const EdgeInsets.only(left: 40),
         decoration: BoxDecoration(
           color: isActive ? AppColors.sidebarActive.withValues(alpha: 0.2) : Colors.transparent,
           border: isActive ? Border(left: BorderSide(color: AppColors.primary, width: 3)) : null,
@@ -318,9 +367,9 @@ class _SidebarItemWidgetState extends State<_SidebarItemWidget> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: Duration(milliseconds: 150),
+          duration: const Duration(milliseconds: 150),
           height: 42,
-          margin: EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
           padding: EdgeInsets.symmetric(horizontal: widget.isCollapsed ? 0 : 10),
           decoration: BoxDecoration(
             color: widget.isActive
@@ -335,7 +384,7 @@ class _SidebarItemWidgetState extends State<_SidebarItemWidget> {
               : Row(
                   children: [
                     Icon(widget.icon, color: widget.isActive ? Colors.white : AppColors.sidebarText, size: 18),
-                    SizedBox(width: 10),
+                    const SizedBox(width: 10),
                     Text(
                       widget.label,
                       style: TextStyle(

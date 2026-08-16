@@ -9,6 +9,8 @@ import '../models/credit_note.dart';
 import '../models/customer.dart';
 import '../models/document_wrapper.dart';
 import '../services/pdf_service.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
@@ -95,11 +97,12 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                   Text('Gerer vos avoirs', style: TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
-              AppButton(
-                label: 'Nouvel Avoir',
-                icon: Icons.add_rounded,
-                onPressed: () => _navigate(context),
-              ),
+              if (PermissionService.instance.canCreate(UserPermissionResources.salesCreditNotes))
+                AppButton(
+                  label: 'Nouvel Avoir',
+                  icon: Icons.add_rounded,
+                  onPressed: () => _navigate(context),
+                ),
             ],
           ),
         ),
@@ -887,11 +890,15 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                                                 },
                                                 itemBuilder: (_) => [
                                                   _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
-                                                  PopupMenuDivider(height: 1),
-                                                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                                                  PopupMenuDivider(height: 1),
-                                                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                                                  PopupMenuDivider(height: 1),
+                                                  if (PermissionService.instance.canUpdate(UserPermissionResources.salesCreditNotes)) ...[
+                                                    const PopupMenuDivider(height: 1),
+                                                    _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                                                  ],
+                                                  if (PermissionService.instance.canDelete(UserPermissionResources.salesCreditNotes)) ...[
+                                                    const PopupMenuDivider(height: 1),
+                                                    _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                                                  ],
+                                                  const PopupMenuDivider(height: 1),
                                                   _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
                                                   PopupMenuDivider(height: 1),
                                                   _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),

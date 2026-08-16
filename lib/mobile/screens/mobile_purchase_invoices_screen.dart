@@ -11,6 +11,8 @@ import '../../models/supplier.dart';
 import 'forms/mobile_purchase_invoice_form_screen.dart';
 import 'mobile_purchase_invoice_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 import '../../blocs/products/products_bloc.dart';
 import '../../blocs/projects/projects_bloc.dart';
 import '../../blocs/warehouses/warehouses_bloc.dart';
@@ -182,7 +184,7 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
                   _fetchFilteredPurchaseInvoices();
                 });
               },
-              onEdit: () {
+              onEdit: PermissionService.instance.canUpdate(UserPermissionResources.purchasesPurchaseInvoices) ? () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -200,8 +202,8 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
                 ).then((_) {
                   _fetchFilteredPurchaseInvoices();
                 });
-              },
-              onDelete: () => _handleDelete(item.id),
+              } : null,
+              onDelete: PermissionService.instance.canDelete(UserPermissionResources.purchasesPurchaseInvoices) ? () => _handleDelete(item.id) : null,
             );
           }).toList();
         }

@@ -10,6 +10,8 @@ import '../../blocs/warehouses/warehouses_event.dart';
 import '../../blocs/warehouses/warehouses_state.dart';
 import '../../models/stock_movement.dart';
 import '../../screens/warehouses_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileWarehousesScreen extends StatefulWidget {
   const MobileWarehousesScreen({super.key});
@@ -43,6 +45,21 @@ class _MobileWarehousesScreenState extends State<MobileWarehousesScreen> {
   }
 
   void _showCreateDialog([Warehouse? existing]) {
+    if (existing != null) {
+      final isDefault = existing.isDefault ||
+          existing.name.trim().toLowerCase() == 'entrepôt par défaut' ||
+          existing.name.trim().toLowerCase() == 'entrepot par defaut';
+      if (isDefault) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+    }
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -51,6 +68,19 @@ class _MobileWarehousesScreenState extends State<MobileWarehousesScreen> {
   }
 
   void _deleteWarehouse(Warehouse warehouse) {
+    final isDefault = warehouse.isDefault ||
+        warehouse.name.trim().toLowerCase() == 'entrepôt par défaut' ||
+        warehouse.name.trim().toLowerCase() == 'entrepot par defaut';
+    if (isDefault) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Cet élément est un élément par défaut et ne peut pas être supprimé.'),
+          backgroundColor: AppColors.warning,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -123,6 +153,9 @@ class _MobileWarehousesScreenState extends State<MobileWarehousesScreen> {
           isEmpty = filteredItems.isEmpty;
 
           listItems = filteredItems.map((item) {
+            final isDefault = item.isDefault ||
+                item.name.trim().toLowerCase() == 'entrepôt par défaut' ||
+                item.name.trim().toLowerCase() == 'entrepot par defaut';
             final ref = (item.reference != null && item.reference!.trim().isNotEmpty)
                 ? item.reference!.trim()
                 : (item.name.length >= 3 ? 'WH-${item.name.substring(0, 3).toUpperCase()}' : 'WH-${item.name.toUpperCase()}');
@@ -131,13 +164,29 @@ class _MobileWarehousesScreenState extends State<MobileWarehousesScreen> {
               reference: ref,
               name: item.name,
               status: item.isActive ? 'Actif' : 'Inactif',
-              badgeText: item.isDefault ? 'Par Défaut' : null,
+              badgeText: isDefault ? 'Par défaut' : null,
               subtitle: _buildAddressString(item),
               subtitleIcon: Icons.location_on_outlined,
               nameIcon: Icons.warehouse_rounded,
-              onTap: () => _showCreateDialog(item),
-              onEdit: () => _showCreateDialog(item),
-              onDelete: () => _deleteWarehouse(item),
+              onTap: () {
+                if (isDefault) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+                      backgroundColor: AppColors.warning,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
+                _showCreateDialog(item);
+              },
+              onEdit: (!isDefault && PermissionService.instance.canUpdate(UserPermissionResources.stockWarehouses))
+                  ? () => _showCreateDialog(item)
+                  : null,
+              onDelete: (!isDefault && PermissionService.instance.canDelete(UserPermissionResources.stockWarehouses))
+                  ? () => _deleteWarehouse(item)
+                  : null,
             );
           }).toList();
         }

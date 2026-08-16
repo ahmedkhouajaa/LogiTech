@@ -15,6 +15,8 @@ import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../models/customer.dart';
 import 'forms/mobile_customer_order_form_screen.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileCustomerOrdersScreen extends StatefulWidget {
   const MobileCustomerOrdersScreen({super.key});
@@ -178,7 +180,7 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
                   _fetchFilteredOrders();
                 });
               },
-              onEdit: () {
+              onEdit: PermissionService.instance.canUpdate(UserPermissionResources.salesOrders) ? () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -196,8 +198,8 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
                 ).then((_) {
                   _fetchFilteredOrders();
                 });
-              },
-              onDelete: () => _handleDelete(item.id),
+              } : null,
+              onDelete: PermissionService.instance.canDelete(UserPermissionResources.salesOrders) ? () => _handleDelete(item.id) : null,
             );
           }).toList();
         }

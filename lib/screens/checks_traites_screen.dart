@@ -6,6 +6,8 @@ import '../models/check_traite.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/data_table_widget.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
@@ -147,7 +149,7 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (doc.status == 'pending') ...[
+                                if (doc.status == 'pending' && PermissionService.instance.canUpdate(UserPermissionResources.treasuryChecks)) ...[
                                   IconButton(
                                     icon: Icon(Icons.check_circle_outline_rounded, size: 18, color: AppColors.success),
                                     onPressed: () => context.read<ChecksTraitesBloc>().add(UpdateCheckTraiteStatus(doc.id, 'cashed')),

@@ -26,6 +26,8 @@ import '../models/return_note.dart';
 import 'create_invoice_screen.dart';
 import 'create_return_note_screen.dart';
 import '../services/pdf_service.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import '../widgets/shimmer_effect.dart';
@@ -99,17 +101,18 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   ),
                 ],
               ),
-              ElevatedButton.icon(
-                onPressed: () => _navigate(context, null),
-                icon: Icon(Icons.add_rounded, size: 18),
-                label: Text('Creer un Bon de Livraison'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              if (PermissionService.instance.canCreate(UserPermissionResources.salesDeliveryNotes))
+                ElevatedButton.icon(
+                  onPressed: () => _navigate(context, null),
+                  icon: Icon(Icons.add_rounded, size: 18),
+                  label: Text('Creer un Bon de Livraison'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -1037,11 +1040,15 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                 itemBuilder: (_) {
                   final items = <PopupMenuEntry<String>>[
                     _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
-                    PopupMenuDivider(height: 1),
-                    _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                    PopupMenuDivider(height: 1),
-                    _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                    PopupMenuDivider(height: 1),
+                    if (PermissionService.instance.canUpdate(UserPermissionResources.salesDeliveryNotes)) ...[
+                      const PopupMenuDivider(height: 1),
+                      _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                    ],
+                    if (PermissionService.instance.canDelete(UserPermissionResources.salesDeliveryNotes)) ...[
+                      const PopupMenuDivider(height: 1),
+                      _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                    ],
+                    const PopupMenuDivider(height: 1),
                     _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
                     const PopupMenuDivider(height: 1),
                   ];

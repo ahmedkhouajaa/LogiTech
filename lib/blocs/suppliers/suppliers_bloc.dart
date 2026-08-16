@@ -8,6 +8,8 @@ import '../../database/database_helper.dart';
 import '../../models/supplier.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class SuppliersEvent extends Equatable {
@@ -292,6 +294,10 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
   }
 
   Future<void> _onAdd(AddSupplier event, Emitter<SuppliersState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.suppliers)) {
+      emit(const SuppliersError('Permission refusée : Vous n\'avez pas le droit d\'ajouter un fournisseur.'));
+      return;
+    }
     final currentEntId = EnterpriseService.instance.currentEnterpriseId;
     
     String finalCode = event.supplier.code;
@@ -322,6 +328,7 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
             firebaseUid: event.supplier.firebaseUid,
             enterpriseId: currentEntId,
             isDeleted: event.supplier.isDeleted,
+            isDefault: false,
             createdAt: event.supplier.createdAt,
             updatedAt: event.supplier.updatedAt,
             supplierType: event.supplier.supplierType,
@@ -362,6 +369,14 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
   }
 
   Future<void> _onUpdate(UpdateSupplier event, Emitter<SuppliersState> emit) async {
+    if (event.supplier.isDefault || event.supplier.name.trim().toLowerCase() == 'fournisseur passager') {
+      emit(const SuppliersError('Cet élément est un élément par défaut et ne peut pas être modifié.'));
+      return;
+    }
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.suppliers)) {
+      emit(const SuppliersError('Permission refusée : Vous n\'avez pas le droit de modifier un fournisseur.'));
+      return;
+    }
     final currentState = state;
     if (currentState is SuppliersLoaded) {
       final currentList = List<Supplier>.from(currentState.suppliers);
@@ -383,6 +398,17 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
 
   Future<void> _onDelete(DeleteSupplier event, Emitter<SuppliersState> emit) async {
     final currentState = state;
+    if (currentState is SuppliersLoaded) {
+      final target = currentState.suppliers.where((s) => s.id == event.id).firstOrNull;
+      if (target != null && (target.isDefault || target.name.trim().toLowerCase() == 'fournisseur passager')) {
+        emit(const SuppliersError('Cet élément est un élément par défaut et ne peut pas être supprimé.'));
+        return;
+      }
+    }
+    if (!PermissionService.instance.canDelete(UserPermissionResources.suppliers)) {
+      emit(const SuppliersError('Permission refusée : Vous n\'avez pas le droit de supprimer un fournisseur.'));
+      return;
+    }
     if (currentState is SuppliersLoaded) {
       final currentList = List<Supplier>.from(currentState.suppliers)..removeWhere((s) => s.id == event.id);
       emit(SuppliersLoaded(currentList, totalCount: currentList.length, hasMore: false));

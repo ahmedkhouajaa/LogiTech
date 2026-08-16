@@ -45,6 +45,8 @@ import 'company_info_screen.dart';
 import 'document_templates_screen.dart';
 import 'stock_transfers_screen.dart';
 import 'inventory_sheets_screen.dart';
+import 'user_management_screen.dart';
+import '../services/permission_service.dart';
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
 
@@ -69,6 +71,9 @@ class AppShellScreenState extends State<AppShellScreen> {
   }
 
   Widget _buildContent() {
+    if (!PermissionService.instance.canAccessModule(_activeModule)) {
+      return const UnauthorizedView();
+    }
     switch (_activeModule) {
       case AppModule.dashboard:
         return const DashboardScreen();
@@ -139,6 +144,8 @@ class AppShellScreenState extends State<AppShellScreen> {
         return const DocumentTemplatesScreen();
       case AppModule.stockEntry:
         return const StockEntriesScreen();
+      case AppModule.userManagement:
+        return const UserManagementScreen();
       default:
         return _ComingSoonScreen(module: _activeModule);
     }
@@ -181,6 +188,7 @@ class AppShellScreenState extends State<AppShellScreen> {
       case AppModule.payments: return 'Paiements';
       case AppModule.companyInfo: return 'Informations sur la societe';
       case AppModule.documentTemplates: return 'Modeles de documents';
+      case AppModule.userManagement: return 'Gestion des utilisateurs';
     }
   }
 
@@ -232,43 +240,64 @@ class AppShellScreenState extends State<AppShellScreen> {
                   const SyncIndicator(),
                   SizedBox(width: 8),
                   // User menu
-                  PopupMenuButton(
-                    offset: Offset(0, 40),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceAlt,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(backgroundColor: AppColors.primary, radius: 14, child: Text('A', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold))),
-                          if (!isMobile) SizedBox(width: 8),
-                          if (!isMobile) Text('Admin', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                          if (!isMobile) SizedBox(width: 4),
-                          if (!isMobile) Icon(Icons.keyboard_arrow_down_rounded, size: 16),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: PermissionService.instance.permissionsNotifier,
+                    builder: (context, _, __) {
+                      final name = PermissionService.instance.userName;
+                      final initial = PermissionService.instance.userInitial;
+                      return PopupMenuButton(
+                        offset: const Offset(0, 40),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceAlt,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: AppColors.primary,
+                                radius: 14,
+                                child: Text(
+                                  initial,
+                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              if (!isMobile) const SizedBox(width: 8),
+                              if (!isMobile)
+                                Text(
+                                  name,
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
+                              if (!isMobile) const SizedBox(width: 4),
+                              if (!isMobile) const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
+                            ],
+                          ),
+                        ),
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            onTap: () => setState(() => _activeModule = AppModule.settings),
+                            child: const Row(children: [Icon(Icons.settings_rounded, size: 16), SizedBox(width: 8), Text('Parametres')]),
+                          ),
+                          PopupMenuItem(
+                            onTap: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
+                            child: Row(children: [Icon(Icons.logout_rounded, size: 16, color: AppColors.error), const SizedBox(width: 8), Text('Deconnexion', style: TextStyle(color: AppColors.error))]),
+                          ),
                         ],
-                      ),
-                    ),
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        onTap: () => setState(() => _activeModule = AppModule.settings),
-                        child: Row(children: [Icon(Icons.settings_rounded, size: 16), SizedBox(width: 8), Text('Parametres')]),
-                      ),
-                      PopupMenuItem(
-                        onTap: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
-                        child: Row(children: [Icon(Icons.logout_rounded, size: 16, color: AppColors.error), SizedBox(width: 8), Text('Deconnexion', style: TextStyle(color: AppColors.error))]),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ],
               ),
             ),
             // Content area
             Expanded(
-              child: _buildContent(),
+              child: ValueListenableBuilder<bool>(
+                valueListenable: PermissionService.instance.permissionsNotifier,
+                builder: (context, _, __) => _buildContent(),
+              ),
             ),
           ],
         );

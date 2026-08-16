@@ -14,6 +14,8 @@ import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../blocs/warehouses/warehouses_state.dart';
 
 import 'forms/mobile_inventory_sheet_form_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileInventorySheetDetailScreen extends StatefulWidget {
   final InventorySheet sheet;
@@ -154,9 +156,13 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                 icon: Icon(Icons.more_vert, color: Colors.white),
                 onSelected: (val) => _handleAction(context, val, currentSheet),
                 itemBuilder: (_) => [
-                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                  PopupMenuDivider(height: 1),
-                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                  if (PermissionService.instance.canUpdate(UserPermissionResources.stockInventorySheets))
+                    _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                  if (PermissionService.instance.canUpdate(UserPermissionResources.stockInventorySheets) &&
+                      PermissionService.instance.canDelete(UserPermissionResources.stockInventorySheets))
+                    const PopupMenuDivider(height: 1),
+                  if (PermissionService.instance.canDelete(UserPermissionResources.stockInventorySheets))
+                    _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
                 ],
               ),
           ],

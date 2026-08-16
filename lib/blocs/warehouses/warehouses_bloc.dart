@@ -113,6 +113,13 @@ class WarehousesBloc extends Bloc<WarehousesEvent, WarehousesState> {
 
   Future<void> _onUpdateWarehouse(UpdateWarehouse event, Emitter<WarehousesState> emit) async {
     final currentState = state;
+    final nameLower = event.warehouse.name.trim().toLowerCase();
+    if (event.warehouse.isDefault || nameLower == 'entrepôt par défaut' || nameLower == 'entrepot par defaut') {
+      emit(WarehousesError("Cet élément est un élément par défaut et ne peut pas être modifié."));
+      if (currentState is WarehousesLoaded) emit(WarehousesLoaded(currentState.warehouses));
+      return;
+    }
+
     if (currentState is WarehousesLoaded) {
       final currentList = List<Warehouse>.from(currentState.warehouses);
       final idx = currentList.indexWhere((w) => w.id == event.warehouse.id);
@@ -138,6 +145,17 @@ class WarehousesBloc extends Bloc<WarehousesEvent, WarehousesState> {
   Future<void> _onDeleteWarehouse(DeleteWarehouse event, Emitter<WarehousesState> emit) async {
     final currentState = state;
     if (currentState is WarehousesLoaded) {
+      final target = currentState.warehouses.firstWhere(
+        (w) => w.id == event.id,
+        orElse: () => Warehouse(id: '', name: ''),
+      );
+      final nameLower = target.name.trim().toLowerCase();
+      if (target.isDefault || nameLower == 'entrepôt par défaut' || nameLower == 'entrepot par defaut') {
+        emit(WarehousesError("Cet élément est un élément par défaut et ne peut pas être supprimé."));
+        emit(WarehousesLoaded(currentState.warehouses));
+        return;
+      }
+
       final currentList = List<Warehouse>.from(currentState.warehouses)
         ..removeWhere((w) => w.id == event.id);
       emit(WarehousesLoaded(currentList));

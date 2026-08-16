@@ -12,6 +12,8 @@ import '../models/project.dart';
 import '../services/expense_category_service.dart';
 import 'package:intl/intl.dart';
 import '../mobile/screens/mobile_treasury_accounts_screen.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
@@ -135,17 +137,19 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                   SizedBox(width: 8),
                   Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary),
                   Spacer(),
-                  OutlinedButton.icon(
-                    onPressed: () => _showAccountDialog(context),
-                    icon: Icon(Icons.add_rounded, size: 18),
-                    label: Text('Ajouter un Compte'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textPrimary,
-                      side: BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  if (PermissionService.instance.canCreate(UserPermissionResources.treasuryAccounts)) ...[
+                    OutlinedButton.icon(
+                      onPressed: () => _showAccountDialog(context),
+                      icon: Icon(Icons.add_rounded, size: 18),
+                      label: Text('Ajouter un Compte'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textPrimary,
+                        side: BorderSide(color: AppColors.border),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 12),
+                    SizedBox(width: 12),
+                  ],
                   ElevatedButton.icon(
                     onPressed: () => _showExpenseDialog(context),
                     icon: Icon(Icons.attach_money_rounded, size: 18),
@@ -191,31 +195,72 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                       columns: ['Nom du Compte', 'Type', 'Solde'],
                       rows: filtered,
                       emptyMessage: 'Aucun compte trouve',
-                      cellBuilder: (acc) => [
-                        DataCell(Text(acc.name, style: TextStyle(fontWeight: FontWeight.w600))),
-                        DataCell(Text(acc.type == 'bank' ? 'Compte Bancaire' : 'Caisse')),
-                        DataCell(
-                          Text(
-                            formatCurrencyDT(acc.balance),
-                            style: TextStyle(
-                              color: acc.balance < 0 ? AppColors.error : AppColors.success,
-                              fontWeight: FontWeight.bold,
+                      cellBuilder: (acc) {
+                        final isDefault = acc.isDefault || acc.name.trim().toLowerCase() == 'compte principal';
+                        return [
+                          DataCell(
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(acc.name, style: TextStyle(fontWeight: FontWeight.w600)),
+                                if (isDefault) ...[
+                                  SizedBox(width: 8),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.lock_rounded, size: 10, color: AppColors.primary),
+                                        SizedBox(width: 2),
+                                        Text(
+                                          'Par défaut',
+                                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                        ),
-                      ],
-                      customActionsBuilder: (acc) => PopupMenuButton<String>(
-                        icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
-                        onSelected: (val) => _handleAction(context, val, acc, state is TreasuryAccountsLoaded ? state.accounts : []),
-                        itemBuilder: (_) => [
-                          _buildMenuItem('depot', Icons.file_upload_outlined, 'Dépôt'),
-                          _buildMenuItem('transfer', Icons.swap_horiz_outlined, 'Transférer'),
-                          PopupMenuDivider(height: 1),
-                          _buildMenuItem('edit', Icons.edit_outlined, 'Modifier'),
-                          PopupMenuDivider(height: 1),
-                          _buildMenuItem('delete', Icons.delete_outline, 'Supprimer', isDestructive: true),
-                        ],
-                      ),
+                          DataCell(Text(acc.type == 'bank' ? 'Compte Bancaire' : 'Caisse')),
+                          DataCell(
+                            Text(
+                              formatCurrencyDT(acc.balance),
+                              style: TextStyle(
+                                color: acc.balance < 0 ? AppColors.error : AppColors.success,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ];
+                      },
+                      customActionsBuilder: (acc) {
+                        final isDefault = acc.isDefault || acc.name.trim().toLowerCase() == 'compte principal';
+                        return PopupMenuButton<String>(
+                          icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
+                          onSelected: (val) => _handleAction(context, val, acc, state is TreasuryAccountsLoaded ? state.accounts : []),
+                          itemBuilder: (_) => [
+                            _buildMenuItem('depot', Icons.file_upload_outlined, 'Dépôt'),
+                            _buildMenuItem('transfer', Icons.swap_horiz_outlined, 'Transférer'),
+                            if (!isDefault) ...[
+                              if (PermissionService.instance.canUpdate(UserPermissionResources.treasuryAccounts)) ...[
+                                PopupMenuDivider(height: 1),
+                                _buildMenuItem('edit', Icons.edit_outlined, 'Modifier'),
+                              ],
+                              if (PermissionService.instance.canDelete(UserPermissionResources.treasuryAccounts)) ...[
+                                PopupMenuDivider(height: 1),
+                                _buildMenuItem('delete', Icons.delete_outline, 'Supprimer', isDestructive: true),
+                              ],
+                            ],
+                          ],
+                        );
+                      },
                     ),
                   ),
                 );
@@ -245,6 +290,17 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
   }
 
   void _handleAction(BuildContext context, String action, TreasuryAccount account, List<TreasuryAccount> allAccounts) {
+    final isDefault = account.isDefault || account.name.trim().toLowerCase() == 'compte principal';
+    if (isDefault && (action == 'edit' || action == 'delete')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié/supprimé.'),
+          backgroundColor: AppColors.warning,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
     switch (action) {
       case 'depot':
         showDialog(

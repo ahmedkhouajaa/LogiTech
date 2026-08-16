@@ -4,6 +4,8 @@ import '../../database/database_helper.dart';
 import '../../models/product.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class ProductsEvent extends Equatable {
@@ -229,6 +231,10 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
   }
 
   Future<void> _onAdd(AddProduct event, Emitter<ProductsState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.productsList)) {
+      emit(const ProductsError('Permission refusée : Vous n\'avez pas le droit d\'ajouter un article.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveProduct(event.product);
       add(const LoadFirstProducts());
@@ -238,6 +244,10 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
   }
 
   Future<void> _onUpdate(UpdateProduct event, Emitter<ProductsState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.productsList)) {
+      emit(const ProductsError('Permission refusée : Vous n\'avez pas le droit de modifier un article.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveProduct(event.product);
       add(const LoadFirstProducts());
@@ -247,6 +257,10 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
   }
 
   Future<void> _onDelete(DeleteProduct event, Emitter<ProductsState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.productsList)) {
+      emit(const ProductsError('Permission refusée : Vous n\'avez pas le droit de supprimer un article.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('articles', event.id);
       add(const LoadFirstProducts());

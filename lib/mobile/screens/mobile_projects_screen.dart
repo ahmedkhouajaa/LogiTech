@@ -7,6 +7,8 @@ import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/projects/projects_bloc.dart';
 import 'forms/mobile_project_form_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 
 class MobileProjectsScreen extends StatefulWidget {
@@ -102,6 +104,9 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
           isEmpty = filteredItems.isEmpty;
           
           cards = filteredItems.map((item) {
+            final isDefault = item.isDefault ||
+                item.name.trim().toLowerCase() == 'projet par défaut' ||
+                item.name.trim().toLowerCase() == 'projet principal par défaut';
             String reference = item.name.isNotEmpty ? item.name : 'Projet sans nom';
             
             String status = item.status.name;
@@ -114,10 +119,21 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
             return MobileGenericCard(
               reference: reference,
               status: status,
+              badgeText: isDefault ? 'Par défaut' : null,
               name: description != null && description.isNotEmpty ? description : 'Budget: ${budget.toStringAsFixed(2)} TND',
               date: date,
               amount: budget > 0 ? budget : null,
               onTap: () {
+                if (isDefault) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+                      backgroundColor: AppColors.warning,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MobileProjectFormScreen(existing: item)),
@@ -125,15 +141,19 @@ class _MobileProjectsScreenState extends State<MobileProjectsScreen> {
                   context.read<ProjectsBloc>().add(LoadProjects());
                 });
               },
-              onEdit: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => MobileProjectFormScreen(existing: item)),
-                ).then((_) {
-                  context.read<ProjectsBloc>().add(LoadProjects());
-                });
-              },
-              onDelete: () => _handleDelete(id),
+              onEdit: (!isDefault && PermissionService.instance.canUpdate(UserPermissionResources.projects))
+                  ? () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => MobileProjectFormScreen(existing: item)),
+                      ).then((_) {
+                        context.read<ProjectsBloc>().add(LoadProjects());
+                      });
+                    }
+                  : null,
+              onDelete: (!isDefault && PermissionService.instance.canDelete(UserPermissionResources.projects))
+                  ? () => _handleDelete(id)
+                  : null,
             );
           }).toList();
         }

@@ -17,6 +17,8 @@ import '../../database/database_helper.dart';
 
 import '../../screens/document_preview_screen.dart';
 import 'forms/mobile_supplier_return_form_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileSupplierReturnDetailScreen extends StatefulWidget {
   final SupplierReturn returnNote;
@@ -249,10 +251,14 @@ class _MobileSupplierReturnDetailScreenState extends State<MobileSupplierReturnD
     final List<PopupMenuEntry<String>> items = [];
 
     items.add(_buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'));
+    if (PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierReturns)) {
+      items.add(const PopupMenuDivider(height: 1));
+      items.add(_buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'));
+    }
+    if (PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierReturns)) {
+      items.add(const PopupMenuDivider(height: 1));
+      items.add(_buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'));
+    }
     items.add(const PopupMenuDivider(height: 1));
     items.add(_buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'));
     items.add(const PopupMenuDivider(height: 1));

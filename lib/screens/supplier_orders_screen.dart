@@ -24,6 +24,8 @@ import 'create_purchase_invoice_screen.dart';
 import '../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import 'create_receiving_voucher_screen.dart';
 import '../services/pdf_service.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import '../models/receiving_voucher.dart';
@@ -89,25 +91,26 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                   Text('Gerer vos commandes fournisseur', style: TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
-              AppButton(
-                label: 'Creer une Commande',
-                icon: Icons.add_rounded,
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => MultiBlocProvider(
-                      providers: [
-                        BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
-                        BlocProvider.value(value: context.read<SuppliersBloc>()),
-                        BlocProvider.value(value: context.read<ProductsBloc>()),
-                        BlocProvider.value(value: context.read<ProjectsBloc>()),
-                        BlocProvider.value(value: context.read<WarehousesBloc>()),
-                      ],
-                      child: const CreateSupplierOrderScreen(),
+              if (PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierOrders))
+                AppButton(
+                  label: 'Creer une Commande',
+                  icon: Icons.add_rounded,
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MultiBlocProvider(
+                        providers: [
+                          BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
+                          BlocProvider.value(value: context.read<SuppliersBloc>()),
+                          BlocProvider.value(value: context.read<ProductsBloc>()),
+                          BlocProvider.value(value: context.read<ProjectsBloc>()),
+                          BlocProvider.value(value: context.read<WarehousesBloc>()),
+                        ],
+                        child: const CreateSupplierOrderScreen(),
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -1062,8 +1065,12 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     final List<PopupMenuEntry<String>> items = [];
 
     items.add(_buildMenuItem('view', Icons.visibility_outlined, 'Voir', const Color(0xFF6366F1)));
-    items.add(_buildMenuItem('edit', Icons.edit_outlined, 'Modifier', const Color(0xFF2563EB)));
-    items.add(_buildMenuItem('delete', Icons.delete_outline, 'Supprimer', const Color(0xFFEF4444)));
+    if (PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierOrders)) {
+      items.add(_buildMenuItem('edit', Icons.edit_outlined, 'Modifier', const Color(0xFF2563EB)));
+    }
+    if (PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierOrders)) {
+      items.add(_buildMenuItem('delete', Icons.delete_outline, 'Supprimer', const Color(0xFFEF4444)));
+    }
     items.add(_buildMenuItem('print', Icons.print_outlined, 'Imprimer', const Color(0xFF475569)));
 
 

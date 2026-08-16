@@ -14,6 +14,8 @@ import 'create_exit_voucher_screen.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import '../services/pdf_service.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
@@ -172,17 +174,18 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                       ),
                     ],
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () => _navigate(context, null),
-                    icon: Icon(Icons.add_rounded, size: 18),
-                    label: Text('Creer un Bon de Sortie'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  if (PermissionService.instance.canCreate(UserPermissionResources.salesExitVouchers))
+                    ElevatedButton.icon(
+                      onPressed: () => _navigate(context, null),
+                      icon: Icon(Icons.add_rounded, size: 18),
+                      label: Text('Creer un Bon de Sortie'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -435,17 +438,18 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                   ),
                 ],
               ),
-              ElevatedButton.icon(
-                onPressed: () => _navigate(context, null),
-                icon: Icon(Icons.add_rounded, size: 18),
-                label: Text('Creer un Bon de Sortie'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              if (PermissionService.instance.canCreate(UserPermissionResources.salesExitVouchers))
+                ElevatedButton.icon(
+                  onPressed: () => _navigate(context, null),
+                  icon: Icon(Icons.add_rounded, size: 18),
+                  label: Text('Creer un Bon de Sortie'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -1208,22 +1212,24 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                         SizedBox(width: 8),
                         Text('Voir')
                       ])),
-                  PopupMenuItem(
-                      value: 'edit',
-                      child: Row(children: [
-                        Icon(Icons.edit_rounded,
-                            size: 16, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Text('Modifier')
-                      ])),
-                  PopupMenuItem(
-                      value: 'delete',
-                      child: Row(children: [
-                        Icon(Icons.delete_rounded,
-                            size: 16, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Text('Supprimer')
-                      ])),
+                  if (PermissionService.instance.canUpdate(UserPermissionResources.salesExitVouchers))
+                    PopupMenuItem(
+                        value: 'edit',
+                        child: Row(children: [
+                          Icon(Icons.edit_rounded,
+                              size: 16, color: AppColors.textSecondary),
+                          SizedBox(width: 8),
+                          Text('Modifier')
+                        ])),
+                  if (PermissionService.instance.canDelete(UserPermissionResources.salesExitVouchers))
+                    PopupMenuItem(
+                        value: 'delete',
+                        child: Row(children: [
+                          Icon(Icons.delete_rounded,
+                              size: 16, color: AppColors.textSecondary),
+                          SizedBox(width: 8),
+                          Text('Supprimer')
+                        ])),
                   PopupMenuItem(
                       value: 'print',
                       child: Row(children: [

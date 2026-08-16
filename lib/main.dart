@@ -47,6 +47,7 @@ import 'blocs/warehouses/warehouses_event.dart';
 import 'blocs/inventory_sheets/inventory_sheets_bloc.dart';
 import 'blocs/inventory_sheets/inventory_sheets_event.dart';
 import 'blocs/enterprise/enterprise_bloc.dart';
+import 'blocs/user_management/user_management_bloc.dart';
 import 'blocs/theme/theme_cubit.dart';
 import 'services/auth_service.dart';
 import 'services/enterprise_service.dart';
@@ -58,6 +59,8 @@ import 'utils/constants.dart';
 import 'screens/login_screen.dart';
 import 'screens/app_shell_screen.dart';
 import 'screens/onboarding_enterprise_screen.dart';
+import 'screens/forgot_password_screen.dart';
+import 'screens/reset_password_screen.dart';
 
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -177,6 +180,7 @@ class BusinessManagerApp extends StatelessWidget {
         BlocProvider(create: (_) => InventorySheetsBloc(databaseHelper: DatabaseHelper.instance)..add(InventorySheetsLoadRequested())),
         BlocProvider(create: (_) => ReportsBloc()..add(ReportsRefreshRequested(dateRange: 'Cette Année'))),
         BlocProvider(create: (_) => RetenueSourceVenteBloc()),
+        BlocProvider(create: (_) => UserManagementBloc()),
         BlocProvider(create: (_) => ThemeCubit()),
       ],
       child: BlocBuilder<ThemeCubit, ThemeMode>(
@@ -199,6 +203,32 @@ class BusinessManagerApp extends StatelessWidget {
               Locale('en', 'US'),
             ],
             home: const _AppGate(),
+            onGenerateRoute: (settings) {
+              if (settings.name != null) {
+                final uri = Uri.tryParse(settings.name!);
+                if (uri != null) {
+                  final mode = uri.queryParameters['mode'];
+                  final oobCode = uri.queryParameters['oobCode'] ?? uri.queryParameters['code'];
+                  if (mode == 'resetPassword' && oobCode != null && oobCode.isNotEmpty) {
+                    return MaterialPageRoute(
+                      builder: (_) => ResetPasswordScreen(actionCode: oobCode),
+                    );
+                  }
+                  if (uri.path.contains('reset-password')) {
+                    final code = uri.queryParameters['code'] ?? uri.queryParameters['oobCode'] ?? '';
+                    return MaterialPageRoute(
+                      builder: (_) => ResetPasswordScreen(actionCode: code),
+                    );
+                  }
+                  if (uri.path.contains('forgot-password')) {
+                    return MaterialPageRoute(
+                      builder: (_) => const ForgotPasswordScreen(),
+                    );
+                  }
+                }
+              }
+              return null;
+            },
           );
         },
       ),
@@ -312,7 +342,7 @@ class _AppGate extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
-        if (authState is AuthLoading || authState is AuthInitial) {
+        if (authState is AuthInitial) {
           return Scaffold(
             backgroundColor: AppColors.sidebarBg,
             body: Center(
@@ -320,8 +350,8 @@ class _AppGate extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   CircularProgressIndicator(color: AppColors.primary),
-                  SizedBox(height: 16),
-                  Text('Chargement...', style: TextStyle(color: Colors.white60, fontSize: 14)),
+                  const SizedBox(height: 16),
+                  const Text('Chargement...', style: TextStyle(color: Colors.white60, fontSize: 14)),
                 ],
               ),
             ),

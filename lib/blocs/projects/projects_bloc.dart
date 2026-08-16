@@ -73,8 +73,9 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
           final defaultProject = Project(
             id: const Uuid().v4(),
             name: 'Projet par défaut',
-            description: 'Projet initial par défaut',
+            description: 'Projet principal par défaut',
             startDate: DateTime.now(),
+            isDefault: true,
             enterpriseId: EnterpriseService.instance.currentEnterpriseId,
           );
           projects = [defaultProject];
@@ -118,6 +119,7 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
             firebaseUid: event.project.firebaseUid,
             enterpriseId: currentEntId,
             isDeleted: event.project.isDeleted,
+            isDefault: false,
             createdAt: event.project.createdAt,
             updatedAt: event.project.updatedAt,
           )
@@ -138,6 +140,12 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
   }
 
   Future<void> _onUpdate(UpdateProject event, Emitter<ProjectsState> emit) async {
+    if (event.project.isDefault ||
+        event.project.name.trim().toLowerCase() == 'projet par défaut' ||
+        event.project.name.trim().toLowerCase() == 'projet principal par défaut') {
+      emit(const ProjectsError('Cet élément est un élément par défaut et ne peut pas être modifié.'));
+      return;
+    }
     final currentState = state;
     if (currentState is ProjectsLoaded) {
       final currentList = List<Project>.from(currentState.projects);
@@ -160,6 +168,14 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
   Future<void> _onDelete(DeleteProject event, Emitter<ProjectsState> emit) async {
     final currentState = state;
     if (currentState is ProjectsLoaded) {
+      final target = currentState.projects.where((p) => p.id == event.id).firstOrNull;
+      if (target != null &&
+          (target.isDefault ||
+              target.name.trim().toLowerCase() == 'projet par défaut' ||
+              target.name.trim().toLowerCase() == 'projet principal par défaut')) {
+        emit(const ProjectsError('Cet élément est un élément par défaut et ne peut pas être supprimé.'));
+        return;
+      }
       final currentList = List<Project>.from(currentState.projects)..removeWhere((p) => p.id == event.id);
       emit(ProjectsLoaded(currentList));
     }

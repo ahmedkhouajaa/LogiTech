@@ -16,6 +16,8 @@ import '../../models/customer.dart';
 import 'mobile_return_note_detail_screen.dart';
 import 'forms/mobile_return_voucher_form_screen.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileReturnNotesScreen extends StatefulWidget {
   const MobileReturnNotesScreen({super.key});
@@ -184,7 +186,7 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
                   _fetchFilteredReturnNotes();
                 });
               },
-              onEdit: () {
+              onEdit: PermissionService.instance.canUpdate(UserPermissionResources.salesReturnVouchers) ? () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MultiBlocProvider(
@@ -200,8 +202,8 @@ class _MobileReturnNotesScreenState extends State<MobileReturnNotesScreen> {
                 ).then((_) {
                   _fetchFilteredReturnNotes();
                 });
-              },
-              onDelete: () => _handleDelete(id),
+              } : null,
+              onDelete: PermissionService.instance.canDelete(UserPermissionResources.salesReturnVouchers) ? () => _handleDelete(id) : null,
             );
           }).toList();
         }

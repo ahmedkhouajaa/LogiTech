@@ -17,6 +17,8 @@ import '../../models/supplier.dart';
 import 'forms/mobile_supplier_return_form_screen.dart';
 import 'mobile_supplier_return_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileSupplierReturnsScreen extends StatefulWidget {
   const MobileSupplierReturnsScreen({super.key});
@@ -185,7 +187,7 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
                   _fetchFilteredSupplierReturns();
                 });
               },
-              onEdit: () {
+              onEdit: PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierReturns) ? () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -203,8 +205,8 @@ class _MobileSupplierReturnsScreenState extends State<MobileSupplierReturnsScree
                 ).then((_) {
                   _fetchFilteredSupplierReturns();
                 });
-              },
-              onDelete: () => _handleDelete(id),
+              } : null,
+              onDelete: PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierReturns) ? () => _handleDelete(id) : null,
             );
           }).toList();
         }

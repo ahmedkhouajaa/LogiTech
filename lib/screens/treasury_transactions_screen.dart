@@ -11,6 +11,8 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/searchable_dropdown_field.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
@@ -417,13 +419,14 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                           ),
                           DataCell(Text(tx.description ?? '—', style: TextStyle(fontSize: 13, color: AppColors.textSecondary))),
                           DataCell(
-                            IconButton(
-                              icon: Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textSecondary),
-                              onPressed: () {
-                                // Options menu
-                                _showOptions(context, tx);
-                              },
-                            ),
+                            PermissionService.instance.canDelete(UserPermissionResources.treasuryTransactions)
+                                ? IconButton(
+                                    icon: Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textSecondary),
+                                    onPressed: () {
+                                      _showOptions(context, tx);
+                                    },
+                                  )
+                                : const SizedBox(),
                           ),
                         ];
                       },

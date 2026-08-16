@@ -17,6 +17,8 @@ import '../../models/supplier.dart';
 import 'forms/mobile_supplier_credit_note_form_screen.dart';
 import 'mobile_supplier_credit_note_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileSupplierCreditNotesScreen extends StatefulWidget {
   const MobileSupplierCreditNotesScreen({super.key});
@@ -215,7 +217,7 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
                   _fetchFilteredCreditNotes();
                 });
               },
-              onEdit: () {
+              onEdit: PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierCreditNotes) ? () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -233,8 +235,8 @@ class _MobileSupplierCreditNotesScreenState extends State<MobileSupplierCreditNo
                 ).then((_) {
                   _fetchFilteredCreditNotes();
                 });
-              },
-              onDelete: () => _handleDelete(item.id),
+              } : null,
+              onDelete: PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierCreditNotes) ? () => _handleDelete(item.id) : null,
             );
           }).toList();
         }

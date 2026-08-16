@@ -20,6 +20,8 @@ import '../../blocs/warehouses/warehouses_state.dart';
 import '../../screens/document_preview_screen.dart';
 import '../../screens/create_stock_withdrawal_screen.dart';
 import 'forms/mobile_exit_voucher_form_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileStockWithdrawalDetailScreen extends StatefulWidget {
   final StockWithdrawal withdrawal;
@@ -186,15 +188,22 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
             PopupMenuButton<String>(
               icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentWithdrawal),
-              itemBuilder: (_) => [
-                _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-              ],
+              itemBuilder: (_) {
+                final resKey = widget.isExitVoucher ? UserPermissionResources.salesExitVouchers : UserPermissionResources.stockWithdrawalVouchers;
+                return [
+                  _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
+                  if (PermissionService.instance.canUpdate(resKey)) ...[
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                  ],
+                  if (PermissionService.instance.canDelete(resKey)) ...[
+                    const PopupMenuDivider(height: 1),
+                    _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                  ],
+                  const PopupMenuDivider(height: 1),
+                  _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
+                ];
+              },
             ),
           ],
         ),

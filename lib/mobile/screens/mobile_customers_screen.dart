@@ -90,6 +90,16 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
             return MobileClientCard(
               customer: customer,
               onTap: () {
+                if (customer.isDefault || customer.name.trim().toLowerCase() == 'client passager') {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+                      backgroundColor: AppColors.warning,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
                 showDialog(
                   context: context,
                   barrierDismissible: false,

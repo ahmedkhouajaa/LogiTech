@@ -10,6 +10,8 @@ import '../../database/database_helper.dart';
 import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../blocs/warehouses/warehouses_state.dart';
 import 'forms/mobile_stock_transfer_form_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileStockTransferDetailScreen extends StatefulWidget {
   final StockTransfer transfer;
@@ -100,9 +102,13 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
               icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentTransfer),
               itemBuilder: (_) => [
-                _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                if (PermissionService.instance.canUpdate(UserPermissionResources.stockTransferVouchers))
+                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                if (PermissionService.instance.canUpdate(UserPermissionResources.stockTransferVouchers) &&
+                    PermissionService.instance.canDelete(UserPermissionResources.stockTransferVouchers))
+                  const PopupMenuDivider(height: 1),
+                if (PermissionService.instance.canDelete(UserPermissionResources.stockTransferVouchers))
+                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
               ],
             ),
           ],

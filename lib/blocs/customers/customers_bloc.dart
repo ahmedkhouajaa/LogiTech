@@ -8,6 +8,8 @@ import '../../database/database_helper.dart';
 import '../../models/customer.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 // Events
@@ -194,6 +196,7 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
             balance: 0.0,
             creditLimit: 0.0,
             isDeleted: false,
+            isDefault: true,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
             enterpriseId: currentEntId,
@@ -281,6 +284,10 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
   }
 
   Future<void> _onAddCustomer(AddCustomer event, Emitter<CustomersState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.customers)) {
+      emit(const CustomersError('Permission refusée : Vous n\'avez pas le droit d\'ajouter un client.'));
+      return;
+    }
     final currentEntId = EnterpriseService.instance.currentEnterpriseId;
 
     String finalCode = event.customer.code;
@@ -312,6 +319,7 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
             firebaseUid: event.customer.firebaseUid,
             enterpriseId: currentEntId,
             isDeleted: event.customer.isDeleted,
+            isDefault: false,
             createdAt: event.customer.createdAt,
             updatedAt: event.customer.updatedAt,
             customerType: event.customer.customerType,
@@ -359,6 +367,14 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
   }
 
   Future<void> _onUpdateCustomer(UpdateCustomer event, Emitter<CustomersState> emit) async {
+    if (event.customer.isDefault || event.customer.name.trim().toLowerCase() == 'client passager') {
+      emit(const CustomersError('Cet élément est un élément par défaut et ne peut pas être modifié.'));
+      return;
+    }
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.customers)) {
+      emit(const CustomersError('Permission refusée : Vous n\'avez pas le droit de modifier un client.'));
+      return;
+    }
     final currentState = state;
     if (currentState is CustomersLoaded) {
       final currentList = List<Customer>.from(currentState.customers);
@@ -380,6 +396,17 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
 
   Future<void> _onDeleteCustomer(DeleteCustomer event, Emitter<CustomersState> emit) async {
     final currentState = state;
+    if (currentState is CustomersLoaded) {
+      final target = currentState.customers.where((c) => c.id == event.id).firstOrNull;
+      if (target != null && (target.isDefault || target.name.trim().toLowerCase() == 'client passager')) {
+        emit(const CustomersError('Cet élément est un élément par défaut et ne peut pas être supprimé.'));
+        return;
+      }
+    }
+    if (!PermissionService.instance.canDelete(UserPermissionResources.customers)) {
+      emit(const CustomersError('Permission refusée : Vous n\'avez pas le droit de supprimer un client.'));
+      return;
+    }
     if (currentState is CustomersLoaded) {
       final currentList = List<Customer>.from(currentState.customers)..removeWhere((c) => c.id == event.id);
       emit(CustomersLoaded(currentList, totalCount: currentList.length, hasMore: false));

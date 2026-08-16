@@ -15,6 +15,8 @@ import '../../models/customer.dart';
 import 'forms/mobile_delivery_note_form_screen.dart';
 import 'mobile_delivery_note_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileDeliveryNotesScreen extends StatefulWidget {
   const MobileDeliveryNotesScreen({super.key});
@@ -173,7 +175,7 @@ class _MobileDeliveryNotesScreenState extends State<MobileDeliveryNotesScreen> {
                   _fetchFilteredNotes();
                 });
               },
-              onEdit: () {
+              onEdit: PermissionService.instance.canUpdate(UserPermissionResources.salesDeliveryNotes) ? () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -191,8 +193,8 @@ class _MobileDeliveryNotesScreenState extends State<MobileDeliveryNotesScreen> {
                 ).then((_) {
                   _fetchFilteredNotes();
                 });
-              },
-              onDelete: () => _handleDelete(item.id),
+              } : null,
+              onDelete: PermissionService.instance.canDelete(UserPermissionResources.salesDeliveryNotes) ? () => _handleDelete(item.id) : null,
             );
           }).toList();
         }

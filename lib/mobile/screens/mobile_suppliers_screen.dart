@@ -89,6 +89,16 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
             return MobileSupplierCard(
               supplier: supplier,
               onTap: () {
+                if (supplier.isDefault || supplier.name.trim().toLowerCase() == 'fournisseur passager') {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+                      backgroundColor: AppColors.warning,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
                 showDialog(
                   context: context,
                   barrierDismissible: false,

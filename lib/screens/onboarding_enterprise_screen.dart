@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../blocs/auth/auth_bloc.dart';
 import '../blocs/enterprise/enterprise_bloc.dart';
+import '../services/error_handler.dart';
 import '../utils/constants.dart';
 
 class OnboardingEnterpriseScreen extends StatefulWidget {
@@ -116,121 +118,168 @@ class _OnboardingEnterpriseScreenState extends State<OnboardingEnterpriseScreen>
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 700;
 
-    return Scaffold(
-      backgroundColor: AppColors.sidebarBg,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 780),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: AppShadows.lg,
-              ),
-              padding: EdgeInsets.all(isMobile ? 20 : 32),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Créer une nouvelle entreprise',
-                      style: TextStyle(
-                        fontSize: isMobile ? 20 : 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Bienvenue ! Veuillez configurer votre entreprise pour accéder au tableau de bord.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    if (isMobile) ...[
-                      _buildField('Nom de votre société (Tireur)', _nameController, hint: 'Mon Entreprise', isRequired: true),
-                      const SizedBox(height: 16),
-                      _buildField('Téléphone', _phoneController, hint: '27755999', keyboardType: TextInputType.phone),
-                      const SizedBox(height: 16),
-                      _buildField('Email', _emailController, hint: 'ahmed@gmail.com', keyboardType: TextInputType.emailAddress),
-                      const SizedBox(height: 16),
-                      _buildField('Site Web', _websiteController, hint: 'www.ahmed.com'),
-                      const SizedBox(height: 16),
-                      _buildField('Matricule Fiscale', _taxIdController, hint: 'MF1234567/A/B/C/000'),
-                      const SizedBox(height: 16),
-                      _buildField('Registre de Commerce', _rcController, hint: 'RC123456789'),
-                    ] else ...[
+    return BlocListener<EnterpriseBloc, EnterpriseState>(
+      listener: (context, state) {
+        if (state is EnterpriseError) {
+          setState(() => _isSaving = false);
+          ErrorHandler.showRetryableErrorDialog(
+            context: context,
+            title: "Erreur de création d'entreprise",
+            error: state.message,
+            onRetry: _submitForm,
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.sidebarBg,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: [
+            TextButton.icon(
+              onPressed: () {
+                context.read<AuthBloc>().add(AuthLogoutRequested());
+              },
+              icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white70),
+              label: const Text('Déconnexion', style: TextStyle(color: Colors.white70, fontSize: 13)),
+            ),
+            const SizedBox(width: 12),
+          ],
+        ),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 780),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: AppShadows.lg,
+                ),
+                padding: EdgeInsets.all(isMobile ? 20 : 32),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
                         children: [
-                          Expanded(
-                            child: _buildField('Nom de votre société (Tireur)', _nameController, hint: 'Mon Entreprise', isRequired: true),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.business_rounded, color: AppColors.primary, size: 24),
                           ),
-                          const SizedBox(width: 20),
+                          const SizedBox(width: 14),
                           Expanded(
-                            child: _buildField('Téléphone', _phoneController, hint: '27755999', keyboardType: TextInputType.phone),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Créer votre première entreprise',
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 18 : 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Configurez votre entreprise pour initialiser votre espace de travail.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 28),
+                      if (isMobile) ...[
+                        _buildField('Nom de votre société (Tireur)', _nameController, hint: 'Ex: Ma Société Pro', isRequired: true),
+                        const SizedBox(height: 16),
+                        _buildField('Téléphone', _phoneController, hint: '27755999', keyboardType: TextInputType.phone),
+                        const SizedBox(height: 16),
+                        _buildField('Email', _emailController, hint: 'contact@masociete.com', keyboardType: TextInputType.emailAddress),
+                        const SizedBox(height: 16),
+                        _buildField('Site Web', _websiteController, hint: 'www.masociete.com'),
+                        const SizedBox(height: 16),
+                        _buildField('Matricule Fiscale', _taxIdController, hint: 'MF1234567/A/B/C/000'),
+                        const SizedBox(height: 16),
+                        _buildField('Registre de Commerce', _rcController, hint: 'RC123456789'),
+                      ] else ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildField('Nom de votre société (Tireur)', _nameController, hint: 'Ex: Ma Société Pro', isRequired: true),
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: _buildField('Téléphone', _phoneController, hint: '27755999', keyboardType: TextInputType.phone),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildField('Email', _emailController, hint: 'contact@masociete.com', keyboardType: TextInputType.emailAddress),
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: _buildField('Site Web', _websiteController, hint: 'www.masociete.com'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildField('Matricule Fiscale', _taxIdController, hint: 'MF1234567/A/B/C/000'),
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: _buildField('Registre de Commerce', _rcController, hint: 'RC123456789'),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildField('Email', _emailController, hint: 'ahmed@gmail.com', keyboardType: TextInputType.emailAddress),
-                          ),
-                          const SizedBox(width: 20),
-                          Expanded(
-                            child: _buildField('Site Web', _websiteController, hint: 'www.ahmed.com'),
-                          ),
-                        ],
-                      ),
+                      _buildField('Adresse de votre société', _addressController, hint: '123 Rue Exemple, Tunis, Tunisie'),
                       const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildField('Matricule Fiscale', _taxIdController, hint: 'MF1234567/A/B/C/000'),
+                      _buildField('Coordonnées bancaires (RIB)', _ribController, hint: 'Banque - Agence - RIB: 08001002003004005006'),
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            elevation: 2,
                           ),
-                          const SizedBox(width: 20),
-                          Expanded(
-                            child: _buildField('Registre de Commerce', _rcController, hint: 'RC123456789'),
-                          ),
-                        ],
+                          onPressed: _isSaving ? null : _submitForm,
+                          child: _isSaving
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                )
+                              : const Text(
+                                  'Créer l\'entreprise et continuer',
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                        ),
                       ),
                     ],
-                    const SizedBox(height: 20),
-                    _buildField('Adresse de votre société', _addressController, hint: '123 Rue Exemple, Ville, Pays'),
-                    const SizedBox(height: 20),
-                    _buildField('Coordonnées bancaires (RIB)', _ribController, hint: 'BIAT - Agence X - RIB: 08001002003004005006'),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          elevation: 2,
-                        ),
-                        onPressed: _isSaving ? null : _submitForm,
-                        child: _isSaving
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                              )
-                            : const Text(
-                                'Créer l\'entreprise',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

@@ -5,7 +5,7 @@ import 'mobile_search_bar.dart';
 import 'mobile_filter_chips.dart';
 import 'mobile_empty_state.dart';
 import '../../services/sync_service.dart';
-
+import '../../services/permission_service.dart';
 import 'shimmer_card.dart';
 import '../../widgets/shimmer_effect.dart';
 
@@ -29,7 +29,6 @@ class MobileGenericListScreen extends StatelessWidget {
   final ScrollController? scrollController;
   final Widget? customFab;
   final String? subtitle;
-
   final Widget? loadingWidget;
 
   const MobileGenericListScreen({
@@ -58,89 +57,111 @@ class MobileGenericListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (subtitle != null && subtitle!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 4.0),
-              child: Text(
-                subtitle!,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-          // Sticky Search Bar
-          MobileSearchBar(onChanged: onSearchChanged),
-          
-          if (customFilterWidget == null) ...[
-            // Horizontal Filter Chips
-            if (filterOptions.isNotEmpty)
-              MobileFilterChips(
-                options: filterOptions,
-                selectedOption: selectedFilter,
-                onSelected: onFilterChanged,
-              ),
-              
-            if (itemCount != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '$itemCount résultat${itemCount! > 1 ? 's' : ''}',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+    return ValueListenableBuilder<bool>(
+      valueListenable: PermissionService.instance.permissionsNotifier,
+      builder: (context, _, __) {
+        final resKey = PermissionService.instance.getResourceKeyForModule(activeModule);
+        final canRead = resKey == null || PermissionService.instance.canRead(resKey);
+        final canCreate = resKey == null || PermissionService.instance.canCreate(resKey);
+
+        if (!canRead) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            body: const UnauthorizedView(),
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (subtitle != null && subtitle!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 4.0),
+                  child: Text(
+                    subtitle!,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ),
-              ),
-          ],
-          
-          // Content Area
-          Expanded(
-            child: isLoading
-                ? (loadingWidget ?? _buildDefaultLoading())
-                : RefreshIndicator(
-                    onRefresh: () async {
-                      await SyncService.instance.triggerSync();
-                      onRefresh();
-                    },
-                    child: SingleChildScrollView(
-                      controller: scrollController,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.only(bottom: 80),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (customFilterWidget != null) customFilterWidget!,
-                          if (isEmpty)
-                            MobileEmptyState(message: emptyMessage)
-                          else
-                            child,
-                        ],
+              // Sticky Search Bar
+              MobileSearchBar(onChanged: onSearchChanged),
+              
+              if (customFilterWidget == null) ...[
+                // Horizontal Filter Chips
+                if (filterOptions.isNotEmpty)
+                  MobileFilterChips(
+                    options: filterOptions,
+                    selectedOption: selectedFilter,
+                    onSelected: onFilterChanged,
+                  ),
+                  
+                if (itemCount != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '$itemCount élément${itemCount! > 1 ? 's' : ''}',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
                       ),
                     ),
                   ),
+              ],
+              // List with Pull to Refresh
+              Expanded(
+                child: isLoading
+                    ? (loadingWidget ?? _buildDefaultLoading())
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          onRefresh();
+                          await SyncService.instance.triggerSync();
+                        },
+                        child: SingleChildScrollView(
+                          controller: scrollController,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(bottom: 80),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (customFilterWidget != null) customFilterWidget!,
+                              if (isEmpty)
+                                MobileEmptyState(message: emptyMessage)
+                              else
+                                child,
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+            ],
           ),
-        ],
-      ),
-      floatingActionButton: customFab ?? (onFabPressed != null && fabText != null ? FloatingActionButton.extended(
-        onPressed: onFabPressed,
-        icon: Icon(Icons.add, color: Colors.white),
-        label: Text(fabText!, style: TextStyle(color: Colors.white)),
-        backgroundColor: AppColors.primary,
-      ) : null),
+          floatingActionButton: customFab ??
+              (onFabPressed != null && fabText != null && canCreate
+                  ? FloatingActionButton.extended(
+                      onPressed: onFabPressed,
+                      icon: const Icon(Icons.add, color: Colors.white),
+                      label: Text(fabText!, style: const TextStyle(color: Colors.white)),
+                      backgroundColor: AppColors.primary,
+                    )
+                  : null),
+        );
+      },
     );
   }
 

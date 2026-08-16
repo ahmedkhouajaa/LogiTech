@@ -7,6 +7,8 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_treasury_account_card.dart';
 import '../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../../models/treasury_account.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileTreasuryAccountsScreen extends StatefulWidget {
   final Function(BuildContext context, [TreasuryAccount? existing]) showAccountDialog;
@@ -102,6 +104,7 @@ class _MobileTreasuryAccountsScreenState extends State<MobileTreasuryAccountsScr
           isEmpty = filteredItems.isEmpty;
 
           cards = filteredItems.map((account) {
+            final isDefault = account.isDefault || account.name.trim().toLowerCase() == 'compte principal';
             return MobileTreasuryAccountCard(
               account: account,
               popupMenu: PopupMenuButton<String>(
@@ -112,13 +115,29 @@ class _MobileTreasuryAccountsScreenState extends State<MobileTreasuryAccountsScr
                 itemBuilder: (_) => [
                   const PopupMenuItem(value: 'depot', child: Text('Dépôt')),
                   const PopupMenuItem(value: 'transfer', child: Text('Transférer')),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem(value: 'edit', child: Text('Modifier')),
-                  const PopupMenuDivider(),
-                  PopupMenuItem(value: 'delete', child: Text('Supprimer', style: TextStyle(color: AppColors.error))),
+                  if (!isDefault) ...[
+                    if (PermissionService.instance.canUpdate(UserPermissionResources.treasuryAccounts)) ...[
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(value: 'edit', child: Text('Modifier')),
+                    ],
+                    if (PermissionService.instance.canDelete(UserPermissionResources.treasuryAccounts)) ...[
+                      const PopupMenuDivider(),
+                      PopupMenuItem(value: 'delete', child: Text('Supprimer', style: TextStyle(color: AppColors.error))),
+                    ],
+                  ],
                 ],
               ),
               onTap: () {
+                if (isDefault) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+                      backgroundColor: AppColors.warning,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
                 widget.handleAction(context, 'edit', account, items);
               },
             );

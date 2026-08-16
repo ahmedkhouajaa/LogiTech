@@ -28,7 +28,8 @@ import 'app_shell_screen.dart';
 import '../widgets/sidebar_menu.dart';
 import '../database/database_helper.dart';
 import '../services/pdf_service.dart';
-import '../models/document_wrapper.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import '../widgets/receiving_voucher_payment_dialog.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
@@ -114,28 +115,29 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 ],
               ),
               const Spacer(),
-              AppButton(
-                label: 'Nouveau bon',
-                icon: Icons.add,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MultiBlocProvider(
-                        providers: [
-                          BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
-                          BlocProvider.value(value: context.read<SuppliersBloc>()),
-                          BlocProvider.value(value: context.read<ProductsBloc>()),
-                          BlocProvider.value(value: context.read<ProjectsBloc>()),
-                          BlocProvider.value(value: context.read<WarehousesBloc>()),
-                        ],
-                        child: const CreateReceivingVoucherScreen(),
+              if (PermissionService.instance.canCreate(UserPermissionResources.purchasesReceivingVouchers))
+                AppButton(
+                  label: 'Nouveau bon',
+                  icon: Icons.add,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MultiBlocProvider(
+                          providers: [
+                            BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
+                            BlocProvider.value(value: context.read<SuppliersBloc>()),
+                            BlocProvider.value(value: context.read<ProductsBloc>()),
+                            BlocProvider.value(value: context.read<ProjectsBloc>()),
+                            BlocProvider.value(value: context.read<WarehousesBloc>()),
+                          ],
+                          child: const CreateReceivingVoucherScreen(),
+                        ),
                       ),
-                    ),
-                  );
-                },
-                isPrimary: true,
-              ),
+                    );
+                  },
+                  isPrimary: true,
+                ),
             ],
           ),
         ),
@@ -1331,8 +1333,12 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     final List<PopupMenuEntry<String>> items = [];
 
     items.add(_buildMenuItem('view', Icons.visibility_outlined, 'Voir', const Color(0xFF6366F1)));
-    items.add(_buildMenuItem('edit', Icons.edit_outlined, 'Modifier', const Color(0xFF2563EB)));
-    items.add(_buildMenuItem('delete', Icons.delete_outline, 'Supprimer', const Color(0xFFEF4444)));
+    if (PermissionService.instance.canUpdate(UserPermissionResources.purchasesReceivingVouchers)) {
+      items.add(_buildMenuItem('edit', Icons.edit_outlined, 'Modifier', const Color(0xFF2563EB)));
+    }
+    if (PermissionService.instance.canDelete(UserPermissionResources.purchasesReceivingVouchers)) {
+      items.add(_buildMenuItem('delete', Icons.delete_outline, 'Supprimer', const Color(0xFFEF4444)));
+    }
     items.add(_buildMenuItem('print', Icons.print_outlined, 'Imprimer', const Color(0xFF475569)));
     
     if (!voucher.isPaid) {

@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../services/auth_service.dart';
+import '../../services/permission_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
-// Events
+// ─── Events ──────────────────────────────────────────────────────────
+
 abstract class AuthEvent extends Equatable {
   const AuthEvent();
   @override
@@ -35,7 +38,15 @@ class AuthLogoutRequested extends AuthEvent {}
 
 class AuthOfflineModeRequested extends AuthEvent {}
 
-// States
+class AuthSessionExpiredEvent extends AuthEvent {
+  final String reason;
+  const AuthSessionExpiredEvent({this.reason = 'Votre session a expiré. Veuillez vous reconnecter.'});
+  @override
+  List<Object?> get props => [reason];
+}
+
+// ─── States ──────────────────────────────────────────────────────────
+
 abstract class AuthState extends Equatable {
   const AuthState();
   @override
@@ -43,24 +54,38 @@ abstract class AuthState extends Equatable {
 }
 
 class AuthInitial extends AuthState {}
+
 class AuthLoading extends AuthState {}
+
 class AuthAuthenticated extends AuthState {
   final bool isOffline;
   const AuthAuthenticated({this.isOffline = false});
   @override
   List<Object?> get props => [isOffline];
 }
+
 class AuthUnauthenticated extends AuthState {}
+
 class AuthError extends AuthState {
   final String message;
-  const AuthError(this.message);
+  final bool isCancellation;
+  const AuthError(this.message, {this.isCancellation = false});
+  @override
+  List<Object?> get props => [message, isCancellation];
+}
+
+class AuthSessionExpired extends AuthState {
+  final String message;
+  const AuthSessionExpired(this.message);
   @override
   List<Object?> get props => [message];
 }
 
-// BLoC
+// ─── BLoC ────────────────────────────────────────────────────────────
+
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthService _authService;
+  StreamSubscription? _tokenSub;
 
   AuthBloc({required AuthService authService})
       : _authService = authService,
@@ -71,11 +96,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthGoogleSignInRequested>(_onAuthGoogleSignInRequested);
     on<AuthLogoutRequested>(_onAuthLogoutRequested);
     on<AuthOfflineModeRequested>(_onAuthOfflineModeRequested);
+    on<AuthSessionExpiredEvent>(_onAuthSessionExpired);
+
+    // Listen to token changes for revocation / expiration (Scenarios 15, 18)
+    _tokenSub = _authService.idTokenChanges.listen((user) {
+      if (user == null && state is AuthAuthenticated && !_authService.isOfflineMode) {
+        add(const AuthSessionExpiredEvent(reason: 'Votre session a été fermée ou révoquée.'));
+      }
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _tokenSub?.cancel();
+    return super.close();
   }
 
   Future<void> _onAuthCheckRequested(AuthCheckRequested event, Emitter<AuthState> emit) async {
     await _authService.initialize();
     if (_authService.isAuthenticated) {
+      await PermissionService.instance.loadPermissions();
       emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
     } else {
       emit(AuthUnauthenticated());
@@ -83,10 +123,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onAuthLoginRequested(AuthLoginRequested event, Emitter<AuthState> emit) async {
+    // Scenario 11: Debounce simultaneous clicks
+    if (state is AuthLoading) return;
+
     emit(AuthLoading());
     try {
       final success = await _authService.login(event.email, event.password);
       if (success) {
+        await PermissionService.instance.loadPermissions();
         emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
       } else {
         emit(const AuthError('Identifiants incorrects'));
@@ -97,10 +141,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onAuthSignUpRequested(AuthSignUpRequested event, Emitter<AuthState> emit) async {
+    if (state is AuthLoading) return;
+
     emit(AuthLoading());
     try {
       final success = await _authService.signUpWithEmail(event.email, event.password, event.name);
       if (success) {
+        await PermissionService.instance.loadPermissions();
         emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
       } else {
         emit(const AuthError('Erreur lors de l\'inscription'));
@@ -111,16 +158,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onAuthGoogleSignInRequested(AuthGoogleSignInRequested event, Emitter<AuthState> emit) async {
+    // Scenario 11: Debounce / prevent multiple simultaneous clicks
+    if (state is AuthLoading) return;
+
     emit(AuthLoading());
     try {
       final success = await _authService.signInWithGoogle();
       if (success) {
+        await PermissionService.instance.loadPermissions();
         emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
       } else {
         emit(const AuthError('Erreur lors de la connexion Google'));
       }
     } catch (e) {
-      emit(AuthError(ErrorHandler.parseError(e)));
+      final message = ErrorHandler.parseError(e);
+      final isCancel = message.contains('annulée par l\'utilisateur') ||
+          message.toLowerCase().contains('user_cancelled');
+      emit(AuthError(message, isCancellation: isCancel));
     }
   }
 
@@ -134,5 +188,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     await _authService.enableOfflineMode();
     emit(const AuthAuthenticated(isOffline: true));
+  }
+
+  void _onAuthSessionExpired(AuthSessionExpiredEvent event, Emitter<AuthState> emit) {
+    emit(AuthSessionExpired(event.reason));
   }
 }

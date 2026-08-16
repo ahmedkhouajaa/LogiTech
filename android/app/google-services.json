@@ -9,12 +9,20 @@
       "client_info": {
         "mobilesdk_app_id": "1:300906049669:android:90a3ed294951644b1679ec",
         "android_client_info": {
-          "package_name": "com.logitech.pro"
+          "package_name": "com.example.business_manager_pro"
         }
       },
       "oauth_client": [
         {
-          "client_id": "300906049669-oqdhoonski8rq59knaor043hb3pg25k6.apps.googleusercontent.com",
+          "client_id": "300906049669-467lklo8v1e0of7671qrub61i4umu9qq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.business_manager_pro",
+            "certificate_hash": "3c7f91c6b6838defa8368b75636ad13d1acafc94"
+          }
+        },
+        {
+          "client_id": "300906049669-5ibt6t6k1vdo1b28gt7qjtbfdmtciorm.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
@@ -27,7 +35,7 @@
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "300906049669-oqdhoonski8rq59knaor043hb3pg25k6.apps.googleusercontent.com",
+              "client_id": "300906049669-5ibt6t6k1vdo1b28gt7qjtbfdmtciorm.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

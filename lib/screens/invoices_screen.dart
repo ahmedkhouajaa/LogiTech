@@ -27,6 +27,8 @@ import '../database/database_helper.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 
 class InvoicesScreen extends StatefulWidget {
   const InvoicesScreen({super.key});
@@ -83,10 +85,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 ],
               ),
               const Spacer(),
-              AppButton(
-                label: 'Nouvelle facture',
-                icon: Icons.add_rounded,
-                onPressed: () => Navigator.push(
+              if (PermissionService.instance.canCreate(UserPermissionResources.salesInvoices))
+                AppButton(
+                  label: 'Nouvelle facture',
+                  icon: Icons.add_rounded,
+                  onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => MultiBlocProvider(
@@ -810,11 +813,15 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             onSelected: (val) => _handleAction(context, val, inv),
             itemBuilder: (_) => [
               _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
-              PopupMenuDivider(height: 1),
-              _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-              PopupMenuDivider(height: 1),
-              _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-              PopupMenuDivider(height: 1),
+              if (PermissionService.instance.canUpdate(UserPermissionResources.salesInvoices)) ...[
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+              ],
+              if (PermissionService.instance.canDelete(UserPermissionResources.salesInvoices)) ...[
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+              ],
+              const PopupMenuDivider(height: 1),
               _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
               PopupMenuDivider(height: 1),
               if (inv.status != InvoiceStatus.paid) ...[

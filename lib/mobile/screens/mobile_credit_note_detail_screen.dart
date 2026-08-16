@@ -16,6 +16,8 @@ import '../../database/database_helper.dart';
 
 import '../../screens/document_preview_screen.dart';
 import 'forms/mobile_credit_note_form_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileCreditNoteDetailScreen extends StatefulWidget {
   final CreditNote creditNote;
@@ -120,10 +122,14 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
                 _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
                 PopupMenuDivider(height: 1),
                 _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                if (PermissionService.instance.canUpdate(UserPermissionResources.salesCreditNotes)) ...[
+                  const PopupMenuDivider(height: 1),
+                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                ],
+                if (PermissionService.instance.canDelete(UserPermissionResources.salesCreditNotes)) ...[
+                  const PopupMenuDivider(height: 1),
+                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                ],
               ],
             ),
           ],

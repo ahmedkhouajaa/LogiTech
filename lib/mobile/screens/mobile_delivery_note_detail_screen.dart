@@ -28,6 +28,8 @@ import '../../database/database_helper.dart';
 import '../../screens/document_preview_screen.dart';
 import '../../widgets/delivery_note_payment_dialog.dart';
 import 'forms/mobile_delivery_note_form_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 import 'forms/mobile_invoice_form_screen.dart';
 import 'forms/mobile_return_voucher_form_screen.dart';
 
@@ -118,11 +120,15 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
               onSelected: (val) => _handleAction(context, val, currentDeliveryNote),
               itemBuilder: (_) => [
                 _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                PopupMenuDivider(height: 1),
+                if (PermissionService.instance.canUpdate(UserPermissionResources.salesDeliveryNotes)) ...[
+                  const PopupMenuDivider(height: 1),
+                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                ],
+                if (PermissionService.instance.canDelete(UserPermissionResources.salesDeliveryNotes)) ...[
+                  const PopupMenuDivider(height: 1),
+                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                ],
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
                 PopupMenuDivider(height: 1),
                 if (currentDeliveryNote.isConvertedToInvoice) ...[

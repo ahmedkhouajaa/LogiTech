@@ -17,6 +17,8 @@ import '../models/supplier.dart';
 import '../models/treasury_account.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/searchable_dropdown_field.dart';
 
@@ -141,20 +143,22 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                       );
                     },
                   ),
-                  SizedBox(width: AppSpacing.md),
-                  // New payment button
-                  ElevatedButton.icon(
-                    onPressed: () => _showCreateDialog(context),
-                    icon: Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                    label: Text('Nouveau paiement',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      elevation: 0,
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  if (PermissionService.instance.canCreate(UserPermissionResources.payments)) ...[
+                    SizedBox(width: AppSpacing.md),
+                    // New payment button
+                    ElevatedButton.icon(
+                      onPressed: () => _showCreateDialog(context),
+                      icon: Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                      label: Text('Nouveau paiement',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        elevation: 0,
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -608,12 +612,13 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _TableAction(
-                  icon: Icons.delete_outline_rounded,
-                  color: AppColors.error,
-                  tooltip: 'Supprimer',
-                  onTap: () => _confirmDelete(context, p),
-                ),
+                if (PermissionService.instance.canDelete(UserPermissionResources.payments))
+                  _TableAction(
+                    icon: Icons.delete_outline_rounded,
+                    color: AppColors.error,
+                    tooltip: 'Supprimer',
+                    onTap: () => _confirmDelete(context, p),
+                  ),
               ],
             ),
           ),

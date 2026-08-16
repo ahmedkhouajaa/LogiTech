@@ -18,6 +18,8 @@ import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import '../services/auth_service.dart';
 import '../database/database_helper.dart';
 import '../blocs/projects/projects_bloc.dart';
@@ -92,10 +94,11 @@ class _QuotesScreenState extends State<QuotesScreen> {
                   Text('Gerer vos devis', style: TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
-              AppButton(
-                label: 'Nouveau devis',
-                icon: Icons.add_rounded,
-                onPressed: () => Navigator.push(
+              if (PermissionService.instance.canCreate(UserPermissionResources.salesQuotes))
+                AppButton(
+                  label: 'Nouveau devis',
+                  icon: Icons.add_rounded,
+                  onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => MultiBlocProvider(
@@ -923,11 +926,15 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                                 onSelected: (val) => _handleAction(context, val, quote),
                                                 itemBuilder: (_) => [
                                                   _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
-                                                  PopupMenuDivider(height: 1),
-                                                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                                                  PopupMenuDivider(height: 1),
-                                                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                                                  PopupMenuDivider(height: 1),
+                                                  if (PermissionService.instance.canUpdate(UserPermissionResources.salesQuotes)) ...[
+                                                    const PopupMenuDivider(height: 1),
+                                                    _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                                                  ],
+                                                  if (PermissionService.instance.canDelete(UserPermissionResources.salesQuotes)) ...[
+                                                    const PopupMenuDivider(height: 1),
+                                                    _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                                                  ],
+                                                  const PopupMenuDivider(height: 1),
                                                   if (!quote.isConverted && !quote.isConvertedToOrder && !quote.isConvertedToDelivery) ...[
                                                     _buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture'),
                                                     PopupMenuDivider(height: 1),

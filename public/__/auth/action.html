@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LogiTech Pro - Réinitialisation du mot de passe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    body {
+      background-color: #f5f7fa;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 440px;
+      border-radius: 20px;
+      padding: 36px 32px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+      border: 1px solid #e5e7eb;
+    }
+    .logo-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .logo-icon {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 16px -4px rgba(26, 35, 126, 0.3);
+      margin-bottom: 12px;
+    }
+    .logo-icon svg {
+      width: 28px;
+      height: 28px;
+      fill: #ffffff;
+    }
+    .app-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #1a237e;
+      letter-spacing: -0.5px;
+    }
+    .app-subtitle {
+      font-size: 13px;
+      color: #6b7280;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+    .email-badge {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .email-badge svg {
+      width: 18px;
+      height: 18px;
+      fill: #6b7280;
+      flex-shrink: 0;
+    }
+    .email-label {
+      font-size: 11px;
+      color: #6b7280;
+      font-weight: 600;
+    }
+    .email-value {
+      font-size: 13px;
+      color: #1a1a2e;
+      font-weight: 700;
+      word-break: break-all;
+    }
+    .form-group {
+      margin-bottom: 16px;
+      text-align: left;
+    }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-wrapper svg.field-icon {
+      position: absolute;
+      left: 14px;
+      width: 16px;
+      height: 16px;
+      fill: #6b7280;
+      pointer-events: none;
+    }
+    .form-input {
+      width: 100%;
+      padding: 11px 40px 11px 38px;
+      font-size: 13px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      background: #f3f4f6;
+      color: #1a1a2e;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+    .form-input:focus {
+      background: #ffffff;
+      border-color: #1a237e;
+      box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
+    }
+    .toggle-password {
+      position: absolute;
+      right: 10px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .toggle-password svg {
+      width: 16px;
+      height: 16px;
+      fill: #6b7280;
+    }
+    .strength-wrapper {
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .strength-bars {
+      flex: 1;
+      display: flex;
+      gap: 3px;
+    }
+    .strength-bar {
+      flex: 1;
+      height: 3px;
+      border-radius: 2px;
+      background: #e5e7eb;
+      transition: background 0.3s;
+    }
+    .strength-text {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b7280;
+      min-width: 50px;
+      text-align: right;
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 6px 16px -3px rgba(26, 35, 126, 0.3);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 24px;
+    }
+    .submit-btn:hover {
+      background: linear-gradient(135deg, #0d47a1 0%, #1a237e 100%);
+    }
+    .submit-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+    .alert-box {
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      line-height: 1.4;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .alert-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+    }
+    .alert-success {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #16a34a;
+    }
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .footer-note {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+  </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, verifyPasswordResetCode, confirmPasswordReset } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCHftTv1FxLNqkXKpZEEDSbaQQiXrReiQ4",
+      authDomain: "logitech-37369.firebaseapp.com",
+      projectId: "logitech-37369",
+      appId: "1:300906049669:web:e64927fc5bcefb4d1679ec"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    const actionCode = urlParams.get('oobCode') || urlParams.get('code');
+
+    const formEl = document.getElementById('reset-form');
+    const loadingState = document.getElementById('loading-state');
+    const errorState = document.getElementById('error-state');
+    const successState = document.getElementById('success-state');
+    const emailBadge = document.getElementById('email-badge');
+    const emailText = document.getElementById('email-text');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirm-password');
+    const submitBtn = document.getElementById('submit-btn');
+    const alertBox = document.getElementById('alert-box');
+
+    function showAlert(msg, isError = true) {
+      alertBox.textContent = msg;
+      alertBox.className = 'alert-box ' + (isError ? 'alert-error' : 'alert-success');
+      alertBox.style.display = 'block';
+    }
+
+    function clearAlert() {
+      alertBox.style.display = 'none';
+    }
+
+    if (!actionCode || mode !== 'resetPassword') {
+      loadingState.style.display = 'none';
+      errorState.style.display = 'block';
+      document.getElementById('error-msg').textContent = 'Lien de réinitialisation invalide ou manquant.';
+    } else {
+      verifyPasswordResetCode(auth, actionCode)
+        .then((email) => {
+          loadingState.style.display = 'none';
+          formEl.style.display = 'block';
+          emailBadge.style.display = 'flex';
+          emailText.textContent = email;
+        })
+        .catch((error) => {
+          loadingState.style.display = 'none';
+          errorState.style.display = 'block';
+          if (error.code === 'auth/expired-action-code') {
+            document.getElementById('error-msg').textContent = 'Ce lien de réinitialisation a expiré. Veuillez faire une nouvelle demande.';
+          } else {
+            document.getElementById('error-msg').textContent = 'Ce lien est invalide ou a déjà été utilisé.';
+          }
+        });
+    }
+
+    passwordInput.addEventListener('input', () => {
+      const val = passwordInput.value;
+      let score = 0;
+      if (val.length >= 6) score++;
+      if (val.length >= 8) score++;
+      if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
+      if (/[0-9]/.test(val) || /[^A-Za-z0-9]/.test(val)) score++;
+
+      const bars = [document.getElementById('bar-1'), document.getElementById('bar-2'), document.getElementById('bar-3'), document.getElementById('bar-4')];
+      const labels = ['Trop court', 'Faible', 'Moyen', 'Fort', 'Très fort'];
+      const colors = ['#dc2626', '#f59e0b', '#1a237e', '#16a34a'];
+
+      bars.forEach((bar, idx) => {
+        if (idx < score) {
+          bar.style.backgroundColor = colors[score - 1];
+        } else {
+          bar.style.backgroundColor = '#e5e7eb';
+        }
+      });
+      document.getElementById('strength-text').textContent = val.length > 0 ? labels[score] : '';
+      document.getElementById('strength-text').style.color = val.length > 0 ? colors[Math.max(0, score - 1)] : '#6b7280';
+    });
+
+    formEl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert();
+
+      const pwd = passwordInput.value;
+      const confirmPwd = confirmPasswordInput.value;
+
+      if (pwd.length < 6) {
+        showAlert('Le mot de passe doit contenir au moins 6 caractères.');
+        return;
+      }
+      if (pwd !== confirmPwd) {
+        showAlert('Les mots de passe ne correspondent pas.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<div class="spinner"></div> Enregistrement...';
+
+      try {
+        await confirmPasswordReset(auth, actionCode, pwd);
+        formEl.style.display = 'none';
+        emailBadge.style.display = 'none';
+        successState.style.display = 'block';
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Enregistrer le mot de passe';
+        if (err.code === 'auth/weak-password') {
+          showAlert('Le mot de passe est trop faible. Choisissez un mot de passe plus complexe.');
+        } else if (err.code === 'auth/expired-action-code') {
+          showAlert('Le lien a expiré. Veuillez faire une nouvelle demande.');
+        } else {
+          showAlert('Une erreur est survenue lors de la réinitialisation.');
+        }
+      }
+    });
+
+    window.togglePwd = function(id) {
+      const input = document.getElementById(id);
+      input.type = input.type === 'password' ? 'text' : 'password';
+    };
+  </script>
+</head>
+<body>
+  <div class="card">
+    <div class="logo-container">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+      </div>
+      <h1 class="app-title">LogiTech Pro</h1>
+      <p class="app-subtitle">Nouveau mot de passe sécurisé</p>
+    </div>
+
+    <!-- Email Badge -->
+    <div id="email-badge" class="email-badge" style="display: none;">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+      <div>
+        <div class="email-label">Compte associé</div>
+        <div id="email-text" class="email-value"></div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" style="text-align: center; padding: 24px 0;">
+      <div class="spinner" style="margin: 0 auto 12px; border-color: rgba(26,35,126,0.2); border-top-color: #1a237e; width: 24px; height: 24px;"></div>
+      <p style="color: #6b7280; font-size: 13px;">Vérification du lien de réinitialisation...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error-state" style="display: none; text-align: center; padding: 16px 0;">
+      <div style="width: 48px; height: 48px; background: #fef2f2; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+        <svg style="width: 24px; height: 24px; fill: #dc2626;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+      </div>
+      <h3 style="color: #1a1a2e; font-size: 17px; margin-bottom: 6px;">Lien invalide ou expiré</h3>
+      <p id="error-msg" style="color: #6b7280; font-size: 13px; margin-bottom: 20px; line-height: 1.4;"></p>
+    </div>
+
+    <!-- Success State -->
+    <div id="success-state" style="display: none; text-align: center; padding: 16px 0;">
+      <div style="width: 48px; height: 48px; background: #ecfdf5; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+        <svg style="width: 28px; height: 28px; fill: #16a34a;" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      </div>
+      <h3 style="color: #1a1a2e; font-size: 18px; font-weight: 800; margin-bottom: 6px;">Mot de passe modifié !</h3>
+      <p style="color: #6b7280; font-size: 13px; line-height: 1.4; margin-bottom: 20px;">
+        Votre mot de passe a été mis à jour avec succès. Vous pouvez maintenant fermer cette page et vous connecter sur votre application LogiTech Pro.
+      </p>
+    </div>
+
+    <!-- Form -->
+    <form id="reset-form" style="display: none;">
+      <div id="alert-box" class="alert-box"></div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Nouveau mot de passe</label>
+        <div class="input-wrapper">
+          <svg class="field-icon" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+          <input class="form-input" type="password" id="password" placeholder="••••••••" required minlength="6">
+          <button type="button" class="toggle-password" onclick="togglePwd('password')">
+            <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+          </button>
+        </div>
+        <div class="strength-wrapper">
+          <div class="strength-bars">
+            <div class="strength-bar" id="bar-1"></div>
+            <div class="strength-bar" id="bar-2"></div>
+            <div class="strength-bar" id="bar-3"></div>
+            <div class="strength-bar" id="bar-4"></div>
+          </div>
+          <div class="strength-text" id="strength-text"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="confirm-password">Confirmer le mot de passe</label>
+        <div class="input-wrapper">
+          <svg class="field-icon" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+          <input class="form-input" type="password" id="confirm-password" placeholder="••••••••" required minlength="6">
+          <button type="button" class="toggle-password" onclick="togglePwd('confirm-password')">
+            <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submit-btn">
+        Enregistrer le mot de passe
+      </button>
+    </form>
+  </div>
+</body>
+</html>

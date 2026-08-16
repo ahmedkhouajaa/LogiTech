@@ -7,6 +7,8 @@ import '../blocs/warehouses/warehouses_state.dart';
 import '../models/stock_movement.dart';
 import '../utils/constants.dart';
 import '../services/enterprise_service.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import '../widgets/custom_app_bar.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
@@ -36,13 +38,41 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
   }
 
   void _showWarehouseDialog([Warehouse? warehouse]) {
+    if (warehouse != null) {
+      final isDefault = warehouse.isDefault ||
+          warehouse.name.trim().toLowerCase() == 'entrepôt par défaut' ||
+          warehouse.name.trim().toLowerCase() == 'entrepot par defaut';
+      if (isDefault) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+    }
     showDialog(
       context: context,
       builder: (context) => CreateWarehouseDialog(warehouse: warehouse),
     );
   }
 
-  void _deleteWarehouse(String id) {
+  void _deleteWarehouse(Warehouse warehouse) {
+    final isDefault = warehouse.isDefault ||
+        warehouse.name.trim().toLowerCase() == 'entrepôt par défaut' ||
+        warehouse.name.trim().toLowerCase() == 'entrepot par defaut';
+    if (isDefault) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Cet élément est un élément par défaut et ne peut pas être supprimé.'),
+          backgroundColor: AppColors.warning,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -52,7 +82,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
           TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler')),
           ElevatedButton(
             onPressed: () {
-              context.read<WarehousesBloc>().add(DeleteWarehouse(id));
+              context.read<WarehousesBloc>().add(DeleteWarehouse(warehouse.id));
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
@@ -80,17 +110,18 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                 ],
               ),
               Spacer(),
-              ElevatedButton.icon(
-                onPressed: () => _showWarehouseDialog(),
-                icon: Icon(Icons.add, size: 18),
-                label: Text('Ajouter un Entrepôt'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              if (PermissionService.instance.canCreate(UserPermissionResources.stockWarehouses))
+                ElevatedButton.icon(
+                  onPressed: () => _showWarehouseDialog(),
+                  icon: Icon(Icons.add, size: 18),
+                  label: Text('Ajouter un Entrepôt'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -168,13 +199,44 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                     DataColumn(label: Text('Nom', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('Référence', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('Adresse', style: TextStyle(fontWeight: FontWeight.bold))),
-                    // DataColumn(label: Text('Par Défaut', style: TextStyle(fontWeight: FontWeight.bold))),
                     DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
                   ],
                   rows: warehouses.map((w) {
+                    final isDefault = w.isDefault ||
+                        w.name.trim().toLowerCase() == 'entrepôt par défaut' ||
+                        w.name.trim().toLowerCase() == 'entrepot par defaut';
                     return DataRow(
                       cells: [
-                        DataCell(Text(w.name, style: TextStyle(fontWeight: FontWeight.w500))),
+                        DataCell(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(w.name, style: TextStyle(fontWeight: FontWeight.w500)),
+                              if (isDefault) ...[
+                                SizedBox(width: 8),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.lock_rounded, size: 10, color: AppColors.primary),
+                                      SizedBox(width: 2),
+                                      Text(
+                                        'Par défaut',
+                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                         DataCell(Text(w.reference?.isNotEmpty == true ? w.reference! : 'Aucune référence', style: TextStyle(color: AppColors.textSecondary))),
                         DataCell(
                           Row(
@@ -185,57 +247,43 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                             ],
                           ),
                         ),
-                        /* DataCell(
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: w.isDefault ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surfaceAlt,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  w.isDefault ? Icons.toggle_on : Icons.toggle_off,
-                                  color: w.isDefault ? AppColors.primary : AppColors.textTertiary,
-                                  size: 20,
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  w.isDefault ? 'Oui' : 'Non',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: w.isDefault ? AppColors.primary : AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ), */
                         DataCell(
                           PopupMenuButton(
                             icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
                             itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'edit',
-                                child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')]),
-                                onTap: () {
-                                  // Use Future.delayed because we can't open a dialog during popup menu dismissal
-                                  Future.delayed(Duration.zero, () {
-                                    _showWarehouseDialog(w);
-                                  });
-                                },
-                              ),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Row(children: [Icon(Icons.delete_outline, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))]),
-                                onTap: () {
-                                  Future.delayed(Duration.zero, () {
-                                    _deleteWarehouse(w.id);
-                                  });
-                                },
-                              ),
+                              if (!isDefault) ...[
+                                if (PermissionService.instance.canUpdate(UserPermissionResources.stockWarehouses))
+                                  PopupMenuItem(
+                                    value: 'edit',
+                                    child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')]),
+                                    onTap: () {
+                                      Future.delayed(Duration.zero, () {
+                                        _showWarehouseDialog(w);
+                                      });
+                                    },
+                                  ),
+                                if (PermissionService.instance.canDelete(UserPermissionResources.stockWarehouses))
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(children: [Icon(Icons.delete_outline, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))]),
+                                    onTap: () {
+                                      Future.delayed(Duration.zero, () {
+                                        _deleteWarehouse(w);
+                                      });
+                                    },
+                                  ),
+                              ] else ...[
+                                PopupMenuItem(
+                                  enabled: false,
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.lock_rounded, size: 16, color: AppColors.textTertiary),
+                                      SizedBox(width: 8),
+                                      Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),

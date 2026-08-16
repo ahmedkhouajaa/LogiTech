@@ -16,6 +16,7 @@ class Project {
   final String? firebaseUid;
   final String? enterpriseId;
   final bool isDeleted;
+  final bool isDefault;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -25,6 +26,7 @@ class Project {
     this.endDate, this.budget = 0, this.spent = 0,
     this.status = ProjectStatus.planning, this.progress = 0,
     this.notes, this.firebaseUid, this.enterpriseId, this.isDeleted = false,
+    this.isDefault = false,
     DateTime? createdAt, DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
@@ -39,6 +41,8 @@ class Project {
         'status': status.name, 'progress': progress, 'notes': notes,
         'firebase_uid': firebaseUid, 'enterprise_id': enterpriseId,
         'is_deleted': isDeleted ? 1 : 0,
+        'is_default': isDefault ? 1 : 0,
+        'isDefault': isDefault,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
@@ -59,6 +63,7 @@ class Project {
         firebaseUid: map['firebase_uid'] as String?,
         enterpriseId: map['enterprise_id'] as String?,
         isDeleted: map['is_deleted'] == 1,
+        isDefault: map['is_default'] == 1 || map['is_default'] == true || map['isDefault'] == true || map['name'] == 'Projet par défaut' || map['name'] == 'Projet principal par défaut',
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
       );
@@ -68,6 +73,7 @@ class Project {
     String? customerName, DateTime? startDate, DateTime? endDate,
     double? budget, double? spent, ProjectStatus? status, double? progress,
     String? notes, String? firebaseUid, String? enterpriseId, bool? isDeleted,
+    bool? isDefault,
     DateTime? createdAt, DateTime? updatedAt,
   }) => Project(
         id: id ?? this.id, name: name ?? this.name,
@@ -80,6 +86,7 @@ class Project {
         notes: notes ?? this.notes, firebaseUid: firebaseUid ?? this.firebaseUid,
         enterpriseId: enterpriseId ?? this.enterpriseId,
         isDeleted: isDeleted ?? this.isDeleted,
+        isDefault: isDefault ?? this.isDefault,
         createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
       );
 }

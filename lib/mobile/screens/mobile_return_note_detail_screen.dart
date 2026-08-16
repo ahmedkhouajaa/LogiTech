@@ -18,6 +18,8 @@ import '../../database/database_helper.dart';
 
 import '../../screens/document_preview_screen.dart';
 import 'forms/mobile_return_voucher_form_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileReturnNoteDetailScreen extends StatefulWidget {
   final ReturnNote returnNote;
@@ -104,11 +106,15 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
               onSelected: (val) => _handleAction(context, val, currentReturnNote),
               itemBuilder: (_) => [
                 _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                PopupMenuDivider(height: 1),
+                if (PermissionService.instance.canUpdate(UserPermissionResources.salesReturnVouchers)) ...[
+                  const PopupMenuDivider(height: 1),
+                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                ],
+                if (PermissionService.instance.canDelete(UserPermissionResources.salesReturnVouchers)) ...[
+                  const PopupMenuDivider(height: 1),
+                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                ],
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
                 PopupMenuDivider(height: 1),
                 _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),

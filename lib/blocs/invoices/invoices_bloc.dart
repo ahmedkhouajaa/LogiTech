@@ -5,6 +5,8 @@ import '../../models/invoice.dart';
 import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class InvoicesEvent extends Equatable {
@@ -294,6 +296,10 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
   }
 
   Future<void> _onAdd(AddInvoice event, Emitter<InvoicesState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.salesInvoices)) {
+      emit(const InvoicesError('Permission refusée : Vous n\'avez pas le droit de créer une facture.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveInvoice(event.invoice);
       add(const LoadFirstInvoices());
@@ -303,6 +309,10 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
   }
 
   Future<void> _onUpdate(UpdateInvoice event, Emitter<InvoicesState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.salesInvoices)) {
+      emit(const InvoicesError('Permission refusée : Vous n\'avez pas le droit de modifier une facture.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveInvoice(event.invoice);
       add(const LoadFirstInvoices());
@@ -312,6 +322,10 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
   }
 
   Future<void> _onDelete(DeleteInvoice event, Emitter<InvoicesState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.salesInvoices)) {
+      emit(const InvoicesError('Permission refusée : Vous n\'avez pas le droit de supprimer une facture.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('invoices', event.id);
       add(const LoadFirstInvoices());

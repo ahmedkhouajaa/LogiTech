@@ -7,16 +7,88 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isUserActive() {
+      return isAuthenticated() && 
+        (!exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isActive', true) == true);
+    }
+
+    function isUserAdmin(enterpriseId) {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/enterprises/$(enterpriseId)).data.get('owner_id', '') == request.auth.uid ||
+        get(/databases/$(database)/documents/enterprises/$(enterpriseId)).data.get('userId', '') == request.auth.uid
+      );
+    }
+
+    function isNotDefaultRecord() {
+      return resource == null || (
+        resource.data.get('isDefault', false) != true &&
+        resource.data.get('is_default', 0) != 1 &&
+        resource.data.get('is_default', false) != true
+      );
+    }
+
     match /users/{userId} {
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && isUserActive();
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
     }
     
-    match /enterprises/{document=**} {
-      allow read, write: if isAuthenticated();
+    match /enterprises/{enterpriseId} {
+      allow read: if isUserActive();
+      allow create: if isAuthenticated();
+      allow update, delete: if isUserActive();
+      
+      match /{allChildren=**} {
+        allow read, write: if isUserActive();
+      }
+    }
+
+    match /clients/{docId} {
+      allow read: if isUserActive();
+      allow create: if isUserActive();
+      allow update, delete: if isUserActive() && isNotDefaultRecord();
+    }
+
+    match /fournisseurs/{docId} {
+      allow read: if isUserActive();
+      allow create: if isUserActive();
+      allow update, delete: if isUserActive() && isNotDefaultRecord();
+    }
+
+    match /treasury_accounts/{docId} {
+      allow read: if isUserActive();
+      allow create: if isUserActive();
+      allow update, delete: if isUserActive() && isNotDefaultRecord();
+    }
+
+    match /comptes_tresorerie/{docId} {
+      allow read: if isUserActive();
+      allow create: if isUserActive();
+      allow update, delete: if isUserActive() && isNotDefaultRecord();
+    }
+
+    match /projects/{docId} {
+      allow read: if isUserActive();
+      allow create: if isUserActive();
+      allow update, delete: if isUserActive() && isNotDefaultRecord();
+    }
+
+    match /warehouses/{docId} {
+      allow read: if isUserActive();
+      allow create: if isUserActive();
+      allow update, delete: if isUserActive() && isNotDefaultRecord();
+    }
+
+    match /entrepots/{docId} {
+      allow read: if isUserActive();
+      allow create: if isUserActive();
+      allow update, delete: if isUserActive() && isNotDefaultRecord();
     }
 
     match /{collectionName}/{docId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if isUserActive();
     }
   }
 }

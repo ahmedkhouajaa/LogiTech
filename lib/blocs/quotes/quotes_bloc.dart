@@ -6,6 +6,8 @@ import '../../models/quote_status_history.dart';
 import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class QuotesEvent extends Equatable { const QuotesEvent(); @override List<Object?> get props => []; }
@@ -221,6 +223,10 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
   }
 
   Future<void> _onAdd(AddQuote event, Emitter<QuotesState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.salesQuotes)) {
+      emit(const QuotesError('Permission refusée : Vous n\'avez pas le droit de créer un devis.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveQuote(event.quote);
       add(const LoadFirstDevis());
@@ -230,6 +236,10 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
   }
 
   Future<void> _onUpdate(UpdateQuote event, Emitter<QuotesState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.salesQuotes)) {
+      emit(const QuotesError('Permission refusée : Vous n\'avez pas le droit de modifier un devis.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveQuote(event.quote);
       add(const LoadFirstDevis());
@@ -239,6 +249,10 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
   }
 
   Future<void> _onUpdateStatus(UpdateQuoteStatus event, Emitter<QuotesState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.salesQuotes)) {
+      emit(const QuotesError('Permission refusée : Vous n\'avez pas le droit de modifier le statut.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.updateDocument('quotes', event.id, {'status': event.newStatus.name});
       final history = QuoteStatusHistory(
@@ -258,6 +272,10 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
   }
 
   Future<void> _onDelete(DeleteQuote event, Emitter<QuotesState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.salesQuotes)) {
+      emit(const QuotesError('Permission refusée : Vous n\'avez pas le droit de supprimer un devis.'));
+      return;
+    }
     final currentState = state;
     if (currentState is QuotesLoaded) {
       final updatedList = currentState.quotes.where((q) => q.id != event.id).toList();
@@ -270,12 +288,7 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
     try {
       await FirestoreRepository.instance.softDeleteDocument('quotes', event.id);
       await Future.delayed(const Duration(milliseconds: 300));
-      
-      if (currentState is QuotesLoaded) {
-        add(const LoadFirstDevis());
-      } else {
-        add(const LoadFirstDevis());
-      }
+      add(const LoadFirstDevis());
     } catch (e) {
       emit(QuotesError(ErrorHandler.parseError(e)));
     }

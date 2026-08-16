@@ -8,6 +8,8 @@ import '../../utils/helpers.dart';
 import '../../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import '../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import 'forms/mobile_transaction_form_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileTreasuryTransactionDetailScreen extends StatefulWidget {
   final TreasuryTransaction transaction;
@@ -101,9 +103,13 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
               icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: _handleAction,
               itemBuilder: (_) => [
-                _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                if (PermissionService.instance.canUpdate(UserPermissionResources.treasuryTransactions))
+                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                if (PermissionService.instance.canUpdate(UserPermissionResources.treasuryTransactions) &&
+                    PermissionService.instance.canDelete(UserPermissionResources.treasuryTransactions))
+                  const PopupMenuDivider(height: 1),
+                if (PermissionService.instance.canDelete(UserPermissionResources.treasuryTransactions))
+                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
               ],
             ),
           ],

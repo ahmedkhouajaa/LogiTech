@@ -14,6 +14,8 @@ import '../../models/supplier.dart';
 import 'forms/mobile_receiving_voucher_form_screen.dart';
 import 'mobile_receiving_voucher_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileReceivingVouchersScreen extends StatefulWidget {
   const MobileReceivingVouchersScreen({super.key});
@@ -177,7 +179,7 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
                   _fetchFilteredVouchers();
                 });
               },
-              onEdit: () {
+              onEdit: PermissionService.instance.canUpdate(UserPermissionResources.purchasesReceivingVouchers) ? () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MultiBlocProvider(
@@ -193,8 +195,8 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
                 ).then((_) {
                   _fetchFilteredVouchers();
                 });
-              },
-              onDelete: () => _handleDelete(item.id),
+              } : null,
+              onDelete: PermissionService.instance.canDelete(UserPermissionResources.purchasesReceivingVouchers) ? () => _handleDelete(item.id) : null,
             );
           }).toList();
         }

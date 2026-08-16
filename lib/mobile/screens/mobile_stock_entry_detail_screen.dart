@@ -16,6 +16,8 @@ import '../../blocs/warehouses/warehouses_state.dart';
 
 import '../../screens/create_stock_entry_screen.dart';
 import '../../screens/document_preview_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileStockEntryDetailScreen extends StatefulWidget {
   final StockEntry entry;
@@ -152,10 +154,14 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
               icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentEntry),
               itemBuilder: (_) => [
-                _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                const PopupMenuDivider(height: 1),
+                if (PermissionService.instance.canUpdate(UserPermissionResources.stockEntryVouchers)) ...[
+                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                  const PopupMenuDivider(height: 1),
+                ],
+                if (PermissionService.instance.canDelete(UserPermissionResources.stockEntryVouchers)) ...[
+                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                  const PopupMenuDivider(height: 1),
+                ],
                 _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
               ],
             ),

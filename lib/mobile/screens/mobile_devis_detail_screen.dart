@@ -28,6 +28,8 @@ import 'forms/mobile_quote_form_screen.dart';
 import 'mobile_customer_order_detail_screen.dart';
 import 'mobile_delivery_note_detail_screen.dart';
 import '../../screens/document_preview_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileDevisDetailScreen extends StatefulWidget {
   final Quote quote;
@@ -105,11 +107,15 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
               onSelected: (val) => _handleAction(context, val, currentQuote),
               itemBuilder: (_) => [
                 _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                PopupMenuDivider(height: 1),
+                if (PermissionService.instance.canUpdate(UserPermissionResources.salesQuotes)) ...[
+                  const PopupMenuDivider(height: 1),
+                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                ],
+                if (PermissionService.instance.canDelete(UserPermissionResources.salesQuotes)) ...[
+                  const PopupMenuDivider(height: 1),
+                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                ],
+                const PopupMenuDivider(height: 1),
                 if (!currentQuote.isConverted && !currentQuote.isConvertedToOrder && !currentQuote.isConvertedToDelivery) ...[
                   _buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture'),
                   PopupMenuDivider(height: 1),

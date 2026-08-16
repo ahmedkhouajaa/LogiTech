@@ -9,7 +9,8 @@ import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
-
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import '../widgets/create_project_dialog.dart';
 
 class ProjectsScreen extends StatefulWidget {
@@ -35,10 +36,23 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       ),
     );
   }
-
-  void _editProject(Project p) {
+  void _editProject(Project? p) {
+    if (p != null) {
+      final isDefault = p.isDefault || p.name.trim().toLowerCase() == 'projet par défaut' || p.name.trim().toLowerCase() == 'projet principal par défaut';
+      if (isDefault) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+    }
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (_) => BlocProvider.value(
         value: context.read<ProjectsBloc>(),
         child: CreateProjectDialog(project: p),
@@ -47,6 +61,17 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   void _deleteProject(Project p) {
+    final isDefault = p.isDefault || p.name.trim().toLowerCase() == 'projet par défaut' || p.name.trim().toLowerCase() == 'projet principal par défaut';
+    if (isDefault) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Cet élément est un élément par défaut et ne peut pas être supprimé.'),
+          backgroundColor: AppColors.warning,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -88,11 +113,16 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 children: [
                   Text('Projets', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                   SizedBox(height: 4),
-                  Text('Gérer vos projets', style: TextStyle(color: AppColors.textSecondary)),
+                  Text('Gérez vos projets et suivez leur avancement', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                 ],
               ),
-              const Spacer(),
-              AppButton(label: 'Ajouter un Projet', icon: Icons.add_rounded, onPressed: _showCreateDialog),
+              Spacer(),
+              if (PermissionService.instance.canCreate(UserPermissionResources.projects))
+                ElevatedButton.icon(
+                  onPressed: () => _editProject(null),
+                  icon: Icon(Icons.add_rounded, size: 18),
+                  label: Text('Nouveau Projet'),
+                ),
             ],
           ),
         ),
@@ -134,84 +164,129 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                       columns: const ['Nom', 'Statut', 'Date de Création', 'Actions'],
                       rows: state.projects,
                       emptyMessage: 'Aucun projet',
-                      cellBuilder: (p) => [
-                        DataCell(
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
+                      cellBuilder: (p) {
+                        final isDefault = p.isDefault || p.name.trim().toLowerCase() == 'projet par défaut' || p.name.trim().toLowerCase() == 'projet principal par défaut';
+                        return [
+                          DataCell(
+                            Row(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(Icons.folder_special_rounded, color: AppColors.primary, size: 20),
                                 ),
-                                child: Icon(Icons.folder_special_rounded, color: AppColors.primary, size: 20),
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(p.name, style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                                    if (p.description != null && p.description!.isNotEmpty)
-                                      Text(p.description!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                  ],
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(p.name, style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                                          if (isDefault) ...[
+                                            SizedBox(width: 6),
+                                            Container(
+                                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.primary.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(4),
+                                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.lock_rounded, size: 10, color: AppColors.primary),
+                                                  SizedBox(width: 2),
+                                                  Text(
+                                                    'Par défaut',
+                                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      if (p.description != null && p.description!.isNotEmpty)
+                                        Text(p.description!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        DataCell(StatusBadge(label: p.status.label, color: AppColors.primary)),
-                        DataCell(Text(formatDateTime(p.createdAt), style: TextStyle(color: AppColors.textSecondary))),
-                        DataCell(
-                          PopupMenuButton<String>(
-                            icon: Icon(Icons.more_vert_rounded, color: AppColors.textSecondary),
-                            color: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            onSelected: (value) {
-                              if (value == 'voir') {
-                                _editProject(p); // Fallback to edit for now
-                              } else if (value == 'modifier') {
-                                _editProject(p);
-                              } else if (value == 'supprimer') {
-                                _deleteProject(p);
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'voir',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.visibility_outlined, size: 18, color: AppColors.textSecondary),
-                                    SizedBox(width: 8),
-                                    Text('Voir'),
-                                  ],
+                          DataCell(StatusBadge(label: p.status.label, color: AppColors.primary)),
+                          DataCell(Text(formatDateTime(p.createdAt), style: TextStyle(color: AppColors.textSecondary))),
+                          DataCell(
+                            PopupMenuButton<String>(
+                              icon: Icon(Icons.more_vert_rounded, color: AppColors.textSecondary),
+                              color: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              onSelected: (value) {
+                                if (value == 'voir') {
+                                  _editProject(p);
+                                } else if (value == 'modifier') {
+                                  _editProject(p);
+                                } else if (value == 'supprimer') {
+                                  _deleteProject(p);
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: 'voir',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.visibility_outlined, size: 18, color: AppColors.textSecondary),
+                                      SizedBox(width: 8),
+                                      Text('Voir'),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              PopupMenuItem(
-                                value: 'modifier',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary),
-                                    SizedBox(width: 8),
-                                    Text('Modifier'),
-                                  ],
-                                ),
-                              ),
-                              PopupMenuItem(
-                                value: 'supprimer',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-                                    SizedBox(width: 8),
-                                    Text('Supprimer', style: TextStyle(color: AppColors.error)),
-                                  ],
-                                ),
-                              ),
-                            ],
+                                if (!isDefault) ...[
+                                  if (PermissionService.instance.canUpdate(UserPermissionResources.projects))
+                                    PopupMenuItem(
+                                      value: 'modifier',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary),
+                                          SizedBox(width: 8),
+                                          Text('Modifier'),
+                                        ],
+                                      ),
+                                    ),
+                                  if (PermissionService.instance.canDelete(UserPermissionResources.projects))
+                                    PopupMenuItem(
+                                      value: 'supprimer',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                                          SizedBox(width: 8),
+                                          Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                                        ],
+                                      ),
+                                    ),
+                                ] else ...[
+                                  PopupMenuItem(
+                                    enabled: false,
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.lock_rounded, size: 16, color: AppColors.textTertiary),
+                                        SizedBox(width: 8),
+                                        Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ];
+                      },
                     ),
                   ),
                 );

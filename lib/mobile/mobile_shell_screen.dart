@@ -56,6 +56,8 @@ import '../screens/stock_entries_screen.dart';
 import '../screens/stock_withdrawals_screen.dart';
 import '../screens/stock_transfers_screen.dart';
 import '../screens/inventory_sheets_screen.dart';
+import 'screens/mobile_user_management_screen.dart';
+import '../services/permission_service.dart';
 
 class MobileShellScreen extends StatefulWidget {
   const MobileShellScreen({super.key});
@@ -108,6 +110,9 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
   }
 
   Widget _buildContent() {
+    if (!PermissionService.instance.canAccessModule(_activeModule)) {
+      return const UnauthorizedView();
+    }
     switch (_activeModule) {
       case AppModule.dashboard:
         return const MobileDashboardScreen();
@@ -178,6 +183,8 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         return const DocumentTemplatesScreen();
       case AppModule.stockEntry:
         return const StockEntriesScreen();
+      case AppModule.userManagement:
+        return const MobileUserManagementScreen();
       default:
         return _ComingSoonMobile(module: _activeModule);
     }
@@ -218,7 +225,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.payments: return 'Paiements';
       case AppModule.companyInfo: return 'Ma Societe';
       case AppModule.documentTemplates: return 'Modeles';
-      case AppModule.stockEntry: return "Bons d'entree";
+      case AppModule.userManagement: return 'Gestion des utilisateurs';
       default: return 'LogiTech Pro';
     }
   }
@@ -274,56 +281,60 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
           context.read<ProductsBloc>().add(LoadProducts());
           context.read<DashboardBloc>().add(DashboardRefreshRequested());
         },
-        child: _buildContent(),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: AppColors.border)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: Offset(0, -2),
-            ),
-          ],
-        ),
-        child: NavigationBar(
-          selectedIndex: _bottomNavIndex >= 0 ? _bottomNavIndex : 0,
-          onDestinationSelected: _onBottomNavTapped,
-          backgroundColor: AppColors.surface,
-          surfaceTintColor: Colors.transparent,
-          indicatorColor: AppColors.primary.withValues(alpha: 0.1),
-          height: 64,
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          destinations: [
-            NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined, size: 22),
-              selectedIcon: Icon(Icons.dashboard_rounded, size: 22, color: AppColors.primary),
-              label: 'Accueil',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.receipt_outlined, size: 22),
-              selectedIcon: Icon(Icons.receipt_rounded, size: 22, color: AppColors.primary),
-              label: 'Ventes',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.shopping_bag_outlined, size: 22),
-              selectedIcon: Icon(Icons.shopping_bag_rounded, size: 22, color: AppColors.primary),
-              label: 'Achats',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.people_outline_rounded, size: 22),
-              selectedIcon: Icon(Icons.people_rounded, size: 22, color: AppColors.primary),
-              label: 'Tiers',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.more_horiz_rounded, size: 22),
-              selectedIcon: Icon(Icons.more_horiz_rounded, size: 22, color: AppColors.primary),
-              label: 'Plus',
-            ),
-          ],
+        child: ValueListenableBuilder<bool>(
+          valueListenable: PermissionService.instance.permissionsNotifier,
+          builder: (context, _, __) => _buildContent(),
         ),
       ),
+      // TODO: Bottom navigation bar temporarily hidden - use drawer instead
+      // bottomNavigationBar: Container(
+      //   decoration: BoxDecoration(
+      //     border: Border(top: BorderSide(color: AppColors.border)),
+      //     boxShadow: [
+      //       BoxShadow(
+      //         color: Colors.black.withValues(alpha: 0.05),
+      //         blurRadius: 8,
+      //         offset: Offset(0, -2),
+      //       ),
+      //     ],
+      //   ),
+      //   child: NavigationBar(
+      //     selectedIndex: _bottomNavIndex >= 0 ? _bottomNavIndex : 0,
+      //     onDestinationSelected: _onBottomNavTapped,
+      //     backgroundColor: AppColors.surface,
+      //     surfaceTintColor: Colors.transparent,
+      //     indicatorColor: AppColors.primary.withValues(alpha: 0.1),
+      //     height: 64,
+      //     labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      //     destinations: [
+      //       NavigationDestination(
+      //         icon: Icon(Icons.dashboard_outlined, size: 22),
+      //         selectedIcon: Icon(Icons.dashboard_rounded, size: 22, color: AppColors.primary),
+      //         label: 'Accueil',
+      //       ),
+      //       NavigationDestination(
+      //         icon: Icon(Icons.receipt_outlined, size: 22),
+      //         selectedIcon: Icon(Icons.receipt_rounded, size: 22, color: AppColors.primary),
+      //         label: 'Ventes',
+      //       ),
+      //       NavigationDestination(
+      //         icon: Icon(Icons.shopping_bag_outlined, size: 22),
+      //         selectedIcon: Icon(Icons.shopping_bag_rounded, size: 22, color: AppColors.primary),
+      //         label: 'Achats',
+      //       ),
+      //       NavigationDestination(
+      //         icon: Icon(Icons.people_outline_rounded, size: 22),
+      //         selectedIcon: Icon(Icons.people_rounded, size: 22, color: AppColors.primary),
+      //         label: 'Tiers',
+      //       ),
+      //       NavigationDestination(
+      //         icon: Icon(Icons.more_horiz_rounded, size: 22),
+      //         selectedIcon: Icon(Icons.more_horiz_rounded, size: 22, color: AppColors.primary),
+      //         label: 'Plus',
+      //       ),
+      //     ],
+      //   ),
+      // ),
     );
   }
 }

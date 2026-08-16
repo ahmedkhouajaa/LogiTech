@@ -20,6 +20,8 @@ import '../database/database_helper.dart';
 import 'create_delivery_note_screen.dart';
 import 'create_invoice_screen.dart';
 import '../services/pdf_service.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
@@ -83,25 +85,26 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                   Text('Gerer vos commandes client', style: TextStyle(color: AppColors.textSecondary)),
                 ],
               ),
-              AppButton(
-                label: 'Creer une Commande Client',
-                icon: Icons.add_rounded,
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => MultiBlocProvider(
-                      providers: [
-                        BlocProvider.value(value: context.read<CustomerOrdersBloc>()),
-                        BlocProvider.value(value: context.read<CustomersBloc>()),
-                        BlocProvider.value(value: context.read<ProductsBloc>()),
-                        BlocProvider.value(value: context.read<ProjectsBloc>()),
-                        BlocProvider.value(value: context.read<WarehousesBloc>()),
-                      ],
-                      child: const CreateCustomerOrderScreen(),
+              if (PermissionService.instance.canCreate(UserPermissionResources.salesOrders))
+                AppButton(
+                  label: 'Creer une Commande Client',
+                  icon: Icons.add_rounded,
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MultiBlocProvider(
+                        providers: [
+                          BlocProvider.value(value: context.read<CustomerOrdersBloc>()),
+                          BlocProvider.value(value: context.read<CustomersBloc>()),
+                          BlocProvider.value(value: context.read<ProductsBloc>()),
+                          BlocProvider.value(value: context.read<ProjectsBloc>()),
+                          BlocProvider.value(value: context.read<WarehousesBloc>()),
+                        ],
+                        child: const CreateCustomerOrderScreen(),
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -844,17 +847,21 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                             width: 80,
                                             child: Align(
                                               alignment: Alignment.centerRight,
-                                              child: PopupMenuButton<String>(
+                                            child: PopupMenuButton<String>(
                                                 icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
                                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                                 color: AppColors.surface,
                                                 onSelected: (val) => _handleAction(context, val, order),
                                                 itemBuilder: (_) => [
                                                   _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
-                                                  PopupMenuDivider(height: 1),
-                                                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                                                  PopupMenuDivider(height: 1),
-                                                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                                                  if (PermissionService.instance.canUpdate(UserPermissionResources.salesOrders)) ...[
+                                                    const PopupMenuDivider(height: 1),
+                                                    _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                                                  ],
+                                                  if (PermissionService.instance.canDelete(UserPermissionResources.salesOrders)) ...[
+                                                    const PopupMenuDivider(height: 1),
+                                                    _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                                                  ],
                                                   PopupMenuDivider(height: 1),
                                                   _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
                                                   PopupMenuDivider(height: 1),

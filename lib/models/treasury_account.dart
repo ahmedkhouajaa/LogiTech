@@ -77,6 +77,7 @@ class TreasuryAccount {
       'currency': currency,
       'balance': balance,
       'is_default': isDefault ? 1 : 0,
+      'isDefault': isDefault,
       'enterprise_id': enterpriseId,
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt.millisecondsSinceEpoch,
@@ -94,7 +95,7 @@ class TreasuryAccount {
       iban: map['iban']?.toString(),
       currency: map['currency']?.toString() ?? 'TND',
       balance: double.tryParse(map['balance']?.toString() ?? '0') ?? 0.0,
-      isDefault: map['is_default'] == 1 || map['is_default'] == '1' || map['is_default'] == true,
+      isDefault: map['is_default'] == 1 || map['is_default'] == '1' || map['is_default'] == true || map['isDefault'] == true || map['name'] == 'Compte principal',
       enterpriseId: map['enterprise_id']?.toString(),
       createdAt: map['created_at'] != null 
           ? DateTime.fromMillisecondsSinceEpoch(int.tryParse(map['created_at'].toString()) ?? DateTime.now().millisecondsSinceEpoch) 

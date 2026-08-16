@@ -15,6 +15,8 @@ import '../widgets/custom_date_range_picker.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
 import '../blocs/warehouses/warehouses_state.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
@@ -405,15 +407,16 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
             ),
           ],
         ),
-        Positioned(
-          right: 16,
-          bottom: 16,
-          child: FloatingActionButton(
-            onPressed: () => _navigate(context),
-            backgroundColor: AppColors.primary,
-            child: Icon(Icons.add, color: Colors.white),
+        if (PermissionService.instance.canCreate(UserPermissionResources.stockTransferVouchers))
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton(
+              onPressed: () => _navigate(context),
+              backgroundColor: AppColors.primary,
+              child: Icon(Icons.add, color: Colors.white),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -531,18 +534,19 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                 ],
               ),
               const Spacer(),
-              ElevatedButton.icon(
-                onPressed: () => _navigate(context),
-                icon: Icon(Icons.add, size: 18),
-                label: Text('Créer'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              if (PermissionService.instance.canCreate(UserPermissionResources.stockTransferVouchers))
+                ElevatedButton.icon(
+                  onPressed: () => _navigate(context),
+                  icon: Icon(Icons.add, size: 18),
+                  label: Text('Créer'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -942,22 +946,24 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                       Text('Voir')
                     ]),
                   ),
-                  PopupMenuItem(
-                    value: 'edit',
-                    child: Row(children: [
-                      Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
-                      SizedBox(width: 8),
-                      Text('Modifier'),
-                    ]),
-                  ),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Row(children: [
-                      Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
-                      SizedBox(width: 8),
-                      Text('Supprimer', style: TextStyle(color: AppColors.error)),
-                    ]),
-                  ),
+                  if (PermissionService.instance.canUpdate(UserPermissionResources.stockTransferVouchers))
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(children: [
+                        Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
+                        SizedBox(width: 8),
+                        Text('Modifier'),
+                      ]),
+                    ),
+                  if (PermissionService.instance.canDelete(UserPermissionResources.stockTransferVouchers))
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(children: [
+                        Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
+                        SizedBox(width: 8),
+                        Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                      ]),
+                    ),
                 ],
               ),
             ),

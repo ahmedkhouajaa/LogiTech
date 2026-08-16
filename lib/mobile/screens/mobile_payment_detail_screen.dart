@@ -9,6 +9,8 @@ import '../../utils/helpers.dart';
 import '../../database/database_helper.dart';
 import '../../blocs/payments/payments_bloc.dart';
 import 'forms/mobile_payment_form_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobilePaymentDetailScreen extends StatefulWidget {
   final Payment payment;
@@ -133,9 +135,13 @@ class _MobilePaymentDetailScreenState extends State<MobilePaymentDetailScreen> {
               icon: Icon(Icons.more_vert, color: Colors.white),
               onSelected: _handleAction,
               itemBuilder: (_) => [
-                _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                if (PermissionService.instance.canUpdate(UserPermissionResources.payments))
+                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                if (PermissionService.instance.canUpdate(UserPermissionResources.payments) &&
+                    PermissionService.instance.canDelete(UserPermissionResources.payments))
+                  const PopupMenuDivider(height: 1),
+                if (PermissionService.instance.canDelete(UserPermissionResources.payments))
+                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
               ],
             ),
           ],

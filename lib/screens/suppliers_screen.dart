@@ -8,6 +8,8 @@ import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
@@ -54,18 +56,20 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                 width: 300,
                 child: AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
               ),
-              SizedBox(width: AppSpacing.md),
-              ElevatedButton.icon(
-                onPressed: () => _showDialog(context, null),
-                icon: Icon(Icons.factory_rounded, size: 20, color: Colors.white),
-                label: Text('Nouveau Fournisseur', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              if (PermissionService.instance.canCreate(UserPermissionResources.suppliers)) ...[
+                SizedBox(width: AppSpacing.md),
+                ElevatedButton.icon(
+                  onPressed: () => _showDialog(context, null),
+                  icon: Icon(Icons.factory_rounded, size: 20, color: Colors.white),
+                  label: Text('Nouveau Fournisseur', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -133,6 +137,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                   separatorBuilder: (context, index) => SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final s = filtered[index];
+                    final isDefault = s.isDefault || s.name.trim().toLowerCase() == 'fournisseur passager';
                     return Container(
                       decoration: BoxDecoration(
                         color: AppColors.surface,
@@ -148,7 +153,19 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                         borderRadius: BorderRadius.circular(AppRadius.lg),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(AppRadius.lg),
-                          onTap: () => _showDialog(context, s),
+                          onTap: () {
+                            if (isDefault) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
+                                  backgroundColor: AppColors.warning,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            } else {
+                              _showDialog(context, s);
+                            }
+                          },
                           hoverColor: AppColors.primary.withValues(alpha: 0.02),
                           child: Padding(
                             padding: EdgeInsets.all(20),
@@ -200,6 +217,28 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                               style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: s.supplierType == 'entreprise' ? AppColors.info : Colors.purple),
                                             ),
                                           ),
+                                          if (isDefault) ...[
+                                            SizedBox(width: 6),
+                                            Container(
+                                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.primary.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.lock_rounded, size: 11, color: AppColors.primary),
+                                                  SizedBox(width: 3),
+                                                  Text(
+                                                    'Par défaut',
+                                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
                                         ],
                                       ),
                                       SizedBox(height: 6),
@@ -226,35 +265,6 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                   ),
                                 ),
                                 
-                                /*
-                                // Solde
-                                Expanded(
-                                  flex: 1,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text('Dette', style: TextStyle(fontSize: 11, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
-                                      SizedBox(height: 4),
-                                      Container(
-                                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: s.balance > 0 ? AppColors.errorLight : AppColors.successLight.withValues(alpha: 0.5),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          formatCurrency(s.balance),
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                            color: s.balance > 0 ? AppColors.error : AppColors.success,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                */
-                                
                                 // Actions
                                 SizedBox(width: 16),
                                 PopupMenuButton<String>(
@@ -266,8 +276,23 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                     if (val == 'delete') context.read<SuppliersBloc>().add(DeleteSupplier(s.id));
                                   },
                                   itemBuilder: (context) => [
-                                    PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')])),
-                                    PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))])),
+                                    if (!isDefault) ...[
+                                      if (PermissionService.instance.canUpdate(UserPermissionResources.suppliers))
+                                        PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')])),
+                                      if (PermissionService.instance.canDelete(UserPermissionResources.suppliers))
+                                        PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))])),
+                                    ] else ...[
+                                      PopupMenuItem(
+                                        enabled: false,
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.lock_rounded, size: 16, color: AppColors.textTertiary),
+                                            SizedBox(width: 8),
+                                            Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ],

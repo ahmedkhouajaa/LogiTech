@@ -14,6 +14,8 @@ import '../../models/customer.dart';
 import 'forms/mobile_invoice_form_screen.dart';
 import 'mobile_invoice_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileInvoicesScreen extends StatefulWidget {
   const MobileInvoicesScreen({super.key});
@@ -172,7 +174,7 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
                   _fetchFilteredInvoices();
                 });
               },
-              onEdit: () {
+              onEdit: PermissionService.instance.canUpdate(UserPermissionResources.salesInvoices) ? () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -190,8 +192,8 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
                 ).then((_) {
                   _fetchFilteredInvoices();
                 });
-              },
-              onDelete: () => _handleDelete(item.id),
+              } : null,
+              onDelete: PermissionService.instance.canDelete(UserPermissionResources.salesInvoices) ? () => _handleDelete(item.id) : null,
             );
           }).toList();
         }

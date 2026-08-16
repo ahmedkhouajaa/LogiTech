@@ -20,6 +20,8 @@ import 'forms/mobile_exit_voucher_form_screen.dart';
 import 'mobile_stock_withdrawal_detail_screen.dart';
 import '../../models/stock_withdrawal.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileStockWithdrawalsScreen extends StatefulWidget {
   final AppModule activeModule;
@@ -237,6 +239,7 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
     bool isEmpty = filteredItems.isEmpty;
 
     List<Widget> cards = filteredItems.map((item) {
+      final resKey = _isExitVoucher ? UserPermissionResources.salesExitVouchers : UserPermissionResources.stockWithdrawalVouchers;
       return MobileGenericCard(
         reference: item.number,
         status: item.status,
@@ -254,7 +257,7 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
             _fetchFilteredWithdrawals();
           });
         },
-        onEdit: () {
+        onEdit: PermissionService.instance.canUpdate(resKey) ? () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => MultiBlocProvider(
@@ -274,8 +277,8 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
           ).then((_) {
             _fetchFilteredWithdrawals();
           });
-        },
-        onDelete: () => _handleDelete(item.id),
+        } : null,
+        onDelete: PermissionService.instance.canDelete(resKey) ? () => _handleDelete(item.id) : null,
       );
     }).toList();
 

@@ -30,6 +30,7 @@ class Supplier {
   final String? cinNumber;
   final String? birthDate;
   final String? referenceCode;
+  final bool isDefault;
 
   final String? enterpriseId;
 
@@ -48,6 +49,7 @@ class Supplier {
     this.firebaseUid,
     this.enterpriseId,
     this.isDeleted = false,
+    this.isDefault = false,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.postalCode,
@@ -82,6 +84,8 @@ class Supplier {
         'firebase_uid': firebaseUid,
         'enterprise_id': enterpriseId,
         'is_deleted': isDeleted ? 1 : 0,
+        'is_default': isDefault ? 1 : 0,
+        'isDefault': isDefault,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
         'postal_code': postalCode,
@@ -115,6 +119,7 @@ class Supplier {
         firebaseUid: map['firebase_uid'] as String?,
         enterpriseId: map['enterprise_id'] as String?,
         isDeleted: map['is_deleted'] == 1,
+        isDefault: map['is_default'] == 1 || map['is_default'] == true || map['isDefault'] == true || map['name'] == 'Fournisseur passager',
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
         postalCode: map['postal_code'] as String?,
@@ -138,7 +143,7 @@ class Supplier {
     String? phone, String? address, String? city, String? taxId,
     String? rc, double? balance, String? notes, String? firebaseUid,
     String? enterpriseId,
-    bool? isDeleted, DateTime? createdAt, DateTime? updatedAt,
+    bool? isDeleted, bool? isDefault, DateTime? createdAt, DateTime? updatedAt,
     String? postalCode, String? country, String? deliveryStreet,
     String? deliveryCity, String? deliveryPostalCode, String? deliveryCountry,
     bool? deliverySameAsBilling, String? bankAccount,
@@ -153,6 +158,7 @@ class Supplier {
         firebaseUid: firebaseUid ?? this.firebaseUid,
         enterpriseId: enterpriseId ?? this.enterpriseId,
         isDeleted: isDeleted ?? this.isDeleted,
+        isDefault: isDefault ?? this.isDefault,
         createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
         postalCode: postalCode ?? this.postalCode,
         country: country ?? this.country,

@@ -15,6 +15,8 @@ import '../../models/supplier.dart';
 import 'forms/mobile_supplier_order_form_screen.dart';
 import 'mobile_supplier_order_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileSupplierOrdersScreen extends StatefulWidget {
   const MobileSupplierOrdersScreen({super.key});
@@ -178,7 +180,7 @@ class _MobileSupplierOrdersScreenState extends State<MobileSupplierOrdersScreen>
                   _fetchFilteredOrders();
                 });
               },
-              onEdit: () {
+              onEdit: PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierOrders) ? () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MultiBlocProvider(
@@ -194,8 +196,8 @@ class _MobileSupplierOrdersScreenState extends State<MobileSupplierOrdersScreen>
                 ).then((_) {
                   _fetchFilteredOrders();
                 });
-              },
-              onDelete: () => _handleDelete(item.id),
+              } : null,
+              onDelete: PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierOrders) ? () => _handleDelete(item.id) : null,
             );
           }).toList();
         }

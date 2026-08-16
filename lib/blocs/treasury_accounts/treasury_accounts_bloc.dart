@@ -290,6 +290,10 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
   }
 
   Future<void> _onUpdateAccount(UpdateTreasuryAccount event, Emitter<TreasuryAccountsState> emit) async {
+    if (event.account.isDefault || event.account.name.trim().toLowerCase() == 'compte principal') {
+      emit(const TreasuryAccountsError('Cet élément est un élément par défaut et ne peut pas être modifié.'));
+      return;
+    }
     final currentState = state;
     if (currentState is TreasuryAccountsLoaded) {
       final currentList = List<TreasuryAccount>.from(currentState.accounts);
@@ -312,6 +316,11 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
   Future<void> _onDeleteAccount(DeleteTreasuryAccount event, Emitter<TreasuryAccountsState> emit) async {
     final currentState = state;
     if (currentState is TreasuryAccountsLoaded) {
+      final target = currentState.accounts.where((a) => a.id == event.id).firstOrNull;
+      if (target != null && (target.isDefault || target.name.trim().toLowerCase() == 'compte principal')) {
+        emit(const TreasuryAccountsError('Cet élément est un élément par défaut et ne peut pas être supprimé.'));
+        return;
+      }
       final currentList = List<TreasuryAccount>.from(currentState.accounts)..removeWhere((a) => a.id == event.id);
       emit(currentState.copyWith(accounts: currentList, totalCount: currentList.length));
     }

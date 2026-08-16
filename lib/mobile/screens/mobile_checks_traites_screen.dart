@@ -7,6 +7,8 @@ import '../widgets/mobile_generic_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/checks_traites/checks_traites_bloc.dart';
 import 'forms/mobile_check_traite_form_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 
 class MobileChecksTraitesScreen extends StatefulWidget {
@@ -148,15 +150,15 @@ class _MobileChecksTraitesScreenState extends State<MobileChecksTraitesScreen> {
               amount: amount,
               onTap: () {
               },
-              onEdit: () {
+              onEdit: PermissionService.instance.canUpdate(UserPermissionResources.treasuryChecks) ? () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => MobileCheckTraiteFormScreen(existing: item)),
                 ).then((_) {
                   context.read<ChecksTraitesBloc>().add(LoadChecksTraites());
                 });
-              },
-              onDelete: () => _handleDelete(id),
+              } : null,
+              onDelete: PermissionService.instance.canDelete(UserPermissionResources.treasuryChecks) ? () => _handleDelete(id) : null,
             );
           }).toList();
         }

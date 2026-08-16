@@ -22,6 +22,8 @@ import '../blocs/supplier_credit_notes/supplier_credit_notes_event.dart';
 import '../models/supplier_credit_note.dart';
 import 'create_purchase_invoice_screen.dart';
 import '../services/pdf_service.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import '../database/database_helper.dart';
@@ -87,25 +89,26 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                 ],
               ),
               const Spacer(),
-              AppButton(
-                label: 'Nouvelle facture',
-                icon: Icons.add_rounded,
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => MultiBlocProvider(
-                      providers: [
-                        BlocProvider.value(value: context.read<PurchaseInvoicesBloc>()),
-                        BlocProvider.value(value: context.read<SuppliersBloc>()),
-                        BlocProvider.value(value: context.read<ProductsBloc>()),
-                        BlocProvider.value(value: context.read<ProjectsBloc>()),
-                        BlocProvider.value(value: context.read<WarehousesBloc>()),
-                      ],
-                      child: const CreatePurchaseInvoiceScreen(),
+              if (PermissionService.instance.canCreate(UserPermissionResources.purchasesPurchaseInvoices))
+                AppButton(
+                  label: 'Nouvelle facture',
+                  icon: Icons.add_rounded,
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MultiBlocProvider(
+                        providers: [
+                          BlocProvider.value(value: context.read<PurchaseInvoicesBloc>()),
+                          BlocProvider.value(value: context.read<SuppliersBloc>()),
+                          BlocProvider.value(value: context.read<ProductsBloc>()),
+                          BlocProvider.value(value: context.read<ProjectsBloc>()),
+                          BlocProvider.value(value: context.read<WarehousesBloc>()),
+                        ],
+                        child: const CreatePurchaseInvoiceScreen(),
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -801,11 +804,15 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
             onSelected: (val) => _handleAction(context, val, inv),
             itemBuilder: (_) => [
               _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
-              PopupMenuDivider(height: 1),
-              _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-              PopupMenuDivider(height: 1),
-              _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-              PopupMenuDivider(height: 1),
+              if (PermissionService.instance.canUpdate(UserPermissionResources.purchasesPurchaseInvoices)) ...[
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+              ],
+              if (PermissionService.instance.canDelete(UserPermissionResources.purchasesPurchaseInvoices)) ...[
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+              ],
+              const PopupMenuDivider(height: 1),
               _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
               PopupMenuDivider(height: 1),
               if (inv.status != InvoiceStatus.paid) ...[

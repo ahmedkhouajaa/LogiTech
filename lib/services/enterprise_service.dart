@@ -12,6 +12,8 @@ import '../models/treasury_account.dart';
 import '../models/project.dart';
 import '../utils/constants.dart';
 import '../database/database_helper.dart';
+import '../models/user_management_model.dart';
+import 'permission_service.dart';
 
 /// Singleton service that manages the current enterprise context.
 ///
@@ -77,6 +79,17 @@ class EnterpriseService {
         _enterprises = [];
       }
     }
+    unawaited(PermissionService.instance.loadPermissions());
+  }
+
+  /// Clears in-memory and cached enterprise data on logout.
+  Future<void> clearCache() async {
+    _currentEnterpriseId = null;
+    _enterprises = [];
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefKeyCurrentId);
+    await prefs.remove(_prefKeyEnterprisesJson);
+    _enterpriseController.add(null);
   }
 
   // ─── Enterprise CRUD ─────────────────────────────────────────────
@@ -136,6 +149,7 @@ class EnterpriseService {
 
       await _persistToPrefs();
       _enterpriseController.add(_currentEnterpriseId);
+      await PermissionService.instance.loadPermissions(enterpriseId: _currentEnterpriseId);
       return _enterprises;
     } catch (e) {
       print('EnterpriseService.loadEnterprisesFromFirestore error: $e');
@@ -176,6 +190,18 @@ class EnterpriseService {
       updatedAt: now,
     );
 
+    final adminPerms = UserPermissionResources.getAdminDefaultPermissions()
+        .map((k, v) => MapEntry(k, v.toMap()));
+
+    final memberMap = {
+      'uid': uid,
+      'role': 'admin',
+      'isOwner': true,
+      'name': FirebaseAuth.instance.currentUser?.displayName ?? 'Admin',
+      'email': FirebaseAuth.instance.currentUser?.email ?? '',
+      'permissions': adminPerms,
+    };
+
     // Write enterprise doc to Firestore if online
     if (FirebaseAuth.instance.currentUser != null) {
       try {
@@ -184,13 +210,25 @@ class EnterpriseService {
             .doc(id)
             .set({
               ...enterprise.toMap(),
+              'owner_id': uid,
               'userId': uid,
+              'members': [memberMap],
             });
 
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'email': FirebaseAuth.instance.currentUser?.email,
+          'role': 'admin',
+          'isOwner': true,
+          'permissions': adminPerms,
           'enterprises': FieldValue.arrayUnion([id]),
           'currentEnterpriseId': id,
+          'enterpriseRoles': {
+            id: {
+              'role': 'admin',
+              'isOwner': true,
+              'permissions': adminPerms,
+            }
+          },
           'updated_at': now.toIso8601String(),
         }, SetOptions(merge: true));
       } catch (e) {
@@ -202,6 +240,8 @@ class EnterpriseService {
     _enterprises.add(enterprise);
     _currentEnterpriseId = id;
     await _persistToPrefs();
+    _enterpriseController.add(_currentEnterpriseId);
+    await PermissionService.instance.loadPermissions(enterpriseId: id);
 
     // Insert company_settings row into SQLite for this enterprise
     try {
@@ -260,6 +300,7 @@ class EnterpriseService {
         country: 'Tunisia',
         deliveryCountry: 'Tunisia',
         priceList: 'HT',
+        isDefault: true,
         enterpriseId: id,
         createdAt: now,
         updatedAt: now,
@@ -285,6 +326,7 @@ class EnterpriseService {
         supplierType: 'company',
         country: 'Tunisia',
         deliveryCountry: 'Tunisia',
+        isDefault: true,
         enterpriseId: id,
         createdAt: now,
         updatedAt: now,
@@ -338,6 +380,7 @@ class EnterpriseService {
         description: 'Projet principal par défaut',
         startDate: now,
         status: ProjectStatus.active,
+        isDefault: true,
         enterpriseId: id,
         createdAt: now,
         updatedAt: now,
@@ -386,6 +429,7 @@ class EnterpriseService {
     }
 
     _enterpriseController.add(_currentEnterpriseId);
+    await PermissionService.instance.loadPermissions(enterpriseId: enterpriseId);
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────
