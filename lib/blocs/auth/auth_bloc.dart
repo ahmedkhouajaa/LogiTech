@@ -45,6 +45,13 @@ class AuthSessionExpiredEvent extends AuthEvent {
   List<Object?> get props => [reason];
 }
 
+class AuthAccountDeactivatedEvent extends AuthEvent {
+  final String reason;
+  const AuthAccountDeactivatedEvent({this.reason = "Votre compte a été désactivé. Contactez l'administrateur."});
+  @override
+  List<Object?> get props => [reason];
+}
+
 // ─── States ──────────────────────────────────────────────────────────
 
 abstract class AuthState extends Equatable {
@@ -81,11 +88,19 @@ class AuthSessionExpired extends AuthState {
   List<Object?> get props => [message];
 }
 
+class AuthAccountDeactivated extends AuthState {
+  final String reason;
+  const AuthAccountDeactivated(this.reason);
+  @override
+  List<Object?> get props => [reason];
+}
+
 // ─── BLoC ────────────────────────────────────────────────────────────
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthService _authService;
   StreamSubscription? _tokenSub;
+  StreamSubscription? _deactivationSub;
 
   AuthBloc({required AuthService authService})
       : _authService = authService,
@@ -97,6 +112,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLogoutRequested>(_onAuthLogoutRequested);
     on<AuthOfflineModeRequested>(_onAuthOfflineModeRequested);
     on<AuthSessionExpiredEvent>(_onAuthSessionExpired);
+    on<AuthAccountDeactivatedEvent>(_onAuthAccountDeactivated);
 
     // Listen to token changes for revocation / expiration (Scenarios 15, 18)
     _tokenSub = _authService.idTokenChanges.listen((user) {
@@ -104,12 +120,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         add(const AuthSessionExpiredEvent(reason: 'Votre session a été fermée ou révoquée.'));
       }
     });
+
+    // Listen to real-time deactivation triggers
+    _deactivationSub = _authService.onAccountDeactivated.listen((reason) {
+      add(AuthAccountDeactivatedEvent(reason: reason));
+    });
   }
 
   @override
   Future<void> close() {
     _tokenSub?.cancel();
+    _deactivationSub?.cancel();
     return super.close();
+  }
+
+  void _onAuthAccountDeactivated(AuthAccountDeactivatedEvent event, Emitter<AuthState> emit) {
+    emit(AuthAccountDeactivated(event.reason));
   }
 
   Future<void> _onAuthCheckRequested(AuthCheckRequested event, Emitter<AuthState> emit) async {

@@ -270,8 +270,6 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
               child: Row(
                 children: [
                   Text('Paiement', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.play_circle_filled, color: Colors.red, size: 24),
                   const Spacer(),
                   OutlinedButton.icon(
                     onPressed: () => Navigator.pop(context),
@@ -370,23 +368,6 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                                     ),
                                   ],
                                 ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Tabs
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                      ),
-                      padding: const EdgeInsets.all(4),
-                      child: Row(
-                        children: [
-                          _buildTab(0, 'Nouveau paiement'),
-                          _buildTab(1, isMobile ? 'Existant' : 'Paiement existant 1'),
-                          _buildTab(2, isMobile ? 'Avoir' : 'Avoir 1'),
                         ],
                       ),
                     ),

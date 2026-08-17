@@ -584,15 +584,36 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
                     BlocBuilder<ProjectsBloc, ProjectsState>(
                       builder: (context, state) {
                         final projects = state is ProjectsLoaded ? state.projects : <Project>[];
-                        final selectedProject = projects.cast<Project?>().firstWhere((p) => p?.id == _selectedProjectId, orElse: () => null);
+                        final defaultProj = projects.cast<Project?>().firstWhere(
+                          (p) => p?.isDefault == true,
+                          orElse: () => projects.cast<Project?>().firstWhere(
+                            (p) => p?.name.toLowerCase().contains('défaut') == true || p?.name.toLowerCase().contains('defaut') == true,
+                            orElse: () => projects.isNotEmpty ? projects.first : null,
+                          ),
+                        );
+                        if (_selectedProjectId == null && defaultProj != null) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted && _selectedProjectId == null) {
+                              setState(() => _selectedProjectId = defaultProj.id);
+                            }
+                          });
+                        }
+                        final selectedProject = projects.cast<Project?>().firstWhere(
+                          (p) => p?.id == (_selectedProjectId ?? defaultProj?.id),
+                          orElse: () => defaultProj,
+                        );
 
                         return _buildSearchableField(
-                          hint: 'Projet par defaut',
-                          selectedText: selectedProject?.name ?? 'Projet par defaut',
+                          hint: 'Sélectionner un projet',
+                          selectedText: selectedProject?.name ?? 'Projet par défaut',
                           onTap: () async {
-                            final res = await _showProjectSelectDialog(context, projects);
+                            final res = await showProjectSelectDialog(
+                              context,
+                              projects,
+                              selectedProjectId: _selectedProjectId ?? defaultProj?.id,
+                            );
                             if (res != null) {
-                              setState(() => _selectedProjectId = (res == '__default__' ? null : res));
+                              setState(() => _selectedProjectId = res);
                             }
                           },
                         );
@@ -876,156 +897,6 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
 );
 }
 
-  Future<String?> _showProjectSelectDialog(BuildContext context, List<Project> projects) async {
-    return showDialog<String?>(
-      context: context,
-      builder: (context) {
-        String search = '';
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            final query = search.trim().toLowerCase();
-            final filtered = projects.where((p) {
-              if (query.isEmpty) return true;
-              final nameMatch = p.name.toLowerCase().contains(query);
-              final descMatch = p.description?.toLowerCase().contains(query) ?? false;
-              final custMatch = p.customerName?.toLowerCase().contains(query) ?? false;
-              return nameMatch || descMatch || custMatch;
-            }).toList();
-
-            return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-              backgroundColor: AppColors.surface,
-              child: Container(
-                width: 440,
-                constraints: BoxConstraints(maxHeight: 520),
-                padding: EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Sélectionner un projet',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
-                          onPressed: () => Navigator.of(context).pop(),
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 12),
-                    SizedBox(
-                      height: 38,
-                      child: TextField(
-                        autofocus: true,
-                        onChanged: (val) => setDialogState(() => search = val),
-                        style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                        decoration: InputDecoration(
-                          hintText: 'Rechercher un projet...',
-                          hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                          prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
-                          filled: true,
-                          fillColor: AppColors.background,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                            borderSide: BorderSide(color: AppColors.border),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                            borderSide: BorderSide(color: AppColors.border),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                            borderSide: BorderSide(color: AppColors.primary),
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    Divider(height: 1, color: AppColors.border),
-                    SizedBox(height: 4),
-                    ListTile(
-                      dense: true,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      selected: _selectedProjectId == null,
-                      selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
-                      title: Text(
-                        'Projet par defaut',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: _selectedProjectId == null ? FontWeight.bold : FontWeight.w500,
-                          color: _selectedProjectId == null ? AppColors.primary : AppColors.textPrimary,
-                        ),
-                      ),
-                      trailing: _selectedProjectId == null
-                          ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
-                          : null,
-                      onTap: () {
-                        Navigator.of(context).pop('__default__');
-                      },
-                    ),
-                    Flexible(
-                      child: filtered.isEmpty
-                          ? Padding(
-                              padding: EdgeInsets.all(20.0),
-                              child: Center(
-                                child: Text(
-                                  'Aucun projet trouvé',
-                                  style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: filtered.length,
-                              itemBuilder: (context, index) {
-                                final project = filtered[index];
-                                final isSelected = project.id == _selectedProjectId;
-
-                                return ListTile(
-                                  dense: true,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                                  selected: isSelected,
-                                  selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
-                                  title: Text(
-                                    project.name,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                                    ),
-                                  ),
-                                  subtitle: project.customerName != null
-                                      ? Text(
-                                          'Client: ${project.customerName}',
-                                          style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
-                                        )
-                                      : null,
-                                  trailing: isSelected
-                                      ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
-                                      : null,
-                                  onTap: () {
-                                    Navigator.of(context).pop(project.id);
-                                  },
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 
   // ── Articles Section ──────────────────────────────────────────────
   Widget _buildArticlesSection() {

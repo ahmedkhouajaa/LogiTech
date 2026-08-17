@@ -355,16 +355,37 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                 BlocBuilder<ProjectsBloc, ProjectsState>(
                   builder: (context, state) {
                     final projects = state is ProjectsLoaded ? state.projects : <Project>[];
-                    final selectedProject = projects.cast<Project?>().firstWhere((p) => p?.id == _selectedProjectId, orElse: () => null);
-                    final displayName = selectedProject != null ? selectedProject.name : 'Projet par défaut';
+                    final defaultProj = projects.cast<Project?>().firstWhere(
+                      (p) => p?.isDefault == true,
+                      orElse: () => projects.cast<Project?>().firstWhere(
+                        (p) => p?.name.toLowerCase().contains('défaut') == true || p?.name.toLowerCase().contains('defaut') == true,
+                        orElse: () => projects.isNotEmpty ? projects.first : null,
+                      ),
+                    );
+                    if (_selectedProjectId == null && defaultProj != null) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted && _selectedProjectId == null) {
+                          setState(() => _selectedProjectId = defaultProj.id);
+                        }
+                      });
+                    }
+                    final selectedProject = projects.cast<Project?>().firstWhere(
+                      (p) => p?.id == (_selectedProjectId ?? defaultProj?.id),
+                      orElse: () => defaultProj,
+                    );
+                    final displayName = selectedProject?.name ?? 'Projet par défaut';
                     return SmartSearchableSelector(
                       label: 'Projet',
-                      hint: 'Projet par défaut',
+                      hint: 'Sélectionner un projet',
                       selectedText: displayName,
                       onTap: () async {
-                        final res = await showProjectSelectDialog(context, projects, selectedProjectId: _selectedProjectId);
+                        final res = await showProjectSelectDialog(
+                          context,
+                          projects,
+                          selectedProjectId: _selectedProjectId ?? defaultProj?.id,
+                        );
                         if (res != null && mounted) {
-                          setState(() => _selectedProjectId = res == '__default__' ? null : res);
+                          setState(() => _selectedProjectId = res);
                         }
                       },
                     );

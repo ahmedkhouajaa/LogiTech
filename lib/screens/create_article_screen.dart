@@ -4,7 +4,9 @@ import 'package:uuid/uuid.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/product_settings/product_settings_bloc.dart';
 import '../blocs/product_settings/product_settings_state.dart';
+import '../blocs/product_settings/product_settings_event.dart';
 import '../models/product.dart';
+import '../models/product_family.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
@@ -35,17 +37,70 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
   String? _subFamily;
   String? _category;
   String? _brand;
+  String? _priceList;
   
   bool _allowNegativeStock = false;
   bool _lowStockAlert = false;
   bool _highStockAlert = false;
   
   late TabController _tabController;
+
+  static const List<Map<String, String>> _unitOptions = [
+    {'value': 'Piece', 'label': 'Pièce', 'code': 'pcs'},
+    {'value': 'Kilogramme', 'label': 'Kilogramme', 'code': 'kg'},
+    {'value': 'Litre', 'label': 'Litre', 'code': 'L'},
+    {'value': 'Metre', 'label': 'Mètre', 'code': 'm'},
+    {'value': 'Gramme', 'label': 'Gramme', 'code': 'g'},
+    {'value': 'Millilitre', 'label': 'Millilitre', 'code': 'ml'},
+    {'value': 'Boite', 'label': 'Boîte', 'code': 'bte'},
+    {'value': 'Carton', 'label': 'Carton', 'code': 'ctn'},
+    {'value': 'Paquet', 'label': 'Paquet', 'code': 'pqt'},
+    {'value': 'Lot', 'label': 'Lot', 'code': 'lot'},
+    {'value': 'Heure', 'label': 'Heure', 'code': 'h'},
+    {'value': 'Jour', 'label': 'Jour', 'code': 'j'},
+    {'value': 'Forfait', 'label': 'Forfait', 'code': 'forf'},
+  ];
+
+  static const List<String> _categoryOptions = [
+    'Standard',
+    'Premium',
+    'Informatique',
+    'Bureautique',
+    'Alimentation',
+    'Électronique',
+    'Outillage',
+    'Mobilier',
+    'Services',
+    'Divers',
+  ];
+
+  static const List<String> _brandOptions = [
+    'Samsung',
+    'Apple',
+    'Dell',
+    'HP',
+    'Logitech',
+    'Lenovo',
+    'Asus',
+    'Xiaomi',
+    'Sony',
+    'Canon',
+    'Autre',
+  ];
+
+  static const List<String> _priceListOptions = [
+    'Prix de Gros',
+    'Prix Détaillant',
+    'Client VIP',
+    'Tarif Spécial',
+  ];
   
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    context.read<ProductSettingsBloc>().add(LoadFamilies());
+
     final p = widget.existing;
     
     _nameCtrl = TextEditingController(text: p?.name ?? '');
@@ -65,13 +120,12 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
     // Safely load unit
     String rawUnit = p?.unit ?? 'Piece';
     if (rawUnit == 'Pièce' || rawUnit == 'Unite') rawUnit = 'Piece';
-    _unit = ['Piece', 'Kilogramme', 'Litre', 'Metre'].contains(rawUnit) ? rawUnit : 'Piece';
+    _unit = _unitOptions.any((u) => u['value'] == rawUnit) ? rawUnit : 'Piece';
     
-    // Load family, subFamily, category, brand without constraints
     _family = p?.familyId;
     _subFamily = p?.subFamilyId;
     _category = p?.category;
-    _brand = ['Samsung', 'Apple', 'Dell', 'HP'].contains(p?.brandId) ? p!.brandId : null;
+    _brand = p?.brandId;
     
     _allowNegativeStock = p?.allowNegativeStock ?? false;
     _lowStockAlert = p?.lowStockAlert ?? false;
@@ -85,6 +139,276 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
     _purchCtrl.dispose(); _sellCtrl.dispose(); _discountCtrl.dispose();
     _barcodeCtrl.dispose(); _privateNotesCtrl.dispose();
     super.dispose();
+  }
+
+  // ─── SEARCHABLE SELECTION DIALOG (Warehouse Picker Style) ─────────────────
+  Future<T?> _showSearchableSelectDialog<T>({
+    required String title,
+    required String searchHint,
+    required List<T> items,
+    required String Function(T) itemTitle,
+    String Function(T)? itemSubtitle,
+    required bool Function(T, String query) filter,
+    required bool Function(T) isSelected,
+    IconData? itemIcon,
+    bool allowCustom = false,
+    T Function(String)? onAddCustom,
+  }) async {
+    return showDialog<T?>(
+      context: context,
+      builder: (context) {
+        String search = '';
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final query = search.trim().toLowerCase();
+            final filtered = items.where((item) {
+              if (query.isEmpty) return true;
+              return filter(item, query);
+            }).toList();
+
+            final bool canAddNew = allowCustom &&
+                query.isNotEmpty &&
+                !items.any((item) => itemTitle(item).toLowerCase() == query);
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: AppColors.surface,
+              child: Container(
+                width: 480,
+                constraints: const BoxConstraints(maxHeight: 540),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header: Title & Close Button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: Icon(Icons.close_rounded, color: AppColors.textSecondary, size: 22),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Search input
+                    SizedBox(
+                      height: 40,
+                      child: TextField(
+                        autofocus: false,
+                        onChanged: (val) => setDialogState(() => search = val),
+                        style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                        decoration: InputDecoration(
+                          hintText: searchHint,
+                          hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                          prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
+                          filled: true,
+                          fillColor: AppColors.background,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Divider(height: 1, color: AppColors.border),
+                    const SizedBox(height: 8),
+
+                    // Items List
+                    Flexible(
+                      child: filtered.isEmpty && !canAddNew
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(vertical: 28),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Aucun résultat trouvé',
+                                style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
+                              ),
+                            )
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: filtered.length + (canAddNew ? 1 : 0),
+                              separatorBuilder: (_, __) => const SizedBox(height: 4),
+                              itemBuilder: (context, index) {
+                                if (canAddNew && index == filtered.length) {
+                                  return InkWell(
+                                    onTap: () {
+                                      if (onAddCustom != null) {
+                                        Navigator.of(context).pop(onAddCustom(search.trim()));
+                                      }
+                                    },
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withValues(alpha: 0.05),
+                                        borderRadius: BorderRadius.circular(AppRadius.md),
+                                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primary),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              'Utiliser "${search.trim()}"',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.primary,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                final item = filtered[index];
+                                final selected = isSelected(item);
+                                final subtitle = itemSubtitle != null ? itemSubtitle(item) : null;
+
+                                return InkWell(
+                                  onTap: () => Navigator.of(context).pop(item),
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: selected ? AppColors.primary.withValues(alpha: 0.08) : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(AppRadius.md),
+                                      border: Border.all(
+                                        color: selected ? AppColors.primary.withValues(alpha: 0.3) : Colors.transparent,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        if (itemIcon != null) ...[
+                                          Icon(
+                                            itemIcon,
+                                            size: 18,
+                                            color: selected ? AppColors.primary : AppColors.textTertiary,
+                                          ),
+                                          const SizedBox(width: 10),
+                                        ],
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                itemTitle(item),
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                                                  color: selected ? AppColors.primary : AppColors.textPrimary,
+                                                ),
+                                              ),
+                                              if (subtitle != null && subtitle.isNotEmpty) ...[
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  subtitle,
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: AppColors.textTertiary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        if (selected)
+                                          Icon(Icons.check_rounded, size: 18, color: AppColors.primary),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ─── DIALOG SELECTOR TRIGGER FIELD ───────────────────────────────────────
+  Widget _buildDialogSelectorField({
+    required String? text,
+    required String hint,
+    required VoidCallback? onTap,
+    IconData? prefixIcon,
+  }) {
+    final hasValue = text != null && text.isNotEmpty;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            if (prefixIcon != null) ...[
+              Icon(
+                prefixIcon,
+                size: 16,
+                color: hasValue ? AppColors.primary : AppColors.textTertiary,
+              ),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: Text(
+                hasValue ? text : hint,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: hasValue ? FontWeight.w500 : FontWeight.normal,
+                  color: hasValue ? AppColors.textPrimary : AppColors.textTertiary,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 20,
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -231,28 +555,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    /* Text('Image de l\'Article', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
-                    SizedBox(height: 8),
-                    Container(
-                      height: 180,
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceAlt.withOpacity(0.5),
-                        border: Border.all(color: AppColors.border, style: BorderStyle.solid),
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.upload_rounded, size: 32, color: AppColors.textSecondary),
-                            SizedBox(height: 8),
-                            Text('Cliquez, glissez ou collez une image', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                          ],
-                        ),
-                      ),
-                    ), */
-                  ],
+                  children: const [],
                 ),
               ),
             ],
@@ -332,19 +635,26 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           SizedBox(height: 4),
           Text('Configurez des tarifs speciaux pour differents groupes de clients ou quantites d\'achat', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
           SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-            value: null,
-            hint: Text('Selectionnez une liste de prix'),
-            items: ['Prix de Gros', 'Prix Detaillant', 'Client VIP'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-            onChanged: (v) {},
-            decoration: InputDecoration(
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
+          _buildDialogSelectorField(
+            text: _priceList,
+            hint: 'Sélectionnez une liste de prix',
+            prefixIcon: Icons.sell_outlined,
+            onTap: () async {
+              final res = await _showSearchableSelectDialog<String>(
+                title: 'Sélectionner une liste de prix',
+                searchHint: 'Rechercher une liste...',
+                items: _priceListOptions,
+                itemTitle: (p) => p,
+                filter: (p, q) => p.toLowerCase().contains(q),
+                isSelected: (p) => p == _priceList,
+                itemIcon: Icons.sell_outlined,
+                allowCustom: true,
+                onAddCustom: (q) => q,
+              );
+              if (res != null) {
+                setState(() => _priceList = res);
+              }
+            },
           ),
         ],
       ),
@@ -364,90 +674,165 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
         children: [
           Text('Famille et Marque', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
           SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: BlocBuilder<ProductSettingsBloc, ProductSettingsState>(
-                  builder: (context, state) {
-                    if (state is ProductSettingsLoaded) {
-                      final families = state.rootFamilies;
-                      // Si la famille actuelle n'est plus dans la liste, on la reinitialise
-                      if (_family != null && !families.any((f) => f.id == _family)) {
-                        _family = null;
-                        _subFamily = null;
-                      }
-                      
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Famille', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                          SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                            value: _family,
-                            hint: Text('Selectionner'),
-                            items: families.map((f) => DropdownMenuItem(value: f.id, child: Text(f.name))).toList(),
-                            onChanged: (v) {
+          BlocBuilder<ProductSettingsBloc, ProductSettingsState>(
+            builder: (context, state) {
+              List<ProductFamily> rootFamilies = [];
+              List<ProductFamily> subFamilies = [];
+
+              if (state is ProductSettingsLoaded) {
+                rootFamilies = state.rootFamilies;
+                if (_family != null && !rootFamilies.any((f) => f.id == _family)) {
+                  _family = null;
+                  _subFamily = null;
+                }
+                if (_family != null) {
+                  subFamilies = state.getSubFamilies(_family!);
+                  if (_subFamily != null && !subFamilies.any((sf) => sf.id == _subFamily)) {
+                    _subFamily = null;
+                  }
+                }
+              }
+
+              final selectedFamily = rootFamilies.where((f) => f.id == _family).firstOrNull;
+              final selectedSubFamily = subFamilies.where((sf) => sf.id == _subFamily).firstOrNull;
+
+              return Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Famille', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                        SizedBox(height: 6),
+                        _buildDialogSelectorField(
+                          text: selectedFamily?.name,
+                          hint: 'Sélectionner',
+                          prefixIcon: Icons.account_tree_outlined,
+                          onTap: () async {
+                            final res = await _showSearchableSelectDialog<ProductFamily>(
+                              title: 'Sélectionner une famille',
+                              searchHint: 'Rechercher une famille...',
+                              items: rootFamilies,
+                              itemTitle: (f) => f.name,
+                              filter: (f, q) => f.name.toLowerCase().contains(q),
+                              isSelected: (f) => f.id == _family,
+                              itemIcon: Icons.folder_open_rounded,
+                            );
+                            if (res != null) {
                               setState(() {
-                                _family = v;
-                                _subFamily = null; // Reset sub-family quand on change de famille
+                                _family = res.id;
+                                _subFamily = null;
                               });
-                            },
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            ),
-                          ),
-                        ],
-                      );
-                    }
-                    return SizedBox();
-                  },
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 24),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Sous-famille', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                        SizedBox(height: 6),
+                        _buildDialogSelectorField(
+                          text: selectedSubFamily?.name,
+                          hint: _family == null ? 'Choisir famille' : 'Sélectionner',
+                          prefixIcon: Icons.subdirectory_arrow_right_rounded,
+                          onTap: _family == null
+                              ? () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Veuillez d\'abord sélectionner une famille'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              : () async {
+                                  final res = await _showSearchableSelectDialog<ProductFamily>(
+                                    title: 'Sélectionner une sous-famille',
+                                    searchHint: 'Rechercher une sous-famille...',
+                                    items: subFamilies,
+                                    itemTitle: (sf) => sf.name,
+                                    filter: (sf, q) => sf.name.toLowerCase().contains(q),
+                                    isSelected: (sf) => sf.id == _subFamily,
+                                    itemIcon: Icons.account_tree_outlined,
+                                  );
+                                  if (res != null) {
+                                    setState(() => _subFamily = res.id);
+                                  }
+                                },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Categorie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    SizedBox(height: 6),
+                    _buildDialogSelectorField(
+                      text: _category,
+                      hint: 'Sélectionner',
+                      prefixIcon: Icons.folder_outlined,
+                      onTap: () async {
+                        final res = await _showSearchableSelectDialog<String>(
+                          title: 'Sélectionner une catégorie',
+                          searchHint: 'Rechercher une catégorie...',
+                          items: _categoryOptions,
+                          itemTitle: (c) => c,
+                          filter: (c, q) => c.toLowerCase().contains(q),
+                          isSelected: (c) => c == _category,
+                          itemIcon: Icons.category_outlined,
+                          allowCustom: true,
+                          onAddCustom: (q) => q,
+                        );
+                        if (res != null) {
+                          setState(() => _category = res);
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ),
               SizedBox(width: 24),
               Expanded(
-                child: BlocBuilder<ProductSettingsBloc, ProductSettingsState>(
-                  builder: (context, state) {
-                    if (state is ProductSettingsLoaded) {
-                      List<DropdownMenuItem<String>> items = [];
-                      if (_family != null) {
-                        final subFamilies = state.getSubFamilies(_family!);
-                        items = subFamilies.map((sf) => DropdownMenuItem(value: sf.id, child: Text(sf.name))).toList();
-                        
-                        // Reset if not found
-                        if (_subFamily != null && !subFamilies.any((sf) => sf.id == _subFamily)) {
-                          _subFamily = null;
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Marque', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    SizedBox(height: 6),
+                    _buildDialogSelectorField(
+                      text: _brand,
+                      hint: 'Sélectionner',
+                      prefixIcon: Icons.branding_watermark_outlined,
+                      onTap: () async {
+                        final res = await _showSearchableSelectDialog<String>(
+                          title: 'Sélectionner une marque',
+                          searchHint: 'Rechercher une marque...',
+                          items: _brandOptions,
+                          itemTitle: (b) => b,
+                          filter: (b, q) => b.toLowerCase().contains(q),
+                          isSelected: (b) => b == _brand,
+                          itemIcon: Icons.branding_watermark_outlined,
+                          allowCustom: true,
+                          onAddCustom: (q) => q,
+                        );
+                        if (res != null) {
+                          setState(() => _brand = res);
                         }
-                      }
-                      
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Sous-famille', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                          SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                            value: _subFamily,
-                            hint: Text('Selectionner'),
-                            items: items,
-                            onChanged: _family == null ? null : (v) => setState(() => _subFamily = v),
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            ),
-                          ),
-                        ],
-                      );
-                    }
-                    return SizedBox();
-                  },
+                      },
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -455,74 +840,38 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Categorie', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                  SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: _category,
-                    hint: Text('Selectionner'),
-                    items: ['Standard', 'Premium'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                    onChanged: (v) => setState(() => _category = v),
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Unite', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    SizedBox(height: 6),
+                    _buildDialogSelectorField(
+                      text: _unitOptions.firstWhere((u) => u['value'] == _unit, orElse: () => _unitOptions.first)['label'],
+                      hint: 'Sélectionner une unité',
+                      prefixIcon: Icons.straighten_rounded,
+                      onTap: () async {
+                        final res = await _showSearchableSelectDialog<Map<String, String>>(
+                          title: 'Sélectionner une unité',
+                          searchHint: 'Rechercher une unité...',
+                          items: _unitOptions,
+                          itemTitle: (u) => '${u['label']} (${u['code']})',
+                          itemSubtitle: (u) => 'Unité standard: ${u['value']}',
+                          filter: (u, q) =>
+                              u['label']!.toLowerCase().contains(q) ||
+                              u['code']!.toLowerCase().contains(q) ||
+                              u['value']!.toLowerCase().contains(q),
+                          isSelected: (u) => u['value'] == _unit,
+                          itemIcon: Icons.straighten_rounded,
+                        );
+                        if (res != null) {
+                          setState(() => _unit = res['value']!);
+                        }
+                      },
                     ),
-                  ),
-                ],
-              )),
-              SizedBox(width: 24),
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Marque', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                  SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: _brand,
-                    hint: Text('Selectionner'),
-                    items: ['Samsung', 'Apple', 'Dell', 'HP'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                    onChanged: (v) => setState(() => _brand = v),
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                  ),
-                ],
-              )),
-            ],
-          ),
-          SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Unite', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                  SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                    value: _unit,
-                    items: ['Piece', 'Kilogramme', 'Litre', 'Metre'].map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
-                    onChanged: (v) => setState(() => _unit = v!),
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                  ),
-                ],
-              )),
+                  ],
+                ),
+              ),
               SizedBox(width: 24),
               Expanded(child: Container()), // Empty space to align
             ],

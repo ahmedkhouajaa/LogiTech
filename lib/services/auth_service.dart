@@ -18,6 +18,8 @@ class AuthService {
 
   String? _currentUserUid;
   bool _offlineMode = false;
+  final _accountDeactivatedController = StreamController<String>.broadcast();
+  StreamSubscription<DocumentSnapshot>? _userStatusSubscription;
 
   bool get isAuthenticated => _currentUserUid != null || _offlineMode;
   String? get currentUserUid => _currentUserUid;
@@ -26,6 +28,63 @@ class AuthService {
 
   Stream<User?> get authStateChanges => FirebaseAuth.instance.authStateChanges();
   Stream<User?> get idTokenChanges => FirebaseAuth.instance.idTokenChanges();
+  Stream<String> get onAccountDeactivated => _accountDeactivatedController.stream;
+
+  /// Start real-time Firestore listener to detect if the account is deactivated remotely.
+  void _startUserStatusListener(String uid) {
+    _userStatusSubscription?.cancel();
+    try {
+      _userStatusSubscription = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .snapshots()
+          .listen((snapshot) async {
+        if (snapshot.exists) {
+          final data = snapshot.data();
+          final isActive = data?['isActive'] != false &&
+              data?['status'] != 'disabled' &&
+              data?['status'] != 'blocked';
+          if (!isActive) {
+            debugPrint('[AuthService] User account $uid is deactivated in Firestore! Forcing logout.');
+            await triggerDeactivation("Votre compte a été désactivé par l'administrateur.");
+          }
+        }
+      }, onError: (e) async {
+        debugPrint('[AuthService] User status listener error: $e');
+        try {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            await user.reload();
+          }
+        } on FirebaseAuthException catch (authErr) {
+          if (authErr.code == 'user-disabled' || authErr.code == 'user-not-found') {
+            await triggerDeactivation("Votre compte a été désactivé.");
+          }
+        } catch (_) {}
+      });
+    } catch (e) {
+      debugPrint('[AuthService] Error starting user status listener: $e');
+    }
+  }
+
+  /// Triggers immediate full session lockout when account is disabled
+  Future<void> triggerDeactivation([String reason = "Votre compte a été désactivé. Contactez l'administrateur."]) async {
+    _userStatusSubscription?.cancel();
+    _userStatusSubscription = null;
+    _currentUserUid = null;
+    _offlineMode = false;
+    try {
+      if (!kIsWeb && Platform.isAndroid) {
+        final GoogleSignIn googleSignIn = GoogleSignIn();
+        await googleSignIn.signOut();
+      }
+    } catch (_) {}
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {}
+    await EnterpriseService.instance.clearCache();
+    _accountDeactivatedController.add(reason);
+  }
 
   /// Initialize and verify session validity on app startup.
   Future<void> initialize() async {
@@ -33,18 +92,38 @@ class AuthService {
     if (user != null) {
       // Validate session token on startup
       try {
+        await user.reload();
         final token = await user.getIdToken(false);
         if (token != null && token.isNotEmpty) {
           _currentUserUid = user.uid;
+
+          // Check if active in Firestore
+          try {
+            final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+              final data = userDoc.data();
+              final isActive = data?['isActive'] != false &&
+                  data?['status'] != 'disabled' &&
+                  data?['status'] != 'blocked';
+              if (!isActive) {
+                await triggerDeactivation("Votre compte a été désactivé. Contactez l'administrateur.");
+                return;
+              }
+            }
+          } catch (_) {}
+
+          _startUserStatusListener(user.uid);
         } else {
           _currentUserUid = null;
           await FirebaseAuth.instance.signOut();
         }
       } catch (e) {
-        // If token refresh fails due to revocation / expiration, sign out
-        if (e is FirebaseAuthException && (e.code == 'user-disabled' || e.code == 'user-token-expired')) {
-          _currentUserUid = null;
-          await FirebaseAuth.instance.signOut();
+        // If token refresh fails due to revocation / expiration / disabled
+        if (e is FirebaseAuthException &&
+            (e.code == 'user-disabled' ||
+                e.code == 'user-token-expired' ||
+                e.code == 'user-not-found')) {
+          await triggerDeactivation("Votre compte a été désactivé.");
         } else {
           // Might be offline - allow local session
           _currentUserUid = user.uid;
@@ -121,6 +200,8 @@ class AuthService {
           await _createUserProfile(userCredential.user!);
         }
 
+        _startUserStatusListener(_currentUserUid!);
+
         // Trigger sync immediately after successful login
         unawaited(SyncService.instance.triggerSync());
         return true;
@@ -163,6 +244,7 @@ class AuthService {
           throw 'Échec de la création du profil utilisateur. L\'inscription a été annulée. Veuillez réessayer.';
         }
 
+        _startUserStatusListener(_currentUserUid!);
         unawaited(SyncService.instance.triggerSync());
         return true;
       }
@@ -336,6 +418,7 @@ class AuthService {
         );
       }
 
+      _startUserStatusListener(_currentUserUid!);
       debugPrint('[GoogleAuth] Step 9: Sync triggered, sign in complete!');
       unawaited(SyncService.instance.triggerSync());
       return true;
@@ -445,6 +528,8 @@ class AuthService {
 
   /// Scenario 10: Clean logout for both Firebase and Google Sign In
   Future<void> logout() async {
+    _userStatusSubscription?.cancel();
+    _userStatusSubscription = null;
     _offlineMode = false;
     _currentUserUid = null;
     try {

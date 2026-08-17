@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../screens/forgot_password_screen.dart';
 import '../screens/signup_screen.dart';
+import '../services/security/biometric_auth_service.dart';
 
 class MobileLoginScreen extends StatefulWidget {
   const MobileLoginScreen({super.key});
@@ -19,6 +21,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
   bool _obscurePassword = true;
   bool _isGoogleLoading = false;
   bool _isEmailLoading = false;
+  bool _canUseBiometrics = false;
 
   late AnimationController _animCtrl;
   late Animation<double> _fadeIn;
@@ -39,6 +42,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
   @override
   void initState() {
     super.initState();
+    _checkBiometrics();
     _animCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -50,6 +54,11 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
     ).animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic));
 
     _animCtrl.forward();
+  }
+
+  Future<void> _checkBiometrics() async {
+    final available = await BiometricAuthService.instance.isBiometricAvailable();
+    if (mounted) setState(() => _canUseBiometrics = available);
   }
 
   @override
@@ -396,6 +405,56 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                                 );
                               },
                             ),
+                            if (_canUseBiometrics) ...[
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    side: const BorderSide(color: _primaryColor),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  onPressed: () async {
+                                    final authenticated = await BiometricAuthService.instance.authenticate(
+                                      reason: 'Authentifiez-vous pour déverrouiller LogiTech Pro',
+                                    );
+                                    if (authenticated && mounted) {
+                                      final user = FirebaseAuth.instance.currentUser;
+                                      if (user != null) {
+                                        context.read<AuthBloc>().add(AuthCheckRequested());
+                                      } else {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Empreinte confirmée. Connectez-vous avec vos identifiants pour enregistrer la session.'),
+                                            backgroundColor: _primaryColor,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.fingerprint_rounded, color: _primaryColor, size: 22),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Connexion biométrique',
+                                        style: TextStyle(
+                                          color: _primaryColor,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 14),
 
                             // Sign Up link

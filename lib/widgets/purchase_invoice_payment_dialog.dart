@@ -341,8 +341,6 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                 children: [
                   _buildSummaryCard(remainingAmount),
                   SizedBox(height: 20),
-                  _buildMobileTabs(),
-                  SizedBox(height: 20),
                   if (_selectedTab == 0) ...[
                     _buildWithholdingTaxSection(taxAmount, netAmount),
                     SizedBox(height: 20),
@@ -1125,8 +1123,6 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
               child: Row(
                 children: [
                   Text('Paiement', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  SizedBox(width: 8),
-                  Icon(Icons.play_circle_filled, color: Colors.red, size: 24),
                   const Spacer(),
                   OutlinedButton.icon(
                     onPressed: () => Navigator.pop(context),
@@ -1186,21 +1182,6 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 24),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceAlt,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                      ),
-                      padding: EdgeInsets.all(4),
-                      child: Row(
-                        children: [
-                          _buildTab(0, 'Nouveau paiement'),
-                          _buildTab(1, 'Paiement existant 1'),
-                          _buildTab(2, 'Avoir 1'),
                         ],
                       ),
                     ),

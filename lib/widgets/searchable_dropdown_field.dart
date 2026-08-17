@@ -403,151 +403,144 @@ Future<String?> showProjectSelectDialog(
         builder: (context, setDialogState) {
           return BlocBuilder<ProjectsBloc, ProjectsState>(
             builder: (context, state) {
-              final projects = state is ProjectsLoaded ? state.projects : initialProjects;
+              final projects = List<Project>.from(state is ProjectsLoaded ? state.projects : initialProjects)
+                ..sort((a, b) => a.name.compareTo(b.name));
+              final defaultProj = projects.cast<Project?>().firstWhere(
+                (p) => p?.isDefault == true,
+                orElse: () => projects.cast<Project?>().firstWhere(
+                  (p) => p?.name.toLowerCase().contains('défaut') == true || p?.name.toLowerCase().contains('defaut') == true,
+                  orElse: () => projects.isNotEmpty ? projects.first : null,
+                ),
+              );
+              final effectiveSelectedId = selectedProjectId ?? defaultProj?.id;
               final query = search.trim().toLowerCase();
               final filtered = projects.where((p) {
-            if (query.isEmpty) return true;
-            final nameMatch = p.name.toLowerCase().contains(query);
-            final descMatch = p.description?.toLowerCase().contains(query) ?? false;
-            final custMatch = p.customerName?.toLowerCase().contains(query) ?? false;
-            return nameMatch || descMatch || custMatch;
-          }).toList();
+                if (query.isEmpty) return true;
+                final nameMatch = p.name.toLowerCase().contains(query);
+                final descMatch = p.description?.toLowerCase().contains(query) ?? false;
+                final custMatch = p.customerName?.toLowerCase().contains(query) ?? false;
+                return nameMatch || descMatch || custMatch;
+              }).toList();
 
-          return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-            backgroundColor: AppColors.surface,
-            child: Container(
-              width: 440,
-              constraints: const BoxConstraints(maxHeight: 520),
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              return Dialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+                backgroundColor: AppColors.surface,
+                child: Container(
+                  width: 480,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Sélectionner un projet',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Sélectionner un projet',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        icon: Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
-                        onPressed: () => Navigator.of(context).pop(),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 38,
+                        child: TextField(
+                          autofocus: true,
+                          onChanged: (val) => setDialogState(() => search = val),
+                          style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                          decoration: InputDecoration(
+                            hintText: 'Rechercher un projet...',
+                            hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                            prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
+                            filled: true,
+                            fillColor: AppColors.background,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderSide: BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderSide: BorderSide(color: AppColors.primary),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Divider(height: 1, color: AppColors.border),
+                      const SizedBox(height: 4),
+                      Flexible(
+                        child: filtered.isEmpty
+                            ? Padding(
+                                padding: const EdgeInsets.all(20.0),
+                                child: Center(
+                                  child: Text(
+                                    'Aucun projet trouvé',
+                                    style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                shrinkWrap: true,
+                                itemCount: filtered.length,
+                                itemBuilder: (context, index) {
+                                  final project = filtered[index];
+                                  final isSelected = project.id == effectiveSelectedId;
+                                  final showSubtitle = project.customerName != null && project.customerName!.isNotEmpty
+                                      ? 'Client: ${project.customerName}'
+                                      : (project.description != null &&
+                                              project.description!.trim().isNotEmpty &&
+                                              project.description!.trim().toLowerCase() != project.name.trim().toLowerCase()
+                                          ? project.description!.trim()
+                                          : null);
+
+                                  return ListTile(
+                                    dense: true,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                    selected: isSelected,
+                                    selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
+                                    title: Text(
+                                      project.name,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                        color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    subtitle: showSubtitle != null
+                                        ? Text(
+                                            showSubtitle,
+                                            style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                                          )
+                                        : null,
+                                    trailing: isSelected
+                                        ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
+                                        : null,
+                                    onTap: () {
+                                      Navigator.of(context).pop(project.id);
+                                    },
+                                  );
+                                },
+                              ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 12),
-                  SizedBox(
-                    height: 38,
-                    child: TextField(
-                      autofocus: true,
-                      onChanged: (val) => setDialogState(() => search = val),
-                      style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                      decoration: InputDecoration(
-                        hintText: 'Rechercher un projet...',
-                        hintStyle: TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                        prefixIcon: Icon(Icons.search_rounded, size: 18, color: AppColors.textSecondary),
-                        filled: true,
-                        fillColor: AppColors.background,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          borderSide: BorderSide(color: AppColors.border),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          borderSide: BorderSide(color: AppColors.border),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          borderSide: BorderSide(color: AppColors.primary),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  Divider(height: 1, color: AppColors.border),
-                  SizedBox(height: 4),
-                  ListTile(
-                    dense: true,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                    selected: selectedProjectId == null,
-                    selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
-                    title: Text(
-                      'Projet par defaut',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: selectedProjectId == null ? FontWeight.bold : FontWeight.w500,
-                        color: selectedProjectId == null ? AppColors.primary : AppColors.textPrimary,
-                      ),
-                    ),
-                    trailing: selectedProjectId == null
-                        ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
-                        : null,
-                    onTap: () {
-                      Navigator.of(context).pop('__default__');
-                    },
-                  ),
-                  Flexible(
-                    child: filtered.isEmpty
-                        ? Padding(
-                            padding: EdgeInsets.all(20.0),
-                            child: Center(
-                              child: Text(
-                                'Aucun projet trouvé',
-                                style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: filtered.length,
-                            itemBuilder: (context, index) {
-                              final project = filtered[index];
-                              final isSelected = project.id == selectedProjectId;
-
-                              return ListTile(
-                                dense: true,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                                selected: isSelected,
-                                selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
-                                title: Text(
-                                  project.name,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                    color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                                  ),
-                                ),
-                                subtitle: project.customerName != null
-                                    ? Text(
-                                        'Client: ${project.customerName}',
-                                        style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
-                                      )
-                                    : null,
-                                trailing: isSelected
-                                    ? Icon(Icons.check_rounded, size: 18, color: AppColors.primary)
-                                    : null,
-                                onTap: () {
-                                  Navigator.of(context).pop(project.id);
-                                },
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         },
       );
     },
   );
-},
-);
 }
 
 Future<String?> showSupplierSelectDialog(

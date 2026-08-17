@@ -61,6 +61,7 @@ import 'screens/app_shell_screen.dart';
 import 'screens/onboarding_enterprise_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
+import 'screens/account_deactivated_screen.dart';
 
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -70,6 +71,7 @@ import 'utils/platform_utils.dart';
 import 'mobile/mobile_login_screen.dart';
 import 'mobile/mobile_shell_screen.dart';
 import 'services/migration_service.dart';
+import 'services/security/security_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -99,6 +101,14 @@ void main() async {
     );
   } catch (e, stack) {
     print('FIREBASE INIT ERROR: $e');
+    print(stack);
+  }
+
+  // Initialize Security Engine (License verification & DPAPI storage)
+  try {
+    await SecurityManager.instance.initialize();
+  } catch (e, stack) {
+    print('SECURITY INIT ERROR: $e');
     print(stack);
   }
 
@@ -356,6 +366,9 @@ class _AppGate extends StatelessWidget {
               ),
             ),
           );
+        }
+        if (authState is AuthAccountDeactivated) {
+          return AccountDeactivatedScreen(reason: authState.reason);
         }
         if (authState is AuthAuthenticated) {
           return const _EnterpriseGate();
