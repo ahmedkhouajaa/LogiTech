@@ -28,11 +28,14 @@ import 'forms/mobile_supplier_credit_note_form_screen.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
+import '../../services/document_share_service.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../database/database_helper.dart';
 
+import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
+import '../../widgets/supplier_order_payment_dialog.dart';
 import 'forms/mobile_supplier_order_form_screen.dart';
 
 class MobileSupplierOrderDetailScreen extends StatefulWidget {
@@ -91,12 +94,80 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
 
   @override
   Widget build(BuildContext context) {
+    final statusLabel = translateStatus(currentOrder.status);
+    final statusColor = _getStatusColor(currentOrder.status);
+
+    final infoSections = [
+      PremiumInfoSection(
+        title: 'Informations Générales',
+        icon: Icons.info_outline,
+        fields: [
+          PremiumInfoField(
+            label: 'Fournisseur',
+            value: currentOrder.supplierName ?? 'Inconnu',
+            icon: Icons.business_outlined,
+            isHighlight: true,
+          ),
+          PremiumInfoField(
+            label: 'Date de commande',
+            value: formatDateTimeLong(currentOrder.date),
+            icon: Icons.calendar_today_outlined,
+          ),
+          if (currentOrder.expectedDate != null)
+            PremiumInfoField(
+              label: 'Livraison prévue',
+              value: formatDateTimeLong(currentOrder.expectedDate!),
+              icon: Icons.local_shipping_outlined,
+            ),
+          if (currentOrder.projectName != null && currentOrder.projectName!.isNotEmpty)
+            PremiumInfoField(
+              label: 'Projet',
+              value: currentOrder.projectName!,
+              icon: Icons.folder_outlined,
+            ),
+        ],
+      ),
+    ];
+
+    final articles = currentOrder.items.map((item) {
+      final product = _getProduct(item.productId);
+      final productName = product?.name ?? ((item.description != null && item.description!.isNotEmpty) ? item.description! : 'Article sans nom');
+      final refCode = product?.reference ?? product?.code;
+
+      return PremiumArticleItem(
+        reference: refCode,
+        designation: productName,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        tvaRate: item.tvaRate > 0 ? item.tvaRate : null,
+        discountPercent: item.discountPercent > 0 ? item.discountPercent : null,
+        totalHT: item.totalHT,
+      );
+    }).toList();
+
+    final totals = <PremiumTotalRow>[
+      PremiumTotalRow(
+        label: 'Total HT',
+        amount: currentOrder.subTotalHT,
+      ),
+      PremiumTotalRow(
+        label: 'Total TVA',
+        amount: currentOrder.totalTVA,
+      ),
+      PremiumTotalRow(
+        label: 'Total TTC',
+        amount: currentOrder.totalTTC,
+        isGrandTotal: true,
+      ),
+    ];
+
     return BlocListener<SupplierOrdersBloc, SupplierOrdersState>(
       listener: (context, state) {
         if (state is SupplierOrdersLoaded) {
           try {
             final updatedOrder = state.orders.firstWhere((q) => q.id == currentOrder.id);
-            if (updatedOrder.id == currentOrder.id && mounted) {
+            if (mounted) {
               setState(() {
                 currentOrder = updatedOrder.copyWith(items: currentOrder.items);
               });
@@ -111,171 +182,27 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('Commande ${currentOrder.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Commande ${currentOrder.number}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primary,
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentOrder),
               itemBuilder: (_) => _buildActionMenu(context, currentOrder),
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surface,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Réf: ${currentOrder.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(currentOrder.status).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(translateStatus(currentOrder.status), style: TextStyle(color: _getStatusColor(currentOrder.status), fontWeight: FontWeight.bold, fontSize: 12)),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      _buildInfoRow('Date', formatDateTimeLong(currentOrder.date)),
-                      if (currentOrder.expectedDate != null) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('Livraison', formatDateTimeLong(currentOrder.expectedDate!)),
-                      ],
-                      SizedBox(height: 8),
-                      _buildInfoRow('Fournisseur', currentOrder.supplierName ?? 'Non spécifié'),
-                      if (currentOrder.projectName != null && currentOrder.projectName!.isNotEmpty) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('Projet', currentOrder.projectName!),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              if (currentOrder.items.isEmpty)
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
-                  ),
-                )
-              else
-                ...currentOrder.items.map((item) {
-                  final product = _getProduct(item.productId);
-                  final productName = product?.name ?? item.description ?? 'Article sans nom';
-                  final refCode = product?.reference ?? product?.code;
-
-                  return Card(
-                    elevation: 0,
-                    margin: EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                    color: AppColors.surface,
-                    child: Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(productName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                if (refCode != null && refCode.isNotEmpty) ...[
-                                  SizedBox(height: 2),
-                                  Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                                ],
-                                SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Text('${item.quantity} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                    Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-                                  ],
-                                ),
-                                if (item.discountPercent > 0) ...[
-                                  SizedBox(height: 4),
-                                  Text('Remise: ${item.discountPercent}%', style: TextStyle(color: AppColors.error, fontSize: 12)),
-                                ]
-                              ],
-                            ),
-                          ),
-                          Text(formatCurrencyDT(item.totalHT), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              SizedBox(height: 16),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surfaceAlt,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _buildInfoRow('Total HT', formatCurrencyDT(currentOrder.subTotalHT)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Total TVA', formatCurrencyDT(currentOrder.totalTVA)),
-                      if (currentOrder.timbreFiscal > 0) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentOrder.timbreFiscal)),
-                      ],
-                      Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentOrder.subTotalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (currentOrder.notes != null && currentOrder.notes!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentOrder.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                  ),
-                ),
-              ],
-              SizedBox(height: 32),
-            ],
-          ),
+        body: PremiumDetailShell(
+          documentType: 'Commande Fournisseur',
+          referenceNumber: currentOrder.number,
+          statusLabel: statusLabel,
+          statusColor: statusColor,
+          infoSections: infoSections,
+          articles: articles,
+          totals: totals,
+          notes: currentOrder.notes,
+          termsAndConditions: currentOrder.conditionsGenerales,
         ),
       ),
     );
@@ -431,7 +358,13 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
         _createCreditNoteFromOrder(context, order);
         break;
       case 'email':
+        final docEmail = DocumentWrapper.fromSupplierOrder(order);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
       case 'whatsapp':
+        final docWa = DocumentWrapper.fromSupplierOrder(order);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
+        break;
       case 'duplicate':
       case 'attachments':
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));

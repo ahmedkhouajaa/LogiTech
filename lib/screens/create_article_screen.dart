@@ -99,6 +99,9 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     context.read<ProductSettingsBloc>().add(LoadFamilies());
 
     final p = widget.existing;
@@ -468,12 +471,12 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
             ),
             child: TabBar(
               controller: _tabController,
-              labelColor: Color(0xFF7C3AED),
+              labelColor: AppColors.primary,
               unselectedLabelColor: AppColors.textTertiary,
-              indicatorColor: const Color(0xFF7C3AED),
+              indicatorColor: AppColors.primary,
               indicatorWeight: 3,
-              labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
               tabs: const [
                 Tab(text: 'General', icon: Icon(Icons.info_outline_rounded, size: 20)),
                 Tab(text: 'Prix & TVA', icon: Icon(Icons.attach_money_rounded, size: 20)),
@@ -490,14 +493,157 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  SingleChildScrollView(padding: EdgeInsets.all(24), child: _buildMainSection()),
-                  SingleChildScrollView(padding: EdgeInsets.all(24), child: _buildPricingSection()),
-                  SingleChildScrollView(padding: EdgeInsets.all(24), child: _buildClassificationSection()),
-                  SingleChildScrollView(padding: EdgeInsets.all(24), child: _buildStockSection()),
+                  SingleChildScrollView(padding: const EdgeInsets.all(24), child: _buildMainSection()),
+                  SingleChildScrollView(padding: const EdgeInsets.all(24), child: _buildPricingSection()),
+                  SingleChildScrollView(padding: const EdgeInsets.all(24), child: _buildClassificationSection()),
+                  SingleChildScrollView(padding: const EdgeInsets.all(24), child: _buildStockSection()),
                 ],
               ),
             ),
           ),
+
+          // Bottom Step Navigation Footer
+          _buildBottomNavigationBar(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    final currentIndex = _tabController.index;
+    final isFirstTab = currentIndex == 0;
+    final isLastTab = currentIndex == 3;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Précédent / Annuler Button
+          if (!isFirstTab)
+            OutlinedButton.icon(
+              onPressed: () {
+                _tabController.animateTo(currentIndex - 1);
+              },
+              icon: const Icon(Icons.arrow_back_rounded, size: 16),
+              label: const Text('Précédent', style: TextStyle(fontWeight: FontWeight.w600)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textPrimary,
+                side: BorderSide(color: AppColors.border),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              ),
+            )
+          else
+            OutlinedButton.icon(
+              onPressed: () => Navigator.pop(context),
+              icon: Icon(Icons.close_rounded, size: 16, color: AppColors.textSecondary),
+              label: Text('Annuler', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: AppColors.border),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              ),
+            ),
+
+          // Step Progress Dots & Text
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Étape ${currentIndex + 1}/4',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(4, (index) {
+                  final isActive = currentIndex == index;
+                  final isPassed = currentIndex > index;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: isActive ? 20 : 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? AppColors.primary
+                          : (isPassed
+                              ? AppColors.primary.withValues(alpha: 0.4)
+                              : AppColors.border),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
+
+          // Suivant / Terminer Button
+          if (!isLastTab)
+            ElevatedButton.icon(
+              onPressed: () {
+                if (currentIndex == 0 && _nameCtrl.text.trim().isEmpty) {
+                  _formKey.currentState?.validate();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Veuillez saisir le nom de l\'article pour continuer'),
+                      backgroundColor: AppColors.warning,
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
+                _tabController.animateTo(currentIndex + 1);
+              },
+              icon: const Text('Suivant', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+              label: const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 1,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              ),
+            )
+          else
+            ElevatedButton.icon(
+              onPressed: _isSaving ? null : _save,
+              icon: const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
+              label: _isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(
+                      widget.existing == null ? 'Terminer & Créer' : 'Terminer & Enregistrer',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 2,
+                padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              ),
+            ),
         ],
       ),
     );
@@ -941,7 +1087,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                 Switch(
                   value: _lowStockAlert,
                   onChanged: (v) => setState(() => _lowStockAlert = v),
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                 ),
                 Text('Alerte activee', style: TextStyle(fontSize: 13, color: _lowStockAlert ? AppColors.textPrimary : AppColors.textSecondary)),
               ],
@@ -967,7 +1113,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                 Switch(
                   value: _highStockAlert,
                   onChanged: (v) => setState(() => _highStockAlert = v),
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                 ),
                 Text('Alerte max activee', style: TextStyle(fontSize: 13, color: _highStockAlert ? AppColors.textPrimary : AppColors.textSecondary)),
               ],
@@ -998,9 +1144,9 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.surface,
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surface,
           border: Border.all(color: isSelected ? AppColors.primary : AppColors.border),
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
@@ -1009,7 +1155,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           children: [
             if (icon != null) ...[
               Icon(icon, size: 18, color: isSelected ? AppColors.primary : AppColors.textSecondary),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
             ],
             Text(
               title,
@@ -1019,7 +1165,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
               ),
             ),
             if (isSelected) ...[
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Icon(Icons.check_circle, size: 16, color: AppColors.primary),
             ]
           ],
@@ -1034,9 +1180,9 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
       onTap: () => setState(() => _tvaRate = rate),
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : AppColors.surface,
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surface,
           border: Border.all(color: isSelected ? AppColors.primary : AppColors.border),
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),

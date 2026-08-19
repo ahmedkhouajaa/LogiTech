@@ -244,6 +244,7 @@ class SupplierOrderItem {
   final String id;
   final String orderId;
   final String productId;
+  final String? productName;
   final String? description;
   final double quantity;
   final double unitPrice;
@@ -256,6 +257,7 @@ class SupplierOrderItem {
     String? id,
     required this.orderId,
     required this.productId,
+    this.productName,
     this.description,
     this.quantity = 1,
     this.unitPrice = 0,
@@ -285,6 +287,7 @@ class SupplierOrderItem {
     String? id,
     String? orderId,
     String? productId,
+    String? productName,
     String? description,
     double? quantity,
     double? unitPrice,
@@ -297,6 +300,7 @@ class SupplierOrderItem {
       id: id ?? this.id,
       orderId: orderId ?? this.orderId,
       productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
       description: description ?? this.description,
       quantity: quantity ?? this.quantity,
       unitPrice: unitPrice ?? this.unitPrice,
@@ -312,6 +316,7 @@ class SupplierOrderItem {
       'id': id,
       'order_id': orderId,
       'product_id': productId,
+      'product_name': productName ?? description,
       'description': description,
       'quantity': quantity,
       'unit_price': unitPrice,
@@ -324,11 +329,14 @@ class SupplierOrderItem {
   }
 
   factory SupplierOrderItem.fromMap(Map<String, dynamic> map) {
+    final pName = map['product_name']?.toString();
+    final desc = map['description']?.toString();
     return SupplierOrderItem(
       id: map['id']?.toString(),
       orderId: map['order_id']?.toString() ?? '',
       productId: map['product_id']?.toString() ?? '',
-      description: map['description']?.toString(),
+      productName: (pName != null && pName.isNotEmpty) ? pName : desc,
+      description: desc,
       quantity: double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0,
       unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
       tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,

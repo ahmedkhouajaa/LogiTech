@@ -162,13 +162,30 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
       }).toList();
     }
 
+    List<Customer> deduplicateDefaults(List<Customer> list) {
+      final unique = <Customer>[];
+      bool seenDefault = false;
+      for (final c in list) {
+        final isDef = c.isDefault || c.name.trim().toLowerCase() == 'client passager';
+        if (isDef) {
+          if (!seenDefault) {
+            unique.add(c);
+            seenDefault = true;
+          }
+        } else {
+          unique.add(c);
+        }
+      }
+      return unique;
+    }
+
     try {
       // Phase 1: Try cache for instant display
       bool shownFromCache = false;
       try {
         final cacheSnapshot = await buildQuery().get(const GetOptions(source: Source.cache));
         if (cacheSnapshot.docs.isNotEmpty && !emit.isDone) {
-          final cachedCustomers = parseSnapshot(cacheSnapshot);
+          final cachedCustomers = deduplicateDefaults(parseSnapshot(cacheSnapshot));
           emit(CustomersLoaded(cachedCustomers, totalCount: cachedCustomers.length, hasMore: false));
           shownFromCache = true;
         }
@@ -179,34 +196,7 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
       // Phase 2: Always fetch from server for cross-device sync
       try {
         final serverSnapshot = await buildQuery().get(const GetOptions(source: Source.server));
-        List<Customer> customers = parseSnapshot(serverSnapshot);
-
-        // Only create default if server is truly empty for this enterprise
-        if (customers.isEmpty && !shownFromCache) {
-          final defaultCustomer = Customer(
-            id: const Uuid().v4(),
-            code: 'CL-001',
-            name: 'Client Passager',
-            email: 'passager@client.com',
-            phone: '',
-            address: 'Passager',
-            city: '',
-            taxId: '',
-            rc: '',
-            balance: 0.0,
-            creditLimit: 0.0,
-            isDeleted: false,
-            isDefault: true,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-            enterpriseId: currentEntId,
-          );
-          customers = [defaultCustomer];
-
-          FirestoreRepository.instance
-              .saveDocument('clients', defaultCustomer.id, defaultCustomer.toMap())
-              .catchError((e) => print("Firestore default customer auto-create error: $e"));
-        }
+        List<Customer> customers = deduplicateDefaults(parseSnapshot(serverSnapshot));
 
         if (!emit.isDone) {
           emit(CustomersLoaded(customers, totalCount: customers.length, hasMore: false));

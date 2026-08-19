@@ -21,11 +21,9 @@ import '../models/supplier_return.dart';
 import '../models/inventory_sheet.dart';
 import '../models/stock_movement.dart';
 import '../models/treasury_account.dart';
-import '../models/treasury_transaction.dart';
 import '../models/payment_model.dart';
 import '../models/project.dart';
 import '../models/check_traite.dart';
-import '../models/project.dart';
 import '../models/document_template.dart';
 import '../models/product_family.dart';
 import '../models/transaction_model.dart';
@@ -481,9 +479,63 @@ class DatabaseHelper {
     }
   }
 
-  Future<List<Product>> getProducts() async => [];
+  Future<List<Product>> getProducts() async {
+    try {
+      final entId = currentEnterpriseId;
+      final snap = await _firestore.collection('articles').get();
+      return snap.docs
+          .map((d) {
+            try {
+              final data = Map<String, dynamic>.from(d.data());
+              data['id'] = d.id;
+              return Product.fromMap(data);
+            } catch (_) {
+              return null;
+            }
+          })
+          .whereType<Product>()
+          .where((p) {
+            if (p.isDeleted) return false;
+            if (entId != null && entId.isNotEmpty && p.enterpriseId != null && p.enterpriseId!.isNotEmpty) {
+              return p.enterpriseId == entId;
+            }
+            return true;
+          })
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<List<Product>> getLowStockProducts() async => [];
-  Future<Product?> getProduct(String id) async => null;
+
+  Future<Product?> getProduct(String id) async {
+    if (id.isEmpty) return null;
+    try {
+      final doc = await _firestore.collection('articles').doc(id).get();
+      if (doc.exists && doc.data() != null) {
+        final data = Map<String, dynamic>.from(doc.data()!);
+        data['id'] = doc.id;
+        return Product.fromMap(data);
+      }
+    } catch (_) {}
+
+    try {
+      final all = await getProducts();
+      final normId = id.trim().toLowerCase();
+      return all.cast<Product?>().firstWhere(
+        (p) => p != null && (
+          p.id.toLowerCase() == normId ||
+          p.code.toLowerCase() == normId ||
+          (p.reference != null && p.reference!.toLowerCase() == normId) ||
+          p.name.toLowerCase() == normId
+        ),
+        orElse: () => null,
+      );
+    } catch (_) {}
+    return null;
+  }
+
   Future<void> insertProduct(dynamic item) async {}
   Future<void> updateProduct(dynamic item) async {}
   Future<void> deleteProduct(String id) async {}

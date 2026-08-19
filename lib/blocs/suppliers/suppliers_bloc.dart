@@ -159,13 +159,30 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
       }).toList();
     }
 
+    List<Supplier> deduplicateDefaults(List<Supplier> list) {
+      final unique = <Supplier>[];
+      bool seenDefault = false;
+      for (final s in list) {
+        final isDef = s.isDefault || s.name.trim().toLowerCase() == 'fournisseur passager';
+        if (isDef) {
+          if (!seenDefault) {
+            unique.add(s);
+            seenDefault = true;
+          }
+        } else {
+          unique.add(s);
+        }
+      }
+      return unique;
+    }
+
     try {
       // Phase 1: Try cache for instant display
       bool shownFromCache = false;
       try {
         final cacheSnapshot = await buildQuery().get(const GetOptions(source: Source.cache));
         if (cacheSnapshot.docs.isNotEmpty && !emit.isDone) {
-          final cachedSuppliers = parseSnapshot(cacheSnapshot);
+          final cachedSuppliers = deduplicateDefaults(parseSnapshot(cacheSnapshot));
           emit(SuppliersLoaded(cachedSuppliers, totalCount: cachedSuppliers.length, hasMore: false));
           shownFromCache = true;
         }
@@ -176,32 +193,7 @@ class SuppliersBloc extends Bloc<SuppliersEvent, SuppliersState> {
       // Phase 2: Always fetch from server for cross-device sync
       try {
         final serverSnapshot = await buildQuery().get(const GetOptions(source: Source.server));
-        List<Supplier> suppliers = parseSnapshot(serverSnapshot);
-
-        // Only create default if server is truly empty for this enterprise
-        if (suppliers.isEmpty && !shownFromCache) {
-          final defaultSupplier = Supplier(
-            id: const Uuid().v4(),
-            code: 'FR-001',
-            name: 'Fournisseur Passager',
-            email: 'passager@fournisseur.com',
-            phone: '',
-            address: 'Passager',
-            city: '',
-            taxId: '',
-            rc: '',
-            balance: 0.0,
-            isDeleted: false,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-            enterpriseId: currentEntId,
-          );
-          suppliers = [defaultSupplier];
-
-          FirestoreRepository.instance
-              .saveDocument('fournisseurs', defaultSupplier.id, defaultSupplier.toMap())
-              .catchError((e) => print("Firestore default supplier auto-create error: $e"));
-        }
+        List<Supplier> suppliers = deduplicateDefaults(parseSnapshot(serverSnapshot));
 
         if (!emit.isDone) {
           emit(SuppliersLoaded(suppliers, totalCount: suppliers.length, hasMore: false));

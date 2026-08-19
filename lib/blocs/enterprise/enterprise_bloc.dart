@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../models/enterprise.dart';
@@ -61,6 +62,20 @@ class CreateEnterprise extends EnterpriseEvent {
       ];
 }
 
+/// Internal event fired when Firestore notifies of new/updated enterprises in real time.
+class EnterprisesUpdated extends EnterpriseEvent {
+  final List<Enterprise> enterprises;
+  final String? currentEnterpriseId;
+
+  const EnterprisesUpdated({
+    required this.enterprises,
+    this.currentEnterpriseId,
+  });
+
+  @override
+  List<Object?> get props => [enterprises, currentEnterpriseId];
+}
+
 // ─── States ──────────────────────────────────────────────────────────
 
 abstract class EnterpriseState extends Equatable {
@@ -99,6 +114,8 @@ class EnterpriseError extends EnterpriseState {
 
 class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
   final EnterpriseService _service;
+  StreamSubscription<List<Enterprise>>? _enterprisesSub;
+  StreamSubscription<String?>? _currentIdSub;
 
   EnterpriseBloc({EnterpriseService? service})
       : _service = service ?? EnterpriseService.instance,
@@ -106,6 +123,40 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
     on<LoadEnterprises>(_onLoadEnterprises);
     on<SwitchEnterprise>(_onSwitchEnterprise);
     on<CreateEnterprise>(_onCreateEnterprise);
+    on<EnterprisesUpdated>(_onEnterprisesUpdated);
+
+    // Reactively update BLoC whenever EnterpriseService streams a refreshed enterprise list
+    _enterprisesSub = _service.enterprisesStream.listen((enterprises) {
+      add(EnterprisesUpdated(
+        enterprises: List<Enterprise>.from(enterprises),
+        currentEnterpriseId: _service.currentEnterpriseId,
+      ));
+    });
+
+    // Reactively update BLoC whenever EnterpriseService switches the active enterprise ID
+    _currentIdSub = _service.enterpriseStream.listen((currentId) {
+      add(EnterprisesUpdated(
+        enterprises: List<Enterprise>.from(_service.enterprises),
+        currentEnterpriseId: currentId,
+      ));
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _enterprisesSub?.cancel();
+    _currentIdSub?.cancel();
+    return super.close();
+  }
+
+  void _onEnterprisesUpdated(
+    EnterprisesUpdated event,
+    Emitter<EnterpriseState> emit,
+  ) {
+    emit(EnterpriseLoaded(
+      enterprises: List<Enterprise>.from(event.enterprises),
+      currentEnterpriseId: event.currentEnterpriseId ?? _service.currentEnterpriseId,
+    ));
   }
 
   Future<void> _onLoadEnterprises(
@@ -116,7 +167,7 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
     try {
       final enterprises = await _service.loadEnterprisesFromFirestore();
       emit(EnterpriseLoaded(
-        enterprises: enterprises,
+        enterprises: List<Enterprise>.from(enterprises),
         currentEnterpriseId: _service.currentEnterpriseId,
       ));
     } catch (e) {
@@ -132,7 +183,7 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
     try {
       await _service.setCurrentEnterprise(event.enterpriseId);
       emit(EnterpriseLoaded(
-        enterprises: _service.enterprises,
+        enterprises: List<Enterprise>.from(_service.enterprises),
         currentEnterpriseId: event.enterpriseId,
       ));
     } catch (e) {
@@ -144,6 +195,7 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
     CreateEnterprise event,
     Emitter<EnterpriseState> emit,
   ) async {
+    if (state is EnterpriseLoading) return;
     emit(EnterpriseLoading());
     try {
       final enterprise = await _service.createEnterprise(
@@ -158,7 +210,7 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
         rib: event.rib,
       );
       emit(EnterpriseLoaded(
-        enterprises: _service.enterprises,
+        enterprises: List<Enterprise>.from(_service.enterprises),
         currentEnterpriseId: enterprise.id,
       ));
     } catch (e) {

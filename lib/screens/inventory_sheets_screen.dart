@@ -18,6 +18,7 @@ import '../utils/helpers.dart';
 import 'create_inventory_sheet_screen.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
 import '../mobile/screens/mobile_inventory_sheet_detail_screen.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
@@ -114,10 +115,16 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
 
   void _previewDocument(InventorySheet entry) {
     final wrapper = DocumentWrapper.fromInventorySheet(entry);
+    final statusLabel = entry.status == 'validated' ? 'Validé' : (entry.status == 'cancelled' ? 'Annulé' : 'Brouillon');
+    final statusColor = entry.status == 'validated' ? AppColors.success : (entry.status == 'cancelled' ? AppColors.error : AppColors.warning);
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => DocumentPreviewScreen(document: wrapper),
+        builder: (_) => DocumentDetailScreen(
+          document: wrapper,
+          status: statusLabel,
+          statusColor: statusColor,
+        ),
       ),
     );
   }

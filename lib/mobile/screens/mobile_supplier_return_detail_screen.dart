@@ -13,9 +13,12 @@ import '../../models/document_wrapper.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
+import '../../services/document_share_service.dart';
 import '../../database/database_helper.dart';
 
+import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
+import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_supplier_return_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
@@ -36,28 +39,67 @@ class _MobileSupplierReturnDetailScreenState extends State<MobileSupplierReturnD
   void initState() {
     super.initState();
     currentReturn = widget.returnNote;
-    _loadFullReturn();
-  }
-
-  Future<void> _loadFullReturn() async {
-    final fullReturn = await DatabaseHelper.instance.getSupplierReturn(currentReturn.id);
-    if (fullReturn != null && mounted) {
-      setState(() {
-        currentReturn = fullReturn;
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final statusLabel = translateStatus(currentReturn.status);
+    final statusColor = _getStatusColor(currentReturn.status);
+
+    final infoSections = [
+      PremiumInfoSection(
+        title: 'Informations Générales',
+        icon: Icons.info_outline,
+        fields: [
+          PremiumInfoField(
+            label: 'Fournisseur',
+            value: currentReturn.supplierName ?? 'Non spécifié',
+            icon: Icons.business_outlined,
+            isHighlight: true,
+          ),
+          PremiumInfoField(
+            label: 'Date de retour',
+            value: formatDateTimeLong(currentReturn.date),
+            icon: Icons.calendar_today_outlined,
+          ),
+        ],
+      ),
+    ];
+
+    final articles = currentReturn.items.map((item) {
+      return PremiumArticleItem(
+        designation: item.designation,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        tvaRate: item.tvaRate > 0 ? item.tvaRate : null,
+        totalHT: item.totalHT,
+      );
+    }).toList();
+
+    final totals = <PremiumTotalRow>[
+      PremiumTotalRow(
+        label: 'Total HT',
+        amount: currentReturn.totalHT,
+      ),
+      PremiumTotalRow(
+        label: 'Total TVA',
+        amount: currentReturn.totalTVA,
+      ),
+      PremiumTotalRow(
+        label: 'Total TTC',
+        amount: currentReturn.totalTTC,
+        isGrandTotal: true,
+      ),
+    ];
+
     return BlocListener<SupplierReturnsBloc, SupplierReturnsState>(
       listener: (context, state) {
         if (state is SupplierReturnsLoaded) {
           try {
             final updatedReturn = state.returns.firstWhere((q) => q.id == currentReturn.id);
-            if (updatedReturn.id == currentReturn.id && mounted) {
+            if (mounted) {
               setState(() {
-                currentReturn = updatedReturn.copyWith(items: currentReturn.items);
+                currentReturn = updatedReturn;
               });
             }
           } catch (_) {
@@ -70,145 +112,26 @@ class _MobileSupplierReturnDetailScreenState extends State<MobileSupplierReturnD
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('BRF ${currentReturn.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Retour ${currentReturn.number}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primary,
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentReturn),
               itemBuilder: (_) => _buildActionMenu(context, currentReturn),
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surface,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Réf: ${currentReturn.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(currentReturn.status).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(translateStatus(currentReturn.status), style: TextStyle(color: _getStatusColor(currentReturn.status), fontWeight: FontWeight.bold, fontSize: 12)),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      _buildInfoRow('Date', formatDateTimeLong(currentReturn.date)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Fournisseur', currentReturn.supplierName ?? 'Non spécifié'),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              if (currentReturn.items.isEmpty)
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
-                  ),
-                )
-              else
-                ...currentReturn.items.map((item) => Card(
-                  elevation: 0,
-                  margin: EdgeInsets.only(bottom: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                          child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item.designation, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Text('${item.quantity} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                  Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(formatCurrencyDT(item.totalHT * (1 + item.tvaRate / 100)), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                      ],
-                    ),
-                  ),
-                )),
-              SizedBox(height: 16),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surfaceAlt,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _buildInfoRow('Total HT', formatCurrencyDT(currentReturn.totalHT)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Total TVA', formatCurrencyDT(currentReturn.totalTVA)),
-                      Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentReturn.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (currentReturn.reason != null && currentReturn.reason!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Motif', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentReturn.reason!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                  ),
-                ),
-              ],
-              SizedBox(height: 32),
-            ],
-          ),
+        body: PremiumDetailShell(
+          documentType: 'Retour Fournisseur',
+          referenceNumber: currentReturn.number,
+          statusLabel: statusLabel,
+          statusColor: statusColor,
+          infoSections: infoSections,
+          articles: articles,
+          totals: totals,
+          notes: currentReturn.reason,
         ),
       ),
     );
@@ -328,9 +251,15 @@ class _MobileSupplierReturnDetailScreenState extends State<MobileSupplierReturnD
         final doc = DocumentWrapper.fromSupplierReturn(note);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
         break;
-      case 'add_payment':
       case 'email':
+        final docEmail = DocumentWrapper.fromSupplierReturn(note);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
       case 'whatsapp':
+        final docWa = DocumentWrapper.fromSupplierReturn(note);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
+        break;
+      case 'add_payment':
       case 'duplicate':
       case 'attachments':
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));

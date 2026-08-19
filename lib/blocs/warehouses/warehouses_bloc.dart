@@ -27,12 +27,32 @@ class WarehousesBloc extends Bloc<WarehousesEvent, WarehousesState> {
       query = query.where('enterprise_id', isEqualTo: currentEntId);
     }
 
+    List<Warehouse> deduplicateDefaults(List<Warehouse> list) {
+      final unique = <Warehouse>[];
+      bool seenDefault = false;
+      for (final w in list) {
+        final isDef = w.isDefault ||
+            w.name.trim().toLowerCase() == 'entrepôt par défaut' ||
+            w.name.trim().toLowerCase() == 'entrepot par defaut';
+        if (isDef) {
+          if (!seenDefault) {
+            unique.add(w);
+            seenDefault = true;
+          }
+        } else {
+          unique.add(w);
+        }
+      }
+      return unique;
+    }
+
     bool shownFromCache = false;
     try {
       final cacheSnap = await query.get(const GetOptions(source: Source.cache));
       if (cacheSnap.docs.isNotEmpty && !emit.isDone) {
         final accounts = cacheSnap.docs.map((d) => Warehouse.fromMap(d.data() as Map<String, dynamic>)).toList();
-        emit(WarehousesLoaded(accounts));
+        final deduped = deduplicateDefaults(accounts);
+        emit(WarehousesLoaded(deduped));
         shownFromCache = true;
       }
     } catch (_) {}
@@ -40,25 +60,7 @@ class WarehousesBloc extends Bloc<WarehousesEvent, WarehousesState> {
     try {
       final serverSnap = await query.get(const GetOptions(source: Source.server));
       List<Warehouse> accounts = serverSnap.docs.map((d) => Warehouse.fromMap(d.data() as Map<String, dynamic>)).toList();
-      
-      if (!accounts.any((w) => w.isDefault)) {
-        final defaultWarehouse = Warehouse(
-          id: const Uuid().v4(),
-          name: 'Entrepôt par défaut',
-          reference: 'WH-001',
-          isDefault: true,
-          isActive: true,
-          enterpriseId: currentEntId ?? '',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-        accounts.add(defaultWarehouse);
-
-        FirestoreRepository.instance
-            .saveDocument('warehouses', defaultWarehouse.id, defaultWarehouse.toMap())
-            .catchError((e) => print('Firestore warehouse auto-create sync error: $e'));
-      }
-
+      accounts = deduplicateDefaults(accounts);
       accounts.sort((a, b) => (a.reference ?? '').compareTo(b.reference ?? ''));
 
       if (!emit.isDone) {

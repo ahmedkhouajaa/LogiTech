@@ -28,9 +28,10 @@ import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
+import '../services/document_share_service.dart';
 import '../models/receiving_voucher.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 
 class SupplierOrdersScreen extends StatefulWidget {
@@ -855,11 +856,19 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                                 itemBuilder: (ctx) => _buildActionMenu(context, order),
                                                 onSelected: (val) {
                                                   if (val == 'view') {
+                                                    final statusEnum = SupplierOrderStatus.values.firstWhere(
+                                                      (e) => e.name == order.status,
+                                                      orElse: () => SupplierOrderStatus.draft,
+                                                    );
                                                     final doc = DocumentWrapper.fromSupplierOrder(order);
                                                     Navigator.push(
                                                       context,
                                                       MaterialPageRoute(
-                                                        builder: (_) => DocumentPreviewScreen(document: doc),
+                                                        builder: (_) => DocumentDetailScreen(
+                                                          document: doc,
+                                                          status: statusEnum.label,
+                                                          statusColor: statusEnum.color,
+                                                        ),
                                                       ),
                                                     );
                                                   } else if (val == 'to_invoice') {
@@ -907,7 +916,21 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                                         context.read<SupplierOrdersBloc>().add(LoadSupplierOrders());
                                                       }
                                                     });
-                                                  } else if (val == 'print' || val == 'credit_note' || val == 'email' || val == 'whatsapp' || val == 'status' || val == 'duplicate' || val == 'attachments') {
+                                                  } else if (val == 'email') {
+                                                    final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                    DocumentShareService.shareDocument(doc, isEmail: true);
+                                                  } else if (val == 'whatsapp') {
+                                                    final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                    DocumentShareService.shareDocument(doc, isEmail: false);
+                                                  } else if (val == 'print') {
+                                                    final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) => DocumentPreviewScreen(document: doc),
+                                                      ),
+                                                    );
+                                                  } else if (val == 'credit_note' || val == 'status' || val == 'duplicate' || val == 'attachments') {
                                                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                                                       content: Text('Cette fonctionnalité sera disponible prochainement'),
                                                       backgroundColor: AppColors.info,

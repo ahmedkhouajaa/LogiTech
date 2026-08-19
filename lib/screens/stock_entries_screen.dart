@@ -14,6 +14,7 @@ import '../database/database_helper.dart';
 import '../models/document_wrapper.dart';
 import 'create_stock_entry_screen.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
 import '../mobile/screens/mobile_stock_entry_detail_screen.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
@@ -136,7 +137,11 @@ class _StockEntriesScreenState extends State<StockEntriesScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => DocumentPreviewScreen(document: wrapper),
+        builder: (_) => DocumentDetailScreen(
+          document: wrapper,
+          status: 'Validé',
+          statusColor: AppColors.success,
+        ),
       ),
     );
   }

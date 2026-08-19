@@ -11,6 +11,7 @@ import '../utils/helpers.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/tej_export_dialog.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
 
 class WithholdingTaxScreen extends StatefulWidget {
   final bool isSales;
@@ -421,7 +422,14 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 color: AppColors.surface,
                 onSelected: (val) {
-                  if (val == 'print') {
+                  if (val == 'view') {
+                    final doc = DocumentWrapper.fromWithholdingTax(p, widget.isSales);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentDetailScreen(
+                      document: doc,
+                      status: 'Validé',
+                      statusColor: AppColors.success,
+                    )));
+                  } else if (val == 'print') {
                     final doc = DocumentWrapper.fromWithholdingTax(p, widget.isSales);
                     Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
                   } else if (val == 'pdf') {
@@ -431,24 +439,36 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                 },
                 itemBuilder: (_) => [
                   PopupMenuItem<String>(
+                    value: 'view',
+                    height: 40,
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility_outlined, size: 18, color: AppColors.info),
+                        const SizedBox(width: 12),
+                        Text('Voir', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(height: 1),
+                  PopupMenuItem<String>(
                     value: 'print',
                     height: 40,
                     child: Row(
                       children: [
                         Icon(Icons.print_outlined, size: 18, color: AppColors.primary),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Text('Imprimer', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
                       ],
                     ),
                   ),
-                  PopupMenuDivider(height: 1),
+                  const PopupMenuDivider(height: 1),
                   PopupMenuItem<String>(
                     value: 'pdf',
                     height: 40,
                     child: Row(
                       children: [
                         Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.error),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Text('Télécharger PDF', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
                       ],
                     ),

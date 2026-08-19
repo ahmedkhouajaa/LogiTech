@@ -30,6 +30,8 @@ import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
+import '../services/document_share_service.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 
@@ -1163,11 +1165,17 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
   void _handleAction(BuildContext context, String action, DeliveryNote note) {
     switch (action) {
       case 'view':
+        final statusEnum = DeliveryNoteStatus.values.firstWhere(
+          (e) => e.name == note.status,
+          orElse: () => DeliveryNoteStatus.draft,
+        );
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DocumentPreviewScreen(
+            builder: (_) => DocumentDetailScreen(
               document: DocumentWrapper.fromDeliveryNote(note),
+              status: statusEnum.label,
+              statusColor: statusEnum.color,
             ),
           ),
         );
@@ -1181,6 +1189,14 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       case 'pdf':
         final doc = DocumentWrapper.fromDeliveryNote(note);
         PdfService.instance.downloadDocument(context, doc);
+        break;
+      case 'email':
+        final docEmail = DocumentWrapper.fromDeliveryNote(note);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = DocumentWrapper.fromDeliveryNote(note);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
             case 'print':
         final doc = DocumentWrapper.fromDeliveryNote(note);

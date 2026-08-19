@@ -19,14 +19,15 @@ import '../../models/document_wrapper.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
+import '../../services/document_share_service.dart';
 import '../../services/auth_service.dart';
 import '../../database/database_helper.dart';
-import '../utils/mobile_status_colors.dart';
 
 import 'mobile_invoice_detail_screen.dart';
 import 'forms/mobile_quote_form_screen.dart';
 import 'mobile_customer_order_detail_screen.dart';
 import 'mobile_delivery_note_detail_screen.dart';
+import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
@@ -78,6 +79,75 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final statusLabel = currentQuote.status.label;
+    final statusColor = currentQuote.status.color;
+
+    final infoSections = [
+      PremiumInfoSection(
+        title: 'Informations Générales',
+        icon: Icons.info_outline,
+        fields: [
+          PremiumInfoField(
+            label: 'Client',
+            value: currentQuote.customerName ?? 'Inconnu',
+            icon: Icons.person_outline,
+            isHighlight: true,
+          ),
+          PremiumInfoField(
+            label: 'Date d\'émission',
+            value: formatDateTimeLong(currentQuote.date),
+            icon: Icons.calendar_today_outlined,
+          ),
+          PremiumInfoField(
+            label: 'Date de validité',
+            value: formatDateTimeLong(currentQuote.validityDate),
+            icon: Icons.event_available_outlined,
+          ),
+        ],
+      ),
+    ];
+
+    final articles = currentQuote.items.map((item) {
+      final product = _getProduct(item.productId);
+      final productName = product?.name ?? item.productName ?? 'Produit Inconnu';
+      final refCode = (product?.reference != null && product!.reference!.trim().isNotEmpty)
+          ? product.reference!.trim()
+          : (product?.code.trim().isNotEmpty == true ? product!.code.trim() : null);
+
+      return PremiumArticleItem(
+        reference: refCode,
+        designation: productName,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        tvaRate: item.tvaRate > 0 ? item.tvaRate : null,
+        discountPercent: item.discountPercent > 0 ? item.discountPercent : null,
+        totalHT: item.computedTotalHT,
+      );
+    }).toList();
+
+    final stampTax = (currentQuote.totalTTC - currentQuote.totalHT - currentQuote.totalTva);
+    final totals = <PremiumTotalRow>[
+      PremiumTotalRow(
+        label: 'Total HT',
+        amount: currentQuote.totalHT,
+      ),
+      PremiumTotalRow(
+        label: 'Total TVA',
+        amount: currentQuote.totalTva,
+      ),
+      if (stampTax > 0.01)
+        PremiumTotalRow(
+          label: 'Droit de Timbre',
+          amount: stampTax,
+        ),
+      PremiumTotalRow(
+        label: 'Total TTC',
+        amount: currentQuote.totalTTC,
+        isGrandTotal: true,
+      ),
+    ];
+
     return BlocListener<QuotesBloc, QuotesState>(
       listener: (context, state) {
         if (state is QuotesLoaded) {
@@ -87,7 +157,6 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
               currentQuote = updated;
             });
           } catch (_) {
-            // Quote might have been deleted, pop the screen
             if (!_isPopping) {
               _isPopping = true;
               Navigator.pop(context);
@@ -98,12 +167,12 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('Devis ${currentQuote.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Devis ${currentQuote.number}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primary,
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentQuote),
               itemBuilder: (_) => [
                 _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
@@ -118,205 +187,52 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                 const PopupMenuDivider(height: 1),
                 if (!currentQuote.isConverted && !currentQuote.isConvertedToOrder && !currentQuote.isConvertedToDelivery) ...[
                   _buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture'),
-                  PopupMenuDivider(height: 1),
+                  const PopupMenuDivider(height: 1),
                   _buildMenuItem('to_order', Icons.shopping_cart_outlined, AppColors.textSecondary, 'Transformer en Commande Client'),
-                  PopupMenuDivider(height: 1),
+                  const PopupMenuDivider(height: 1),
                   _buildMenuItem('to_delivery', Icons.local_shipping_outlined, AppColors.textSecondary, 'Transformer en Bon de Livraison'),
-                  PopupMenuDivider(height: 1),
+                  const PopupMenuDivider(height: 1),
                 ] else ...[
                   if (currentQuote.isConverted && currentQuote.convertedTo == 'invoice') ...[
                     _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture créée'),
-                    PopupMenuDivider(height: 1),
+                    const PopupMenuDivider(height: 1),
                   ],
                   if (currentQuote.isConvertedToOrder) ...[
                     _buildMenuItem('view_order', Icons.shopping_cart_outlined, AppColors.success, 'Voir la commande client créée'),
-                    PopupMenuDivider(height: 1),
+                    const PopupMenuDivider(height: 1),
                   ],
                   if (currentQuote.isConvertedToDelivery) ...[
                     _buildMenuItem('view_delivery', Icons.local_shipping_outlined, AppColors.success, 'Voir le bon de livraison créé'),
-                    PopupMenuDivider(height: 1),
+                    const PopupMenuDivider(height: 1),
                   ],
                 ],
                 _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-//                 PopupMenuDivider(height: 1),
-//                 _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
               ],
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header Card
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surface,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Réf: ${currentQuote.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Builder(
-                            builder: (context) {
-                              final label = currentQuote.status.label;
-                              final color = MobileStatusColors.getColorForStatus(label);
-                              return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: color.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
-                                ),
-                                child: Text(
-                                  label,
-                                  style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12),
-                                ),
-                              );
-                            }
-                          ),
-                        ],
-                      ),
-                      Divider(height: 24),
-                      _buildInfoRow('Client', currentQuote.customerName ?? 'Inconnu'),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Date', formatDateTimeLong(currentQuote.date)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Date de validité', formatDateTimeLong(currentQuote.validityDate)),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              // Articles
-              if (currentQuote.items.isNotEmpty) ...[
-                Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                ...currentQuote.items.map((item) {
-                  final product = _getProduct(item.productId);
-                  final productName = product?.name ?? item.productName ?? 'Produit Inconnu';
-                  final refCode = product?.reference ?? product?.code;
-                  final subtitleText = (refCode != null && refCode.isNotEmpty)
-                      ? refCode
-                      : ((item.description != null && item.description!.isNotEmpty && item.description != productName) ? item.description! : null);
-
-                  return Card(
-                    elevation: 1,
-                    margin: EdgeInsets.only(bottom: 8),
-                    color: AppColors.surface,
-                    surfaceTintColor: AppColors.surface,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border.withOpacity(0.5))),
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(productName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
-                          if (subtitleText != null) ...[
-                            SizedBox(height: 4),
-                            Text(subtitleText, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                          ],
-                          SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
-                                child: Text('${item.quantity} x ${formatCurrencyDT(item.unitPrice)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
-                              ),
-                              Text(formatCurrencyDT(item.computedTotalHT), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-                SizedBox(height: 16),
-              ],
-              // Totals
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surfaceAlt,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _buildInfoRow('Total HT', formatCurrencyDT(currentQuote.totalHT)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Total TVA', formatCurrencyDT(currentQuote.totalTva)),
-                      if ((currentQuote.totalTTC - currentQuote.totalHT - currentQuote.totalTva) > 0.01) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentQuote.totalTTC - currentQuote.totalHT - currentQuote.totalTva)),
-                      ],
-                      Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentQuote.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (currentQuote.notes != null && currentQuote.notes!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentQuote.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                  ),
-                ),
-              ],
-              SizedBox(height: 32),
-            ],
-          ),
+        body: PremiumDetailShell(
+          documentType: 'Devis',
+          referenceNumber: currentQuote.number,
+          statusLabel: statusLabel,
+          statusColor: statusColor,
+          infoSections: infoSections,
+          articles: articles,
+          totals: totals,
+          notes: currentQuote.notes,
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-        SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            value,
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary),
-            textAlign: TextAlign.end,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 2,
-          ),
-        ),
-      ],
-    );
-  }
 
   PopupMenuItem<String> _buildMenuItem(String value, IconData icon, Color iconColor, String text) {
     return PopupMenuItem<String>(
@@ -415,8 +331,12 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
         PdfService.instance.downloadDocument(context, doc);
         break;
       case 'email':
+        final docEmail = DocumentWrapper.fromQuote(quote);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
       case 'whatsapp':
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fonctionnalité en cours de développement')));
+        final docWa = DocumentWrapper.fromQuote(quote);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));

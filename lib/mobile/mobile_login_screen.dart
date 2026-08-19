@@ -405,6 +405,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                                 );
                               },
                             ),
+                            /*
                             if (_canUseBiometrics) ...[
                               const SizedBox(height: 10),
                               SizedBox(
@@ -455,6 +456,7 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                                 ),
                               ),
                             ],
+                            */
                             const SizedBox(height: 14),
 
                             // Sign Up link

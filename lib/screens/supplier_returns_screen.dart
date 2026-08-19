@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 import '../blocs/supplier_returns/supplier_returns_bloc.dart';
 import '../blocs/supplier_returns/supplier_returns_event.dart';
@@ -23,6 +22,8 @@ import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
+import '../services/document_share_service.dart';
 
 enum SupplierReturnStatus {
   draft('Brouillon'),
@@ -1162,11 +1163,19 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
   void _handleAction(BuildContext context, String action, SupplierReturn note) {
     switch (action) {
       case 'view':
+        final statusEnum = SupplierReturnStatus.values.firstWhere(
+          (e) => e.name == note.status,
+          orElse: () => SupplierReturnStatus.draft,
+        );
         final doc = DocumentWrapper.fromSupplierReturn(note);
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DocumentPreviewScreen(document: doc),
+            builder: (_) => DocumentDetailScreen(
+              document: doc,
+              status: statusEnum.label,
+              statusColor: statusEnum.color,
+            ),
           ),
         );
         break;
@@ -1194,6 +1203,14 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
       case 'pdf':
         final doc = DocumentWrapper.fromSupplierReturn(note);
         PdfService.instance.downloadDocument(context, doc);
+        break;
+      case 'email':
+        final docEmail = DocumentWrapper.fromSupplierReturn(note);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = DocumentWrapper.fromSupplierReturn(note);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));

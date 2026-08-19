@@ -13,13 +13,16 @@ import '../../models/document_wrapper.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
+import '../../services/document_share_service.dart';
 import '../../database/database_helper.dart';
 import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../blocs/warehouses/warehouses_state.dart';
 
+import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
-import '../../screens/create_stock_withdrawal_screen.dart';
+import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_exit_voucher_form_screen.dart';
+import '../../screens/create_stock_withdrawal_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 
@@ -48,8 +51,6 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
     _loadFullWithdrawal();
     _loadProducts();
   }
-
-  // removed _loadWarehouseName()
 
   Future<void> _loadProducts() async {
     try {
@@ -88,10 +89,12 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
     return DocumentWrapper(
       id: note.id,
       number: note.number,
-      documentTitle: "BON DE SORTIE",
+      documentTitle: widget.isExitVoucher ? "BON DE SORTIE" : "BON DE PRÉLÈVEMENT",
       date: note.date,
-      totalHT: note.totalHTAfterDiscount,
+      customerName: note.customerName,
+      totalHT: note.subTotalHT,
       totalTva: note.totalTVA,
+      stampTax: note.timbreFiscal ?? 0,
       totalTTC: note.totalTTC,
       notes: note.notes,
       items: note.items.map((item) {
@@ -114,7 +117,7 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
       }).toList(),
       customData: {
         'warehouseId': note.warehouseId,
-        'warehouseName': 'Entrepôt par défaut', // or fetch if available
+        'warehouseName': 'Entrepôt par défaut',
         'createdBy': 'Admin',
       },
     );
@@ -129,13 +132,87 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
       if (wState is WarehousesLoaded) {
         final match = wState.warehouses.cast<dynamic>().firstWhere(
           (w) => w.id == id, 
-          orElse: () => null
+          orElse: () => null,
         );
         if (match != null) return match.name;
       }
       return 'Entrepôt par défaut';
     }
     final String warehouseName = getWhName(currentWithdrawal.warehouseId);
+
+    final statusEnum = StockWithdrawalStatus.values.firstWhere(
+      (s) => s.name == currentWithdrawal.status, 
+      orElse: () => StockWithdrawalStatus.draft,
+    );
+    final statusLabel = statusEnum.label;
+    final statusColor = statusEnum.color;
+    final resKey = widget.isExitVoucher ? UserPermissionResources.salesExitVouchers : UserPermissionResources.stockWithdrawalVouchers;
+
+    final infoSections = [
+      PremiumInfoSection(
+        title: 'Informations Générales',
+        icon: Icons.info_outline,
+        fields: [
+          if (currentWithdrawal.customerName != null && currentWithdrawal.customerName!.isNotEmpty)
+            PremiumInfoField(
+              label: 'Client',
+              value: currentWithdrawal.customerName!,
+              icon: Icons.person_outline,
+              isHighlight: true,
+            ),
+          PremiumInfoField(
+            label: 'Entrepôt',
+            value: warehouseName,
+            icon: Icons.warehouse_outlined,
+            isHighlight: currentWithdrawal.customerName == null,
+          ),
+          PremiumInfoField(
+            label: 'Date',
+            value: formatDateTimeLong(currentWithdrawal.date),
+            icon: Icons.calendar_today_outlined,
+          ),
+          if (currentWithdrawal.projectName != null && currentWithdrawal.projectName!.isNotEmpty)
+            PremiumInfoField(
+              label: 'Projet',
+              value: currentWithdrawal.projectName!,
+              icon: Icons.work_outline,
+            ),
+        ],
+      ),
+    ];
+
+    final articles = currentWithdrawal.items.map((item) {
+      final product = _getProduct(item.productId);
+      final productName = product?.name ?? 'Article non spécifié';
+      final refCode = product?.reference ?? product?.code;
+
+      return PremiumArticleItem(
+        reference: refCode,
+        designation: productName,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        tvaRate: item.tvaRate > 0 ? item.tvaRate : null,
+        discountPercent: item.discountPercent > 0 ? item.discountPercent : null,
+        totalHT: item.totalHT,
+      );
+    }).toList();
+
+    final totals = <PremiumTotalRow>[
+      PremiumTotalRow(
+        label: 'Total HT',
+        amount: currentWithdrawal.subTotalHT,
+      ),
+      PremiumTotalRow(
+        label: 'Total TVA',
+        amount: currentWithdrawal.totalTVA,
+      ),
+      PremiumTotalRow(
+        label: 'Total TTC',
+        amount: currentWithdrawal.totalTTC,
+        isGrandTotal: true,
+      ),
+    ];
 
     return MultiBlocListener(
       listeners: [
@@ -145,9 +222,9 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
             if (state is StockWithdrawalsLoaded) {
               try {
                 final updatedWithdrawal = state.withdrawals.firstWhere((q) => (q as StockWithdrawal).id == currentWithdrawal.id);
-                if ((updatedWithdrawal as StockWithdrawal).id == currentWithdrawal.id && mounted) {
+                if (mounted) {
                   setState(() {
-                    currentWithdrawal = updatedWithdrawal.copyWith(items: currentWithdrawal.items);
+                    currentWithdrawal = (updatedWithdrawal as StockWithdrawal).copyWith(items: currentWithdrawal.items);
                   });
                 }
               } catch (_) {
@@ -164,7 +241,7 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
             if (state is ExitVouchersLoaded) {
               try {
                 final updatedWithdrawal = state.withdrawals.firstWhere((q) => q.id == currentWithdrawal.id);
-                if (updatedWithdrawal.id == currentWithdrawal.id && mounted) {
+                if (mounted) {
                   setState(() {
                     currentWithdrawal = updatedWithdrawal.copyWith(items: currentWithdrawal.items);
                   });
@@ -181,15 +258,17 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('BS ${currentWithdrawal.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text(
+            '${widget.isExitVoucher ? 'BS' : 'BP'} ${currentWithdrawal.number}', 
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           backgroundColor: AppColors.primary,
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentWithdrawal),
               itemBuilder: (_) {
-                final resKey = widget.isExitVoucher ? UserPermissionResources.salesExitVouchers : UserPermissionResources.stockWithdrawalVouchers;
                 return [
                   _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
                   if (PermissionService.instance.canUpdate(resKey)) ...[
@@ -201,189 +280,29 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                     _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
                   ],
                   const PopupMenuDivider(height: 1),
-                  _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
+                  _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
+                  const PopupMenuDivider(height: 1),
+                  _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
+                  const PopupMenuDivider(height: 1),
+                  _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
+                  const PopupMenuDivider(height: 1),
+                  _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
                 ];
               },
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surface,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Réf: ${currentWithdrawal.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Builder(
-                            builder: (context) {
-                              final statusEnum = StockWithdrawalStatus.values.firstWhere((s) => s.name == currentWithdrawal.status, orElse: () => StockWithdrawalStatus.draft);
-                              return Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: statusEnum.color.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(statusEnum.label, style: TextStyle(color: statusEnum.color, fontWeight: FontWeight.bold, fontSize: 12)),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      _buildInfoRow('Date', formatDateTimeLong(currentWithdrawal.date)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Entrepôt', warehouseName),
-                      if (currentWithdrawal.projectName != null) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('Projet', currentWithdrawal.projectName!),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              if (currentWithdrawal.items.isEmpty)
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
-                  ),
-                )
-              else
-                ...currentWithdrawal.items.map((item) {
-                  final product = _getProduct(item.productId);
-                  final productName = product?.name ?? item.description ?? 'Article non spécifié';
-                  final unit = product?.unit ?? 'pièces';
-                  final qtyText = widget.isExitVoucher
-                      ? '${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity} x ${formatCurrencyDT(item.unitPrice)}'
-                      : '${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity} $unit';
-                  return Card(
-                    elevation: 0,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                    color: AppColors.surface,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(productName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                if (product?.reference != null && product!.reference!.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(product.reference!, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                                ] else if (product?.code != null && product!.code.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(product.code, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                                ],
-                                const SizedBox(height: 4),
-                                if (widget.isExitVoucher)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
-                                    child: Text(qtyText, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
-                                  )
-                                else
-                                  Text(qtyText, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                              ],
-                            ),
-                          ),
-                          if (widget.isExitVoucher)
-                            Text(
-                              formatCurrencyDT(item.totalHT),
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primary),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              if (widget.isExitVoucher) ...[
-                const SizedBox(height: 16),
-                // Totals
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surfaceAlt,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        _buildInfoRow('Total HT', formatCurrencyDT(currentWithdrawal.subTotalHT)),
-                        const SizedBox(height: 8),
-                        _buildInfoRow('Total TVA', formatCurrencyDT(currentWithdrawal.totalTVA)),
-                        if (currentWithdrawal.timbreFiscal > 0) ...[
-                          const SizedBox(height: 8),
-                          _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentWithdrawal.timbreFiscal)),
-                        ],
-                        const Divider(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary)),
-                            Text(formatCurrencyDT(currentWithdrawal.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-              if (currentWithdrawal.notes != null && currentWithdrawal.notes!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentWithdrawal.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                  ),
-                ),
-              ],
-              SizedBox(height: 32),
-            ],
-          ),
+        body: PremiumDetailShell(
+          documentType: widget.isExitVoucher ? 'Bon de Sortie' : 'Bon de Prélèvement',
+          referenceNumber: currentWithdrawal.number,
+          statusLabel: statusLabel,
+          statusColor: statusColor,
+          infoSections: infoSections,
+          articles: articles,
+          totals: totals,
+          notes: currentWithdrawal.notes,
         ),
       ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
-      ],
     );
   }
 
@@ -466,6 +385,18 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
       case 'print':
         final doc = _createDocumentWrapper(withdrawal);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
+        break;
+      case 'pdf':
+        final docPdf = _createDocumentWrapper(withdrawal);
+        PdfService.instance.downloadDocument(context, docPdf);
+        break;
+      case 'email':
+        final docEmail = _createDocumentWrapper(withdrawal);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = _createDocumentWrapper(withdrawal);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));

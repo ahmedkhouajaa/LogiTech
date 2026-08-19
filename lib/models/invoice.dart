@@ -216,25 +216,40 @@ class InvoiceItem {
   double get totalTTC => computedTotalHT + tvaAmount;
 
   Map<String, dynamic> toMap() => {
-        'id': id, 'invoice_id': invoiceId, 'product_id': productId,
-        'description': description, 'quantity': quantity,
-        'unit_price': unitPrice, 'tva_rate': tvaRate,
-        'discount_percent': discountPercent, 'total_ht': computedTotalHT,
+        'id': id,
+        'invoice_id': invoiceId,
+        'product_id': productId,
+        'product_name': productName,
+        'description': description,
+        'quantity': quantity,
+        'unit_price': unitPrice,
+        'tva_rate': tvaRate,
+        'discount_percent': discountPercent,
+        'total_ht': computedTotalHT,
+        'show_description': showDescription ? 1 : 0,
+        'show_discount': showDiscount ? 1 : 0,
         'custom_fields_json': jsonEncode(customFields),
       };
 
-  factory InvoiceItem.fromMap(Map<String, dynamic> map) => InvoiceItem(
-        id: map['id']?.toString() ?? '', invoiceId: map['invoice_id']?.toString() ?? '',
-        productId: map['product_id']?.toString() ?? '',
-        productName: map['product_name']?.toString(),
-        description: map['description']?.toString(),
-        quantity: double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0,
-        unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
-        tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
-        discountPercent: double.tryParse(map['discount_percent']?.toString() ?? '0') ?? 0.0,
-        totalHT: double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0,
-        customFields: _parseCustomFields(map['custom_fields_json']?.toString()),
-      );
+  factory InvoiceItem.fromMap(Map<String, dynamic> map) {
+    final pName = map['product_name']?.toString();
+    final desc = map['description']?.toString();
+    return InvoiceItem(
+      id: map['id']?.toString() ?? '',
+      invoiceId: map['invoice_id']?.toString() ?? '',
+      productId: map['product_id']?.toString() ?? '',
+      productName: (pName != null && pName.isNotEmpty) ? pName : desc,
+      description: desc,
+      quantity: double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0,
+      unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
+      tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
+      discountPercent: double.tryParse(map['discount_percent']?.toString() ?? '0') ?? 0.0,
+      totalHT: double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0,
+      showDescription: map['show_description'] == 1 || map['show_description'] == true,
+      showDiscount: map['show_discount'] == 1 || map['show_discount'] == true,
+      customFields: _parseCustomFields(map['custom_fields_json']?.toString()),
+    );
+  }
 
   static Map<String, String> _parseCustomFields(String? jsonStr) {
     if (jsonStr == null || jsonStr.isEmpty) return {};

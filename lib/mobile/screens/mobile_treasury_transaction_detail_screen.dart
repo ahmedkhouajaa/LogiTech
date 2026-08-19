@@ -7,6 +7,7 @@ import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import '../../blocs/treasury_accounts/treasury_accounts_bloc.dart';
+import '../../widgets/premium_detail_shell.dart';
 import 'forms/mobile_transaction_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
@@ -41,12 +42,12 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text('Confirmer la suppression'),
-          content: Text('Voulez-vous vraiment supprimer cette transaction ?'),
+          title: const Text('Confirmer la suppression'),
+          content: const Text('Voulez-vous vraiment supprimer cette transaction ?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Annuler'),
+              child: const Text('Annuler'),
             ),
             TextButton(
               onPressed: () {
@@ -54,7 +55,7 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
                 Navigator.pop(ctx);
                 Navigator.pop(context);
               },
-              child: Text('Supprimer', style: TextStyle(color: Colors.red)),
+              child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
             ),
           ],
         ),
@@ -68,8 +69,8 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
       child: Row(
         children: [
           Icon(icon, color: const Color(0xFF64748B), size: 20),
-          SizedBox(width: 8),
-          Text(text, style: TextStyle(color: const Color(0xFF64748B))),
+          const SizedBox(width: 8),
+          Text(text, style: const TextStyle(color: Color(0xFF64748B))),
         ],
       ),
     );
@@ -77,11 +78,71 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
 
   @override
   Widget build(BuildContext context) {
+    final isIncome = currentTransaction.type == 'income';
+    final statusLabel = isIncome ? 'Entrée' : 'Sortie';
+    final statusColor = isIncome ? AppColors.success : AppColors.error;
+
+    final accountState = context.watch<TreasuryAccountsBloc>().state;
+    String accountDisplayName = currentTransaction.accountName ?? currentTransaction.accountId;
+    if (accountState is TreasuryAccountsLoaded) {
+      final acc = accountState.accounts.cast<dynamic>().firstWhere(
+        (a) => a?.id == currentTransaction.accountId, 
+        orElse: () => null,
+      );
+      if (acc != null) accountDisplayName = acc.name;
+    }
+
+    final infoSections = [
+      PremiumInfoSection(
+        title: 'Détails de la Transaction',
+        icon: Icons.account_balance_wallet_outlined,
+        fields: [
+          PremiumInfoField(
+            label: 'Compte de trésorerie',
+            value: accountDisplayName,
+            icon: Icons.account_balance_outlined,
+            isHighlight: true,
+          ),
+          PremiumInfoField(
+            label: 'Date & Heure',
+            value: DateFormat('dd MMM yyyy - HH:mm').format(currentTransaction.dateTransaction),
+            icon: Icons.calendar_today_outlined,
+          ),
+          if (currentTransaction.category != null && currentTransaction.category!.isNotEmpty)
+            PremiumInfoField(
+              label: 'Catégorie',
+              value: currentTransaction.category!,
+              icon: Icons.category_outlined,
+            ),
+          if (currentTransaction.projectName != null && currentTransaction.projectName!.isNotEmpty)
+            PremiumInfoField(
+              label: 'Projet',
+              value: currentTransaction.projectName!,
+              icon: Icons.work_outline,
+            ),
+          if (currentTransaction.withholdingTax > 0)
+            PremiumInfoField(
+              label: 'Retenue à la source',
+              value: formatCurrencyDT(currentTransaction.withholdingTax),
+              icon: Icons.percent_outlined,
+            ),
+        ],
+      ),
+    ];
+
+    final totals = <PremiumTotalRow>[
+      PremiumTotalRow(
+        label: isIncome ? 'Montant Entré' : 'Montant Sorti',
+        amount: currentTransaction.amount,
+        isGrandTotal: true,
+      ),
+    ];
+
     return BlocListener<TreasuryTransactionsBloc, TreasuryTransactionsState>(
       listener: (context, state) {
         if (state is TreasuryTransactionsLoaded) {
           try {
-             final updated = state.transactions.firstWhere((t) => t.id == currentTransaction.id);
+             final updated = state.transactions.firstWhere((p) => p.id == currentTransaction.id);
              if (mounted) {
                setState(() {
                  currentTransaction = updated;
@@ -95,12 +156,12 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('Détails de la transaction', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text(currentTransaction.transactionNumber, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primary,
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: _handleAction,
               itemBuilder: (_) => [
                 if (PermissionService.instance.canUpdate(UserPermissionResources.treasuryTransactions))
@@ -114,124 +175,16 @@ class _MobileTreasuryTransactionDetailScreenState extends State<MobileTreasuryTr
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surface,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            currentTransaction.transactionNumber,
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: currentTransaction.type == 'income' ? AppColors.success.withOpacity(0.1) : AppColors.error.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              currentTransaction.type == 'income' ? 'Entrée' : 'Sortie',
-                              style: TextStyle(
-                                color: currentTransaction.type == 'income' ? AppColors.success : AppColors.error,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      _buildDetailRow('Date et heure', DateFormat('dd MMM yyyy - HH:mm').format(currentTransaction.dateTransaction)),
-                      Divider(height: 24),
-                      BlocBuilder<TreasuryAccountsBloc, TreasuryAccountsState>(
-                        builder: (context, accountState) {
-                          String displayName = currentTransaction.accountName ?? currentTransaction.accountId;
-                          if (accountState is TreasuryAccountsLoaded) {
-                            final acc = accountState.accounts.cast<dynamic>().firstWhere(
-                              (a) => a?.id == currentTransaction.accountId, 
-                              orElse: () => null
-                            );
-                            if (acc != null) displayName = acc.name;
-                          }
-                          return _buildDetailRow('Compte', displayName);
-                        },
-                      ),
-                      SizedBox(height: 12),
-                      _buildDetailRow('Montant', formatCurrency(currentTransaction.amount)),
-                      if (currentTransaction.category != null) ...[
-                         SizedBox(height: 12),
-                         _buildDetailRow('Catégorie', currentTransaction.category!),
-                      ],
-                      if (currentTransaction.projectName != null) ...[
-                         SizedBox(height: 12),
-                         _buildDetailRow('Projet', currentTransaction.projectName!),
-                      ],
-                      if (currentTransaction.withholdingTax > 0) ...[
-                         SizedBox(height: 12),
-                         _buildDetailRow('Retenue à la source', '${formatCurrency(currentTransaction.withholdingTax)} (${currentTransaction.withholdingTaxRate}%)'),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              if (currentTransaction.description != null && currentTransaction.description!.isNotEmpty) ...[
-                 SizedBox(height: 16),
-                 Card(
-                   elevation: 0,
-                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                   color: AppColors.surface,
-                   child: Padding(
-                     padding: EdgeInsets.all(16.0),
-                     child: Column(
-                       crossAxisAlignment: CrossAxisAlignment.start,
-                       children: [
-                         Text('Motif / Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textSecondary)),
-                         SizedBox(height: 8),
-                         Text(currentTransaction.description!, style: TextStyle(fontSize: 16)),
-                       ],
-                     ),
-                   ),
-                 ),
-              ]
-            ],
-          ),
+        body: PremiumDetailShell(
+          documentType: isIncome ? 'Mouvement Trésorerie (Entrée)' : 'Mouvement Trésorerie (Sortie)',
+          referenceNumber: currentTransaction.transactionNumber,
+          statusLabel: statusLabel,
+          statusColor: statusColor,
+          infoSections: infoSections,
+          totals: totals,
+          notes: currentTransaction.description,
         ),
       ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 2,
-          child: Text(
-            label,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-          ),
-        ),
-        Expanded(
-          flex: 3,
-          child: Text(
-            value,
-            style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-            textAlign: TextAlign.right,
-          ),
-        ),
-      ],
     );
   }
 }

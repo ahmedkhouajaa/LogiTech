@@ -761,6 +761,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                           setState(() {
                             _items[index] = item.copyWith(
                               productId: selection.id,
+                              productName: selection.name,
                               description: selection.name,
                               unitPrice: selection.sellingPrice,
                               tvaRate: selection.tvaRate,
@@ -1000,6 +1001,7 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
                         id: _uuid.v4(),
                         orderId: widget.existing?.id ?? '',
                         productId: product.id,
+                        productName: product.name,
                         description: product.name,
                         quantity: 1,
                         unitPrice: product.sellingPrice,

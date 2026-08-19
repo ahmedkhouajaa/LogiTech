@@ -23,6 +23,8 @@ import 'create_invoice_screen.dart';
 import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import '../services/document_share_service.dart';
+import 'document_detail_screen.dart';
 import '../database/database_helper.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
@@ -1053,8 +1055,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DocumentPreviewScreen(
+            builder: (_) => DocumentDetailScreen(
               document: DocumentWrapper.fromInvoice(inv),
+              status: inv.status.label,
+              statusColor: inv.status.color,
             ),
           ),
         );
@@ -1118,6 +1122,14 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       case 'pdf':
         final doc = DocumentWrapper.fromInvoice(inv);
         PdfService.instance.downloadDocument(context, doc);
+        break;
+      case 'email':
+        final docEmail = DocumentWrapper.fromInvoice(inv);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = DocumentWrapper.fromInvoice(inv);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));

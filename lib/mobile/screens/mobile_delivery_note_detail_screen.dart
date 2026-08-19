@@ -22,9 +22,11 @@ import '../../models/document_wrapper.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
+import '../../services/document_share_service.dart';
 import '../../services/auth_service.dart';
 import '../../database/database_helper.dart';
 
+import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
 import '../../widgets/delivery_note_payment_dialog.dart';
 import 'forms/mobile_delivery_note_form_screen.dart';
@@ -90,6 +92,83 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
 
   @override
   Widget build(BuildContext context) {
+    final statusEnum = DeliveryNoteStatus.values.firstWhere(
+      (s) => s.name == currentDeliveryNote.status,
+      orElse: () => DeliveryNoteStatus.draft,
+    );
+    final statusLabel = statusEnum.label;
+    final statusColor = statusEnum.color;
+
+    final infoSections = [
+      PremiumInfoSection(
+        title: 'Informations Générales',
+        icon: Icons.info_outline,
+        fields: [
+          PremiumInfoField(
+            label: 'Client',
+            value: currentDeliveryNote.customerName ?? 'Inconnu',
+            icon: Icons.person_outline,
+            isHighlight: true,
+          ),
+          PremiumInfoField(
+            label: 'Date de livraison',
+            value: formatDateTimeLong(currentDeliveryNote.date),
+            icon: Icons.calendar_today_outlined,
+          ),
+          if (currentDeliveryNote.projectName != null && currentDeliveryNote.projectName!.isNotEmpty)
+            PremiumInfoField(
+              label: 'Projet',
+              value: currentDeliveryNote.projectName!,
+              icon: Icons.folder_outlined,
+            ),
+        ],
+      ),
+    ];
+
+    final articles = currentDeliveryNote.items.map((item) {
+      final product = _getProduct(item.productId);
+      final productName = product?.name ?? item.productName ?? 'Produit Inconnu';
+      final refCode = product?.reference ?? product?.code;
+      final subtitle = (refCode != null && refCode.isNotEmpty)
+          ? refCode
+          : ((item.description != null && item.description!.isNotEmpty && item.description != productName)
+              ? item.description
+              : null);
+
+      return PremiumArticleItem(
+        reference: subtitle,
+        designation: productName,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        tvaRate: item.tvaRate > 0 ? item.tvaRate : null,
+        discountPercent: item.discountPercent > 0 ? item.discountPercent : null,
+        totalHT: item.totalHT,
+      );
+    }).toList();
+
+    final stampTax = currentDeliveryNote.timbreFiscal;
+    final totals = <PremiumTotalRow>[
+      PremiumTotalRow(
+        label: 'Total HT',
+        amount: currentDeliveryNote.subTotalHT,
+      ),
+      PremiumTotalRow(
+        label: 'Total TVA',
+        amount: currentDeliveryNote.totalTVA,
+      ),
+      if (stampTax > 0.01)
+        PremiumTotalRow(
+          label: 'Droit de Timbre',
+          amount: stampTax,
+        ),
+      PremiumTotalRow(
+        label: 'Total TTC',
+        amount: currentDeliveryNote.totalTTC,
+        isGrandTotal: true,
+      ),
+    ];
+
     return BlocListener<DeliveryNotesBloc, DeliveryNotesState>(
       listener: (context, state) {
         if (state is DeliveryNotesLoaded) {
@@ -111,12 +190,12 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('BL ${currentDeliveryNote.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('BL ${currentDeliveryNote.number}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primary,
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentDeliveryNote),
               itemBuilder: (_) => [
                 _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
@@ -129,172 +208,46 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                   _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
                 ],
                 const PopupMenuDivider(height: 1),
-                _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-                PopupMenuDivider(height: 1),
-                if (currentDeliveryNote.isConvertedToInvoice) ...[
-                  _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture créée'),
-                  PopupMenuDivider(height: 1),
-                ] else if (currentDeliveryNote.isConvertedToReturn) ...[
-                  _buildMenuItem('view_return', Icons.assignment_return_outlined, AppColors.success, 'Voir le bon de retour créé'),
-                  PopupMenuDivider(height: 1),
-                ] else ...[
-                  _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
-                  PopupMenuDivider(height: 1),
+                _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter Paiement'),
+                const PopupMenuDivider(height: 1),
+                if (!currentDeliveryNote.isConvertedToInvoice && !currentDeliveryNote.isConvertedToReturn) ...[
                   _buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture'),
-                  PopupMenuDivider(height: 1),
-                  _buildMenuItem('to_return', Icons.assignment_return_outlined, AppColors.textSecondary, 'Transformer en Bon de Retour'),
-                  PopupMenuDivider(height: 1),
+                  const PopupMenuDivider(height: 1),
+                  _buildMenuItem('to_return', Icons.assignment_return_outlined, AppColors.textSecondary, 'Créer un Bon de Retour'),
+                  const PopupMenuDivider(height: 1),
+                ] else ...[
+                  if (currentDeliveryNote.isConvertedToInvoice) ...[
+                    _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture créée'),
+                    const PopupMenuDivider(height: 1),
+                  ],
+                  if (currentDeliveryNote.isConvertedToReturn) ...[
+                    _buildMenuItem('view_return', Icons.assignment_return_outlined, AppColors.success, 'Voir le bon de retour créé'),
+                    const PopupMenuDivider(height: 1),
+                  ],
                 ],
+                _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-//                 PopupMenuDivider(height: 1),
-//                 _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-//                 PopupMenuDivider(height: 1),
-//                 _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'),
               ],
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surface,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Réf: ${currentDeliveryNote.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Builder(
-                            builder: (context) {
-                              final statusEnum = DeliveryNoteStatus.values.firstWhere((s) => s.name == currentDeliveryNote.status, orElse: () => DeliveryNoteStatus.draft);
-                              return Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: statusEnum.color.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  statusEnum.label,
-                                  style: TextStyle(color: statusEnum.color, fontWeight: FontWeight.bold, fontSize: 12),
-                                ),
-                              );
-                            }
-                          ),
-                        ],
-                      ),
-                      Divider(height: 24),
-                      _buildInfoRow('Client', currentDeliveryNote.customerName ?? 'Inconnu'),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Date', formatDateTimeLong(currentDeliveryNote.date)),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              if (currentDeliveryNote.items.isNotEmpty) ...[
-                Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                ...currentDeliveryNote.items.map((item) {
-                  final product = _getProduct(item.productId);
-                  final productName = product?.name ?? item.description ?? 'Produit Inconnu';
-                  final refCode = product?.reference ?? product?.code;
-                  final subtitleText = (refCode != null && refCode.isNotEmpty)
-                      ? refCode
-                      : ((item.description != null && item.description!.isNotEmpty && item.description != productName) ? item.description! : null);
-
-                  return Card(
-                    elevation: 1,
-                    margin: EdgeInsets.only(bottom: 8),
-                    color: AppColors.surface,
-                    surfaceTintColor: AppColors.surface,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border.withOpacity(0.5))),
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(productName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
-                          if (subtitleText != null) ...[
-                            SizedBox(height: 4),
-                            Text(subtitleText, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                          ],
-                          SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
-                                child: Text('${item.quantity} x ${formatCurrencyDT(item.unitPrice)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
-                              ),
-                              Text(formatCurrencyDT(item.totalHT), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-                SizedBox(height: 16),
-              ],
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surfaceAlt,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _buildInfoRow('Total HT', formatCurrencyDT(currentDeliveryNote.totalHTAfterDiscount)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Total TVA', formatCurrencyDT(currentDeliveryNote.totalTVA)),
-                      if ((currentDeliveryNote.totalTTC - currentDeliveryNote.totalHTAfterDiscount - currentDeliveryNote.totalTVA) > 0.01) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentDeliveryNote.totalTTC - currentDeliveryNote.totalHTAfterDiscount - currentDeliveryNote.totalTVA)),
-                      ],
-                      Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentDeliveryNote.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (currentDeliveryNote.notes != null && currentDeliveryNote.notes!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentDeliveryNote.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                  ),
-                ),
-              ],
-              SizedBox(height: 32),
-            ],
-          ),
+        body: PremiumDetailShell(
+          documentType: 'Bon de Livraison',
+          referenceNumber: currentDeliveryNote.number,
+          statusLabel: statusLabel,
+          statusColor: statusColor,
+          infoSections: infoSections,
+          articles: articles,
+          totals: totals,
+          notes: currentDeliveryNote.notes,
+          termsAndConditions: currentDeliveryNote.conditionsGenerales,
         ),
       ),
     );
@@ -405,8 +358,12 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
         PdfService.instance.downloadDocument(context, doc);
         break;
       case 'email':
+        final docEmail = DocumentWrapper.fromDeliveryNote(deliveryNote);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
       case 'whatsapp':
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fonctionnalité en cours de développement')));
+        final docWa = DocumentWrapper.fromDeliveryNote(deliveryNote);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));

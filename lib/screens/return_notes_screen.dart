@@ -25,6 +25,8 @@ import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
+import '../services/document_share_service.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../models/payment_model.dart';
 import 'package:uuid/uuid.dart';
@@ -1153,11 +1155,19 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
   void _handleAction(BuildContext context, String action, ReturnNote note) {
     switch (action) {
       case 'view':
+        final statusEnum = ReturnNoteStatus.values.firstWhere(
+          (e) => e.name == note.status,
+          orElse: () => ReturnNoteStatus.draft,
+        );
         final doc = DocumentWrapper.fromReturnNote(note);
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DocumentPreviewScreen(document: doc),
+            builder: (_) => DocumentDetailScreen(
+              document: doc,
+              status: statusEnum.label,
+              statusColor: statusEnum.color,
+            ),
           ),
         );
         break;
@@ -1200,6 +1210,14 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
       case 'pdf':
         final doc = DocumentWrapper.fromReturnNote(note);
         PdfService.instance.downloadDocument(context, doc);
+        break;
+      case 'email':
+        final docEmail = DocumentWrapper.fromReturnNote(note);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = DocumentWrapper.fromReturnNote(note);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));

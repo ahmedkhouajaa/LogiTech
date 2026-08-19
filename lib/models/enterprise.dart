@@ -15,6 +15,7 @@ class Enterprise {
   final String? rib;
   final String ownerId;
   final List<EnterpriseMember> members;
+  final bool defaultsCreated;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -31,6 +32,7 @@ class Enterprise {
     this.rib,
     required this.ownerId,
     this.members = const [],
+    this.defaultsCreated = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -49,6 +51,8 @@ class Enterprise {
         'rib': rib,
         'owner_id': ownerId,
         'members': members.map((m) => m.toMap()).toList(),
+        'defaults_created': defaultsCreated,
+        'defaultsCreated': defaultsCreated,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
@@ -74,6 +78,12 @@ class Enterprise {
       rib: map['rib']?.toString(),
       ownerId: map['owner_id']?.toString() ?? '',
       members: parsedMembers,
+      defaultsCreated: map['defaults_created'] == true ||
+          map['defaults_created'] == 1 ||
+          map['defaults_created'] == 'true' ||
+          map['defaultsCreated'] == true ||
+          map['defaultsCreated'] == 1 ||
+          map['defaultsCreated'] == 'true',
       createdAt: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()
           : DateTime.now(),
@@ -96,6 +106,7 @@ class Enterprise {
     String? rib,
     String? ownerId,
     List<EnterpriseMember>? members,
+    bool? defaultsCreated,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) =>
@@ -112,6 +123,7 @@ class Enterprise {
         rib: rib ?? this.rib,
         ownerId: ownerId ?? this.ownerId,
         members: members ?? this.members,
+        defaultsCreated: defaultsCreated ?? this.defaultsCreated,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -129,6 +141,8 @@ class Enterprise {
         'address': address,
         'rib': rib,
         'owner_id': ownerId,
+        'defaults_created': defaultsCreated ? 1 : 0,
+        'defaultsCreated': defaultsCreated,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };

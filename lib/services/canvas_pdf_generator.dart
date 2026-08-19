@@ -356,7 +356,13 @@ class CanvasPdfGenerator {
 
     final data = document.items.map((item) {
       return List.generate(headers.length, (idx) {
-        if (idx == 0) return item.productName;
+        if (idx == 0) {
+          final des = item.customFields['designation'];
+          if (des != null && des.isNotEmpty && des != 'Produit Inconnu') {
+            return des;
+          }
+          return item.productName;
+        }
         if (idx == 1) return formatQuantity(item.quantity);
         if (idx == 2) return formatCurrency(item.unitPrice, symbol: '');
         if (idx == 3) return formatPercentage(item.tvaRate);

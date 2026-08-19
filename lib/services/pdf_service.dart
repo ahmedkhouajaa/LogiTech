@@ -12,6 +12,7 @@ import '../models/document_template.dart';
 import '../models/canvas/canvas_element.dart';
 import '../utils/helpers.dart';
 import '../utils/platform_utils.dart';
+import '../models/product.dart';
 import '../database/database_helper.dart';
 import 'canvas_pdf_generator.dart';
 
@@ -23,17 +24,40 @@ class PdfService {
     final rawSettings = await DatabaseHelper.instance.getCompanySettings();
     final CompanySettings companySettings = (rawSettings is CompanySettings) ? rawSettings : CompanySettings();
 
-    // Fetch product references for all items if available
+    // Fetch product references and designations for all items
     final db = DatabaseHelper.instance;
+    final allProducts = await db.getProducts();
     for (var item in document.items) {
+      if (item.productName.isNotEmpty && item.productName != 'Produit Inconnu') {
+        item.customFields['designation'] ??= item.productName;
+      }
+      Product? product;
       if (item.productId != null && item.productId!.isNotEmpty) {
-        final product = await db.getProduct(item.productId!);
-        if (product != null) {
-          item.customFields['reference'] = (product.reference != null && product.reference!.isNotEmpty)
-              ? product.reference
-              : product.code;
-          item.customFields['designation'] = product.name;
+        product = await db.getProduct(item.productId!);
+      }
+      if (product == null && allProducts.isNotEmpty) {
+        final searchName = (item.customFields['designation'] ?? item.productName).trim().toLowerCase();
+        if (searchName.isNotEmpty && searchName != 'produit inconnu') {
+          product = allProducts.cast<Product?>().firstWhere(
+            (p) => p != null && (
+              p.name.trim().toLowerCase() == searchName ||
+              (p.reference != null && p.reference!.trim().toLowerCase() == searchName) ||
+              p.code.trim().toLowerCase() == searchName
+            ),
+            orElse: () => null,
+          );
         }
+      }
+      if (product != null) {
+        final ref = (product.reference != null && product.reference!.trim().isNotEmpty)
+            ? product.reference!.trim()
+            : product.code.trim();
+        item.customFields['reference'] = ref;
+        item.customFields['ref'] = ref;
+        item.customFields['code'] = product.code;
+        item.customFields['designation'] = product.name;
+        item.customFields['unit'] = product.unit;
+        item.customFields['purchasePrice'] = product.purchasePrice;
       }
     }
 
@@ -129,14 +153,14 @@ class PdfService {
             content: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.picture_as_pdf, color: Colors.redAccent, size: 24),
+                  child: const Icon(Icons.picture_as_pdf, color: Colors.redAccent, size: 20),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,22 +168,30 @@ class PdfService {
                     children: [
                       Text(
                         fileName,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 14),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 13),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 14),
+                          const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 13),
                           const SizedBox(width: 4),
-                          Text(
-                            'Téléchargé avec succès',
-                            style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+                          Flexible(
+                            child: Text(
+                              'Téléchargé avec succès',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11.5),
+                            ),
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 6),
                 TextButton(
                   onPressed: () {
                     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -167,18 +199,20 @@ class PdfService {
                   },
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.white,
-                    backgroundColor: Colors.white.withOpacity(0.1),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    backgroundColor: Colors.white.withOpacity(0.12),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: const Text('Ouvrir'),
+                  child: const Text('Ouvrir', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+                  icon: const Icon(Icons.close, color: Colors.white70, size: 18),
                   onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
-                  splashRadius: 20,
-                  padding: EdgeInsets.zero,
+                  splashRadius: 18,
+                  padding: const EdgeInsets.all(4),
                   constraints: const BoxConstraints(),
                 ),
               ],
@@ -189,8 +223,8 @@ class PdfService {
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
             ),
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             duration: const Duration(seconds: 5),
             elevation: 4,
           ),
@@ -401,19 +435,36 @@ class PdfService {
       final item = entry.value;
       return activeColumns.map((c) {
         final id = c['id'] as String;
-        final type = c['type'] as String?;
-        if (type == 'custom') {
-          return item.customFields[id] ?? '';
-        }
         switch (id) {
-          case 'index': return index.toString();
-          case 'designation': return item.customFields['designation'] ?? item.productName;
-          case 'quantity': return formatQuantity(item.quantity);
-          case 'unitPrice': return formatCurrency(item.unitPrice, symbol: '');
-          case 'tva': return formatPercentage(item.tvaRate);
-          case 'discount': return item.discountPercent > 0 ? formatPercentage(item.discountPercent) : '-';
-          case 'totalHT': return formatCurrency(item.totalHT, symbol: '');
-          default: return '';
+          case 'index':
+            return index.toString();
+          case 'reference':
+          case 'ref':
+          case 'code':
+            final ref = item.customFields['reference'] ??
+                item.customFields['ref'] ??
+                item.customFields['code'];
+            return (ref != null && ref.toString().trim().isNotEmpty) ? ref.toString().trim() : '';
+          case 'designation':
+            final des = item.customFields['designation'];
+            if (des != null && des.isNotEmpty && des != 'Produit Inconnu') {
+              return des;
+            }
+            return (item.productName.isNotEmpty && item.productName != 'Produit Inconnu')
+                ? item.productName
+                : (item.customFields['description'] ?? item.productName);
+          case 'quantity':
+            return formatQuantity(item.quantity);
+          case 'unitPrice':
+            return formatCurrency(item.unitPrice, symbol: '');
+          case 'tva':
+            return formatPercentage(item.tvaRate);
+          case 'discount':
+            return item.discountPercent > 0 ? formatPercentage(item.discountPercent) : '-';
+          case 'totalHT':
+            return formatCurrency(item.totalHT, symbol: '');
+          default:
+            return item.customFields[id] ?? '';
         }
       }).toList();
     }).toList();

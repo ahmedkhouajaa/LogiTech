@@ -15,6 +15,8 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
+import '../services/document_share_service.dart';
 import 'create_credit_note_screen.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
@@ -879,13 +881,24 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                                                   } else if (val == 'pdf') {
                                                     final doc = DocumentWrapper.fromCreditNote(note);
                                                     PdfService.instance.downloadDocument(context, doc);
-                                                  } else if (val == 'print' || val == 'view') {
+                                                  } else if (val == 'view') {
+                                                     final doc = DocumentWrapper.fromCreditNote(note);
+                                                     Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentDetailScreen(
+                                                       document: doc,
+                                                       status: note.status.label,
+                                                       statusColor: note.status.color,
+                                                     )));
+                                                  } else if (val == 'print') {
                                                     final doc = DocumentWrapper.fromCreditNote(note);
                                                     Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
                                                   } else if (val == 'edit') {
                                                     _navigate(context, note);
-                                                  } else if (val == 'email' || val == 'whatsapp') {
-                                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fonctionnalité en cours de développement')));
+                                                  } else if (val == 'email') {
+                                                    final doc = DocumentWrapper.fromCreditNote(note);
+                                                    DocumentShareService.shareDocument(doc, isEmail: true);
+                                                  } else if (val == 'whatsapp') {
+                                                    final doc = DocumentWrapper.fromCreditNote(note);
+                                                    DocumentShareService.shareDocument(doc, isEmail: false);
                                                   }
                                                 },
                                                 itemBuilder: (_) => [

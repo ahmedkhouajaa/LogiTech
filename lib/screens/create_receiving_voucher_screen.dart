@@ -717,7 +717,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                             _items[index] = item.copyWith(
                               productId: selection.id,
                               productName: selection.name,
-                              unitPrice: selection.purchasePrice,
+                              unitPrice: selection.purchasePrice > 0 ? selection.purchasePrice : selection.sellingPrice,
                               tvaRate: selection.tvaRate,
                             );
                           });

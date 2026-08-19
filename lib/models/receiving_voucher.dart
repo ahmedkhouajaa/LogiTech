@@ -252,16 +252,18 @@ class ReceivingVoucherItem {
   }
 
   factory ReceivingVoucherItem.fromMap(Map<String, dynamic> map) {
+    final pName = map['product_name']?.toString();
+    final desc = map['description']?.toString();
     return ReceivingVoucherItem(
       id: map['id']?.toString() ?? '',
       voucherId: map['voucher_id']?.toString() ?? '',
       productId: map['product_id']?.toString() ?? '',
-      productName: map['product_name']?.toString(),
-      quantityExpected: (map['quantity_expected'] ?? 0).toDouble(),
-      quantityReceived: (map['quantity_received'] ?? map['quantity'] ?? 0).toDouble(),
-      unitPrice: (map['unit_price'] ?? 0).toDouble(),
-      tvaRate: (map['tva_rate'] ?? 0).toDouble(),
-      discountPercent: (map['discount_percent'] ?? 0).toDouble(),
+      productName: (pName != null && pName.isNotEmpty) ? pName : desc,
+      quantityExpected: double.tryParse(map['quantity_expected']?.toString() ?? '0') ?? 0.0,
+      quantityReceived: double.tryParse((map['quantity_received'] ?? map['quantity'])?.toString() ?? '0') ?? 0.0,
+      unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
+      tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '0') ?? 0.0,
+      discountPercent: double.tryParse(map['discount_percent']?.toString() ?? '0') ?? 0.0,
     );
   }
 }

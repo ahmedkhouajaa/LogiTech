@@ -9,9 +9,14 @@ import '../../utils/helpers.dart';
 import '../../database/database_helper.dart';
 import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../blocs/warehouses/warehouses_state.dart';
+import '../../widgets/premium_detail_shell.dart';
+import '../../screens/document_preview_screen.dart';
 import 'forms/mobile_stock_transfer_form_screen.dart';
 import '../../services/permission_service.dart';
+import '../../services/pdf_service.dart';
+import '../../services/document_share_service.dart';
 import '../../models/user_management_model.dart';
+import '../../models/document_wrapper.dart';
 
 class MobileStockTransferDetailScreen extends StatefulWidget {
   final StockTransfer transfer;
@@ -25,6 +30,7 @@ class MobileStockTransferDetailScreen extends StatefulWidget {
 class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDetailScreen> {
   late StockTransfer currentTransfer;
   Map<String, Product> _dbProducts = {};
+
   @override
   void initState() {
     super.initState();
@@ -64,7 +70,7 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
       if (wState is WarehousesLoaded) {
         final match = wState.warehouses.cast<dynamic>().firstWhere(
           (w) => w.id == id, 
-          orElse: () => null
+          orElse: () => null,
         );
         if (match != null) return match.name;
       }
@@ -73,6 +79,54 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
 
     final String srcName = getWhName(currentTransfer.sourceWarehouseId);
     final String destName = getWhName(currentTransfer.destinationWarehouseId);
+    final statusLabel = translateStatus(currentTransfer.status);
+    final statusColor = _getStatusColor(currentTransfer.status);
+
+    final infoSections = [
+      PremiumInfoSection(
+        title: 'Informations Générales',
+        icon: Icons.info_outline,
+        fields: [
+          PremiumInfoField(
+            label: 'Entrepôt Source',
+            value: srcName,
+            icon: Icons.warehouse_outlined,
+            isHighlight: true,
+          ),
+          PremiumInfoField(
+            label: 'Entrepôt Destination',
+            value: destName,
+            icon: Icons.input_outlined,
+            isHighlight: true,
+          ),
+          PremiumInfoField(
+            label: 'Date de transfert',
+            value: formatDateTimeLong(currentTransfer.date),
+            icon: Icons.calendar_today_outlined,
+          ),
+          if (currentTransfer.reason != null && currentTransfer.reason!.isNotEmpty)
+            PremiumInfoField(
+              label: 'Motif',
+              value: currentTransfer.reason!,
+              icon: Icons.assignment_outlined,
+            ),
+        ],
+      ),
+    ];
+
+    final articles = currentTransfer.items.map((item) {
+      final product = _getProduct(item.productId);
+      final productName = product?.name ?? item.productName ?? 'Article inconnu';
+      final refCode = product?.reference ?? product?.code ?? item.productSku;
+      final unit = product?.unit ?? 'pièces';
+
+      return PremiumArticleItem(
+        reference: refCode ?? '',
+        designation: productName,
+        unit: unit,
+        quantity: item.quantityToTransfer.toDouble(),
+      );
+    }).toList();
 
     return BlocListener<StockTransfersBloc, StockTransfersState>(
       listener: (context, state) {
@@ -94,161 +148,45 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('Bon de transfert ${currentTransfer.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('BT ${currentTransfer.number}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primary,
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentTransfer),
               itemBuilder: (_) => [
-                if (PermissionService.instance.canUpdate(UserPermissionResources.stockTransferVouchers))
-                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                if (PermissionService.instance.canUpdate(UserPermissionResources.stockTransferVouchers) &&
-                    PermissionService.instance.canDelete(UserPermissionResources.stockTransferVouchers))
+                _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
+                if (PermissionService.instance.canUpdate(UserPermissionResources.stockTransferVouchers)) ...[
                   const PopupMenuDivider(height: 1),
-                if (PermissionService.instance.canDelete(UserPermissionResources.stockTransferVouchers))
+                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
+                ],
+                if (PermissionService.instance.canDelete(UserPermissionResources.stockTransferVouchers)) ...[
+                  const PopupMenuDivider(height: 1),
                   _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
+                ],
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
               ],
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surface,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Réf: ${currentTransfer.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(currentTransfer.status).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(translateStatus(currentTransfer.status), style: TextStyle(color: _getStatusColor(currentTransfer.status), fontWeight: FontWeight.bold, fontSize: 12)),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      _buildInfoRow('Date', formatDateTimeLong(currentTransfer.date)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Source', srcName),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Destination', destName),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              if (currentTransfer.items.isEmpty)
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
-                  ),
-                )
-              else
-                ...currentTransfer.items.map((item) {
-                  final product = _getProduct(item.productId);
-                  final productName = product?.name ?? item.productName ?? 'Article inconnu';
-                  final refCode = product?.reference ?? product?.code ?? item.productSku;
-                  final unit = product?.unit ?? 'pièces';
-                  final qtyText = '${item.quantityToTransfer % 1 == 0 ? item.quantityToTransfer.toInt() : item.quantityToTransfer} $unit';
-                  return Card(
-                    elevation: 0,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                    color: AppColors.surface,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(productName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                if (refCode != null && refCode.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                                ],
-                                const SizedBox(height: 4),
-                                Text(qtyText, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              if (currentTransfer.reason != null && currentTransfer.reason!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Raison', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentTransfer.reason!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                  ),
-                ),
-              ],
-              if (currentTransfer.notes != null && currentTransfer.notes!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentTransfer.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                  ),
-                ),
-              ],
-              SizedBox(height: 32),
-            ],
-          ),
+        body: PremiumDetailShell(
+          documentType: 'Bon de Transfert',
+          referenceNumber: currentTransfer.number,
+          statusLabel: statusLabel,
+          statusColor: statusColor,
+          infoSections: infoSections,
+          articles: articles,
+          notes: currentTransfer.notes,
         ),
       ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-        Text(value, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.textPrimary)),
-      ],
     );
   }
 
@@ -258,8 +196,8 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
       height: 40,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Color(0xFF64748B)),
-          SizedBox(width: 12),
+          Icon(icon, size: 18, color: const Color(0xFF64748B)),
+          const SizedBox(width: 12),
           Text(text, style: TextStyle(fontSize: 14, color: AppColors.textPrimary)),
         ],
       ),
@@ -279,6 +217,23 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
 
   void _handleAction(BuildContext context, String action, StockTransfer transfer) {
     switch (action) {
+      case 'view':
+      case 'print':
+        final doc = DocumentWrapper.fromStockTransfer(transfer);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
+        break;
+      case 'pdf':
+        final doc = DocumentWrapper.fromStockTransfer(transfer);
+        PdfService.instance.downloadDocument(context, doc);
+        break;
+      case 'email':
+        final docEmail = DocumentWrapper.fromStockTransfer(transfer);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = DocumentWrapper.fromStockTransfer(transfer);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
+        break;
       case 'edit':
         Navigator.push(
           context,
@@ -296,17 +251,17 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
         showDialog(
           context: context,
           builder: (dialogCtx) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer ce bon de transfert ?'),
+            title: const Text('Confirmer la suppression'),
+            content: const Text('Voulez-vous vraiment supprimer ce bon de transfert ?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogCtx);
                   context.read<StockTransfersBloc>().add(DeleteStockTransfer(transfer.id));
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
+                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),

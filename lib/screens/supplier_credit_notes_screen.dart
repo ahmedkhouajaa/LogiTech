@@ -19,14 +19,13 @@ import '../models/payment_model.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../blocs/invoices/invoices_bloc.dart';
-import '../models/invoice.dart';
-import '../models/invoice.dart';
-import 'create_invoice_screen.dart';
 import '../services/pdf_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
+import '../services/document_share_service.dart';
 
 enum SupplierCreditNoteStatus {
   draft('Non Utilisé'),
@@ -1156,11 +1155,19 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
   void _handleAction(BuildContext context, String action, SupplierCreditNote note) {
     switch (action) {
       case 'view':
+        final statusEnum = SupplierCreditNoteStatus.values.firstWhere(
+          (e) => e.name == note.status,
+          orElse: () => SupplierCreditNoteStatus.draft,
+        );
         final doc = DocumentWrapper.fromSupplierCreditNote(note);
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DocumentPreviewScreen(document: doc),
+            builder: (_) => DocumentDetailScreen(
+              document: doc,
+              status: statusEnum.label,
+              statusColor: statusEnum.color,
+            ),
           ),
         );
         break;
@@ -1188,6 +1195,14 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
       case 'pdf':
         final doc = DocumentWrapper.fromSupplierCreditNote(note);
         PdfService.instance.downloadDocument(context, doc);
+        break;
+      case 'email':
+        final docEmail = DocumentWrapper.fromSupplierCreditNote(note);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = DocumentWrapper.fromSupplierCreditNote(note);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));

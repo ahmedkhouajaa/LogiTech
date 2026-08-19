@@ -14,9 +14,12 @@ import '../../models/document_wrapper.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
+import '../../services/document_share_service.dart';
 import '../../database/database_helper.dart';
 
+import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
+import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_return_voucher_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
@@ -77,14 +80,71 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
 
   @override
   Widget build(BuildContext context) {
+    final statusLabel = translateStatus(currentReturnNote.status);
+    final statusColor = MobileStatusColors.getColorForStatus(statusLabel);
+
+    final infoSections = [
+      PremiumInfoSection(
+        title: 'Informations Générales',
+        icon: Icons.info_outline,
+        fields: [
+          PremiumInfoField(
+            label: 'Client',
+            value: currentReturnNote.customerName ?? currentReturnNote.customerCompany ?? 'Non spécifié',
+            icon: Icons.person_outline,
+            isHighlight: true,
+          ),
+          PremiumInfoField(
+            label: 'Date de retour',
+            value: formatDateTimeLong(currentReturnNote.dateEmission),
+            icon: Icons.calendar_today_outlined,
+          ),
+        ],
+      ),
+    ];
+
+    final articles = currentReturnNote.items.map((item) {
+      final product = item.productId != null ? _getProduct(item.productId!) : null;
+      final productName = item.designation.isNotEmpty ? item.designation : (product?.name ?? 'Article non spécifié');
+      final refCode = product?.reference ?? product?.code;
+
+      return PremiumArticleItem(
+        reference: refCode,
+        designation: productName,
+        description: item.reason,
+        quantity: item.quantity.abs(),
+        unitPrice: item.unitPrice,
+        tvaRate: item.tvaRate > 0 ? item.tvaRate : null,
+        totalHT: item.totalHT,
+      );
+    }).toList();
+
+    final totalTVA = currentReturnNote.totalTTC - currentReturnNote.subtotalHT;
+    final totals = <PremiumTotalRow>[
+      PremiumTotalRow(
+        label: 'Total HT',
+        amount: currentReturnNote.subtotalHT,
+      ),
+      if (totalTVA > 0)
+        PremiumTotalRow(
+          label: 'Total TVA',
+          amount: totalTVA,
+        ),
+      PremiumTotalRow(
+        label: 'Total TTC',
+        amount: currentReturnNote.totalTTC,
+        isGrandTotal: true,
+      ),
+    ];
+
     return BlocListener<ReturnNotesBloc, ReturnNotesState>(
       listener: (context, state) {
         if (state is ReturnNotesLoaded) {
           try {
-            final updatedNote = state.notes.firstWhere((q) => q.id == currentReturnNote.id);
-            if (updatedNote.id == currentReturnNote.id && mounted) {
+            final updatedReturnNote = state.notes.firstWhere((q) => q.id == currentReturnNote.id);
+            if (mounted) {
               setState(() {
-                currentReturnNote = updatedNote.copyWith(items: currentReturnNote.items);
+                currentReturnNote = updatedReturnNote.copyWith(items: currentReturnNote.items);
               });
             }
           } catch (_) {
@@ -97,12 +157,12 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('BR ${currentReturnNote.returnNumber}', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Retour ${currentReturnNote.returnNumber}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primary,
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentReturnNote),
               itemBuilder: (_) => [
                 _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
@@ -115,166 +175,28 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                   _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
                 ],
                 const PopupMenuDivider(height: 1),
-                _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
-                PopupMenuDivider(height: 1),
+                _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-//                 PopupMenuDivider(height: 1),
-//                 _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-//                 PopupMenuDivider(height: 1),
-//                 _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'),
               ],
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surface,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Réf: ${currentReturnNote.returnNumber}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(translateStatus(currentReturnNote.status), style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12)),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      _buildInfoRow('Date', formatDateTimeLong(currentReturnNote.dateEmission)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Client', currentReturnNote.customerName ?? currentReturnNote.customerCompany ?? 'Non spécifié'),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              if (currentReturnNote.items.isEmpty)
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
-                  ),
-                )
-              else
-                ...currentReturnNote.items.map((item) {
-                  final product = item.productId != null ? _getProduct(item.productId!) : null;
-                  final productName = item.designation.isNotEmpty ? item.designation : (product?.name ?? 'Article non spécifié');
-                  final refCode = product?.reference ?? product?.code;
-                  return Card(
-                    elevation: 0,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                    color: AppColors.surface,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(productName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                if (refCode != null && refCode.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                                ],
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Text('${item.quantity.abs()} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                    Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-                                  ],
-                                ),
-                                if (item.reason != null && item.reason!.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
-                                  Text(item.reason!, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                                ]
-                              ],
-                            ),
-                          ),
-                          Text(formatCurrencyDT(item.totalHT), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              SizedBox(height: 16),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surfaceAlt,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _buildInfoRow('Total HT', formatCurrencyDT(currentReturnNote.subtotalHT)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Total TVA', formatCurrencyDT(currentReturnNote.totalTTC - currentReturnNote.subtotalHT)),
-                      Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentReturnNote.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (currentReturnNote.notes != null && currentReturnNote.notes!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentReturnNote.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                  ),
-                ),
-              ],
-              SizedBox(height: 32),
-            ],
-          ),
+        body: PremiumDetailShell(
+          documentType: 'Bon de Retour',
+          referenceNumber: currentReturnNote.returnNumber,
+          statusLabel: statusLabel,
+          statusColor: statusColor,
+          infoSections: infoSections,
+          articles: articles,
+          totals: totals,
+          notes: currentReturnNote.notes,
         ),
       ),
     );
@@ -353,9 +275,15 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
         final doc = DocumentWrapper.fromReturnNote(returnNote);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
         break;
-      case 'add_payment':
       case 'email':
+        final docEmail = DocumentWrapper.fromReturnNote(returnNote);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
       case 'whatsapp':
+        final docWa = DocumentWrapper.fromReturnNote(returnNote);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
+        break;
+      case 'add_payment':
       case 'duplicate':
       case 'attachments':
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));

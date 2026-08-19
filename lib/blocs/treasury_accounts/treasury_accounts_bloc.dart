@@ -137,6 +137,23 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
         query = query.where('enterprise_id', isEqualTo: currentEntId);
       }
       
+      List<TreasuryAccount> deduplicateDefaults(List<TreasuryAccount> list) {
+        final unique = <TreasuryAccount>[];
+        bool seenDefault = false;
+        for (final a in list) {
+          final isDef = a.isDefault || a.name.trim().toLowerCase() == 'compte principal';
+          if (isDef) {
+            if (!seenDefault) {
+              unique.add(a);
+              seenDefault = true;
+            }
+          } else {
+            unique.add(a);
+          }
+        }
+        return unique;
+      }
+
       bool shownFromCache = false;
       try {
         final cacheSnap = await query.get(const GetOptions(source: Source.cache));
@@ -148,7 +165,8 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
               })
               .map((d) => TreasuryAccount.fromMap(d.data() as Map<String, dynamic>))
               .toList();
-          emit(TreasuryAccountsLoaded(accounts, totalCount: accounts.length, hasMore: false));
+          final deduped = deduplicateDefaults(accounts);
+          emit(TreasuryAccountsLoaded(deduped, totalCount: deduped.length, hasMore: false));
           shownFromCache = true;
         }
       } catch (_) {}
@@ -163,22 +181,7 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
             .map((d) => TreasuryAccount.fromMap(d.data() as Map<String, dynamic>))
             .toList();
         
-        if (accounts.isEmpty) {
-          final defaultAccount = TreasuryAccount(
-            id: const Uuid().v4(),
-            name: 'Compte principal',
-            type: 'cash',
-            currency: 'TND',
-            balance: 0.0,
-            isDefault: true,
-            enterpriseId: currentEntId,
-          );
-          accounts = [defaultAccount];
-
-          FirestoreRepository.instance
-              .saveDocument('treasury_accounts', defaultAccount.id, defaultAccount.toMap())
-              .catchError((e) => print("Firestore default treasury account auto-create error: $e"));
-        }
+        accounts = deduplicateDefaults(accounts);
 
         if (!emit.isDone) {
           emit(TreasuryAccountsLoaded(accounts, totalCount: accounts.length, hasMore: false));

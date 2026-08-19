@@ -73,6 +73,13 @@ class AuthAuthenticated extends AuthState {
 
 class AuthUnauthenticated extends AuthState {}
 
+class AuthSignUpSuccess extends AuthState {
+  final String email;
+  const AuthSignUpSuccess(this.email);
+  @override
+  List<Object?> get props => [email];
+}
+
 class AuthError extends AuthState {
   final String message;
   final bool isCancellation;
@@ -173,8 +180,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final success = await _authService.signUpWithEmail(event.email, event.password, event.name);
       if (success) {
-        await PermissionService.instance.loadPermissions();
-        emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
+        emit(AuthSignUpSuccess(event.email));
       } else {
         emit(const AuthError('Erreur lors de l\'inscription'));
       }

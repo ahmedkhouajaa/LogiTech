@@ -4,7 +4,7 @@ project(business_manager_pro LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "business_manager_pro")
+set(BINARY_NAME "logitech_pro")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

@@ -60,7 +60,7 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
         if (cacheSnapshot.docs.isNotEmpty && !emit.isDone) {
           final cachedProjects = _parseSnapshot(cacheSnapshot);
           cachedProjects.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          emit(ProjectsLoaded(cachedProjects));
+          emit(ProjectsLoaded(_deduplicateDefaults(cachedProjects)));
           shownFromCache = true;
         }
       } catch (_) {}
@@ -68,23 +68,7 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
       try {
         final serverSnapshot = await _buildQuery().get(const GetOptions(source: Source.server));
         List<Project> projects = _parseSnapshot(serverSnapshot);
-        
-        if (projects.isEmpty) {
-          final defaultProject = Project(
-            id: const Uuid().v4(),
-            name: 'Projet par défaut',
-            description: 'Projet principal par défaut',
-            startDate: DateTime.now(),
-            isDefault: true,
-            enterpriseId: EnterpriseService.instance.currentEnterpriseId,
-          );
-          projects = [defaultProject];
-          
-          FirestoreRepository.instance
-              .saveDocument('projects', defaultProject.id, defaultProject.toMap())
-              .catchError((e) => print("Firestore default project auto-create error: $e"));
-        }
-
+        projects = _deduplicateDefaults(projects);
         projects.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         
         if (!emit.isDone) {
@@ -98,6 +82,25 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
     } catch (e) {
       if (!emit.isDone) emit(ProjectsLoaded(const []));
     }
+  }
+
+  List<Project> _deduplicateDefaults(List<Project> list) {
+    final unique = <Project>[];
+    bool seenDefault = false;
+    for (final p in list) {
+      final isDef = p.isDefault ||
+          p.name.trim().toLowerCase() == 'projet par défaut' ||
+          p.name.trim().toLowerCase() == 'projet principal par défaut';
+      if (isDef) {
+        if (!seenDefault) {
+          unique.add(p);
+          seenDefault = true;
+        }
+      } else {
+        unique.add(p);
+      }
+    }
+    return unique;
   }
 
   Future<void> _onAdd(AddProject event, Emitter<ProjectsState> emit) async {

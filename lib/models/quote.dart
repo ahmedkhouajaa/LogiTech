@@ -171,21 +171,32 @@ class QuoteItem {
   }
 
   Map<String, dynamic> toMap() => {
-        'id': id, 'quote_id': quoteId, 'product_id': productId,
-        'description': description, 'quantity': quantity, 'unit_price': unitPrice,
-        'tva_rate': tvaRate, 'discount_percent': discountPercent,
+        'id': id,
+        'quote_id': quoteId,
+        'product_id': productId,
+        'product_name': productName,
+        'description': description,
+        'quantity': quantity,
+        'unit_price': unitPrice,
+        'tva_rate': tvaRate,
+        'discount_percent': discountPercent,
         'total_ht': computedTotalHT,
       };
 
-  factory QuoteItem.fromMap(Map<String, dynamic> map) => QuoteItem(
-        id: map['id'] as String, quoteId: map['quote_id'] as String,
-        productId: map['product_id'] as String,
-        productName: map['product_name'] as String?,
-        description: map['description'] as String?,
-        quantity: (map['quantity'] as num?)?.toDouble() ?? 1,
-        unitPrice: (map['unit_price'] as num?)?.toDouble() ?? 0,
-        tvaRate: (map['tva_rate'] as num?)?.toDouble() ?? 19,
-        discountPercent: (map['discount_percent'] as num?)?.toDouble() ?? 0,
-        totalHT: (map['total_ht'] as num?)?.toDouble() ?? 0,
-      );
+  factory QuoteItem.fromMap(Map<String, dynamic> map) {
+    final pName = map['product_name'] as String?;
+    final desc = map['description'] as String?;
+    return QuoteItem(
+      id: map['id'] as String,
+      quoteId: map['quote_id'] as String,
+      productId: map['product_id'] as String,
+      productName: (pName != null && pName.isNotEmpty) ? pName : desc,
+      description: desc,
+      quantity: (map['quantity'] as num?)?.toDouble() ?? 1,
+      unitPrice: (map['unit_price'] as num?)?.toDouble() ?? 0,
+      tvaRate: (map['tva_rate'] as num?)?.toDouble() ?? 19,
+      discountPercent: (map['discount_percent'] as num?)?.toDouble() ?? 0,
+      totalHT: (map['total_ht'] as num?)?.toDouble() ?? 0,
+    );
+  }
 }

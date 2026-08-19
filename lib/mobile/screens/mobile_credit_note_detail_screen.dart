@@ -6,15 +6,19 @@ import '../../blocs/customers/customers_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
 
 import '../../models/credit_note.dart';
+import '../../models/customer.dart';
 import '../../models/product.dart';
 import '../../models/document_wrapper.dart';
 
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
+import '../../services/document_share_service.dart';
 import '../../database/database_helper.dart';
 
+import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
+import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_credit_note_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
@@ -30,16 +34,15 @@ class MobileCreditNoteDetailScreen extends StatefulWidget {
 
 class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScreen> {
   late CreditNote currentCreditNote;
-  Map<String, Product> _dbProducts = {};
   String? _customerName;
+  Map<String, Product> _dbProducts = {};
 
   @override
   void initState() {
     super.initState();
     currentCreditNote = widget.creditNote;
-    _loadFullCreditNote();
-    _loadProducts();
     _loadCustomerName();
+    _loadProducts();
   }
 
   Future<void> _loadProducts() async {
@@ -51,27 +54,6 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
         });
       }
     } catch (_) {}
-  }
-
-  Future<void> _loadCustomerName() async {
-    try {
-      final customer = await DatabaseHelper.instance.getCustomer(currentCreditNote.customerId);
-      if (customer != null && mounted) {
-        setState(() {
-          _customerName = customer.name;
-        });
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _loadFullCreditNote() async {
-    final fullCreditNote = await DatabaseHelper.instance.getCreditNote(currentCreditNote.id);
-    if (fullCreditNote != null && mounted) {
-      setState(() {
-        currentCreditNote = fullCreditNote;
-      });
-      _loadCustomerName();
-    }
   }
 
   Product? _getProduct(String id) {
@@ -87,8 +69,82 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
     return null;
   }
 
+  Future<void> _loadCustomerName() async {
+    if (currentCreditNote.customerId == null || currentCreditNote.customerId!.isEmpty) return;
+    try {
+      final customers = await DatabaseHelper.instance.getCustomers();
+      final customer = customers.firstWhere(
+        (c) => c.id == currentCreditNote.customerId,
+        orElse: () => Customer(id: '', code: '', name: '', country: ''),
+      );
+      if (customer.id.isNotEmpty && mounted) {
+        setState(() {
+          _customerName = (customer.companyName != null && customer.companyName!.isNotEmpty)
+              ? customer.companyName
+              : customer.name;
+        });
+      }
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
+    final statusLabel = currentCreditNote.status.label;
+    final statusColor = _getStatusColor(currentCreditNote.status);
+
+    final infoSections = [
+      PremiumInfoSection(
+        title: 'Informations Générales',
+        icon: Icons.info_outline,
+        fields: [
+          PremiumInfoField(
+            label: 'Client',
+            value: _customerName ?? (currentCreditNote.customerName != null && currentCreditNote.customerName!.isNotEmpty ? currentCreditNote.customerName! : 'Non spécifié'),
+            icon: Icons.person_outline,
+            isHighlight: true,
+          ),
+          PremiumInfoField(
+            label: 'Date de l\'avoir',
+            value: formatDateTimeLong(currentCreditNote.date),
+            icon: Icons.calendar_today_outlined,
+          ),
+        ],
+      ),
+    ];
+
+    final articles = currentCreditNote.items.map((item) {
+      final product = _getProduct(item.productId);
+      final productName = product?.name ?? item.productName ?? item.description ?? 'Article non spécifié';
+      final refCode = product?.reference ?? product?.code;
+
+      return PremiumArticleItem(
+        reference: refCode,
+        designation: productName,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        tvaRate: item.tvaRate > 0 ? item.tvaRate : null,
+        discountPercent: item.discountPercent > 0 ? item.discountPercent : null,
+        totalHT: item.computedTotalHT,
+      );
+    }).toList();
+
+    final totals = <PremiumTotalRow>[
+      PremiumTotalRow(
+        label: 'Total HT',
+        amount: currentCreditNote.totalHT,
+      ),
+      PremiumTotalRow(
+        label: 'Total TVA',
+        amount: currentCreditNote.totalTva,
+      ),
+      PremiumTotalRow(
+        label: 'Total TTC',
+        amount: currentCreditNote.totalTTC,
+        isGrandTotal: true,
+      ),
+    ];
+
     return BlocListener<CreditNotesBloc, CreditNotesState>(
       listener: (context, state) {
         if (state is CreditNotesLoaded) {
@@ -109,19 +165,15 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('Avoir ${currentCreditNote.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Avoir ${currentCreditNote.number}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primary,
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentCreditNote),
               itemBuilder: (_) => [
                 _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
-                PopupMenuDivider(height: 1),
-                _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
                 if (PermissionService.instance.canUpdate(UserPermissionResources.salesCreditNotes)) ...[
                   const PopupMenuDivider(height: 1),
                   _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
@@ -130,147 +182,29 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
                   const PopupMenuDivider(height: 1),
                   _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
                 ],
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
+                const PopupMenuDivider(height: 1),
+                _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
               ],
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surface,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Réf: ${currentCreditNote.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(currentCreditNote.status).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(currentCreditNote.status.label, style: TextStyle(color: _getStatusColor(currentCreditNote.status), fontWeight: FontWeight.bold, fontSize: 12)),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      _buildInfoRow('Date', formatDateTimeLong(currentCreditNote.date)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Client', _customerName ?? (currentCreditNote.customerName != null && currentCreditNote.customerName!.isNotEmpty ? currentCreditNote.customerName! : 'Non spécifié')),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              if (currentCreditNote.items.isEmpty)
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
-                  ),
-                )
-              else
-                ...currentCreditNote.items.map((item) {
-                  final product = _getProduct(item.productId);
-                  final productName = product?.name ?? item.productName ?? item.description ?? 'Article non spécifié';
-                  final refCode = product?.reference ?? product?.code;
-                  return Card(
-                    elevation: 0,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                    color: AppColors.surface,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(productName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                if (refCode != null && refCode.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                                ],
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Text('${item.quantity} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                    Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(formatCurrencyDT(item.totalHT * (1 + item.tvaRate / 100)), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              SizedBox(height: 16),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surfaceAlt,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _buildInfoRow('Total HT', formatCurrencyDT(currentCreditNote.totalHT)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Total TVA', formatCurrencyDT(currentCreditNote.totalTva)),
-                      Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentCreditNote.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (currentCreditNote.notes != null && currentCreditNote.notes!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentCreditNote.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                  ),
-                ),
-              ],
-              SizedBox(height: 32),
-            ],
-          ),
+        body: PremiumDetailShell(
+          documentType: 'Avoir Client',
+          referenceNumber: currentCreditNote.number,
+          statusLabel: statusLabel,
+          statusColor: statusColor,
+          infoSections: infoSections,
+          articles: articles,
+          totals: totals,
+          notes: currentCreditNote.notes,
         ),
       ),
     );
@@ -354,6 +288,14 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
       case 'pdf':
         final doc = DocumentWrapper.fromCreditNote(creditNote);
         PdfService.instance.downloadDocument(context, doc);
+        break;
+      case 'email':
+        final docEmail = DocumentWrapper.fromCreditNote(creditNote);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = DocumentWrapper.fromCreditNote(creditNote);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       case 'print':
         final doc = DocumentWrapper.fromCreditNote(creditNote);

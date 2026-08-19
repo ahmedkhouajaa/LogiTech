@@ -94,33 +94,53 @@ class Product {
         'updated_at': updatedAt.toIso8601String(),
       };
 
-  factory Product.fromMap(Map<String, dynamic> map) => Product(
-        id: map['id'] as String, code: map['code'] as String,
-        name: map['name'] as String, reference: map['reference'] as String?,
-        description: map['description'] as String?, category: map['category'] as String?,
-        productType: map['product_type'] as String? ?? 'produit',
-        familyId: map['family_id'] as String?, subFamilyId: map['sub_family_id'] as String?,
-        brandId: map['brand_id'] as String?,
-        unit: map['unit'] as String? ?? 'Unite',
-        purchasePrice: (map['purchase_price'] as num?)?.toDouble() ?? 0,
-        sellingPrice: (map['selling_price'] as num?)?.toDouble() ?? 0,
-        usualDiscount: (map['usual_discount'] as num?)?.toDouble() ?? 0,
-        tvaRate: (map['tva_rate'] as num?)?.toDouble() ?? 19,
-        stockQty: (map['stock_qty'] as num?)?.toDouble() ?? 0,
-        minStockQty: (map['min_stock_qty'] as num?)?.toDouble() ?? 0,
-        allowNegativeStock: map['allow_negative_stock'] == 1,
-        lowStockAlert: map['low_stock_alert'] == 1,
-        lowStockThreshold: (map['low_stock_threshold'] as num?)?.toDouble() ?? 5,
-        highStockAlert: map['high_stock_alert'] == 1,
-        highStockThreshold: (map['high_stock_threshold'] as num?)?.toDouble() ?? 0,
-        defaultWarehouseId: map['default_warehouse_id'] as String?,
-        barcode: map['barcode'] as String?, privateNotes: map['private_notes'] as String?,
-        isActive: map['is_active'] != 0, firebaseUid: map['firebase_uid'] as String?,
-        enterpriseId: map['enterprise_id'] as String?,
-        isDeleted: map['is_deleted'] == 1,
-        createdAt: DateTime.parse(map['created_at'] as String),
-        updatedAt: DateTime.parse(map['updated_at'] as String),
-      );
+  factory Product.fromMap(Map<String, dynamic> map) {
+    DateTime parseDate(dynamic d) {
+      if (d == null) return DateTime.now();
+      if (d is DateTime) return d;
+      try {
+        if (d.runtimeType.toString().contains('Timestamp') || d is dynamic) {
+          final toDate = (d as dynamic).toDate;
+          if (toDate != null) return (d as dynamic).toDate() as DateTime;
+        }
+      } catch (_) {}
+      return DateTime.tryParse(d.toString()) ?? DateTime.now();
+    }
+
+    return Product(
+      id: map['id']?.toString() ?? '',
+      code: map['code']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
+      reference: map['reference']?.toString(),
+      description: map['description']?.toString(),
+      category: map['category']?.toString(),
+      productType: map['product_type']?.toString() ?? 'produit',
+      familyId: map['family_id']?.toString(),
+      subFamilyId: map['sub_family_id']?.toString(),
+      brandId: map['brand_id']?.toString(),
+      unit: map['unit']?.toString() ?? 'Unite',
+      purchasePrice: (map['purchase_price'] as num?)?.toDouble() ?? 0,
+      sellingPrice: (map['selling_price'] as num?)?.toDouble() ?? 0,
+      usualDiscount: (map['usual_discount'] as num?)?.toDouble() ?? 0,
+      tvaRate: (map['tva_rate'] as num?)?.toDouble() ?? 19,
+      stockQty: (map['stock_qty'] as num?)?.toDouble() ?? 0,
+      minStockQty: (map['min_stock_qty'] as num?)?.toDouble() ?? 0,
+      allowNegativeStock: map['allow_negative_stock'] == 1 || map['allow_negative_stock'] == true,
+      lowStockAlert: map['low_stock_alert'] == 1 || map['low_stock_alert'] == true,
+      lowStockThreshold: (map['low_stock_threshold'] as num?)?.toDouble() ?? 5,
+      highStockAlert: map['high_stock_alert'] == 1 || map['high_stock_alert'] == true,
+      highStockThreshold: (map['high_stock_threshold'] as num?)?.toDouble() ?? 0,
+      defaultWarehouseId: map['default_warehouse_id']?.toString(),
+      barcode: map['barcode']?.toString(),
+      privateNotes: map['private_notes']?.toString(),
+      isActive: map['is_active'] != 0 && map['is_active'] != false,
+      firebaseUid: map['firebase_uid']?.toString(),
+      enterpriseId: map['enterprise_id']?.toString(),
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
+      createdAt: parseDate(map['created_at']),
+      updatedAt: parseDate(map['updated_at']),
+    );
+  }
 
   Product copyWith({
     String? id, String? code, String? name, String? reference, String? description,

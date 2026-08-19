@@ -874,6 +874,7 @@ class _CreateDeliveryNoteScreenState
                           setState(() {
                             _items[index] = item.copyWith(
                               productId: selection.id,
+                              productName: selection.name,
                               description: selection.name,
                               unitPrice: selection.sellingPrice,
                               tvaRate: selection.tvaRate,
@@ -1113,6 +1114,7 @@ class _CreateDeliveryNoteScreenState
                         id: _uuid.v4(),
                         deliveryNoteId: widget.existing?.id ?? '',
                         productId: product.id,
+                        productName: product.name,
                         description: product.name,
                         quantity: 1,
                         unitPrice: product.sellingPrice,

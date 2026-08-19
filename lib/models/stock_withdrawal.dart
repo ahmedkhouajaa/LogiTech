@@ -247,6 +247,7 @@ class StockWithdrawalItem {
   final String id;
   final String withdrawalId;
   final String productId;
+  final String? productName;
   final String? description;
   final double quantity;
   final double unitPrice;
@@ -259,6 +260,7 @@ class StockWithdrawalItem {
     String? id,
     required this.withdrawalId,
     required this.productId,
+    this.productName,
     this.description,
     this.quantity = 1,
     this.unitPrice = 0,
@@ -277,6 +279,7 @@ class StockWithdrawalItem {
     String? id,
     String? withdrawalId,
     String? productId,
+    String? productName,
     String? description,
     double? quantity,
     double? unitPrice,
@@ -289,6 +292,7 @@ class StockWithdrawalItem {
       id: id ?? this.id,
       withdrawalId: withdrawalId ?? this.withdrawalId,
       productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
       description: description ?? this.description,
       quantity: quantity ?? this.quantity,
       unitPrice: unitPrice ?? this.unitPrice,
@@ -303,6 +307,7 @@ class StockWithdrawalItem {
         'id': id,
         'withdrawal_id': withdrawalId,
         'product_id': productId,
+        'product_name': productName ?? description,
         'description': description,
         'quantity': quantity,
         'unit_price': unitPrice,
@@ -313,16 +318,21 @@ class StockWithdrawalItem {
         'show_discount': showDiscount ? 1 : 0,
       };
 
-  factory StockWithdrawalItem.fromMap(Map<String, dynamic> map) => StockWithdrawalItem(
-        id: map['id']?.toString() ?? '',
-        withdrawalId: map['withdrawal_id']?.toString() ?? '',
-        productId: map['product_id']?.toString() ?? '',
-        description: map['description']?.toString(),
-        quantity: double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0,
-        unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
-        tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
-        discountPercent: double.tryParse(map['discount_percent']?.toString() ?? '0') ?? 0.0,
-        showDescription: map['show_description'] == 1 || map['show_description'] == '1' || map['show_description'] == true,
-        showDiscount: map['show_discount'] == 1 || map['show_discount'] == '1' || map['show_discount'] == true,
-      );
+  factory StockWithdrawalItem.fromMap(Map<String, dynamic> map) {
+    final pName = map['product_name']?.toString();
+    final desc = map['description']?.toString();
+    return StockWithdrawalItem(
+      id: map['id']?.toString() ?? '',
+      withdrawalId: map['withdrawal_id']?.toString() ?? '',
+      productId: map['product_id']?.toString() ?? '',
+      productName: (pName != null && pName.isNotEmpty) ? pName : desc,
+      description: desc,
+      quantity: double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0,
+      unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
+      tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
+      discountPercent: double.tryParse(map['discount_percent']?.toString() ?? '0') ?? 0.0,
+      showDescription: map['show_description'] == 1 || map['show_description'] == '1' || map['show_description'] == true,
+      showDiscount: map['show_discount'] == 1 || map['show_discount'] == '1' || map['show_discount'] == true,
+    );
+  }
 }

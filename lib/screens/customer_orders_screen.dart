@@ -23,7 +23,9 @@ import '../services/pdf_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import '../models/document_wrapper.dart';
+import '../services/document_share_service.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
@@ -1028,11 +1030,17 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   void _handleAction(BuildContext context, String action, CustomerOrder order) {
     switch (action) {
       case 'view':
+        final statusEnum = CustomerOrderStatus.values.firstWhere(
+          (e) => e.name == order.status,
+          orElse: () => CustomerOrderStatus.draft,
+        );
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DocumentPreviewScreen(
+            builder: (_) => DocumentDetailScreen(
               document: DocumentWrapper.fromCustomerOrder(order),
+              status: statusEnum.label,
+              statusColor: statusEnum.color,
             ),
           ),
         );
@@ -1084,6 +1092,14 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
       case 'pdf':
         final doc = DocumentWrapper.fromCustomerOrder(order);
         PdfService.instance.downloadDocument(context, doc);
+        break;
+      case 'email':
+        final docEmail = DocumentWrapper.fromCustomerOrder(order);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = DocumentWrapper.fromCustomerOrder(order);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));

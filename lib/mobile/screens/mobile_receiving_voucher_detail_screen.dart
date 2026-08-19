@@ -25,13 +25,18 @@ import 'mobile_supplier_returns_screen.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
+import '../../services/document_share_service.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../database/database_helper.dart';
 
+import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
-import 'forms/mobile_receiving_voucher_form_screen.dart';
 import '../../widgets/receiving_voucher_payment_dialog.dart';
+import '../utils/mobile_status_colors.dart';
+import 'forms/mobile_receiving_voucher_form_screen.dart';
+import 'forms/mobile_purchase_invoice_form_screen.dart';
+import 'forms/mobile_supplier_return_form_screen.dart';
 
 class MobileReceivingVoucherDetailScreen extends StatefulWidget {
   final ReceivingVoucher voucher;
@@ -79,24 +84,84 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
   }
 
   Future<void> _loadFullVoucher() async {
-    final fullVoucherData = await DatabaseHelper.instance.getReceivingVoucher(currentVoucher.id);
-    if (fullVoucherData != null && mounted) {
-      final itemsMap = fullVoucherData['items'] as List;
-      final items = itemsMap.map((m) => ReceivingVoucherItem.fromMap(m)).toList();
+    final fullVoucher = await DatabaseHelper.instance.getReceivingVoucher(currentVoucher.id);
+    if (fullVoucher != null && mounted) {
       setState(() {
-        currentVoucher = ReceivingVoucher.fromMap(fullVoucherData, items);
+        currentVoucher = fullVoucher;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final statusLabel = translateStatus(currentVoucher.status);
+    final statusColor = _getStatusColor(currentVoucher.status);
+
+    final infoSections = [
+      PremiumInfoSection(
+        title: 'Informations Générales',
+        icon: Icons.info_outline,
+        fields: [
+          PremiumInfoField(
+            label: 'Fournisseur',
+            value: currentVoucher.supplierName ?? 'Non spécifié',
+            icon: Icons.business_outlined,
+            isHighlight: true,
+          ),
+          PremiumInfoField(
+            label: 'Date de réception',
+            value: formatDateTimeLong(currentVoucher.date),
+            icon: Icons.calendar_today_outlined,
+          ),
+        ],
+      ),
+    ];
+
+    final articles = currentVoucher.items.map((item) {
+      final product = _getProduct(item.productId);
+      final productName = product?.name ?? item.productName ?? 'Article sans nom';
+      final refCode = product?.reference ?? product?.code;
+      final qty = item.quantityReceived > 0 ? item.quantityReceived : item.quantityExpected;
+
+      return PremiumArticleItem(
+        reference: refCode,
+        designation: productName,
+        description: null,
+        quantity: qty,
+        unitPrice: item.unitPrice,
+        tvaRate: item.tvaRate > 0 ? item.tvaRate : null,
+        discountPercent: item.discountPercent > 0 ? item.discountPercent : null,
+        totalHT: item.computedTotalHT,
+      );
+    }).toList();
+
+    final totals = <PremiumTotalRow>[
+      PremiumTotalRow(
+        label: 'Total HT',
+        amount: currentVoucher.computedTotalHT,
+      ),
+      PremiumTotalRow(
+        label: 'Total TVA',
+        amount: currentVoucher.computedTotalTvaAfterDiscount,
+      ),
+      if (currentVoucher.timbreFiscal > 0)
+        PremiumTotalRow(
+          label: 'Droit de Timbre',
+          amount: currentVoucher.timbreFiscal,
+        ),
+      PremiumTotalRow(
+        label: 'Total TTC',
+        amount: currentVoucher.computedTotalTTC,
+        isGrandTotal: true,
+      ),
+    ];
+
     return BlocListener<ReceivingVouchersBloc, ReceivingVouchersState>(
       listener: (context, state) {
         if (state is ReceivingVouchersLoaded) {
           try {
             final updatedVoucher = state.vouchers.firstWhere((q) => q.id == currentVoucher.id);
-            if (updatedVoucher.id == currentVoucher.id && mounted) {
+            if (mounted) {
               setState(() {
                 currentVoucher = updatedVoucher.copyWith(items: currentVoucher.items);
               });
@@ -111,163 +176,26 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('BR ${currentVoucher.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('BR ${currentVoucher.number}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primary,
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentVoucher),
               itemBuilder: (_) => _buildActionMenu(context, currentVoucher),
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surface,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Réf: ${currentVoucher.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(currentVoucher.status).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(translateStatus(currentVoucher.status), style: TextStyle(color: _getStatusColor(currentVoucher.status), fontWeight: FontWeight.bold, fontSize: 12)),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      _buildInfoRow('Date', formatDateTimeLong(currentVoucher.date)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Fournisseur', currentVoucher.supplierName ?? 'Non spécifié'),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              if (currentVoucher.items.isEmpty)
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
-                  ),
-                )
-              else
-                ...currentVoucher.items.map((item) {
-                  final product = _getProduct(item.productId);
-                  final productName = product?.name ?? item.productName ?? 'Article non spécifié';
-                  final refCode = product?.reference ?? product?.code;
-
-                  return Card(
-                    elevation: 0,
-                    margin: EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                    color: AppColors.surface,
-                    child: Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(productName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                if (refCode != null && refCode.isNotEmpty) ...[
-                                  SizedBox(height: 2),
-                                  Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                                ],
-                                SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Text('${item.quantityReceived} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                    Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-                                  ],
-                                ),
-                                if (item.discountPercent > 0) ...[
-                                  SizedBox(height: 4),
-                                  Text('Remise: ${item.discountPercent}%', style: TextStyle(color: AppColors.error, fontSize: 12)),
-                                ]
-                              ],
-                            ),
-                          ),
-                          Text(formatCurrencyDT(item.computedTotalHT), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              SizedBox(height: 16),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surfaceAlt,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _buildInfoRow('Total HT', formatCurrencyDT(currentVoucher.computedTotalHT)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Total TVA', formatCurrencyDT(currentVoucher.computedTotalTvaAfterDiscount)),
-                      if (currentVoucher.timbreFiscal > 0) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentVoucher.timbreFiscal)),
-                      ],
-                      Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentVoucher.computedTotalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (currentVoucher.notes != null && currentVoucher.notes!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentVoucher.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                  ),
-                ),
-              ],
-              SizedBox(height: 32),
-            ],
-          ),
+        body: PremiumDetailShell(
+          documentType: 'Bon de Réception',
+          referenceNumber: currentVoucher.number,
+          statusLabel: statusLabel,
+          statusColor: statusColor,
+          infoSections: infoSections,
+          articles: articles,
+          totals: totals,
+          notes: currentVoucher.notes,
         ),
       ),
     );
@@ -427,7 +355,13 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
         );
         break;
       case 'email':
+        final docEmail = DocumentWrapper.fromReceivingVoucher(voucher);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
       case 'whatsapp':
+        final docWa = DocumentWrapper.fromReceivingVoucher(voucher);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
+        break;
       case 'duplicate':
       case 'attachments':
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));

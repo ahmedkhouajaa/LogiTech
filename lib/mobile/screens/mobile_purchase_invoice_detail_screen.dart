@@ -23,10 +23,13 @@ import '../../models/supplier_credit_note.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
+import '../../services/document_share_service.dart';
 import '../../database/database_helper.dart';
 
+import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
 import '../../widgets/purchase_invoice_payment_dialog.dart';
+import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_purchase_invoice_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
@@ -88,6 +91,84 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
 
   @override
   Widget build(BuildContext context) {
+    final statusLabel = translateStatus(currentInvoice.status.toString().split('.').last);
+    final statusColor = _getStatusColor(currentInvoice.status);
+
+    final infoSections = [
+      PremiumInfoSection(
+        title: 'Informations Générales',
+        icon: Icons.info_outline,
+        fields: [
+          PremiumInfoField(
+            label: 'Fournisseur',
+            value: currentInvoice.supplierName ?? 'Non spécifié',
+            icon: Icons.business_outlined,
+            isHighlight: true,
+          ),
+          PremiumInfoField(
+            label: 'Date de facturation',
+            value: formatDateTimeLong(currentInvoice.date),
+            icon: Icons.calendar_today_outlined,
+          ),
+          PremiumInfoField(
+            label: 'Date d\'échéance',
+            value: formatDateTimeLong(currentInvoice.dueDate),
+            icon: Icons.event_available_outlined,
+          ),
+          if (currentInvoice.projectName != null && currentInvoice.projectName!.isNotEmpty)
+            PremiumInfoField(
+              label: 'Projet',
+              value: currentInvoice.projectName!,
+              icon: Icons.folder_outlined,
+            ),
+        ],
+      ),
+    ];
+
+    final articles = currentInvoice.items.map((item) {
+      final product = _getProduct(item.productId);
+      final productName = product?.name ?? item.productName ?? 'Produit Inconnu';
+      final refCode = product?.reference ?? product?.code;
+      final subtitle = (refCode != null && refCode.isNotEmpty)
+          ? refCode
+          : ((item.description != null && item.description!.isNotEmpty && item.description != productName)
+              ? item.description
+              : null);
+
+      return PremiumArticleItem(
+        reference: subtitle,
+        designation: productName,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        tvaRate: item.tvaRate > 0 ? item.tvaRate : null,
+        discountPercent: item.discountPercent > 0 ? item.discountPercent : null,
+        totalHT: item.computedTotalHT,
+      );
+    }).toList();
+
+    final stampTax = (currentInvoice.totalTTC - currentInvoice.totalHT - currentInvoice.totalTva);
+    final totals = <PremiumTotalRow>[
+      PremiumTotalRow(
+        label: 'Total HT',
+        amount: currentInvoice.totalHT,
+      ),
+      PremiumTotalRow(
+        label: 'Total TVA',
+        amount: currentInvoice.totalTva,
+      ),
+      if (stampTax > 0.01)
+        PremiumTotalRow(
+          label: 'Droit de Timbre',
+          amount: stampTax,
+        ),
+      PremiumTotalRow(
+        label: 'Total TTC',
+        amount: currentInvoice.totalTTC,
+        isGrandTotal: true,
+      ),
+    ];
+
     return BlocListener<PurchaseInvoicesBloc, PurchaseInvoicesState>(
       listener: (context, state) {
         if (state is PurchaseInvoicesLoaded) {
@@ -95,7 +176,7 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
             final updatedInvoice = state.purchaseInvoices.firstWhere((q) => q.id == currentInvoice.id);
             if (updatedInvoice.id == currentInvoice.id && mounted) {
               setState(() {
-                currentInvoice = updatedInvoice.items.isNotEmpty ? updatedInvoice : updatedInvoice.copyWith(items: currentInvoice.items);
+                currentInvoice = updatedInvoice.copyWith(items: currentInvoice.items);
               });
             }
           } catch (_) {
@@ -108,167 +189,26 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('FA ${currentInvoice.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Facture ${currentInvoice.number}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primary,
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentInvoice),
               itemBuilder: (_) => _buildActionMenu(context, currentInvoice),
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surface,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Réf: ${currentInvoice.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(currentInvoice.status).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(translateStatus(currentInvoice.status.toString().split('.').last), style: TextStyle(color: _getStatusColor(currentInvoice.status), fontWeight: FontWeight.bold, fontSize: 12)),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      _buildInfoRow('Date', formatDateTimeLong(currentInvoice.date)),
-                      if (currentInvoice.dueDate != null) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('Échéance', formatDateTimeLong(currentInvoice.dueDate!)),
-                      ],
-                      SizedBox(height: 8),
-                      _buildInfoRow('Fournisseur', currentInvoice.supplierName ?? 'Non spécifié'),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              if (currentInvoice.items.isEmpty)
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
-                  ),
-                )
-              else
-                ...currentInvoice.items.map((item) {
-                  final product = _getProduct(item.productId);
-                  final productName = product?.name ?? ((item.productName != null && item.productName!.isNotEmpty) ? item.productName! : ((item.description != null && item.description!.isNotEmpty) ? item.description! : 'Article sans nom'));
-                  final refCode = product?.reference ?? product?.code;
-
-                  return Card(
-                    elevation: 0,
-                    margin: EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                    color: AppColors.surface,
-                    child: Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(productName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                if (refCode != null && refCode.isNotEmpty) ...[
-                                  SizedBox(height: 2),
-                                  Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                                ],
-                                SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Text('${item.quantity} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                    Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-                                  ],
-                                ),
-                                if (item.discountPercent > 0) ...[
-                                  SizedBox(height: 4),
-                                  Text('Remise: ${item.discountPercent}%', style: TextStyle(color: AppColors.error, fontSize: 12)),
-                                ]
-                              ],
-                            ),
-                          ),
-                          Text(formatCurrencyDT(item.computedTotalHT), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              SizedBox(height: 16),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surfaceAlt,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _buildInfoRow('Total HT', formatCurrencyDT(currentInvoice.totalHT)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Total TVA', formatCurrencyDT(currentInvoice.totalTva)),
-                      if (currentInvoice.timbreFiscal != null && currentInvoice.timbreFiscal! > 0) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentInvoice.timbreFiscal!)),
-                      ],
-                      Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentInvoice.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (currentInvoice.notes != null && currentInvoice.notes!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentInvoice.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                  ),
-                ),
-              ],
-              SizedBox(height: 32),
-            ],
-          ),
+        body: PremiumDetailShell(
+          documentType: 'Facture d\'Achat',
+          referenceNumber: currentInvoice.number,
+          statusLabel: statusLabel,
+          statusColor: statusColor,
+          infoSections: infoSections,
+          articles: articles,
+          totals: totals,
+          notes: currentInvoice.notes,
         ),
       ),
     );
@@ -410,7 +350,13 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
         _openConvertedCreditNote(context, inv.creditNoteId, inv);
         break;
       case 'email':
+        final docEmail = DocumentWrapper.fromPurchaseInvoice(inv);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
       case 'whatsapp':
+        final docWa = DocumentWrapper.fromPurchaseInvoice(inv);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
+        break;
       case 'duplicate':
       case 'attachments':
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));

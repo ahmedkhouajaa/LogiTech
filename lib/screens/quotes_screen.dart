@@ -18,6 +18,7 @@ import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
+import '../services/document_share_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import '../services/auth_service.dart';
@@ -32,6 +33,7 @@ import 'create_quote_screen.dart';
 import '../models/document_wrapper.dart';
 import '../services/pdf_service.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
@@ -1085,8 +1087,10 @@ class _QuotesScreenState extends State<QuotesScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DocumentPreviewScreen(
+            builder: (_) => DocumentDetailScreen(
               document: DocumentWrapper.fromQuote(quote),
+              status: quote.status.label,
+              statusColor: quote.status.color,
             ),
           ),
         );
@@ -1165,6 +1169,14 @@ class _QuotesScreenState extends State<QuotesScreen> {
       case 'pdf':
         final doc = DocumentWrapper.fromQuote(quote);
         PdfService.instance.downloadDocument(context, doc);
+        break;
+      case 'email':
+        final docEmail = DocumentWrapper.fromQuote(quote);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = DocumentWrapper.fromQuote(quote);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action non implementee')));

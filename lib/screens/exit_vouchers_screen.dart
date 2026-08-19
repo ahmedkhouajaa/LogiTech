@@ -13,6 +13,7 @@ import '../utils/helpers.dart';
 import 'create_exit_voucher_screen.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
 import '../services/pdf_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
@@ -1180,7 +1181,22 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                     borderRadius: BorderRadius.circular(8)),
                 color: AppColors.surface,
                 onSelected: (val) {
-                  if (val == 'view' || val == 'print') {
+                  if (val == 'view') {
+                    final statusEnum = ExitVoucherStatus.values.firstWhere(
+                      (e) => e.name == note.status,
+                      orElse: () => ExitVoucherStatus.draft,
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DocumentDetailScreen(
+                          document: _createDocumentWrapper(note),
+                          status: statusEnum.label,
+                          statusColor: statusEnum.color,
+                        ),
+                      ),
+                    );
+                  } else if (val == 'print') {
                     Navigator.push(
                       context,
                       MaterialPageRoute(

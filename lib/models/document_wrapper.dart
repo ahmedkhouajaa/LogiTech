@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class DocumentWrapper {
   final String id;
   final String number;
@@ -33,6 +31,44 @@ class DocumentWrapper {
     this.customData = const {},
   });
 
+  static String _extractItemName(dynamic item) {
+    try {
+      if (item.productName != null && item.productName.toString().trim().isNotEmpty) {
+        return item.productName.toString().trim();
+      }
+    } catch (_) {}
+    try {
+      if (item.designation != null && item.designation.toString().trim().isNotEmpty) {
+        return item.designation.toString().trim();
+      }
+    } catch (_) {}
+    try {
+      if (item.description != null && item.description.toString().trim().isNotEmpty) {
+        return item.description.toString().trim();
+      }
+    } catch (_) {}
+    return 'Produit Inconnu';
+  }
+
+  static String? _extractItemReference(dynamic item) {
+    try {
+      if (item.reference != null && item.reference.toString().trim().isNotEmpty) {
+        return item.reference.toString().trim();
+      }
+    } catch (_) {}
+    try {
+      if (item.productCode != null && item.productCode.toString().trim().isNotEmpty) {
+        return item.productCode.toString().trim();
+      }
+    } catch (_) {}
+    try {
+      if (item.code != null && item.code.toString().trim().isNotEmpty) {
+        return item.code.toString().trim();
+      }
+    } catch (_) {}
+    return null;
+  }
+
   static DocumentWrapper fromInvoice(dynamic inv) {
     return DocumentWrapper(
       id: inv.id,
@@ -50,8 +86,10 @@ class DocumentWrapper {
       customData: {
         'projectName': inv.projectName,
       },
-      items: (inv.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
-        productName: i.productName ?? i.description ?? 'Produit Inconnu',
+      items: (inv.items as List).map((i) => DocumentItemWrapper(
+        productId: i.productId,
+        reference: _extractItemReference(i),
+        productName: _extractItemName(i),
         quantity: i.quantity,
         unitPrice: i.unitPrice,
         tvaRate: i.tvaRate,
@@ -78,8 +116,10 @@ class DocumentWrapper {
       customData: {
         'projectName': quote.projectName,
       },
-      items: (quote.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
-        productName: i.productName ?? 'Produit Inconnu',
+      items: (quote.items as List).map((i) => DocumentItemWrapper(
+        productId: i.productId,
+        reference: _extractItemReference(i),
+        productName: _extractItemName(i),
         quantity: i.quantity,
         unitPrice: i.unitPrice,
         tvaRate: i.tvaRate,
@@ -106,8 +146,10 @@ class DocumentWrapper {
       customData: {
         'projectName': order.projectName,
       },
-      items: (order.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
-        productName: i.description ?? 'Produit Inconnu',
+      items: (order.items as List).map((i) => DocumentItemWrapper(
+        productId: i.productId,
+        reference: _extractItemReference(i),
+        productName: _extractItemName(i),
         quantity: i.quantity,
         unitPrice: i.unitPrice,
         tvaRate: i.tvaRate,
@@ -133,8 +175,10 @@ class DocumentWrapper {
       customData: {
         'projectName': doc.projectName,
       },
-      items: (doc.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
-        productName: i.description ?? 'Produit Inconnu',
+      items: (doc.items as List).map((i) => DocumentItemWrapper(
+        productId: i.productId,
+        reference: _extractItemReference(i),
+        productName: _extractItemName(i),
         quantity: i.quantity,
         unitPrice: i.unitPrice,
         tvaRate: i.tvaRate,
@@ -160,8 +204,10 @@ class DocumentWrapper {
       customData: {
         'projectName': doc.projectName,
       },
-      items: (doc.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
-        productName: i.description ?? 'Produit Inconnu',
+      items: (doc.items as List).map((i) => DocumentItemWrapper(
+        productId: i.productId,
+        reference: _extractItemReference(i),
+        productName: _extractItemName(i),
         quantity: i.quantity,
         unitPrice: i.unitPrice,
         tvaRate: i.tvaRate,
@@ -185,20 +231,16 @@ class DocumentWrapper {
       stampTax: inv.timbreFiscal ?? 0,
       notes: inv.notes,
       conditionsGenerales: inv.conditionsGenerales,
-      items: (inv.items as List).map((i) {
-        String pName = 'Produit Inconnu';
-        try { pName = i.productName ?? 'Produit Inconnu'; } catch (_) {}
-        try { pName = i.description ?? pName; } catch (_) {}
-        
-        return DocumentItemWrapper(productId: i.productId,
-          productName: pName,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          tvaRate: i.tvaRate,
-          discountPercent: i.discountPercent,
-          totalHT: (() { try { return i.computedTotalHT; } catch(_) { return i.totalHT; } })(),
-        );
-      }).toList(),
+      items: (inv.items as List).map((i) => DocumentItemWrapper(
+        productId: i.productId,
+        reference: _extractItemReference(i),
+        productName: _extractItemName(i),
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        tvaRate: i.tvaRate,
+        discountPercent: i.discountPercent,
+        totalHT: (() { try { return i.computedTotalHT; } catch(_) { return i.totalHT; } })(),
+      )).toList(),
     );
   }
 
@@ -215,20 +257,16 @@ class DocumentWrapper {
       stampTax: order.timbreFiscal ?? 0,
       notes: order.notes,
       conditionsGenerales: order.conditionsGenerales,
-      items: (order.items as List).map((i) {
-        String pName = 'Produit Inconnu';
-        try { pName = i.description ?? 'Produit Inconnu'; } catch (_) {}
-        try { pName = i.productName ?? pName; } catch (_) {}
-        
-        return DocumentItemWrapper(productId: i.productId,
-          productName: pName,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice ?? 0,
-          tvaRate: i.tvaRate ?? 0,
-          discountPercent: i.discountPercent ?? 0,
-          totalHT: i.totalHT ?? 0,
-        );
-      }).toList(),
+      items: (order.items as List).map((i) => DocumentItemWrapper(
+        productId: i.productId,
+        reference: _extractItemReference(i),
+        productName: _extractItemName(i),
+        quantity: i.quantity,
+        unitPrice: i.unitPrice ?? 0,
+        tvaRate: i.tvaRate ?? 0,
+        discountPercent: i.discountPercent ?? 0,
+        totalHT: i.totalHT ?? 0,
+      )).toList(),
     );
   }
 
@@ -245,8 +283,10 @@ class DocumentWrapper {
       totalTTC: note.totalTTC ?? 0,
       notes: note.notes,
       conditionsGenerales: note.conditions,
-      items: (note.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
-        productName: i.designation ?? 'Produit Inconnu',
+      items: (note.items as List).map((i) => DocumentItemWrapper(
+        productId: i.productId,
+        reference: _extractItemReference(i),
+        productName: _extractItemName(i),
         quantity: i.quantity,
         unitPrice: i.unitPrice ?? 0,
         tvaRate: i.tvaRate ?? 0,
@@ -269,8 +309,10 @@ class DocumentWrapper {
       stampTax: voucher.timbreFiscal ?? 0,
       notes: voucher.notes,
       conditionsGenerales: voucher.conditionsGenerales,
-      items: (voucher.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
-        productName: i.productName ?? 'Produit Inconnu',
+      items: (voucher.items as List).map((i) => DocumentItemWrapper(
+        productId: i.productId,
+        reference: _extractItemReference(i),
+        productName: _extractItemName(i),
         quantity: i.quantityReceived > 0 ? i.quantityReceived : (i.quantityExpected ?? 0),
         unitPrice: i.unitPrice ?? 0,
         tvaRate: i.tvaRate ?? 0,
@@ -291,8 +333,10 @@ class DocumentWrapper {
       totalTva: note.totalTVA ?? 0,
       totalTTC: note.totalTTC ?? 0,
       notes: note.reason,
-      items: (note.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
-        productName: i.designation ?? 'Produit Inconnu',
+      items: (note.items as List).map((i) => DocumentItemWrapper(
+        productId: i.productId,
+        reference: _extractItemReference(i),
+        productName: _extractItemName(i),
         quantity: i.quantity,
         unitPrice: i.unitPrice ?? 0,
         tvaRate: i.tvaRate ?? 0,
@@ -313,8 +357,10 @@ class DocumentWrapper {
       totalTva: note.totalTVA ?? 0,
       totalTTC: note.totalTTC ?? 0,
       notes: note.reason,
-      items: (note.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
-        productName: i.designation ?? 'Produit Inconnu',
+      items: (note.items as List).map((i) => DocumentItemWrapper(
+        productId: i.productId,
+        reference: _extractItemReference(i),
+        productName: _extractItemName(i),
         quantity: i.quantity,
         unitPrice: i.unitPrice ?? 0,
         tvaRate: i.tvaRate ?? 0,
@@ -335,8 +381,10 @@ class DocumentWrapper {
       totalTva: note.totalTva ?? 0,
       totalTTC: note.totalTTC ?? 0,
       notes: note.notes,
-      items: (note.items as List).map((i) => DocumentItemWrapper(productId: i.productId,
-        productName: i.productName ?? 'Produit Inconnu',
+      items: (note.items as List).map((i) => DocumentItemWrapper(
+        productId: i.productId,
+        reference: _extractItemReference(i),
+        productName: _extractItemName(i),
         quantity: i.quantity,
         unitPrice: i.unitPrice ?? 0,
         tvaRate: i.tvaRate ?? 0,
@@ -417,22 +465,26 @@ class DocumentWrapper {
 
 class DocumentItemWrapper {
   final String? productId;
+  final String? reference;
   final String productName;
   final double quantity;
   final double unitPrice;
   final double tvaRate;
   final double discountPercent;
   final double totalHT;
+  final String? unit;
   final Map<String, dynamic> customFields;
 
   DocumentItemWrapper({
     this.productId,
+    this.reference,
     required this.productName,
     required this.quantity,
     required this.unitPrice,
     required this.tvaRate,
     required this.discountPercent,
     required this.totalHT,
+    this.unit,
     Map<String, dynamic>? customFields,
   }) : customFields = customFields ?? <String, dynamic>{};
 }

@@ -711,7 +711,8 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                           setState(() {
                             _items[index] = item.copyWith(
                               productId: selection.id,
-                              unitPrice: selection.purchasePrice,
+                              productName: selection.name,
+                              unitPrice: selection.purchasePrice > 0 ? selection.purchasePrice : selection.sellingPrice,
                               tvaRate: selection.tvaRate,
                               description: selection.name,
                             );
@@ -901,6 +902,11 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                       _items.add(SupplierOrderItem(
                         orderId: widget.existing?.id ?? '',
                         productId: product.id,
+                        productName: product.name,
+                        description: product.name,
+                        quantity: 1,
+                        unitPrice: product.purchasePrice > 0 ? product.purchasePrice : product.sellingPrice,
+                        tvaRate: product.tvaRate,
                       ));
                     });
                   }

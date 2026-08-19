@@ -7,6 +7,7 @@ import '../utils/helpers.dart';
 import 'create_stock_transfer_screen.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
 import '../mobile/screens/mobile_stock_transfer_detail_screen.dart';
 import '../blocs/products/products_bloc.dart';
 import '../models/stock_movement.dart';
@@ -67,11 +68,18 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
   }
 
   void _previewDocument(StockTransfer entry) {
+    final statusLabel = translateStatus(entry.status);
+    final statusColor = entry.status == 'validated'
+        ? AppColors.success
+        : (entry.status == 'cancelled' ? AppColors.error : AppColors.warning);
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => DocumentPreviewScreen(
+        builder: (_) => DocumentDetailScreen(
           document: DocumentWrapper.fromStockTransfer(entry),
+          status: statusLabel,
+          statusColor: statusColor,
         ),
       ),
     );

@@ -75,23 +75,31 @@ class CreditNoteItem extends Equatable {
         'id': id,
         'credit_note_id': creditNoteId,
         'product_id': productId,
+        'product_name': productName ?? description,
+        'description': description,
         'quantity': quantity,
         'unit_price': unitPrice,
         'tva_rate': tvaRate,
+        'discount_percent': discountPercent,
         'total_ht': totalHT,
       };
 
   factory CreditNoteItem.fromMap(Map<String, dynamic> map) {
     final rawQty = double.tryParse(map['quantity']?.toString() ?? '1') ?? 1.0;
     final rawHT = double.tryParse(map['total_ht']?.toString() ?? '0') ?? 0.0;
+    final pName = map['product_name']?.toString();
+    final desc = map['description']?.toString();
     return CreditNoteItem(
-        id: map['id']?.toString() ?? '',
-        productId: map['product_id']?.toString() ?? '',
-        quantity: rawQty > 0 ? -rawQty : rawQty,
-        unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
-        tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
-        totalHT: rawHT > 0 ? -rawHT : rawHT,
-      );
+      id: map['id']?.toString() ?? '',
+      productId: map['product_id']?.toString() ?? '',
+      productName: (pName != null && pName.isNotEmpty) ? pName : desc,
+      description: desc,
+      quantity: rawQty > 0 ? -rawQty : rawQty,
+      unitPrice: double.tryParse(map['unit_price']?.toString() ?? '0') ?? 0.0,
+      tvaRate: double.tryParse(map['tva_rate']?.toString() ?? '19') ?? 19.0,
+      discountPercent: double.tryParse(map['discount_percent']?.toString() ?? '0') ?? 0.0,
+      totalHT: rawHT > 0 ? -rawHT : rawHT,
+    );
   }
 
   CreditNoteItem copyWith({

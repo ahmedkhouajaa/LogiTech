@@ -228,9 +228,6 @@ class AuthService {
       );
 
       if (userCredential.user != null) {
-        _currentUserUid = userCredential.user!.uid;
-        _offlineMode = false;
-
         // Create user profile in Firestore (without auto-creating enterprise)
         try {
           await _createUserProfile(userCredential.user!, name: name);
@@ -244,8 +241,10 @@ class AuthService {
           throw 'Échec de la création du profil utilisateur. L\'inscription a été annulée. Veuillez réessayer.';
         }
 
-        _startUserStatusListener(_currentUserUid!);
-        unawaited(SyncService.instance.triggerSync());
+        // Explicitly sign out so user is redirected to the login interface
+        await FirebaseAuth.instance.signOut();
+        _currentUserUid = null;
+        _offlineMode = false;
         return true;
       }
       return false;

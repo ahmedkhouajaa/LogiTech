@@ -8,14 +8,17 @@ import '../../blocs/suppliers/suppliers_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
 
 import '../../models/supplier_credit_note.dart';
+import '../../models/supplier.dart';
 import '../../models/product.dart';
 import '../../models/document_wrapper.dart';
 
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
+import '../../services/document_share_service.dart';
 import '../../database/database_helper.dart';
 
+import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
 import 'forms/mobile_supplier_credit_note_form_screen.dart';
 import '../../services/permission_service.dart';
@@ -44,26 +47,14 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
     _loadProducts();
   }
 
-  Future<void> _loadSupplierName() async {
-    if (currentNote.supplierId != null && currentNote.supplierId!.isNotEmpty) {
-      try {
-        final suppliersState = context.read<SuppliersBloc>().state;
-        if (suppliersState is SuppliersLoaded) {
-          final s = suppliersState.suppliers.firstWhere((sup) => sup.id == currentNote.supplierId);
-          setState(() {
-            _supplierName = (s.companyName != null && s.companyName!.isNotEmpty) ? s.companyName! : s.name;
-          });
-          return;
-        }
-        final suppliers = await DatabaseHelper.instance.getSuppliers();
-        final s = suppliers.firstWhere((sup) => sup.id == currentNote.supplierId);
-        if (mounted) {
-          setState(() {
-            _supplierName = (s.companyName != null && s.companyName!.isNotEmpty) ? s.companyName! : s.name;
-          });
-        }
-      } catch (_) {}
-    }
+  Future<void> _loadFullNote() async {
+    try {
+      final notes = await DatabaseHelper.instance.getSupplierCreditNotes();
+      final n = notes.firstWhere((x) => x.id == currentNote.id);
+      if (mounted) {
+        setState(() => currentNote = n);
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadProducts() async {
@@ -90,17 +81,81 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
     return null;
   }
 
-  Future<void> _loadFullNote() async {
-    final fullNote = await DatabaseHelper.instance.getSupplierCreditNoteById(currentNote.id);
-    if (fullNote != null && mounted) {
-      setState(() {
-        currentNote = fullNote;
-      });
-    }
+  Future<void> _loadSupplierName() async {
+    if (currentNote.supplierId == null || currentNote.supplierId!.isEmpty) return;
+    try {
+      final suppliers = await DatabaseHelper.instance.getSuppliers();
+      final supplier = suppliers.firstWhere(
+        (s) => s.id == currentNote.supplierId,
+        orElse: () => Supplier(id: '', code: '', name: '', country: ''),
+      );
+      if (supplier.id.isNotEmpty && mounted) {
+        setState(() {
+          _supplierName = (supplier.companyName != null && supplier.companyName!.isNotEmpty)
+              ? supplier.companyName
+              : supplier.name;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
   Widget build(BuildContext context) {
+    final statusLabel = translateStatus(currentNote.status);
+    final statusColor = _getStatusColor(currentNote.status);
+
+    final infoSections = [
+      PremiumInfoSection(
+        title: 'Informations Générales',
+        icon: Icons.info_outline,
+        fields: [
+          PremiumInfoField(
+            label: 'Fournisseur',
+            value: _supplierName ?? currentNote.supplierId ?? 'Non spécifié',
+            icon: Icons.business_outlined,
+            isHighlight: true,
+          ),
+          PremiumInfoField(
+            label: 'Date de l\'avoir',
+            value: formatDateTimeLong(currentNote.date),
+            icon: Icons.calendar_today_outlined,
+          ),
+        ],
+      ),
+    ];
+
+    final articles = currentNote.items.map((item) {
+      final product = _getProduct(item.productId);
+      final productName = product?.name ?? 'Article non spécifié';
+      final refCode = product?.reference ?? product?.code;
+
+      return PremiumArticleItem(
+        reference: refCode,
+        designation: productName,
+        description: null,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        tvaRate: item.tvaRate > 0 ? item.tvaRate : null,
+        totalHT: item.totalHT,
+      );
+    }).toList();
+
+    final totals = <PremiumTotalRow>[
+      PremiumTotalRow(
+        label: 'Total HT',
+        amount: currentNote.totalHT,
+      ),
+      PremiumTotalRow(
+        label: 'Total TVA',
+        amount: currentNote.totalTVA,
+      ),
+      PremiumTotalRow(
+        label: 'Total TTC',
+        amount: currentNote.totalTTC,
+        isGrandTotal: true,
+      ),
+    ];
+
     return BlocListener<SupplierCreditNotesBloc, SupplierCreditNotesState>(
       listener: (context, state) {
         if (state is SupplierCreditNotesLoaded) {
@@ -121,145 +176,26 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('Avoir ${currentNote.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Avoir ${currentNote.number}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primary,
           iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentNote),
               itemBuilder: (_) => _buildActionMenu(context, currentNote),
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surface,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Réf: ${currentNote.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(currentNote.status).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(translateStatus(currentNote.status), style: TextStyle(color: _getStatusColor(currentNote.status), fontWeight: FontWeight.bold, fontSize: 12)),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      _buildInfoRow('Date', formatDateTimeLong(currentNote.date)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Fournisseur', _supplierName ?? currentNote.supplierId ?? 'Non spécifié'),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              SizedBox(height: 8),
-              if (currentNote.items.isEmpty)
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: Text('Aucun article', style: TextStyle(color: AppColors.textSecondary))),
-                  ),
-                )
-              else
-                ...currentNote.items.map((item) {
-                  final product = _getProduct(item.productId);
-                  final productName = product?.name ?? 'Article non spécifié';
-                  final refCode = product?.reference ?? product?.code;
-
-                  return Card(
-                    elevation: 0,
-                    margin: EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                    color: AppColors.surface,
-                    child: Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(productName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                if (refCode != null && refCode.isNotEmpty) ...[
-                                  SizedBox(height: 2),
-                                  Text(refCode, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                                ],
-                                SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Text('${item.quantity} x ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                                    Text(formatCurrencyDT(item.unitPrice), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(formatCurrencyDT(item.totalHT), style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              SizedBox(height: 16),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surfaceAlt,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _buildInfoRow('Total HT', formatCurrencyDT(currentNote.totalHT)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Total TVA', formatCurrencyDT(currentNote.totalTVA)),
-                      if ((currentNote.totalTTC.abs() - currentNote.totalHT.abs() - currentNote.totalTVA.abs()).abs() > 0.01) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('Timbre fiscal', formatCurrencyDT((currentNote.totalTTC.abs() - currentNote.totalHT.abs() - currentNote.totalTVA.abs()).abs())),
-                      ],
-                      Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentNote.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 32),
-            ],
-          ),
+        body: PremiumDetailShell(
+          documentType: 'Avoir Fournisseur',
+          referenceNumber: currentNote.number,
+          statusLabel: statusLabel,
+          statusColor: statusColor,
+          infoSections: infoSections,
+          articles: articles,
+          totals: totals,
+          notes: currentNote.reason,
         ),
       ),
     );
@@ -388,9 +324,15 @@ class _MobileSupplierCreditNoteDetailScreenState extends State<MobileSupplierCre
         final doc = DocumentWrapper.fromSupplierCreditNote(note);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
         break;
-      case 'add_payment':
       case 'email':
+        final docEmail = DocumentWrapper.fromSupplierCreditNote(note);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
       case 'whatsapp':
+        final docWa = DocumentWrapper.fromSupplierCreditNote(note);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
+        break;
+      case 'add_payment':
       case 'duplicate':
       case 'attachments':
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));

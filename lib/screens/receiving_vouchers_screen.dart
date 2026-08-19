@@ -23,6 +23,8 @@ import '../blocs/supplier_returns/supplier_returns_bloc.dart';
 import '../blocs/supplier_returns/supplier_returns_event.dart';
 import '../models/supplier_return.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
+import '../services/document_share_service.dart';
 import '../models/document_wrapper.dart';
 import 'app_shell_screen.dart';
 import '../widgets/sidebar_menu.dart';
@@ -880,11 +882,19 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                 itemBuilder: (ctx) => _buildActionMenu(context, voucher),
                                                 onSelected: (val) {
                                                   if (val == 'view') {
+                                                    final statusEnum = ReceivingVoucherStatus.values.firstWhere(
+                                                      (e) => e.name == voucher.status,
+                                                      orElse: () => ReceivingVoucherStatus.draft,
+                                                    );
                                                     final doc = DocumentWrapper.fromReceivingVoucher(voucher);
                                                     Navigator.push(
                                                       context,
                                                       MaterialPageRoute(
-                                                        builder: (_) => DocumentPreviewScreen(document: doc),
+                                                        builder: (_) => DocumentDetailScreen(
+                                                          document: doc,
+                                                          status: statusEnum.label,
+                                                          statusColor: statusEnum.color,
+                                                        ),
                                                       ),
                                                     );
                                                   } else if (val == 'edit') {
@@ -935,6 +945,20 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                         context.read<ReceivingVouchersBloc>().add(LoadReceivingVouchers());
                                                       }
                                                     });
+                                                  } else if (val == 'email') {
+                                                    final doc = DocumentWrapper.fromReceivingVoucher(voucher);
+                                                    DocumentShareService.shareDocument(doc, isEmail: true);
+                                                  } else if (val == 'whatsapp') {
+                                                    final doc = DocumentWrapper.fromReceivingVoucher(voucher);
+                                                    DocumentShareService.shareDocument(doc, isEmail: false);
+                                                  } else if (val == 'print') {
+                                                    final doc = DocumentWrapper.fromReceivingVoucher(voucher);
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) => DocumentPreviewScreen(document: doc),
+                                                      ),
+                                                    );
                                                   } else {
                                                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                                                       content: Text('Cette fonctionnalité sera disponible prochainement'),

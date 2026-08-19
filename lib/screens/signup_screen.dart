@@ -144,6 +144,29 @@ class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderSt
                 duration: const Duration(seconds: 4),
               ),
             );
+          } else if (state is AuthSignUpSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: const [
+                    Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Compte créé avec succès ! Veuillez vous connecter.',
+                        style: TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF10B981),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.all(16),
+                duration: const Duration(seconds: 4),
+              ),
+            );
+            Navigator.of(context).pop();
           } else if (state is AuthAuthenticated) {
             Navigator.of(context).popUntil((route) => route.isFirst);
           }

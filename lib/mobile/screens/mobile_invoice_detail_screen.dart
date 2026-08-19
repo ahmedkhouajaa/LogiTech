@@ -20,9 +20,11 @@ import '../../models/document_wrapper.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../services/pdf_service.dart';
+import '../../services/document_share_service.dart';
 import '../../services/auth_service.dart';
 import '../../database/database_helper.dart';
 
+import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
 import '../../widgets/invoice_payment_dialog.dart';
 import '../utils/mobile_status_colors.dart';
@@ -88,16 +90,92 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final statusLabel = translateStatus(currentInvoice.status.name);
+    final statusColor = currentInvoice.status.color;
+
+    final infoSections = [
+      PremiumInfoSection(
+        title: 'Informations Générales',
+        icon: Icons.info_outline,
+        fields: [
+          PremiumInfoField(
+            label: 'Client',
+            value: currentInvoice.customerName ?? 'Inconnu',
+            icon: Icons.person_outline,
+            isHighlight: true,
+          ),
+          PremiumInfoField(
+            label: 'Date d\'émission',
+            value: formatDateTimeLong(currentInvoice.date),
+            icon: Icons.calendar_today_outlined,
+          ),
+          PremiumInfoField(
+            label: 'Date d\'échéance',
+            value: formatDateTimeLong(currentInvoice.dueDate),
+            icon: Icons.event_available_outlined,
+          ),
+          if (currentInvoice.projectName != null && currentInvoice.projectName!.isNotEmpty)
+            PremiumInfoField(
+              label: 'Projet',
+              value: currentInvoice.projectName!,
+              icon: Icons.folder_outlined,
+            ),
+        ],
+      ),
+    ];
+
+    final articles = currentInvoice.items.map((item) {
+      final product = _getProduct(item.productId);
+      final productName = product?.name ?? item.productName ?? 'Produit Inconnu';
+      final refCode = product?.reference ?? product?.code;
+      final subtitle = (refCode != null && refCode.isNotEmpty)
+          ? refCode
+          : ((item.description != null && item.description!.isNotEmpty && item.description != productName)
+              ? item.description
+              : null);
+
+      return PremiumArticleItem(
+        reference: subtitle,
+        designation: productName,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        tvaRate: item.tvaRate > 0 ? item.tvaRate : null,
+        discountPercent: item.discountPercent > 0 ? item.discountPercent : null,
+        totalHT: item.computedTotalHT,
+      );
+    }).toList();
+
+    final stampTax = (currentInvoice.totalTTC - currentInvoice.totalHT - currentInvoice.totalTva);
+    final totals = <PremiumTotalRow>[
+      PremiumTotalRow(
+        label: 'Total HT',
+        amount: currentInvoice.totalHT,
+      ),
+      PremiumTotalRow(
+        label: 'Total TVA',
+        amount: currentInvoice.totalTva,
+      ),
+      if (stampTax > 0.01)
+        PremiumTotalRow(
+          label: 'Droit de Timbre',
+          amount: stampTax,
+        ),
+      PremiumTotalRow(
+        label: 'Total TTC',
+        amount: currentInvoice.totalTTC,
+        isGrandTotal: true,
+      ),
+    ];
+
     return BlocListener<InvoicesBloc, InvoicesState>(
       listener: (context, state) {
         if (state is InvoicesLoaded) {
           try {
-            final updatedInvoice = state.invoices.firstWhere((q) => q.id == currentInvoice.id);
-            if (updatedInvoice.id == currentInvoice.id && mounted) {
-              setState(() {
-                currentInvoice = updatedInvoice.copyWith(items: currentInvoice.items);
-              });
-            }
+            final updated = state.invoices.firstWhere((i) => i.id == currentInvoice.id);
+            setState(() {
+              currentInvoice = updated;
+            });
           } catch (_) {
             if (!_isPopping) {
               _isPopping = true;
@@ -109,12 +187,12 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          title: Text('Facture ${currentInvoice.number}', style: TextStyle(color: Colors.white, fontSize: 18)),
+          title: Text('Facture ${currentInvoice.number}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           backgroundColor: AppColors.primary,
-          iconTheme: IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: Colors.white),
           actions: [
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.white),
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentInvoice),
               itemBuilder: (_) => [
                 _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
@@ -127,171 +205,38 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                   _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
                 ],
                 const PopupMenuDivider(height: 1),
-                _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-                PopupMenuDivider(height: 1),
-                if (currentInvoice.status != InvoiceStatus.paid) ...[
-                  _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
-                  PopupMenuDivider(height: 1),
+                _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter Paiement'),
+                const PopupMenuDivider(height: 1),
+                if (currentInvoice.creditNoteId == null || currentInvoice.creditNoteId!.isEmpty) ...[
+                  _buildMenuItem('to_credit_note', Icons.receipt_long_outlined, AppColors.textSecondary, 'Créer un Avoir'),
+                  const PopupMenuDivider(height: 1),
+                ] else ...[
+                  _buildMenuItem('view_credit_note', Icons.receipt_long_outlined, AppColors.success, 'Voir l\'Avoir créé'),
+                  const PopupMenuDivider(height: 1),
                 ],
-                if (currentInvoice.creditNoteId != null && currentInvoice.creditNoteId!.isNotEmpty)
-                  _buildMenuItem('view_credit_note', Icons.receipt_long_outlined, AppColors.primary, 'Voir l\'avoir')
-                else
-                  _buildMenuItem('to_credit_note', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Avoir'),
-                PopupMenuDivider(height: 1),
+                _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                PopupMenuDivider(height: 1),
+                const PopupMenuDivider(height: 1),
                 _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-//                 PopupMenuDivider(height: 1),
-//                 _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-//                 PopupMenuDivider(height: 1),
-//                 _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'),
               ],
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surface,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Réf: ${currentInvoice.number}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Builder(
-                            builder: (context) {
-                              final label = translateStatus(currentInvoice.status.name);
-                              final color = MobileStatusColors.getColorForStatus(label);
-                              return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: color.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
-                                ),
-                                child: Text(
-                                  label,
-                                  style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12),
-                                ),
-                              );
-                            }
-                          ),
-                        ],
-                      ),
-                      Divider(height: 24),
-                      _buildInfoRow('Client', currentInvoice.customerName ?? 'Inconnu'),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Date', formatDateTimeLong(currentInvoice.date)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Date d\'échéance', formatDateTimeLong(currentInvoice.dueDate)),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              if (currentInvoice.items.isNotEmpty) ...[
-                Text('Articles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                ...currentInvoice.items.map((item) {
-                  final product = _getProduct(item.productId);
-                  final productName = product?.name ?? item.productName ?? item.description ?? 'Produit Inconnu';
-                  final refCode = product?.reference ?? product?.code;
-                  final subtitleText = (refCode != null && refCode.isNotEmpty)
-                      ? refCode
-                      : ((item.description != null && item.description!.isNotEmpty && item.description != productName) ? item.description! : null);
-
-                  return Card(
-                    elevation: 1,
-                    margin: EdgeInsets.only(bottom: 8),
-                    color: AppColors.surface,
-                    surfaceTintColor: AppColors.surface,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border.withOpacity(0.5))),
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(productName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
-                          if (subtitleText != null) ...[
-                            SizedBox(height: 4),
-                            Text(subtitleText, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                          ],
-                          SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)),
-                                child: Text('${item.quantity} x ${formatCurrencyDT(item.unitPrice)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
-                              ),
-                              Text(formatCurrencyDT(item.totalHT), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primary)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-                SizedBox(height: 16),
-              ],
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                color: AppColors.surfaceAlt,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _buildInfoRow('Total HT', formatCurrencyDT(currentInvoice.totalHT)),
-                      SizedBox(height: 8),
-                      _buildInfoRow('Total TVA', formatCurrencyDT(currentInvoice.totalTva)),
-                      if ((currentInvoice.totalTTC - currentInvoice.totalHT - currentInvoice.totalTva) > 0.01) ...[
-                        SizedBox(height: 8),
-                        _buildInfoRow('Timbre fiscal', formatCurrencyDT(currentInvoice.totalTTC - currentInvoice.totalHT - currentInvoice.totalTva)),
-                      ],
-                      Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Total TTC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(formatCurrencyDT(currentInvoice.totalTTC), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.primary)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (currentInvoice.notes != null && currentInvoice.notes!.isNotEmpty) ...[
-                SizedBox(height: 16),
-                Text('Notes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 8),
-                Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
-                  color: AppColors.surface,
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(currentInvoice.notes!, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                  ),
-                ),
-              ],
-              SizedBox(height: 32),
-            ],
-          ),
+        body: PremiumDetailShell(
+          documentType: 'Facture',
+          referenceNumber: currentInvoice.number,
+          statusLabel: statusLabel,
+          statusColor: statusColor,
+          infoSections: infoSections,
+          articles: articles,
+          totals: totals,
+          notes: currentInvoice.notes,
+          termsAndConditions: currentInvoice.conditionsGenerales,
         ),
       ),
     );
@@ -389,8 +334,12 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
         PdfService.instance.downloadDocument(context, doc);
         break;
       case 'email':
+        final docEmail = DocumentWrapper.fromInvoice(invoice);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
       case 'whatsapp':
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fonctionnalité en cours de développement')));
+        final docWa = DocumentWrapper.fromInvoice(invoice);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));

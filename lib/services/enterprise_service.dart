@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,14 +32,21 @@ class EnterpriseService {
 
   String? _currentEnterpriseId;
   List<Enterprise> _enterprises = [];
+  final Set<String> _pendingDefaultCreations = {};
+  bool _isCreatingEnterprise = false;
 
   final _enterpriseController = StreamController<String?>.broadcast();
+  final _enterpriseListController = StreamController<List<Enterprise>>.broadcast();
+  StreamSubscription<DocumentSnapshot>? _userDocSubscription;
 
   /// The currently active enterprise ID, used by all data queries.
   String? get currentEnterpriseId => _currentEnterpriseId;
 
   /// Stream that emits whenever the active enterprise changes.
   Stream<String?> get enterpriseStream => _enterpriseController.stream;
+
+  /// Stream that emits whenever the enterprise list updates.
+  Stream<List<Enterprise>> get enterprisesStream => _enterpriseListController.stream;
 
   /// Whether the current active enterprise is the user's default/first enterprise.
   bool get isDefaultEnterprise {
@@ -59,6 +67,40 @@ class EnterpriseService {
   /// Cached enterprise list (may be stale until refreshed from Firestore).
   List<Enterprise> get enterprises => List.unmodifiable(_enterprises);
 
+  // ─── Realtime Sync ────────────────────────────────────────────────
+
+  /// Listens in real-time to user document in Firestore to detect new enterprises
+  /// created from other devices (e.g. Mobile <-> Desktop).
+  void startRealtimeSync() {
+    _userDocSubscription?.cancel();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    _userDocSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen((userDoc) async {
+      if (!userDoc.exists) return;
+      final data = userDoc.data();
+      if (data == null) return;
+
+      final List<String> enterpriseIds = List<String>.from(data['enterprises'] ?? []);
+      final currentIds = _enterprises.map((e) => e.id).toList();
+
+      // Check if enterprise list in Firestore has new/removed enterprises
+      final hasChanges = enterpriseIds.length != currentIds.length ||
+          !enterpriseIds.every((id) => currentIds.contains(id));
+
+      if (hasChanges) {
+        print('EnterpriseService: Detected enterprise change in Firestore! Syncing...');
+        await loadEnterprisesFromFirestore();
+      }
+    }, onError: (e) {
+      print('EnterpriseService.startRealtimeSync error: $e');
+    });
+  }
+
   // ─── Initialisation ──────────────────────────────────────────────
 
   /// Loads the last-used enterprise ID from SharedPreferences for instant boot.
@@ -72,24 +114,28 @@ class EnterpriseService {
     if (jsonStr != null) {
       try {
         final List decoded = jsonDecode(jsonStr) as List;
-        _enterprises = decoded
+        _enterprises = List.unmodifiable(decoded
             .map((e) => Enterprise.fromMap(Map<String, dynamic>.from(e)))
-            .toList();
+            .toList());
       } catch (_) {
         _enterprises = [];
       }
     }
+    startRealtimeSync();
     unawaited(PermissionService.instance.loadPermissions());
   }
 
   /// Clears in-memory and cached enterprise data on logout.
   Future<void> clearCache() async {
+    _userDocSubscription?.cancel();
+    _userDocSubscription = null;
     _currentEnterpriseId = null;
     _enterprises = [];
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefKeyCurrentId);
     await prefs.remove(_prefKeyEnterprisesJson);
     _enterpriseController.add(null);
+    _enterpriseListController.add([]);
   }
 
   // ─── Enterprise CRUD ─────────────────────────────────────────────
@@ -98,6 +144,8 @@ class EnterpriseService {
   Future<List<Enterprise>> loadEnterprisesFromFirestore() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return [];
+
+    startRealtimeSync();
 
     try {
       // Read user doc to get enterprise IDs
@@ -116,6 +164,7 @@ class EnterpriseService {
         _currentEnterpriseId = null;
         await _persistToPrefs();
         _enterpriseController.add(_currentEnterpriseId);
+        _enterpriseListController.add(_enterprises);
         return _enterprises;
       }
 
@@ -131,7 +180,7 @@ class EnterpriseService {
         }
       }
 
-      _enterprises = result;
+      _enterprises = List.unmodifiable(result);
 
       // If current enterprise is not in list, switch to first
       if (_currentEnterpriseId == null ||
@@ -149,6 +198,7 @@ class EnterpriseService {
 
       await _persistToPrefs();
       _enterpriseController.add(_currentEnterpriseId);
+      _enterpriseListController.add(_enterprises);
       await PermissionService.instance.loadPermissions(enterpriseId: _currentEnterpriseId);
       return _enterprises;
     } catch (e) {
@@ -157,7 +207,336 @@ class EnterpriseService {
     }
   }
 
+  /// Ensures all required default records (Warehouse, Customer, Supplier, TreasuryAccount, Project)
+  /// exist for the given enterprise.
+  /// 
+  /// - Guaranteed to be atomic and idempotent.
+  /// - Prevents concurrent duplicate runs via [_pendingDefaultCreations].
+  /// - Checks the [defaultsCreated] flag on the enterprise document.
+  /// - Verifies if records already exist before creating missing defaults.
+  /// - Uses [WriteBatch] to commit all missing default records atomically.
+  /// - Automatically cleans up existing duplicate default records if any exist.
+  Future<void> ensureDefaultRecordsCreated(
+    String enterpriseId, {
+    String? ownerUid,
+    bool force = false,
+  }) async {
+    if (enterpriseId.isEmpty) return;
+
+    if (_pendingDefaultCreations.contains(enterpriseId)) {
+      debugPrint('[EnterpriseDefaults] Creation already in-flight for enterprise $enterpriseId. Skipping duplicate call.');
+      return;
+    }
+    _pendingDefaultCreations.add(enterpriseId);
+
+    try {
+      final uid = ownerUid ?? FirebaseAuth.instance.currentUser?.uid ?? 'local-user';
+      final now = DateTime.now();
+
+      debugPrint('[EnterpriseDefaults] [${now.toIso8601String()}] Checking defaults for enterprise $enterpriseId...');
+
+      // 1. Check if enterprise doc already has defaultsCreated == true in Firestore
+      final entDocRef = FirebaseFirestore.instance.collection('enterprises').doc(enterpriseId);
+      final entSnap = await entDocRef.get();
+      if (!force && entSnap.exists) {
+        final data = entSnap.data();
+        final isAlreadyCreated = data?['defaults_created'] == true ||
+            data?['defaults_created'] == 1 ||
+            data?['defaults_created'] == 'true' ||
+            data?['defaultsCreated'] == true ||
+            data?['defaultsCreated'] == 1 ||
+            data?['defaultsCreated'] == 'true';
+        if (isAlreadyCreated) {
+          debugPrint('[EnterpriseDefaults] Enterprise $enterpriseId already has defaultsCreated=true. Skipping default generation.');
+          return;
+        }
+      }
+
+      // 2. Query Firestore collections for existing records in this enterprise
+      final warehousesQuery = await FirebaseFirestore.instance
+          .collection('warehouses')
+          .where('enterprise_id', isEqualTo: enterpriseId)
+          .get();
+
+      final customersQuery = await FirebaseFirestore.instance
+          .collection('clients')
+          .where('enterprise_id', isEqualTo: enterpriseId)
+          .get();
+
+      final suppliersQuery = await FirebaseFirestore.instance
+          .collection('fournisseurs')
+          .where('enterprise_id', isEqualTo: enterpriseId)
+          .get();
+
+      final treasuryQuery = await FirebaseFirestore.instance
+          .collection('treasury_accounts')
+          .where('enterprise_id', isEqualTo: enterpriseId)
+          .get();
+
+      final projectsQuery = await FirebaseFirestore.instance
+          .collection('projects')
+          .where('enterprise_id', isEqualTo: enterpriseId)
+          .get();
+
+      // Clean up duplicate default records from previous runs if any exist
+      // Projects: keep the oldest one and delete duplicate defaults
+      final defaultProjects = projectsQuery.docs.where((d) {
+        final data = d.data();
+        final name = (data['name'] ?? '').toString().trim().toLowerCase();
+        return data['is_default'] == true || data['is_default'] == 1 || data['isDefault'] == true ||
+            name == 'projet par défaut' || name == 'projet principal par défaut';
+      }).toList();
+      if (defaultProjects.length > 1) {
+        debugPrint('[EnterpriseDefaults] Found ${defaultProjects.length} duplicate default projects for enterprise $enterpriseId. Cleaning up ${defaultProjects.length - 1} duplicates...');
+        for (int i = 1; i < defaultProjects.length; i++) {
+          try {
+            await FirebaseFirestore.instance.collection('projects').doc(defaultProjects[i].id).delete();
+          } catch (e) {
+            debugPrint('[EnterpriseDefaults] Error deleting duplicate project ${defaultProjects[i].id}: $e');
+          }
+        }
+      }
+
+      // Customers: keep oldest and delete duplicate defaults
+      final defaultCustomers = customersQuery.docs.where((d) {
+        final data = d.data();
+        final name = (data['name'] ?? '').toString().trim().toLowerCase();
+        return data['is_default'] == true || data['is_default'] == 1 || data['isDefault'] == true ||
+            name == 'client passager';
+      }).toList();
+      if (defaultCustomers.length > 1) {
+        debugPrint('[EnterpriseDefaults] Found ${defaultCustomers.length} duplicate default customers for enterprise $enterpriseId. Cleaning up ${defaultCustomers.length - 1} duplicates...');
+        for (int i = 1; i < defaultCustomers.length; i++) {
+          try {
+            await FirebaseFirestore.instance.collection('clients').doc(defaultCustomers[i].id).delete();
+          } catch (e) {
+            debugPrint('[EnterpriseDefaults] Error deleting duplicate customer ${defaultCustomers[i].id}: $e');
+          }
+        }
+      }
+
+      // Suppliers: keep oldest and delete duplicate defaults
+      final defaultSuppliers = suppliersQuery.docs.where((d) {
+        final data = d.data();
+        final name = (data['name'] ?? '').toString().trim().toLowerCase();
+        return data['is_default'] == true || data['is_default'] == 1 || data['isDefault'] == true ||
+            name == 'fournisseur passager';
+      }).toList();
+      if (defaultSuppliers.length > 1) {
+        debugPrint('[EnterpriseDefaults] Found ${defaultSuppliers.length} duplicate default suppliers for enterprise $enterpriseId. Cleaning up ${defaultSuppliers.length - 1} duplicates...');
+        for (int i = 1; i < defaultSuppliers.length; i++) {
+          try {
+            await FirebaseFirestore.instance.collection('fournisseurs').doc(defaultSuppliers[i].id).delete();
+          } catch (e) {
+            debugPrint('[EnterpriseDefaults] Error deleting duplicate supplier ${defaultSuppliers[i].id}: $e');
+          }
+        }
+      }
+
+      // Warehouses: keep oldest and delete duplicate defaults
+      final defaultWarehouses = warehousesQuery.docs.where((d) {
+        final data = d.data();
+        final name = (data['name'] ?? '').toString().trim().toLowerCase();
+        return data['is_default'] == true || data['is_default'] == 1 || data['isDefault'] == true ||
+            name == 'entrepôt par défaut' || name == 'entrepot par defaut';
+      }).toList();
+      if (defaultWarehouses.length > 1) {
+        debugPrint('[EnterpriseDefaults] Found ${defaultWarehouses.length} duplicate default warehouses for enterprise $enterpriseId. Cleaning up ${defaultWarehouses.length - 1} duplicates...');
+        for (int i = 1; i < defaultWarehouses.length; i++) {
+          try {
+            await FirebaseFirestore.instance.collection('warehouses').doc(defaultWarehouses[i].id).delete();
+          } catch (e) {
+            debugPrint('[EnterpriseDefaults] Error deleting duplicate warehouse ${defaultWarehouses[i].id}: $e');
+          }
+        }
+      }
+
+      // Treasury Accounts: keep oldest and delete duplicate defaults
+      final defaultAccounts = treasuryQuery.docs.where((d) {
+        final data = d.data();
+        final name = (data['name'] ?? '').toString().trim().toLowerCase();
+        return data['is_default'] == true || data['is_default'] == 1 || data['isDefault'] == true ||
+            name == 'compte principal';
+      }).toList();
+      if (defaultAccounts.length > 1) {
+        debugPrint('[EnterpriseDefaults] Found ${defaultAccounts.length} duplicate default treasury accounts for enterprise $enterpriseId. Cleaning up ${defaultAccounts.length - 1} duplicates...');
+        for (int i = 1; i < defaultAccounts.length; i++) {
+          try {
+            await FirebaseFirestore.instance.collection('treasury_accounts').doc(defaultAccounts[i].id).delete();
+            await FirebaseFirestore.instance.collection('comptes_tresorerie').doc(defaultAccounts[i].id).delete();
+          } catch (e) {
+            debugPrint('[EnterpriseDefaults] Error deleting duplicate treasury account ${defaultAccounts[i].id}: $e');
+          }
+        }
+      }
+
+      final batch = FirebaseFirestore.instance.batch();
+      bool hasNewDefaults = false;
+
+      // Warehouse: only create if no non-deleted warehouse exists
+      final hasWarehouse = warehousesQuery.docs.any((d) => (d.data()['is_deleted'] != true && d.data()['is_deleted'] != 1));
+      if (!hasWarehouse) {
+        final defaultWarehouse = Warehouse(
+          id: const Uuid().v4(),
+          name: 'Entrepôt par défaut',
+          reference: 'WH-001',
+          isDefault: true,
+          isActive: true,
+          enterpriseId: enterpriseId,
+          createdAt: now,
+          updatedAt: now,
+        );
+        final warehouseData = defaultWarehouse.toMap();
+        warehouseData['userId'] = uid;
+        batch.set(
+          FirebaseFirestore.instance.collection('warehouses').doc(defaultWarehouse.id),
+          warehouseData,
+          SetOptions(merge: true),
+        );
+        hasNewDefaults = true;
+        debugPrint('[EnterpriseDefaults] Staged default warehouse: ${defaultWarehouse.id}');
+      }
+
+      // Customer: only create if no non-deleted customer exists
+      final hasCustomer = customersQuery.docs.any((d) => (d.data()['is_deleted'] != true && d.data()['is_deleted'] != 1));
+      if (!hasCustomer) {
+        final defaultCustomer = Customer(
+          id: const Uuid().v4(),
+          code: 'CL-00001',
+          name: 'Client passager',
+          customerType: 'particular',
+          country: 'Tunisia',
+          deliveryCountry: 'Tunisia',
+          priceList: 'HT',
+          isDefault: true,
+          enterpriseId: enterpriseId,
+          createdAt: now,
+          updatedAt: now,
+        );
+        final customerData = defaultCustomer.toMap();
+        customerData['userId'] = uid;
+        batch.set(
+          FirebaseFirestore.instance.collection('clients').doc(defaultCustomer.id),
+          customerData,
+          SetOptions(merge: true),
+        );
+        hasNewDefaults = true;
+        debugPrint('[EnterpriseDefaults] Staged default customer: ${defaultCustomer.id}');
+      }
+
+      // Supplier: only create if no non-deleted supplier exists
+      final hasSupplier = suppliersQuery.docs.any((d) => (d.data()['is_deleted'] != true && d.data()['is_deleted'] != 1));
+      if (!hasSupplier) {
+        final defaultSupplier = Supplier(
+          id: const Uuid().v4(),
+          code: 'FR-00001',
+          name: 'Fournisseur passager',
+          supplierType: 'company',
+          country: 'Tunisia',
+          deliveryCountry: 'Tunisia',
+          isDefault: true,
+          enterpriseId: enterpriseId,
+          createdAt: now,
+          updatedAt: now,
+        );
+        final supplierData = defaultSupplier.toMap();
+        supplierData['userId'] = uid;
+        batch.set(
+          FirebaseFirestore.instance.collection('fournisseurs').doc(defaultSupplier.id),
+          supplierData,
+          SetOptions(merge: true),
+        );
+        hasNewDefaults = true;
+        debugPrint('[EnterpriseDefaults] Staged default supplier: ${defaultSupplier.id}');
+      }
+
+      // Treasury Account: only create if no non-deleted treasury account exists
+      final hasTreasury = treasuryQuery.docs.any((d) => (d.data()['is_deleted'] != true && d.data()['is_deleted'] != 1));
+      if (!hasTreasury) {
+        final defaultAccount = TreasuryAccount(
+          id: const Uuid().v4(),
+          name: 'Compte principal',
+          type: 'cash',
+          currency: 'TND',
+          isDefault: true,
+          enterpriseId: enterpriseId,
+          createdAt: now,
+          updatedAt: now,
+        );
+        final accountData = defaultAccount.toMap();
+        accountData['userId'] = uid;
+        batch.set(
+          FirebaseFirestore.instance.collection('treasury_accounts').doc(defaultAccount.id),
+          accountData,
+          SetOptions(merge: true),
+        );
+        batch.set(
+          FirebaseFirestore.instance.collection('comptes_tresorerie').doc(defaultAccount.id),
+          accountData,
+          SetOptions(merge: true),
+        );
+        hasNewDefaults = true;
+        debugPrint('[EnterpriseDefaults] Staged default treasury account: ${defaultAccount.id}');
+      }
+
+      // Project: only create if no non-deleted project exists
+      final hasProject = projectsQuery.docs.any((d) => (d.data()['is_deleted'] != true && d.data()['is_deleted'] != 1));
+      if (!hasProject) {
+        final defaultProject = Project(
+          id: const Uuid().v4(),
+          name: 'Projet par défaut',
+          description: 'Projet principal par défaut',
+          startDate: now,
+          status: ProjectStatus.active,
+          isDefault: true,
+          enterpriseId: enterpriseId,
+          createdAt: now,
+          updatedAt: now,
+        );
+        final projectData = defaultProject.toMap();
+        projectData['userId'] = uid;
+        batch.set(
+          FirebaseFirestore.instance.collection('projects').doc(defaultProject.id),
+          projectData,
+          SetOptions(merge: true),
+        );
+        hasNewDefaults = true;
+        debugPrint('[EnterpriseDefaults] Staged default project: ${defaultProject.id}');
+      }
+
+      // Mark enterprise document with defaultsCreated: true in the same batch
+      batch.set(
+        entDocRef,
+        {
+          'defaults_created': true,
+          'defaultsCreated': true,
+          'updated_at': now.toIso8601String(),
+        },
+        SetOptions(merge: true),
+      );
+
+      // Commit all changes atomically
+      await batch.commit();
+      debugPrint('[EnterpriseDefaults] Successfully committed defaults batch for enterprise $enterpriseId. (New defaults created: $hasNewDefaults)');
+
+      // Update in-memory enterprise cache
+      final idx = _enterprises.indexWhere((e) => e.id == enterpriseId);
+      if (idx != -1) {
+        final updatedList = List<Enterprise>.from(_enterprises);
+        updatedList[idx] = updatedList[idx].copyWith(defaultsCreated: true);
+        _enterprises = List.unmodifiable(updatedList);
+        await _persistToPrefs();
+        _enterpriseListController.add(_enterprises);
+      }
+    } catch (e, stack) {
+      debugPrint('[EnterpriseDefaults] Error ensuring default records for enterprise $enterpriseId: $e\n$stack');
+    } finally {
+      _pendingDefaultCreations.remove(enterpriseId);
+    }
+  }
+
   /// Creates a new enterprise and adds the current user as owner/admin.
+  /// Enforces single execution via [_isCreatingEnterprise] lock.
   Future<Enterprise> createEnterprise(
     String name, {
     String? description,
@@ -169,237 +548,125 @@ class EnterpriseService {
     String? address,
     String? rib,
   }) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'local-user';
-    final id = const Uuid().v4();
-    final now = DateTime.now();
+    if (_isCreatingEnterprise) {
+      debugPrint('[EnterpriseService] Enterprise creation already in progress. Rejecting duplicate call.');
+      throw 'Une création d\'entreprise est déjà en cours. Veuillez patienter.';
+    }
 
-    final enterprise = Enterprise(
-      id: id,
-      name: name,
-      description: description,
-      phone: phone,
-      email: email,
-      website: website,
-      taxId: taxId,
-      rcNumber: rcNumber,
-      address: address,
-      rib: rib,
-      ownerId: uid,
-      members: [EnterpriseMember(uid: uid, role: 'admin')],
-      createdAt: now,
-      updatedAt: now,
-    );
+    _isCreatingEnterprise = true;
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? 'local-user';
+      final id = const Uuid().v4();
+      final now = DateTime.now();
 
-    final adminPerms = UserPermissionResources.getAdminDefaultPermissions()
-        .map((k, v) => MapEntry(k, v.toMap()));
+      debugPrint('[EnterpriseService] Creating enterprise "$name" (id: $id)...');
 
-    final memberMap = {
-      'uid': uid,
-      'role': 'admin',
-      'isOwner': true,
-      'name': FirebaseAuth.instance.currentUser?.displayName ?? 'Admin',
-      'email': FirebaseAuth.instance.currentUser?.email ?? '',
-      'permissions': adminPerms,
-    };
+      final enterprise = Enterprise(
+        id: id,
+        name: name,
+        description: description,
+        phone: phone,
+        email: email,
+        website: website,
+        taxId: taxId,
+        rcNumber: rcNumber,
+        address: address,
+        rib: rib,
+        ownerId: uid,
+        members: [EnterpriseMember(uid: uid, role: 'admin')],
+        defaultsCreated: false,
+        createdAt: now,
+        updatedAt: now,
+      );
 
-    // Write enterprise doc to Firestore if online
-    if (FirebaseAuth.instance.currentUser != null) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('enterprises')
-            .doc(id)
-            .set({
-              ...enterprise.toMap(),
-              'owner_id': uid,
-              'userId': uid,
-              'members': [memberMap],
-            });
+      final adminPerms = UserPermissionResources.getAdminDefaultPermissions()
+          .map((k, v) => MapEntry(k, v.toMap()));
 
-        await FirebaseFirestore.instance.collection('users').doc(uid).set({
-          'email': FirebaseAuth.instance.currentUser?.email,
-          'role': 'admin',
-          'isOwner': true,
-          'permissions': adminPerms,
-          'enterprises': FieldValue.arrayUnion([id]),
-          'currentEnterpriseId': id,
-          'enterpriseRoles': {
-            id: {
-              'role': 'admin',
-              'isOwner': true,
-              'permissions': adminPerms,
-            }
-          },
-          'updated_at': now.toIso8601String(),
-        }, SetOptions(merge: true));
-      } catch (e) {
-        print('EnterpriseService.createEnterprise Firestore warning: $e');
+      final memberMap = {
+        'uid': uid,
+        'role': 'admin',
+        'isOwner': true,
+        'name': FirebaseAuth.instance.currentUser?.displayName ?? 'Admin',
+        'email': FirebaseAuth.instance.currentUser?.email ?? '',
+        'permissions': adminPerms,
+      };
+
+      // Write enterprise doc to Firestore if online
+      if (FirebaseAuth.instance.currentUser != null) {
+        try {
+          await FirebaseFirestore.instance
+              .collection('enterprises')
+              .doc(id)
+              .set({
+                ...enterprise.toMap(),
+                'owner_id': uid,
+                'userId': uid,
+                'members': [memberMap],
+                'defaults_created': false,
+                'defaultsCreated': false,
+              });
+
+          await FirebaseFirestore.instance.collection('users').doc(uid).set({
+            'email': FirebaseAuth.instance.currentUser?.email,
+            'role': 'admin',
+            'isOwner': true,
+            'permissions': adminPerms,
+            'enterprises': FieldValue.arrayUnion([id]),
+            'currentEnterpriseId': id,
+            'enterpriseRoles': {
+              id: {
+                'role': 'admin',
+                'isOwner': true,
+                'permissions': adminPerms,
+              }
+            },
+            'updated_at': now.toIso8601String(),
+          }, SetOptions(merge: true));
+        } catch (e) {
+          debugPrint('[EnterpriseService] createEnterprise Firestore warning: $e');
+        }
       }
+
+      // Update local state early so subsequent inserts adopt currentEnterpriseId
+      _enterprises = List.unmodifiable([..._enterprises, enterprise]);
+      _currentEnterpriseId = id;
+      await _persistToPrefs();
+      _enterpriseController.add(_currentEnterpriseId);
+      _enterpriseListController.add(_enterprises);
+      await PermissionService.instance.loadPermissions(enterpriseId: id);
+
+      // Insert company_settings row into SQLite for this enterprise
+      try {
+        await DatabaseHelper.instance.insert('company_settings', {
+          'id': const Uuid().v4(),
+          'enterprise_id': id,
+          'name': name,
+          'phone': phone,
+          'email': email,
+          'website': website,
+          'tax_id': taxId,
+          'rc_number': rcNumber,
+          'address': address,
+          'rib': rib,
+          'currency': 'DZD',
+          'default_tva_rate': 19,
+          'invoice_prefix': 'FAC',
+          'next_invoice_number': 1,
+          'updated_at': now.toIso8601String(),
+        });
+      } catch (e) {
+        debugPrint('[EnterpriseService] createEnterprise company_settings insert warning: $e');
+      }
+
+      // Create default records atomically and mark defaultsCreated: true
+      await ensureDefaultRecordsCreated(id, ownerUid: uid);
+
+      _enterpriseController.add(_currentEnterpriseId);
+
+      return enterprise.copyWith(defaultsCreated: true);
+    } finally {
+      _isCreatingEnterprise = false;
     }
-
-    // Update local state early so subsequent inserts adopt currentEnterpriseId
-    _enterprises.add(enterprise);
-    _currentEnterpriseId = id;
-    await _persistToPrefs();
-    _enterpriseController.add(_currentEnterpriseId);
-    await PermissionService.instance.loadPermissions(enterpriseId: id);
-
-    // Insert company_settings row into SQLite for this enterprise
-    try {
-      await DatabaseHelper.instance.insert('company_settings', {
-        'id': const Uuid().v4(),
-        'enterprise_id': id,
-        'name': name,
-        'phone': phone,
-        'email': email,
-        'website': website,
-        'tax_id': taxId,
-        'rc_number': rcNumber,
-        'address': address,
-        'rib': rib,
-        'currency': 'DZD',
-        'default_tva_rate': 19,
-        'invoice_prefix': 'FAC',
-        'next_invoice_number': 1,
-        'updated_at': now.toIso8601String(),
-      });
-    } catch (e) {
-      print('EnterpriseService.createEnterprise company_settings insert warning: $e');
-    }
-
-    // Insert default warehouse for this enterprise
-    try {
-      final defaultWarehouse = Warehouse(
-        id: const Uuid().v4(),
-        name: 'Entrepôt par défaut',
-        reference: 'WH-001',
-        isDefault: true,
-        isActive: true,
-        enterpriseId: id,
-        createdAt: now,
-        updatedAt: now,
-      );
-      await DatabaseHelper.instance.insertWarehouse(defaultWarehouse);
-      final warehouseData = defaultWarehouse.toMap();
-      warehouseData['userId'] = uid;
-      FirebaseFirestore.instance
-          .collection('warehouses')
-          .doc(defaultWarehouse.id)
-          .set(warehouseData, SetOptions(merge: true))
-          .catchError((e) => print('Firestore warehouse sync error: $e'));
-    } catch (e) {
-      print('EnterpriseService.createEnterprise default warehouse insert warning: $e');
-    }
-
-    // Insert default customer ("Client passager") for this enterprise
-    try {
-      final defaultCustomer = Customer(
-        id: const Uuid().v4(),
-        code: 'CL-00001',
-        name: 'Client passager',
-        customerType: 'particular',
-        country: 'Tunisia',
-        deliveryCountry: 'Tunisia',
-        priceList: 'HT',
-        isDefault: true,
-        enterpriseId: id,
-        createdAt: now,
-        updatedAt: now,
-      );
-      await DatabaseHelper.instance.insertCustomer(defaultCustomer);
-      final customerData = defaultCustomer.toMap();
-      customerData['userId'] = uid;
-      FirebaseFirestore.instance
-          .collection('clients')
-          .doc(defaultCustomer.id)
-          .set(customerData, SetOptions(merge: true))
-          .catchError((e) => print('Firestore customer sync error: $e'));
-    } catch (e) {
-      print('EnterpriseService.createEnterprise default customer insert warning: $e');
-    }
-
-    // Insert default supplier ("Fournisseur passager") for this enterprise
-    try {
-      final defaultSupplier = Supplier(
-        id: const Uuid().v4(),
-        code: 'FR-00001',
-        name: 'Fournisseur passager',
-        supplierType: 'company',
-        country: 'Tunisia',
-        deliveryCountry: 'Tunisia',
-        isDefault: true,
-        enterpriseId: id,
-        createdAt: now,
-        updatedAt: now,
-      );
-      await DatabaseHelper.instance.insertSupplier(defaultSupplier);
-      final supplierData = defaultSupplier.toMap();
-      supplierData['userId'] = uid;
-      FirebaseFirestore.instance
-          .collection('fournisseurs')
-          .doc(defaultSupplier.id)
-          .set(supplierData, SetOptions(merge: true))
-          .catchError((e) => print('Firestore supplier sync error: $e'));
-    } catch (e) {
-      print('EnterpriseService.createEnterprise default supplier insert warning: $e');
-    }
-
-    // Insert default treasury account ("Compte principal") for this enterprise
-    try {
-      final defaultAccount = TreasuryAccount(
-        id: const Uuid().v4(),
-        name: 'Compte principal',
-        type: 'cash',
-        currency: 'TND',
-        isDefault: true,
-        enterpriseId: id,
-        createdAt: now,
-        updatedAt: now,
-      );
-      await DatabaseHelper.instance.createTreasuryAccount(defaultAccount.toMap());
-      final accountData = defaultAccount.toMap();
-      accountData['userId'] = uid;
-      FirebaseFirestore.instance
-          .collection('treasury_accounts')
-          .doc(defaultAccount.id)
-          .set(accountData, SetOptions(merge: true))
-          .catchError((e) => print('Firestore treasury account sync error: $e'));
-      FirebaseFirestore.instance
-          .collection('comptes_tresorerie')
-          .doc(defaultAccount.id)
-          .set(accountData, SetOptions(merge: true))
-          .catchError((e) => print('Firestore treasury account sync error: $e'));
-    } catch (e) {
-      print('EnterpriseService.createEnterprise default treasury account insert warning: $e');
-    }
-
-    // Insert default project ("Projet par défaut") for this enterprise
-    try {
-      final defaultProject = Project(
-        id: const Uuid().v4(),
-        name: 'Projet par défaut',
-        description: 'Projet principal par défaut',
-        startDate: now,
-        status: ProjectStatus.active,
-        isDefault: true,
-        enterpriseId: id,
-        createdAt: now,
-        updatedAt: now,
-      );
-      await DatabaseHelper.instance.insertProject(defaultProject);
-      final projectData = defaultProject.toMap();
-      projectData['userId'] = uid;
-      FirebaseFirestore.instance
-          .collection('projects')
-          .doc(defaultProject.id)
-          .set(projectData, SetOptions(merge: true))
-          .catchError((e) => print('Firestore project sync error: $e'));
-    } catch (e) {
-      print('EnterpriseService.createEnterprise default project insert warning: $e');
-    }
-
-    _enterpriseController.add(_currentEnterpriseId);
-
-    return enterprise;
   }
 
   // ─── Switching ───────────────────────────────────────────────────
@@ -456,15 +723,20 @@ class EnterpriseService {
 
   /// Clear state on logout.
   Future<void> clear() async {
+    _userDocSubscription?.cancel();
+    _userDocSubscription = null;
     _currentEnterpriseId = null;
     _enterprises = [];
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefKeyCurrentId);
     await prefs.remove(_prefKeyEnterprisesJson);
     _enterpriseController.add(null);
+    _enterpriseListController.add([]);
   }
 
   void dispose() {
+    _userDocSubscription?.cancel();
     _enterpriseController.close();
+    _enterpriseListController.close();
   }
 }

@@ -15,6 +15,7 @@ import '../utils/helpers.dart';
 import 'create_stock_withdrawal_screen.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
 import '../mobile/screens/mobile_stock_withdrawal_detail_screen.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
@@ -435,10 +436,26 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
       },
     );
 
+    final StockWithdrawalStatus entryStatus;
+    switch (entry.status) {
+      case 'validated':
+        entryStatus = StockWithdrawalStatus.validated;
+        break;
+      case 'cancelled':
+        entryStatus = StockWithdrawalStatus.cancelled;
+        break;
+      default:
+        entryStatus = StockWithdrawalStatus.draft;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => DocumentPreviewScreen(document: wrapper),
+        builder: (_) => DocumentDetailScreen(
+          document: wrapper,
+          status: entryStatus.label,
+          statusColor: entryStatus.color,
+        ),
       ),
     );
   }
