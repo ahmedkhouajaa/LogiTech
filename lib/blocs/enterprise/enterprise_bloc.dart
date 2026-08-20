@@ -62,6 +62,14 @@ class CreateEnterprise extends EnterpriseEvent {
       ];
 }
 
+/// Update existing enterprise details/settings.
+class UpdateEnterprise extends EnterpriseEvent {
+  final Enterprise enterprise;
+  const UpdateEnterprise(this.enterprise);
+  @override
+  List<Object?> get props => [enterprise];
+}
+
 /// Internal event fired when Firestore notifies of new/updated enterprises in real time.
 class EnterprisesUpdated extends EnterpriseEvent {
   final List<Enterprise> enterprises;
@@ -123,6 +131,7 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
     on<LoadEnterprises>(_onLoadEnterprises);
     on<SwitchEnterprise>(_onSwitchEnterprise);
     on<CreateEnterprise>(_onCreateEnterprise);
+    on<UpdateEnterprise>(_onUpdateEnterprise);
     on<EnterprisesUpdated>(_onEnterprisesUpdated);
 
     // Reactively update BLoC whenever EnterpriseService streams a refreshed enterprise list
@@ -212,6 +221,22 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
       emit(EnterpriseLoaded(
         enterprises: List<Enterprise>.from(_service.enterprises),
         currentEnterpriseId: enterprise.id,
+      ));
+    } catch (e) {
+      emit(EnterpriseError(ErrorHandler.parseError(e)));
+    }
+  }
+
+  Future<void> _onUpdateEnterprise(
+    UpdateEnterprise event,
+    Emitter<EnterpriseState> emit,
+  ) async {
+    emit(EnterpriseLoading());
+    try {
+      final updated = await _service.updateEnterprise(event.enterprise);
+      emit(EnterpriseLoaded(
+        enterprises: List<Enterprise>.from(_service.enterprises),
+        currentEnterpriseId: updated.id,
       ));
     } catch (e) {
       emit(EnterpriseError(ErrorHandler.parseError(e)));

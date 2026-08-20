@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
@@ -28,7 +27,7 @@ class ErrorHandler {
       if (message.contains('sign_in_canceled') || message.contains('canceled') || message.contains('cancelled')) {
         code = 'sign_in_canceled';
       }
-    } else if (e is SocketException || e is TimeoutException) {
+    } else if (e is TimeoutException || e.runtimeType.toString().contains('SocketException') || message.contains('socketexception')) {
       return "Aucune connexion Internet ou le serveur ne répond pas. Veuillez vérifier votre connexion et réessayer.";
     }
 

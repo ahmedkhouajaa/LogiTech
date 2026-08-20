@@ -33,10 +33,10 @@ class DataTableWidget<T> extends StatefulWidget {
 class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
   int _sortColumnIndex = 0;
   bool _sortAscending = true;
-  int _rowsPerPage = 15;
+  int _rowsPerPage = 20;
   int _page = 0;
 
-  int get _totalPages => (widget.rows.length / _rowsPerPage).ceil();
+  int get _totalPages => (widget.rows.length / _rowsPerPage).ceil() == 0 ? 1 : (widget.rows.length / _rowsPerPage).ceil();
   List<T> get _pageRows {
     final start = _page * _rowsPerPage;
     final end = (start + _rowsPerPage).clamp(0, widget.rows.length);
@@ -49,13 +49,13 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
     if (widget.rows.isEmpty) {
       return Center(
         child: Padding(
-          padding: EdgeInsets.all(48),
+          padding: const EdgeInsets.all(48),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.inbox_rounded, size: 48, color: AppColors.textTertiary),
-              SizedBox(height: 12),
-              Text(widget.emptyMessage, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+              const SizedBox(height: 12),
+              Text(widget.emptyMessage, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
             ],
           ),
         ),
@@ -69,14 +69,15 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
         Widget table = DataTable(
           sortColumnIndex: _sortColumnIndex,
           sortAscending: _sortAscending,
+          headingRowHeight: 38,
+          dataRowMinHeight: 42,
+          dataRowMaxHeight: 46,
           headingRowColor: WidgetStateProperty.resolveWith((_) => AppColors.surfaceAlt),
-          headingTextStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: AppColors.textSecondary),
-          dataTextStyle: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          headingTextStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary),
+          dataTextStyle: TextStyle(fontSize: 12.5, color: AppColors.textPrimary),
           dividerThickness: 0.5,
-          dataRowMaxHeight: double.infinity,
-          dataRowMinHeight: 48.0,
           columnSpacing: 20,
-          horizontalMargin: 20,
+          horizontalMargin: 16,
           columns: [
             ...widget.columns.asMap().entries.map((e) => DataColumn(
               label: Text(e.value),
@@ -94,7 +95,9 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
                     widget.customActionsBuilder != null 
                     ? widget.customActionsBuilder!(row)
                     : PopupMenuButton<String>(
-                        icon: Icon(Icons.more_vert, color: AppColors.textSecondary),
+                        icon: Icon(Icons.more_horiz, size: 18, color: AppColors.textSecondary),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         color: AppColors.surface,
                         onSelected: (val) {
@@ -107,15 +110,15 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
                         },
                         itemBuilder: (_) => [
                           if (widget.onView != null)
-                            PopupMenuItem(value: 'view', height: 40, child: Row(children: [Icon(Icons.visibility_outlined, size: 18, color: AppColors.info), SizedBox(width: 12), Text('Voir', style: TextStyle(fontSize: 14))])),
+                            PopupMenuItem(value: 'view', height: 36, child: Row(children: [Icon(Icons.visibility_outlined, size: 16, color: AppColors.info), const SizedBox(width: 8), const Text('Voir', style: TextStyle(fontSize: 13))])),
                           if (widget.onEdit != null)
-                            PopupMenuItem(value: 'edit', height: 40, child: Row(children: [Icon(Icons.edit_outlined, size: 18, color: AppColors.primary), SizedBox(width: 12), Text('Modifier', style: TextStyle(fontSize: 14))])),
+                            PopupMenuItem(value: 'edit', height: 36, child: Row(children: [Icon(Icons.edit_outlined, size: 16, color: AppColors.primary), const SizedBox(width: 8), const Text('Modifier', style: TextStyle(fontSize: 13))])),
                           if (widget.onPrint != null)
-                            PopupMenuItem(value: 'print', height: 40, child: Row(children: [Icon(Icons.print_outlined, size: 18, color: AppColors.success), SizedBox(width: 12), Text('Imprimer', style: TextStyle(fontSize: 14))])),
+                            PopupMenuItem(value: 'print', height: 36, child: Row(children: [Icon(Icons.print_outlined, size: 16, color: AppColors.success), const SizedBox(width: 8), const Text('Imprimer', style: TextStyle(fontSize: 13))])),
                           if (widget.onDelete != null) ...[
                             if (widget.onView != null || widget.onEdit != null || widget.onPrint != null)
-                              PopupMenuDivider(height: 1),
-                            PopupMenuItem(value: 'delete', height: 40, child: Row(children: [Icon(Icons.delete_outline, size: 18, color: AppColors.error), SizedBox(width: 12), Text('Supprimer', style: TextStyle(fontSize: 14, color: AppColors.error))])),
+                              const PopupMenuDivider(height: 1),
+                            PopupMenuItem(value: 'delete', height: 36, child: Row(children: [Icon(Icons.delete_outline, size: 16, color: AppColors.error), const SizedBox(width: 8), Text('Supprimer', style: TextStyle(fontSize: 13, color: AppColors.error))])),
                           ],
                         ],
                       ),
@@ -158,50 +161,87 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
   }
 
   Widget _buildPagination() {
-    final startItem = (_page * _rowsPerPage) + 1;
+    final startItem = widget.rows.isEmpty ? 0 : (_page * _rowsPerPage) + 1;
     final endItem = ((_page + 1) * _rowsPerPage).clamp(0, widget.rows.length);
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
       child: Row(
         children: [
-          Text('Lignes:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          SizedBox(width: 8),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<int>(
-              value: _rowsPerPage,
-              style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
-              icon: Icon(Icons.arrow_drop_down, size: 16),
-              items: [10, 15, 20, 50, 100].map((int value) {
-                return DropdownMenuItem<int>(
-                  value: value,
-                  child: Text(value.toString()),
-                );
-              }).toList(),
-              onChanged: (newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _rowsPerPage = newValue;
-                    _page = 0; // Reset to first page
-                  });
-                }
-              },
+          Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const SizedBox(width: 8),
+          Container(
+            height: 28,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(6),
+              color: AppColors.surface,
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: _rowsPerPage,
+                style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                icon: Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textSecondary),
+                items: [20, 50, 100].map((int value) {
+                  return DropdownMenuItem<int>(
+                    value: value,
+                    child: Text(value.toString(), style: const TextStyle(fontSize: 12)),
+                  );
+                }).toList(),
+                onChanged: (newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _rowsPerPage = newValue;
+                      _page = 0;
+                    });
+                  }
+                },
+              ),
             ),
           ),
-          SizedBox(width: 24),
-          Text('Affichage de $startItem a $endItem sur ${widget.rows.length} resultats', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          Spacer(),
+          const SizedBox(width: 20),
           Text('Page ${_page + 1} sur $_totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          SizedBox(width: 16),
-          IconButton(
-            icon: Icon(Icons.chevron_left_rounded),
-            onPressed: _page > 0 ? () => setState(() => _page--) : null,
-            iconSize: 20,
+          const Spacer(),
+          Text(
+            widget.rows.isEmpty ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de $startItem à $endItem sur ${widget.rows.length} résultats',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
-          IconButton(
-            icon: Icon(Icons.chevron_right_rounded),
-            onPressed: _page < _totalPages - 1 ? () => setState(() => _page++) : null,
-            iconSize: 20,
+          const SizedBox(width: 12),
+          Row(
+            children: [
+              InkWell(
+                onTap: _page > 0 ? () => setState(() => _page--) : null,
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _page > 0 ? AppColors.border : AppColors.border.withValues(alpha: 0.5)),
+                    borderRadius: BorderRadius.circular(4),
+                    color: AppColors.surface,
+                  ),
+                  child: Icon(Icons.chevron_left, size: 18, color: _page > 0 ? AppColors.textPrimary : AppColors.textTertiary),
+                ),
+              ),
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: _page < _totalPages - 1 ? () => setState(() => _page++) : null,
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _page < _totalPages - 1 ? AppColors.border : AppColors.border.withValues(alpha: 0.5)),
+                    borderRadius: BorderRadius.circular(4),
+                    color: AppColors.surface,
+                  ),
+                  child: Icon(Icons.chevron_right, size: 18, color: _page < _totalPages - 1 ? AppColors.textPrimary : AppColors.textTertiary),
+                ),
+              ),
+            ],
           ),
         ],
       ),

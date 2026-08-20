@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/enterprise/enterprise_bloc.dart';
 import '../models/enterprise.dart';
+import '../services/enterprise_service.dart';
 import '../utils/constants.dart';
 import 'create_enterprise_wizard.dart';
 
@@ -18,26 +19,36 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<EnterpriseBloc, EnterpriseState>(
-      builder: (context, state) {
-        if (state is! EnterpriseLoaded) {
-          return SizedBox.shrink();
-        }
+    return ValueListenableBuilder<Enterprise?>(
+      valueListenable: EnterpriseService.instance.currentEnterpriseNotifier,
+      builder: (context, currentNotifierEnt, _) {
+        return BlocBuilder<EnterpriseBloc, EnterpriseState>(
+          builder: (context, state) {
+            final enterprises = (state is EnterpriseLoaded && state.enterprises.isNotEmpty)
+                ? state.enterprises
+                : EnterpriseService.instance.enterprises;
 
-        final currentEnterprise = state.enterprises.firstWhere(
-          (e) => e.id == state.currentEnterpriseId,
-          orElse: () => Enterprise(
-            id: '',
-            name: 'Mon Entreprise',
-            ownerId: '',
-          ),
+            final currentId = (state is EnterpriseLoaded)
+                ? (state.currentEnterpriseId ?? EnterpriseService.instance.currentEnterpriseId)
+                : EnterpriseService.instance.currentEnterpriseId;
+
+            final currentEnterprise = currentNotifierEnt ??
+                enterprises.firstWhere(
+                  (e) => e.id == currentId,
+                  orElse: () => Enterprise(
+                    id: currentId ?? '',
+                    name: 'Mon Entreprise',
+                    ownerId: '',
+                  ),
+                );
+
+            if (isMobile) {
+              return _buildMobileSwitcher(context, currentEnterprise, enterprises);
+            }
+
+            return _buildDesktopSwitcher(context, currentEnterprise, enterprises);
+          },
         );
-
-        if (isMobile) {
-          return _buildMobileSwitcher(context, currentEnterprise, state.enterprises);
-        }
-
-        return _buildDesktopSwitcher(context, currentEnterprise, state.enterprises);
       },
     );
   }

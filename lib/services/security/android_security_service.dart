@@ -1,5 +1,5 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart';
 import 'security_config.dart';
 
@@ -13,7 +13,7 @@ class AndroidSecurityService {
   /// Enables Android FLAG_SECURE to prevent screenshots, screen recording,
   /// and recent app switcher previews.
   Future<bool> enableScreenshotProtection() async {
-    if (kIsWeb || !Platform.isAndroid) return true;
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return true;
     if (SecurityConfig.isSecurityDisabled) {
       SecurityLogger.info('Screenshot protection skipped: DISABLE_SECURITY is active.');
       return true;
@@ -31,7 +31,7 @@ class AndroidSecurityService {
 
   /// Disables Android FLAG_SECURE.
   Future<bool> disableScreenshotProtection() async {
-    if (kIsWeb || !Platform.isAndroid) return true;
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return true;
 
     try {
       final res = await _channel.invokeMethod<bool>('disableScreenshotProtection');
@@ -45,7 +45,7 @@ class AndroidSecurityService {
 
   /// Performs native Android security checks: Root, Emulator, Debugger, Frida/Xposed hooks.
   Future<Map<String, dynamic>> checkDeviceSecurity() async {
-    if (kIsWeb || !Platform.isAndroid) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
       return {'isSecure': true, 'platform': 'non-android'};
     }
 

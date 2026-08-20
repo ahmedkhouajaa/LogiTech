@@ -102,7 +102,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
       children: [
         // Header
         Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
             children: [
               Column(
@@ -110,10 +110,10 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 children: [
                   Text(
                     'Bons de réception',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
-                  SizedBox(height: 4),
-                  Text('Gerer vos bons de réception', style: TextStyle(color: AppColors.textSecondary)),
+                  const SizedBox(height: 2),
+                  Text('Gérer vos bons de réception', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
               const Spacer(),
@@ -138,12 +138,11 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                       ),
                     );
                   },
-                  isPrimary: true,
                 ),
             ],
           ),
         ),
-        SizedBox(height: AppSpacing.md),
+        const SizedBox(height: 10),
         // Filter bar
         Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -153,7 +152,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
             },
           ),
         ),
-        SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: 10),
         // Table
         Expanded(
           child: Padding(
@@ -161,7 +160,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
             child: _buildTable(),
           ),
         ),
-        SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: 10),
       ],
     );
   }
@@ -184,7 +183,6 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
       }
       totalItems = filteredVouchers.length;
     }
-
     final activeFilterCount = (_selectedSupplierId != null && _selectedSupplierId != 'all' ? 1 : 0) +
         (_dateFrom != null ? 1 : 0) +
         (_dateTo != null ? 1 : 0) +
@@ -196,24 +194,21 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
-      padding: EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Supplier
-              Expanded(
+          // Supplier
+          Expanded(
             flex: 3,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                Text('Fournisseur', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
                 SizedBox(
-                  height: 40,
+                  height: 32,
                   child: BlocBuilder<SuppliersBloc, SuppliersState>(
                     builder: (context, state) {
                       final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
@@ -238,15 +233,15 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                             _applyFilters();
                           }
                         },
-                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderRadius: BorderRadius.circular(6),
                         child: Container(
-                          height: 40,
+                          height: 32,
                           decoration: BoxDecoration(
                             color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: AppColors.border),
                           ),
-                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
                           child: Row(
                             children: [
                               Expanded(
@@ -255,7 +250,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                       ? 'Tous les fournisseurs'
                                       : selectedSupplierName,
                                   style: TextStyle(
-                                    fontSize: 13,
+                                    fontSize: 12,
                                     color: _selectedSupplierId != null && _selectedSupplierId != 'all'
                                         ? AppColors.textPrimary
                                         : AppColors.textSecondary,
@@ -263,7 +258,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                              Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
                             ],
                           ),
                         ),
@@ -274,7 +269,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               ],
             ),
           ),
-          SizedBox(width: AppSpacing.md),
+          const SizedBox(width: 10),
           // Date From
           Expanded(
             flex: 2,
@@ -282,8 +277,8 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Date de début', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                Text('Date de début', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
                 InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -299,20 +294,20 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                     }
                   },
                   child: Container(
-                    height: 40,
-                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
+                        Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            _dateFrom != null ? formatDateLong(_dateFrom!) : 'Sélectionner une date',
-                            style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                            _dateFrom != null ? formatDateLong(_dateFrom!) : 'Sélectionner date',
+                            style: TextStyle(fontSize: 12, color: _dateFrom != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -323,7 +318,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               ],
             ),
           ),
-          SizedBox(width: AppSpacing.md),
+          const SizedBox(width: 10),
           // Date To
           Expanded(
             flex: 2,
@@ -331,8 +326,8 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Date de fin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                Text('Date de fin', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
                 InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -348,20 +343,20 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                     }
                   },
                   child: Container(
-                    height: 40,
-                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
+                        Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            _dateTo != null ? formatDateLong(_dateTo!) : 'Sélectionner une date',
-                            style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                            _dateTo != null ? formatDateLong(_dateTo!) : 'Sélectionner date',
+                            style: TextStyle(fontSize: 12, color: _dateTo != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -372,7 +367,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               ],
             ),
           ),
-          SizedBox(width: AppSpacing.md),
+          const SizedBox(width: 10),
           // Status
           Expanded(
             flex: 2,
@@ -380,19 +375,19 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Statut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                Text('Statut', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
                 SizedBox(
-                  height: 40,
+                  height: 32,
                   child: PopupMenuButton<ReceivingVoucherStatus?>(
                     tooltip: 'Filtrer par statut',
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderRadius: BorderRadius.circular(6),
                       side: BorderSide(color: AppColors.border),
                     ),
                     color: AppColors.surface,
-                    elevation: 6,
-                    offset: const Offset(0, 44),
+                    elevation: 4,
+                    offset: const Offset(0, 36),
                     initialValue: _statusFilter,
                     onSelected: (val) {
                       setState(() => _statusFilter = val);
@@ -401,49 +396,48 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                     itemBuilder: (context) => [
                       PopupMenuItem<ReceivingVoucherStatus?>(
                         value: null,
-                        height: 38,
+                        height: 34,
                         child: Row(
                           children: [
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 color: AppColors.textTertiary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(AppRadius.sm),
+                                borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 'Tous',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                               ),
                             ),
-                            Spacer(),
+                            const Spacer(),
                             if (_statusFilter == null)
                               Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
                           ],
                         ),
                       ),
-                      const PopupMenuDivider(height: 1),
                       ...ReceivingVoucherStatus.values.map(
                         (s) => PopupMenuItem<ReceivingVoucherStatus?>(
                           value: s,
-                          height: 38,
+                          height: 34,
                           child: Row(
                             children: [
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: s.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
                                   s.label,
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
                                     color: s.color,
                                   ),
                                 ),
                               ),
-                              Spacer(),
+                              const Spacer(),
                               if (_statusFilter == s)
                                 Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
                             ],
@@ -452,34 +446,34 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                       ),
                     ],
                     child: Container(
-                      height: 40,
+                      height: 32,
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderRadius: BorderRadius.circular(6),
                         border: Border.all(
                           color: _statusFilter != null ? AppColors.primary : AppColors.border,
                         ),
                       ),
-                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       child: Row(
                         children: [
                           Expanded(
                             child: _statusFilter == null
                                 ? Text(
                                     'Tous',
-                                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                                     overflow: TextOverflow.ellipsis,
                                   )
                                 : Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: _statusFilter!.color.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                                      borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       _statusFilter!.label,
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w600,
                                         color: _statusFilter!.color,
                                       ),
@@ -487,8 +481,8 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                     ),
                                   ),
                           ),
-                          SizedBox(width: 4),
-                          Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                          const SizedBox(width: 4),
+                          Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
                         ],
                       ),
                     ),
@@ -497,50 +491,37 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               ],
             ),
           ),
-        ],
-      ),
-
-      if (activeFilterCount > 0)
-        Padding(
-          padding: EdgeInsets.only(top: 16),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '$totalItems résultat${totalItems > 1 ? 's' : ''}',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
-                ),
-              ),
-              const Spacer(),
-              TextButton.icon(
+          if (activeFilterCount > 0) ...[
+            const SizedBox(width: 8),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 1),
+              child: IconButton(
                 onPressed: () {
                   setState(() {
                     _selectedSupplierId = null;
                     _dateFrom = null;
                     _dateTo = null;
                     _statusFilter = null;
+                    _currentPage = 0;
                   });
                   _applyFilters();
                 },
-                icon: Icon(Icons.refresh_rounded, size: 16),
-                label: Text('Réinitialiser les filtres'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                tooltip: 'Réinitialiser les filtres',
+                style: IconButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  minimumSize: const Size(32, 32),
+                  padding: EdgeInsets.zero,
                 ),
               ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
   Future<Supplier?> _showSupplierSearchDialog(
     BuildContext context,
@@ -712,12 +693,12 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
   Widget _buildTableShimmer() {
     return ShimmerTable(
       headerColumns: [
-        const SizedBox(width: 32),
-        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-        Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)))),
-        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-        SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+        const SizedBox(width: 28),
+        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
     );
   }
@@ -768,19 +749,19 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                       children: [
                         // Table Header
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
                             border: Border(bottom: BorderSide(color: AppColors.border)),
                             color: AppColors.background,
                           ),
                           child: Row(
                             children: [
-                              SizedBox(width: 32), // Checkbox space
-                              Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                              Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                              SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                              const SizedBox(width: 28), // Checkbox space
+                              Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                             ],
                           ),
                         ),
@@ -791,9 +772,9 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.border),
-                                      SizedBox(height: 16),
-                                      Text("Aucun bon de réception trouvé", style: TextStyle(color: AppColors.textSecondary)),
+                                      Icon(Icons.inventory_2_outlined, size: 40, color: AppColors.border),
+                                      const SizedBox(height: 12),
+                                      Text("Aucun bon de réception trouvé", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                                     ],
                                   ),
                                 )
@@ -808,15 +789,17 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                     );
 
                                     return Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withOpacity(0.3),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
                                       child: Row(
                                         children: [
                                           SizedBox(
-                                            width: 32,
+                                            width: 28,
+                                            height: 28,
                                             child: Checkbox(
                                               value: false,
                                               onChanged: (_) {},
+                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                               side: BorderSide(color: AppColors.border),
                                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
                                             ),
@@ -825,10 +808,11 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                             flex: 2,
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
-                                                Text(voucher.number, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary)),
-                                                SizedBox(height: 4),
-                                                Text(formatDateTimeLong(voucher.date), style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                                                Text(voucher.number, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5, color: AppColors.textPrimary)),
+                                                const SizedBox(height: 1),
+                                                Text(formatDateTimeLong(voucher.date), style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                                               ],
                                             ),
                                           ),
@@ -837,11 +821,11 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                             child: Row(
                                               children: [
                                                 Icon(Icons.business_outlined, size: 14, color: AppColors.textSecondary),
-                                                SizedBox(width: 6),
+                                                const SizedBox(width: 6),
                                                 Flexible(
                                                   child: Text(
                                                     voucher.supplierName ?? 'Fournisseur Inconnu',
-                                                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textPrimary),
+                                                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12.5, color: AppColors.textPrimary),
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
@@ -853,32 +837,33 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                             child: Container(
                                               alignment: Alignment.centerLeft,
                                               child: Container(
-                                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                                 decoration: BoxDecoration(
-                                                  color: statusEnum.color.withOpacity(0.1),
+                                                  color: statusEnum.color.withValues(alpha: 0.1),
                                                   borderRadius: BorderRadius.circular(4),
                                                 ),
                                                 child: Text(
                                                   statusEnum.label,
-                                                  style: TextStyle(color: statusEnum.color, fontSize: 12, fontWeight: FontWeight.w500),
+                                                  style: TextStyle(color: statusEnum.color, fontSize: 11.5, fontWeight: FontWeight.w500),
                                                 ),
                                               ),
                                             ),
                                           ),
                                           Expanded(
                                             flex: 2,
-                                            child: Text(formatCurrency(voucher.computedTotalTTC), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                                            child: Text(formatCurrency(voucher.computedTotalTTC), style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                                           ),
                                           SizedBox(
-                                            width: 80,
+                                            width: 60,
                                             child: Align(
                                               alignment: Alignment.centerRight,
                                               child: PopupMenuButton<String>(
-                                                icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                                color: AppColors.background,
-                                                elevation: 4,
+                                                icon: Icon(Icons.more_horiz, size: 18, color: AppColors.textSecondary),
                                                 padding: EdgeInsets.zero,
+                                                constraints: const BoxConstraints(),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                color: AppColors.surface,
+                                                elevation: 4,
                                                 itemBuilder: (ctx) => _buildActionMenu(context, voucher),
                                                 onSelected: (val) {
                                                   if (val == 'view') {
@@ -901,18 +886,23 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                     Navigator.push(
                                                       context,
                                                       MaterialPageRoute(
-                                                        builder: (_) => CreateReceivingVoucherScreen(existing: voucher),
+                                                        builder: (_) => MultiBlocProvider(
+                                                          providers: [
+                                                            BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
+                                                            BlocProvider.value(value: context.read<SuppliersBloc>()),
+                                                            BlocProvider.value(value: context.read<ProductsBloc>()),
+                                                            BlocProvider.value(value: context.read<ProjectsBloc>()),
+                                                            BlocProvider.value(value: context.read<WarehousesBloc>()),
+                                                          ],
+                                                          child: CreateReceivingVoucherScreen(existing: voucher),
+                                                        ),
                                                       ),
-                                                    ).then((_) {
-                                                      if (context.mounted) {
-                                                        context.read<ReceivingVouchersBloc>().add(LoadReceivingVouchers());
-                                                      }
-                                                    });
+                                                    );
                                                   } else if (val == 'delete') {
                                                     _confirmDelete(voucher);
-                                                  } else if (val == 'convert_invoice') {
+                                                  } else if (val == 'to_invoice') {
                                                     _showConvertToInvoiceDialog(voucher);
-                                                  } else if (val == 'convert_return') {
+                                                  } else if (val == 'to_return') {
                                                     _showConvertToReturnDialog(voucher);
                                                   } else if (val == 'view_invoice_created') {
                                                     final shellState = context.findAncestorStateOfType<AppShellScreenState>();
@@ -982,18 +972,18 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
               ),
               // Pagination Footer
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(
                   border: Border(top: BorderSide(color: AppColors.border)),
                   color: AppColors.background,
                 ),
                 child: Row(
                   children: [
-                    Text('Lignes', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                    SizedBox(width: 8),
+                    Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    const SizedBox(width: 8),
                     Container(
-                      height: 32,
-                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      height: 28,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
                         border: Border.all(color: AppColors.border),
                         borderRadius: BorderRadius.circular(6),
@@ -1001,10 +991,10 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                       ),
                       child: DropdownButton<int>(
                         value: _rowsPerPage,
-                        underline: SizedBox(),
-                        icon: Icon(Icons.keyboard_arrow_down, size: 16),
-                        style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                        items: [10, 20, 50, 100].map((v) => DropdownMenuItem(value: v, child: Text(v.toString()))).toList(),
+                        underline: const SizedBox(),
+                        icon: Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                        items: [20, 50, 100].map((v) => DropdownMenuItem(value: v, child: Text(v.toString()))).toList(),
                         onChanged: (v) {
                           if (v != null) {
                             setState(() {
@@ -1015,39 +1005,41 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                         },
                       ),
                     ),
-                    SizedBox(width: 24),
-                    Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                    Spacer(),
+                    const SizedBox(width: 20),
+                    Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    const Spacer(),
                     Text(
                       totalItems == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de ${startIndex + 1} à $endIndex sur $totalItems résultats',
-                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
-                    SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Row(
                       children: [
                         InkWell(
                           onTap: _currentPage > 0 ? () => setState(() => _currentPage--) : null,
+                          borderRadius: BorderRadius.circular(4),
                           child: Container(
-                            padding: EdgeInsets.all(4),
+                            padding: const EdgeInsets.all(3),
                             decoration: BoxDecoration(
-                              border: Border.all(color: _currentPage > 0 ? AppColors.border : AppColors.border.withOpacity(0.5)),
+                              border: Border.all(color: _currentPage > 0 ? AppColors.border : AppColors.border.withValues(alpha: 0.5)),
                               borderRadius: BorderRadius.circular(4),
                               color: AppColors.surface,
                             ),
-                            child: Icon(Icons.chevron_left, size: 20, color: _currentPage > 0 ? AppColors.textPrimary : AppColors.textTertiary),
+                            child: Icon(Icons.chevron_left, size: 18, color: _currentPage > 0 ? AppColors.textPrimary : AppColors.textTertiary),
                           ),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         InkWell(
                           onTap: _currentPage < totalPages - 1 ? () => setState(() => _currentPage++) : null,
+                          borderRadius: BorderRadius.circular(4),
                           child: Container(
-                            padding: EdgeInsets.all(4),
+                            padding: const EdgeInsets.all(3),
                             decoration: BoxDecoration(
-                              border: Border.all(color: _currentPage < totalPages - 1 ? AppColors.border : AppColors.border.withOpacity(0.5)),
+                              border: Border.all(color: _currentPage < totalPages - 1 ? AppColors.border : AppColors.border.withValues(alpha: 0.5)),
                               borderRadius: BorderRadius.circular(4),
                               color: AppColors.surface,
                             ),
-                            child: Icon(Icons.chevron_right, size: 20, color: _currentPage < totalPages - 1 ? AppColors.textPrimary : AppColors.textTertiary),
+                            child: Icon(Icons.chevron_right, size: 18, color: _currentPage < totalPages - 1 ? AppColors.textPrimary : AppColors.textTertiary),
                           ),
                         ),
                       ],

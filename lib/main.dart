@@ -63,8 +63,8 @@ import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/account_deactivated_screen.dart';
 
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_web_plugins/url_strategy.dart';
 
 import 'dart:ui';
 import 'utils/platform_utils.dart';
@@ -75,6 +75,10 @@ import 'services/security/security_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  if (kIsWeb) {
+    usePathUrlStrategy();
+  }
   
   FlutterError.onError = (FlutterErrorDetails details) {
     print('FLUTTER ERROR: ${details.exception}');
@@ -88,11 +92,6 @@ void main() async {
   };
 
   await initializeDateFormatting('fr_FR', null);
-  
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-    
-    
-  }
 
   // Initialize Firebase
   try {
@@ -250,7 +249,12 @@ class BusinessManagerApp extends StatelessWidget {
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
+        primary: AppColors.primary,
+        onPrimary: Colors.white,
+        primaryContainer: AppColors.primary.withValues(alpha: 0.12),
+        onPrimaryContainer: AppColors.primary,
         surface: AppColors.surface,
+        onSurface: AppColors.textPrimary,
         surfaceContainerHighest: AppColors.surfaceAlt,
       ),
       textTheme: GoogleFonts.interTextTheme(),
@@ -267,6 +271,110 @@ class BusinessManagerApp extends StatelessWidget {
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
         elevation: 8,
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          side: BorderSide(color: AppColors.border),
+        ),
+        headerBackgroundColor: AppColors.primary,
+        headerForegroundColor: Colors.white,
+        headerHeadlineStyle: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          height: 1.2,
+        ),
+        headerHelpStyle: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: Colors.white.withValues(alpha: 0.9),
+          letterSpacing: 0,
+        ),
+        dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary;
+          }
+          return null;
+        }),
+        dayForegroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          if (states.contains(WidgetState.disabled)) {
+            return AppColors.textTertiary;
+          }
+          return AppColors.textPrimary;
+        }),
+        dayOverlayColor: WidgetStateProperty.all(
+          AppColors.primary.withValues(alpha: 0.1),
+        ),
+        todayBackgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary;
+          }
+          return AppColors.primary.withValues(alpha: 0.12);
+        }),
+        todayForegroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          return AppColors.primary;
+        }),
+        todayBorder: BorderSide(color: AppColors.primary, width: 1.5),
+        yearBackgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary;
+          }
+          return null;
+        }),
+        yearForegroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          return AppColors.textPrimary;
+        }),
+        confirmButtonStyle: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(AppColors.primary),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ),
+        cancelButtonStyle: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(AppColors.textSecondary),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          side: BorderSide(color: AppColors.border),
+        ),
+        dayPeriodColor: AppColors.primary.withValues(alpha: 0.15),
+        dayPeriodTextColor: AppColors.primary,
+        dialHandColor: AppColors.primary,
+        dialBackgroundColor: AppColors.surfaceAlt,
+        dialTextColor: AppColors.textPrimary,
+        entryModeIconColor: AppColors.primary,
+        hourMinuteColor: AppColors.surfaceAlt,
+        hourMinuteTextColor: AppColors.primary,
+        confirmButtonStyle: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(AppColors.primary),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ),
+        cancelButtonStyle: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(AppColors.textSecondary),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -299,7 +407,12 @@ class BusinessManagerApp extends StatelessWidget {
       colorScheme: ColorScheme.fromSeed(
         brightness: Brightness.dark,
         seedColor: AppColors.primary,
+        primary: AppColors.primary,
+        onPrimary: Colors.white,
+        primaryContainer: AppColors.primary.withValues(alpha: 0.2),
+        onPrimaryContainer: Colors.white,
         surface: AppColors.surface,
+        onSurface: AppColors.textPrimary,
         surfaceContainerHighest: AppColors.surfaceAlt,
       ),
       textTheme: GoogleFonts.interTextTheme(ThemeData(brightness: Brightness.dark).textTheme).copyWith(
@@ -319,6 +432,110 @@ class BusinessManagerApp extends StatelessWidget {
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
         elevation: 8,
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          side: BorderSide(color: AppColors.border),
+        ),
+        headerBackgroundColor: AppColors.primary,
+        headerForegroundColor: Colors.white,
+        headerHeadlineStyle: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          height: 1.2,
+        ),
+        headerHelpStyle: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: Colors.white.withValues(alpha: 0.9),
+          letterSpacing: 0,
+        ),
+        dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary;
+          }
+          return null;
+        }),
+        dayForegroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          if (states.contains(WidgetState.disabled)) {
+            return AppColors.textTertiary;
+          }
+          return AppColors.textPrimary;
+        }),
+        dayOverlayColor: WidgetStateProperty.all(
+          AppColors.primary.withValues(alpha: 0.15),
+        ),
+        todayBackgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary;
+          }
+          return AppColors.primary.withValues(alpha: 0.2);
+        }),
+        todayForegroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          return AppColors.primaryLight;
+        }),
+        todayBorder: BorderSide(color: AppColors.primaryLight, width: 1.5),
+        yearBackgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary;
+          }
+          return null;
+        }),
+        yearForegroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          return AppColors.textPrimary;
+        }),
+        confirmButtonStyle: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(AppColors.primaryLight),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ),
+        cancelButtonStyle: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(AppColors.textSecondary),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          side: BorderSide(color: AppColors.border),
+        ),
+        dayPeriodColor: AppColors.primary.withValues(alpha: 0.2),
+        dayPeriodTextColor: AppColors.primaryLight,
+        dialHandColor: AppColors.primary,
+        dialBackgroundColor: AppColors.surfaceAlt,
+        dialTextColor: AppColors.textPrimary,
+        entryModeIconColor: AppColors.primaryLight,
+        hourMinuteColor: AppColors.surfaceAlt,
+        hourMinuteTextColor: AppColors.primaryLight,
+        confirmButtonStyle: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(AppColors.primaryLight),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ),
+        cancelButtonStyle: ButtonStyle(
+          foregroundColor: WidgetStatePropertyAll(AppColors.textSecondary),
+          textStyle: const WidgetStatePropertyAll(
+            TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -373,7 +590,24 @@ class _AppGate extends StatelessWidget {
         if (authState is AuthAuthenticated) {
           return const _EnterpriseGate();
         }
-        return PlatformUtils.isAndroid ? const MobileLoginScreen() : const LoginScreen();
+        return const _ResponsiveLoginGate();
+      },
+    );
+  }
+}
+
+class _ResponsiveLoginGate extends StatelessWidget {
+  const _ResponsiveLoginGate();
+
+  @override
+  Widget build(BuildContext context) {
+    if (PlatformUtils.isAndroid) return const MobileLoginScreen();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 850 && !PlatformUtils.isDesktop) {
+          return const MobileLoginScreen();
+        }
+        return const LoginScreen();
       },
     );
   }
@@ -473,10 +707,27 @@ class _EnterpriseGateState extends State<_EnterpriseGate> {
           // KeyedSubtree: changing the key forces a full rebuild of the UI shell
           return KeyedSubtree(
             key: ValueKey(state.currentEnterpriseId),
-            child: PlatformUtils.isAndroid ? const MobileShellScreen() : const AppShellScreen(),
+            child: _ResponsiveShellGate(),
           );
         }
         return const OnboardingEnterpriseScreen();
+      },
+    );
+  }
+}
+
+class _ResponsiveShellGate extends StatelessWidget {
+  const _ResponsiveShellGate();
+
+  @override
+  Widget build(BuildContext context) {
+    if (PlatformUtils.isAndroid) return const MobileShellScreen();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 850 && !PlatformUtils.isDesktop) {
+          return const MobileShellScreen();
+        }
+        return const AppShellScreen();
       },
     );
   }

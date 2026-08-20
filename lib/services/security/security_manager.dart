@@ -1,5 +1,5 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 import 'security_config.dart';
 import 'secure_storage_service.dart';
@@ -32,7 +32,7 @@ class SecurityManager {
     SslPinningService.initialize();
 
     // 2. Android Security Protections
-    if (!kIsWeb && Platform.isAndroid) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       // Enable Screenshot and Screen Recording Prevention (FLAG_SECURE)
       await AndroidSecurityService.instance.enableScreenshotProtection();
 
@@ -84,13 +84,13 @@ class SecurityManager {
       }
     }
 
-    // Default success for mobile platforms (Android handles its own login/auth)
+    // Default success for web and mobile platforms
     _initialized = true;
     _lastResult = LicenseVerificationResult.success(
       license: LicenseInfo(
-        id: 'mobile_active',
+        id: kIsWeb ? 'web_active' : 'mobile_active',
         enterpriseId: 'default',
-        plan: 'mobile',
+        plan: kIsWeb ? 'web' : 'mobile',
         isActive: true,
       ),
       bypass: false,

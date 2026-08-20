@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,9 +7,8 @@ import 'connectivity_service.dart';
 import 'sync_service.dart';
 import 'enterprise_service.dart';
 import '../models/user_management_model.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:openid_client/openid_client_io.dart';
-import '../secrets.dart';
+import '../utils/platform_utils.dart';
+import 'auth/desktop_google_auth_helper.dart';
 
 class AuthService {
   static final AuthService instance = AuthService._();
@@ -74,7 +72,7 @@ class AuthService {
     _currentUserUid = null;
     _offlineMode = false;
     try {
-      if (!kIsWeb && Platform.isAndroid) {
+      if (PlatformUtils.isAndroid) {
         final GoogleSignIn googleSignIn = GoogleSignIn();
         await googleSignIn.signOut();
       }
@@ -265,45 +263,17 @@ class AuthService {
     try {
       UserCredential userCredential;
 
-      if (!kIsWeb && Platform.isWindows) {
-        // Desktop Flow using manual loopback via openid_client
-        final clientId = Secrets.googleClientId;
-        final clientSecret = Secrets.googleClientSecret;
-        var issuer = await Issuer.discover(Issuer.google);
-        var client = Client(issuer, clientId, clientSecret: clientSecret);
-
-        Future<void> urlLauncher(String url) async {
-          if (await canLaunchUrl(Uri.parse(url))) {
-            await launchUrl(Uri.parse(url));
-          } else {
-            throw 'Impossible de lancer le navigateur web.';
-          }
-        }
-
-        var authenticator = Authenticator(
-          client,
-          scopes: ['email', 'profile', 'openid'],
-          port: 43210,
-          urlLancher: urlLauncher,
-        );
-
-        Credential credentials;
-        try {
-          credentials = await authenticator.authorize();
-        } catch (e) {
-          // Scenario 5: User cancelled or closed browser
-          throw 'Connexion Google annulée.';
-        }
-
-        var tokenResponse = await credentials.getTokenResponse();
-        final idToken = tokenResponse.idToken.toCompactSerialization();
-        final accessToken = tokenResponse.accessToken;
-
-        final AuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: accessToken,
-          idToken: idToken,
-        );
-        userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      if (kIsWeb) {
+        // Web Flow using Firebase Auth Popup
+        debugPrint('[GoogleAuth] Step 1: Web signInWithPopup starting...');
+        final googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+        userCredential = await FirebaseAuth.instance.signInWithPopup(googleProvider);
+        debugPrint('[GoogleAuth] Step 2: Web signInWithPopup success: uid=${userCredential.user?.uid}');
+      } else if (PlatformUtils.isWindows) {
+        // Desktop Flow using manual loopback via DesktopGoogleAuthHelper
+        userCredential = await DesktopGoogleAuthHelper.signIn();
       } else {
         // Android / Mobile Flow using google_sign_in
         debugPrint('[GoogleAuth] Step 1: Setting up GoogleSignIn');
@@ -532,7 +502,7 @@ class AuthService {
     _offlineMode = false;
     _currentUserUid = null;
     try {
-      if (!kIsWeb && Platform.isAndroid) {
+      if (PlatformUtils.isAndroid) {
         final GoogleSignIn googleSignIn = GoogleSignIn();
         await googleSignIn.signOut();
       }

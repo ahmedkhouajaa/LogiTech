@@ -1,7 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'security_config.dart';
 
-/// Secure key-value storage backed by Windows DPAPI / Windows Credential Manager.
+/// Secure key-value storage backed by Windows DPAPI / Android Keystore / Web Crypto.
 class SecureStorageService {
   static final SecureStorageService instance = SecureStorageService._();
   SecureStorageService._();
@@ -9,6 +9,10 @@ class SecureStorageService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     wOptions: WindowsOptions(useBackwardCompatibility: false),
+    webOptions: WebOptions(
+      dbName: 'logitech_secure_vault',
+      publicKey: 'logitech_pro_web_secure',
+    ),
   );
 
   // ── Keys ────────────────────────────────────────────────────────

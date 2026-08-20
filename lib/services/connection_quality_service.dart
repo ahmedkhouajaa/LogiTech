@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart';
 
 enum ConnectionQuality {
   excellent,
@@ -31,7 +29,7 @@ class ConnectionQualityService {
     });
 
     _pingTimer?.cancel();
-    _pingTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+    _pingTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       checkQuality();
     });
   }
@@ -44,23 +42,8 @@ class ConnectionQualityService {
         return ConnectionQuality.disconnected;
       }
 
-      final stopwatch = Stopwatch()..start();
-      final addresses = await InternetAddress.lookup('google.com').timeout(const Duration(seconds: 3));
-      stopwatch.stop();
-
-      if (addresses.isEmpty || addresses[0].rawAddress.isEmpty) {
-        _updateQuality(ConnectionQuality.disconnected);
-        return ConnectionQuality.disconnected;
-      }
-
-      final elapsedMs = stopwatch.elapsedMilliseconds;
-      if (elapsedMs > 1200) {
-        _updateQuality(ConnectionQuality.slow);
-        return ConnectionQuality.slow;
-      } else {
-        _updateQuality(ConnectionQuality.excellent);
-        return ConnectionQuality.excellent;
-      }
+      _updateQuality(ConnectionQuality.excellent);
+      return ConnectionQuality.excellent;
     } catch (_) {
       _updateQuality(ConnectionQuality.disconnected);
       return ConnectionQuality.disconnected;

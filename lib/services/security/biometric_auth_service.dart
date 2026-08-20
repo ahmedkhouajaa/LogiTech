@@ -1,5 +1,5 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart';
 import 'secure_storage_service.dart';
 import 'security_config.dart';
@@ -14,7 +14,7 @@ class BiometricAuthService {
 
   /// Checks if hardware and device support biometrics and have enrolled credentials.
   Future<bool> isBiometricAvailable() async {
-    if (kIsWeb || !Platform.isAndroid) return false;
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
     try {
       final available = await _channel.invokeMethod<bool>('isBiometricAvailable');
       return available ?? false;
@@ -31,7 +31,7 @@ class BiometricAuthService {
     String cancelText = 'Annuler',
     String? reason,
   }) async {
-    if (kIsWeb || !Platform.isAndroid) return false;
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
 
     if (SecurityConfig.isSecurityDisabled) {
       SecurityLogger.info('Biometric auth bypassed via DISABLE_SECURITY flag.');

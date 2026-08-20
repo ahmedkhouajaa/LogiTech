@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,9 +19,9 @@ import 'permission_service.dart';
 /// Singleton service that manages the current enterprise context.
 ///
 /// Responsibilities:
-/// - Tracks [currentEnterpriseId] and exposes a stream for changes
+/// - Tracks [currentEnterpriseId] and exposes a stream and ValueNotifier for changes
 /// - Caches enterprise list in SharedPreferences for fast boot
-/// - Reads/writes enterprise data to Firestore
+/// - Reads/writes enterprise data to Firestore with real-time sync across Web, Desktop, and Android
 /// - Auto-creates a default enterprise for new users
 class EnterpriseService {
   static final EnterpriseService instance = EnterpriseService._();
@@ -38,6 +38,13 @@ class EnterpriseService {
   final _enterpriseController = StreamController<String?>.broadcast();
   final _enterpriseListController = StreamController<List<Enterprise>>.broadcast();
   StreamSubscription<DocumentSnapshot>? _userDocSubscription;
+  final Map<String, StreamSubscription<DocumentSnapshot>> _enterpriseDocSubscriptions = {};
+
+  /// ValueNotifier exposing the active enterprise for instant UI reactivity.
+  final ValueNotifier<Enterprise?> currentEnterpriseNotifier = ValueNotifier<Enterprise?>(null);
+
+  /// ValueNotifier exposing the list of enterprises for instant UI reactivity.
+  final ValueNotifier<List<Enterprise>> enterprisesNotifier = ValueNotifier<List<Enterprise>>([]);
 
   /// The currently active enterprise ID, used by all data queries.
   String? get currentEnterpriseId => _currentEnterpriseId;
@@ -69,13 +76,22 @@ class EnterpriseService {
 
   // ─── Realtime Sync ────────────────────────────────────────────────
 
-  /// Listens in real-time to user document in Firestore to detect new enterprises
-  /// created from other devices (e.g. Mobile <-> Desktop).
+  /// Listens in real-time to:
+  /// 1. The user document (`users/{uid}`) to detect enterprise additions/removals and remote active enterprise changes.
+  /// 2. Every enterprise document (`enterprises/{enterpriseId}`) to immediately capture changes made on ANY device (Web, Desktop, Android).
   void startRealtimeSync() {
-    _userDocSubscription?.cancel();
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
+    // Update notifiers with current cached state
+    currentEnterpriseNotifier.value = currentEnterprise;
+    enterprisesNotifier.value = _enterprises;
+
+    // 1. Subscribe to all known enterprise documents
+    _updateEnterpriseSubscriptions();
+
+    // 2. Subscribe to user document
+    _userDocSubscription?.cancel();
     _userDocSubscription = FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
@@ -88,17 +104,96 @@ class EnterpriseService {
       final List<String> enterpriseIds = List<String>.from(data['enterprises'] ?? []);
       final currentIds = _enterprises.map((e) => e.id).toList();
 
+      // Check if currentEnterpriseId was changed remotely
+      final remoteCurrentId = data['currentEnterpriseId']?.toString();
+      if (remoteCurrentId != null &&
+          remoteCurrentId.isNotEmpty &&
+          remoteCurrentId != _currentEnterpriseId &&
+          (enterpriseIds.contains(remoteCurrentId) || _enterprises.any((e) => e.id == remoteCurrentId))) {
+        _currentEnterpriseId = remoteCurrentId;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_prefKeyCurrentId, remoteCurrentId);
+        _enterpriseController.add(_currentEnterpriseId);
+        currentEnterpriseNotifier.value = currentEnterprise;
+      }
+
       // Check if enterprise list in Firestore has new/removed enterprises
       final hasChanges = enterpriseIds.length != currentIds.length ||
           !enterpriseIds.every((id) => currentIds.contains(id));
 
       if (hasChanges) {
-        print('EnterpriseService: Detected enterprise change in Firestore! Syncing...');
+        debugPrint('[EnterpriseService] Detected enterprise list change in Firestore! Syncing...');
         await loadEnterprisesFromFirestore();
+      } else {
+        _updateEnterpriseSubscriptions();
       }
     }, onError: (e) {
-      print('EnterpriseService.startRealtimeSync error: $e');
+      debugPrint('[EnterpriseService.startRealtimeSync] user doc error: $e');
     });
+  }
+
+  /// Manages active real-time document listeners for all user enterprises.
+  void _updateEnterpriseSubscriptions() {
+    final neededIds = <String>{
+      ..._enterprises.map((e) => e.id),
+      if (_currentEnterpriseId != null && _currentEnterpriseId!.isNotEmpty) _currentEnterpriseId!,
+    };
+
+    // Remove subscriptions for enterprises no longer accessible
+    final toRemove = _enterpriseDocSubscriptions.keys.where((id) => !neededIds.contains(id)).toList();
+    for (final id in toRemove) {
+      _enterpriseDocSubscriptions[id]?.cancel();
+      _enterpriseDocSubscriptions.remove(id);
+    }
+
+    // Subscribe to each needed enterprise document
+    for (final eid in neededIds) {
+      if (eid.isEmpty || _enterpriseDocSubscriptions.containsKey(eid)) continue;
+
+      _enterpriseDocSubscriptions[eid] = FirebaseFirestore.instance
+          .collection('enterprises')
+          .doc(eid)
+          .snapshots()
+          .listen((doc) async {
+        if (!doc.exists || doc.data() == null) return;
+
+        final rawData = doc.data()!;
+        final updatedEnt = Enterprise.fromMap(rawData, id: doc.id);
+
+        final existingIdx = _enterprises.indexWhere((e) => e.id == doc.id);
+        bool hasDifference = false;
+
+        if (existingIdx != -1) {
+          final old = _enterprises[existingIdx];
+          hasDifference = old != updatedEnt;
+        } else {
+          hasDifference = true;
+        }
+
+        if (hasDifference) {
+          debugPrint('[EnterpriseService] Real-time document update received for enterprise "${updatedEnt.name}" (${doc.id}). Propagating state across all platforms...');
+          final updatedList = List<Enterprise>.from(_enterprises);
+          if (existingIdx != -1) {
+            updatedList[existingIdx] = updatedEnt;
+          } else {
+            updatedList.add(updatedEnt);
+          }
+          _enterprises = List.unmodifiable(updatedList);
+          enterprisesNotifier.value = _enterprises;
+
+          await _persistToPrefs();
+
+          if (doc.id == _currentEnterpriseId || _currentEnterpriseId == null) {
+            _currentEnterpriseId ??= doc.id;
+            currentEnterpriseNotifier.value = updatedEnt;
+            _enterpriseController.add(_currentEnterpriseId);
+          }
+          _enterpriseListController.add(_enterprises);
+        }
+      }, onError: (e) {
+        debugPrint('[EnterpriseService] Realtime enterprise doc ($eid) error: $e');
+      });
+    }
   }
 
   // ─── Initialisation ──────────────────────────────────────────────
@@ -121,6 +216,8 @@ class EnterpriseService {
         _enterprises = [];
       }
     }
+    currentEnterpriseNotifier.value = currentEnterprise;
+    enterprisesNotifier.value = _enterprises;
     startRealtimeSync();
     unawaited(PermissionService.instance.loadPermissions());
   }
@@ -129,8 +226,14 @@ class EnterpriseService {
   Future<void> clearCache() async {
     _userDocSubscription?.cancel();
     _userDocSubscription = null;
+    for (final sub in _enterpriseDocSubscriptions.values) {
+      sub.cancel();
+    }
+    _enterpriseDocSubscriptions.clear();
     _currentEnterpriseId = null;
     _enterprises = [];
+    currentEnterpriseNotifier.value = null;
+    enterprisesNotifier.value = [];
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefKeyCurrentId);
     await prefs.remove(_prefKeyEnterprisesJson);
@@ -181,12 +284,15 @@ class EnterpriseService {
       }
 
       _enterprises = List.unmodifiable(result);
+      enterprisesNotifier.value = _enterprises;
 
       // If current enterprise is not in list, switch to first
       if (_currentEnterpriseId == null ||
           !enterpriseIds.contains(_currentEnterpriseId)) {
         _currentEnterpriseId = result.isNotEmpty ? result.first.id : null;
       }
+
+      currentEnterpriseNotifier.value = currentEnterprise;
 
       // Also update Firestore user doc's currentEnterpriseId
       if (_currentEnterpriseId != null) {
@@ -199,10 +305,11 @@ class EnterpriseService {
       await _persistToPrefs();
       _enterpriseController.add(_currentEnterpriseId);
       _enterpriseListController.add(_enterprises);
+      _updateEnterpriseSubscriptions();
       await PermissionService.instance.loadPermissions(enterpriseId: _currentEnterpriseId);
       return _enterprises;
     } catch (e) {
-      print('EnterpriseService.loadEnterprisesFromFirestore error: $e');
+      debugPrint('EnterpriseService.loadEnterprisesFromFirestore error: $e');
       return _enterprises; // Return cached list on failure
     }
   }
@@ -535,6 +642,107 @@ class EnterpriseService {
     }
   }
 
+  /// Updates company information and settings for an enterprise in Firestore,
+  /// local cache, and in-memory state.
+  Future<Enterprise> updateEnterprise(Enterprise updated) async {
+    final eid = updated.id.isNotEmpty ? updated.id : (_currentEnterpriseId ?? '');
+    if (eid.isEmpty) {
+      throw 'Identifiant de l\'entreprise introuvable.';
+    }
+
+    final now = DateTime.now();
+    final updatedWithTimestamp = updated.copyWith(
+      id: eid,
+      updatedAt: now,
+    );
+
+    final updateMap = {
+      'name': updatedWithTimestamp.name.trim(),
+      'description': updatedWithTimestamp.description?.trim(),
+      'phone': updatedWithTimestamp.phone?.trim(),
+      'email': updatedWithTimestamp.email?.trim(),
+      'website': updatedWithTimestamp.website?.trim(),
+      'tax_id': updatedWithTimestamp.taxId?.trim(),
+      'taxId': updatedWithTimestamp.taxId?.trim(),
+      'rc_number': updatedWithTimestamp.rcNumber?.trim(),
+      'rcNumber': updatedWithTimestamp.rcNumber?.trim(),
+      'address': updatedWithTimestamp.address?.trim(),
+      'rib': updatedWithTimestamp.rib?.trim(),
+      'updated_at': now.toIso8601String(),
+      'updatedAt': now.toIso8601String(),
+    };
+
+    // 1. Write to Firestore `enterprises/{eid}` document
+    if (FirebaseAuth.instance.currentUser != null) {
+      final firestore = FirebaseFirestore.instance;
+      await firestore
+          .collection('enterprises')
+          .doc(eid)
+          .set(updateMap, SetOptions(merge: true));
+
+      // Also sync subcollection settings doc and top-level company_settings doc
+      try {
+        await firestore
+            .collection('enterprises')
+            .doc(eid)
+            .collection('settings')
+            .doc('company_settings')
+            .set(updateMap, SetOptions(merge: true));
+      } catch (e) {
+        debugPrint('[EnterpriseService] Sub-settings update warning: $e');
+      }
+
+      try {
+        await firestore
+            .collection('company_settings')
+            .doc(eid)
+            .set({
+              ...updateMap,
+              'enterprise_id': eid,
+              'userId': FirebaseAuth.instance.currentUser?.uid,
+            }, SetOptions(merge: true));
+      } catch (e) {
+        debugPrint('[EnterpriseService] Top-level company_settings update warning: $e');
+      }
+    }
+
+    // 2. Update in-memory enterprise cache
+    final existingIndex = _enterprises.indexWhere((e) => e.id == eid);
+    List<Enterprise> updatedList = List<Enterprise>.from(_enterprises);
+    if (existingIndex != -1) {
+      final current = updatedList[existingIndex];
+      updatedList[existingIndex] = current.copyWith(
+        name: updatedWithTimestamp.name,
+        description: updatedWithTimestamp.description,
+        phone: updatedWithTimestamp.phone,
+        email: updatedWithTimestamp.email,
+        website: updatedWithTimestamp.website,
+        taxId: updatedWithTimestamp.taxId,
+        rcNumber: updatedWithTimestamp.rcNumber,
+        address: updatedWithTimestamp.address,
+        rib: updatedWithTimestamp.rib,
+        updatedAt: now,
+      );
+    } else {
+      updatedList.add(updatedWithTimestamp);
+    }
+
+    _enterprises = List.unmodifiable(updatedList);
+    enterprisesNotifier.value = _enterprises;
+    if (eid == _currentEnterpriseId || _currentEnterpriseId == null) {
+      currentEnterpriseNotifier.value = updatedWithTimestamp;
+    }
+
+    // 3. Persist to SharedPreferences and emit updates to all listeners
+    await _persistToPrefs();
+    _enterpriseController.add(_currentEnterpriseId);
+    _enterpriseListController.add(_enterprises);
+    _updateEnterpriseSubscriptions();
+
+    debugPrint('[EnterpriseService] Successfully updated enterprise $eid in Firestore and local state.');
+    return updatedWithTimestamp;
+  }
+
   /// Creates a new enterprise and adds the current user as owner/admin.
   /// Enforces single execution via [_isCreatingEnterprise] lock.
   Future<Enterprise> createEnterprise(
@@ -630,9 +838,12 @@ class EnterpriseService {
       // Update local state early so subsequent inserts adopt currentEnterpriseId
       _enterprises = List.unmodifiable([..._enterprises, enterprise]);
       _currentEnterpriseId = id;
+      currentEnterpriseNotifier.value = enterprise;
+      enterprisesNotifier.value = _enterprises;
       await _persistToPrefs();
       _enterpriseController.add(_currentEnterpriseId);
       _enterpriseListController.add(_enterprises);
+      _updateEnterpriseSubscriptions();
       await PermissionService.instance.loadPermissions(enterpriseId: id);
 
       // Insert company_settings row into SQLite for this enterprise
@@ -677,6 +888,7 @@ class EnterpriseService {
     if (_currentEnterpriseId == enterpriseId) return;
 
     _currentEnterpriseId = enterpriseId;
+    currentEnterpriseNotifier.value = currentEnterprise;
 
     // Persist locally
     final prefs = await SharedPreferences.getInstance();
@@ -691,11 +903,12 @@ class EnterpriseService {
           SetOptions(merge: true),
         );
       } catch (e) {
-        print('EnterpriseService.setCurrentEnterprise Firestore error: $e');
+        debugPrint('EnterpriseService.setCurrentEnterprise Firestore error: $e');
       }
     }
 
     _enterpriseController.add(_currentEnterpriseId);
+    _updateEnterpriseSubscriptions();
     await PermissionService.instance.loadPermissions(enterpriseId: enterpriseId);
   }
 
@@ -725,8 +938,14 @@ class EnterpriseService {
   Future<void> clear() async {
     _userDocSubscription?.cancel();
     _userDocSubscription = null;
+    for (final sub in _enterpriseDocSubscriptions.values) {
+      sub.cancel();
+    }
+    _enterpriseDocSubscriptions.clear();
     _currentEnterpriseId = null;
     _enterprises = [];
+    currentEnterpriseNotifier.value = null;
+    enterprisesNotifier.value = [];
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefKeyCurrentId);
     await prefs.remove(_prefKeyEnterprisesJson);
@@ -736,7 +955,13 @@ class EnterpriseService {
 
   void dispose() {
     _userDocSubscription?.cancel();
+    for (final sub in _enterpriseDocSubscriptions.values) {
+      sub.cancel();
+    }
+    _enterpriseDocSubscriptions.clear();
     _enterpriseController.close();
     _enterpriseListController.close();
+    currentEnterpriseNotifier.dispose();
+    enterprisesNotifier.dispose();
   }
 }

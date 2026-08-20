@@ -82,9 +82,9 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Ã¢a€ €Ã¢a€ € Header Ã¢a€ €Ã¢a€ €
+        // Header
         Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -92,37 +92,37 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Avoir fournisseur',
+                    'Avoirs Fournisseur',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
-                    'Gerer vos Avoirs de retour fournisseur',
-                    style: TextStyle(color: AppColors.textSecondary),
+                    'Gérer vos avoirs fournisseur',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                   ),
                 ],
               ),
               if (PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierCreditNotes))
                 ElevatedButton.icon(
                   onPressed: () => _navigate(context, null),
-                  icon: Icon(Icons.add_rounded, size: 18),
-                  label: Text('Creer un Avoir'),
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Créer un Avoir'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     elevation: 0,
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   ),
                 ),
             ],
           ),
         ),
 
-        // ── Filter Bar ──
+        // Filter Bar
         Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: BlocBuilder<SupplierCreditNotesBloc, SupplierCreditNotesState>(
@@ -131,16 +131,16 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
             },
           ),
         ),
-        SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: 10),
 
-        // ── Table ──
+        // Table
         Expanded(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: _buildTable(),
           ),
         ),
-        SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: 10),
       ],
     );
   }
@@ -181,7 +181,6 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
       }
       totalItems = filteredNotes.length;
     }
-
     final activeFilterCount = (_selectedSupplierId != null && _selectedSupplierId != 'all' ? 1 : 0) +
         (_dateFrom != null ? 1 : 0) +
         (_dateTo != null ? 1 : 0) +
@@ -193,19 +192,16 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
-      padding: EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Fournisseur dropdown
-              Expanded(
-                flex: 3,
-                child: _filterSection(
-                  label: 'Fournisseur',
-                  child: BlocBuilder<SuppliersBloc, SuppliersState>(
+          // Fournisseur dropdown
+          Expanded(
+            flex: 3,
+            child: _filterSection(
+              label: 'Fournisseur',
+              child: BlocBuilder<SuppliersBloc, SuppliersState>(
                 builder: (context, state) {
                   final suppliers = state is SuppliersLoaded ? state.suppliers : <Supplier>[];
                   String selectedSupplierName = 'Tous les fournisseurs';
@@ -229,15 +225,15 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                         _applyFilters();
                       }
                     },
-                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    borderRadius: BorderRadius.circular(6),
                     child: Container(
-                      height: 40,
+                      height: 32,
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderRadius: BorderRadius.circular(6),
                         border: Border.all(color: AppColors.border),
                       ),
-                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       child: Row(
                         children: [
                           Expanded(
@@ -246,7 +242,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                                   ? 'Tous les fournisseurs'
                                   : selectedSupplierName,
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 12,
                                 color: _selectedSupplierId != null && _selectedSupplierId != 'all'
                                     ? AppColors.textPrimary
                                     : AppColors.textSecondary,
@@ -254,7 +250,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                          Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
                         ],
                       ),
                     ),
@@ -263,16 +259,16 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
               ),
             ),
           ),
-          SizedBox(width: AppSpacing.md),
+          const SizedBox(width: 10),
 
           // Date From
           Expanded(
             flex: 2,
             child: _filterSection(
-              label: 'Date de debut',
+              label: 'Date de début',
               child: _datePicker(
                 value: _dateFrom,
-                hint: 'Selectionner une date',
+                hint: 'Sélectionner date',
                 onPicked: (d) {
                   setState(() => _dateFrom = d);
                   _applyFilters();
@@ -280,7 +276,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
               ),
             ),
           ),
-          SizedBox(width: AppSpacing.md),
+          const SizedBox(width: 10),
 
           // Date To
           Expanded(
@@ -289,7 +285,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
               label: 'Date de fin',
               child: _datePicker(
                 value: _dateTo,
-                hint: 'Selectionner une date',
+                hint: 'Sélectionner date',
                 onPicked: (d) {
                   setState(() => _dateTo = d);
                   _applyFilters();
@@ -297,7 +293,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
               ),
             ),
           ),
-          SizedBox(width: AppSpacing.md),
+          const SizedBox(width: 10),
 
           // Status
           Expanded(
@@ -307,12 +303,12 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
               child: PopupMenuButton<SupplierCreditNoteStatus?>(
                 tooltip: 'Filtrer par statut',
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  borderRadius: BorderRadius.circular(6),
                   side: BorderSide(color: AppColors.border),
                 ),
                 color: AppColors.surface,
-                elevation: 6,
-                offset: const Offset(0, 44),
+                elevation: 4,
+                offset: const Offset(0, 36),
                 initialValue: _statusFilter,
                 onSelected: (val) {
                   setState(() => _statusFilter = val);
@@ -321,49 +317,48 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                 itemBuilder: (context) => [
                   PopupMenuItem<SupplierCreditNoteStatus?>(
                     value: null,
-                    height: 38,
+                    height: 34,
                     child: Row(
                       children: [
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: AppColors.textTertiary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             'Tous',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                           ),
                         ),
-                        Spacer(),
+                        const Spacer(),
                         if (_statusFilter == null)
                           Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
                       ],
                     ),
                   ),
-                  const PopupMenuDivider(height: 1),
                   ...SupplierCreditNoteStatus.values.map(
                     (s) => PopupMenuItem<SupplierCreditNoteStatus?>(
                       value: s,
-                      height: 38,
+                      height: 34,
                       child: Row(
                         children: [
                           Container(
-                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: s.color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               s.label,
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w600,
                                 color: s.color,
                               ),
                             ),
                           ),
-                          Spacer(),
+                          const Spacer(),
                           if (_statusFilter == s)
                             Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
                         ],
@@ -372,34 +367,34 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                   ),
                 ],
                 child: Container(
-                  height: 40,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: _statusFilter != null ? AppColors.primary : AppColors.border,
                     ),
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Row(
                     children: [
                       Expanded(
                         child: _statusFilter == null
                             ? Text(
                                 'Tous',
-                                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                                 overflow: TextOverflow.ellipsis,
                               )
                             : Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: _statusFilter!.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
                                   _statusFilter!.label,
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                     color: _statusFilter!.color,
                                   ),
@@ -407,34 +402,19 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                                 ),
                               ),
                       ),
-                      SizedBox(width: 4),
-                      Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-        ],
-      ),
-      if (activeFilterCount > 0)
-        Padding(
-          padding: EdgeInsets.only(top: 16),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '$totalItems résultat${totalItems > 1 ? 's' : ''}',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
-                ),
-              ),
-              const Spacer(),
-              TextButton.icon(
+          if (activeFilterCount > 0) ...[
+            const SizedBox(width: 8),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 1),
+              child: IconButton(
                 onPressed: () {
                   setState(() {
                     _selectedSupplierId = null;
@@ -444,31 +424,31 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                   });
                   _applyFilters();
                 },
-                icon: Icon(Icons.refresh_rounded, size: 16),
-                label: Text('Réinitialiser les filtres'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                tooltip: 'Réinitialiser les filtres',
+                style: IconButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  minimumSize: const Size(32, 32),
+                  padding: EdgeInsets.zero,
                 ),
               ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
   Widget _filterSection({required String label, required Widget child}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label,
-            style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        SizedBox(height: 8),
-        SizedBox(height: 40, child: child),
+        Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        const SizedBox(height: 4),
+        child,
       ],
     );
   }
@@ -640,67 +620,39 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
     );
   }
 
-  Widget _dropdownField<T>({
-    required String hint,
-    required T? value,
-    required List<DropdownMenuItem<T>> items,
-    required ValueChanged<T?> onChanged,
-  }) {
-    return Container(
-      height: 40,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border),
-      ),
-      padding: EdgeInsets.symmetric(horizontal: 12),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          value: value,
-          hint: Text(hint, style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
-          isExpanded: true,
-          icon: Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
-          style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-          items: items,
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
-
   Widget _datePicker({
     required DateTime? value,
     required String hint,
-    required ValueChanged<DateTime> onPicked,
+    required ValueChanged<DateTime?> onPicked,
   }) {
     return InkWell(
       onTap: () async {
-        final picked = await showDatePicker(
+        final d = await showDatePicker(
           context: context,
           initialDate: value ?? DateTime.now(),
           firstDate: DateTime(2000),
           lastDate: DateTime(2100),
           locale: const Locale('fr', 'FR'),
         );
-        if (picked != null) onPicked(picked);
+        if (d != null) onPicked(d);
       },
+      borderRadius: BorderRadius.circular(6),
       child: Container(
-        height: 40,
-        padding: EdgeInsets.symmetric(horizontal: 12),
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_outlined,
-                size: 16, color: AppColors.textSecondary),
-            SizedBox(width: 8),
+            Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+            const SizedBox(width: 6),
             Expanded(
               child: Text(
                 value != null ? formatDateLong(value) : hint,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 12,
                   color: value != null ? AppColors.textPrimary : AppColors.textTertiary,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -715,12 +667,12 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
   Widget _buildTableShimmer() {
     return ShimmerTable(
       headerColumns: [
-        const SizedBox(width: 32),
-        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-        Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)))),
-        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-        SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+        const SizedBox(width: 28),
+        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
     );
   }
@@ -761,8 +713,8 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                       children: [
                         // Header row
                         Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
                             color: AppColors.background,
                             border:
@@ -770,42 +722,42 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                           ),
                           child: Row(
                             children: [
-                              SizedBox(width: 32),
+                              const SizedBox(width: 28),
                               Expanded(
                                   flex: 2,
                                   child: Text('Reference',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
-                                          fontSize: 13,
+                                          fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 3,
                                   child: Text('Fournisseur',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
-                                          fontSize: 13,
+                                          fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 2,
                                   child: Text('Statut',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
-                                          fontSize: 13,
+                                          fontSize: 12,
                                           color: AppColors.textSecondary))),
                               Expanded(
                                   flex: 2,
                                   child: Text('Montant',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
-                                          fontSize: 13,
+                                          fontSize: 12,
                                           color: AppColors.textSecondary))),
                               SizedBox(
-                                  width: 80,
+                                  width: 60,
                                   child: Text('Actions',
                                       textAlign: TextAlign.right,
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
-                                          fontSize: 13,
+                                          fontSize: 12,
                                           color: AppColors.textSecondary))),
                             ],
                           ),
@@ -819,10 +771,11 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Icon(Icons.local_shipping_outlined,
-                                          size: 48, color: AppColors.border),
-                                      SizedBox(height: 16),
-                                      Text('Aucun Avoir fournisseur trouve',
+                                          size: 40, color: AppColors.border),
+                                      const SizedBox(height: 12),
+                                      Text('Aucun Avoir fournisseur trouvé',
                                           style: TextStyle(
+                                              fontSize: 13,
                                               color: AppColors.textSecondary)),
                                     ],
                                   ),
@@ -838,8 +791,8 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
 
                         // Pagination footer
                         Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 6),
                           decoration: BoxDecoration(
                             color: AppColors.background,
                             border:
@@ -849,13 +802,13 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                             children: [
                               Text('Lignes',
                                   style: TextStyle(
-                                      fontSize: 13,
+                                      fontSize: 12,
                                       color: AppColors.textSecondary)),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               Container(
-                                height: 32,
+                                height: 28,
                                 padding:
-                                    EdgeInsets.symmetric(horizontal: 8),
+                                    const EdgeInsets.symmetric(horizontal: 8),
                                 decoration: BoxDecoration(
                                   border:
                                       Border.all(color: AppColors.border),
@@ -864,13 +817,13 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                                 ),
                                 child: DropdownButton<int>(
                                   value: _rowsPerPage,
-                                  underline: SizedBox(),
+                                  underline: const SizedBox(),
                                   icon: Icon(Icons.keyboard_arrow_down,
-                                      size: 16),
+                                      size: 14, color: AppColors.textSecondary),
                                   style: TextStyle(
-                                      fontSize: 13,
+                                      fontSize: 12,
                                       color: AppColors.textPrimary),
-                                  items: [10, 20, 50, 100]
+                                  items: [20, 50, 100]
                                       .map((v) => DropdownMenuItem(
                                           value: v,
                                           child: Text(v.toString())))
@@ -885,28 +838,28 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                                   },
                                 ),
                               ),
-                              SizedBox(width: 24),
+                              const SizedBox(width: 20),
                               Text('Page ${page + 1} sur $totalPages',
                                   style: TextStyle(
-                                      fontSize: 13,
+                                      fontSize: 12,
                                       color: AppColors.textSecondary)),
                               const Spacer(),
                               Text(
                                 total == 0
-                                    ? 'Affichage de 0 a 0 sur 0 resultats'
-                                    : 'Affichage de ${start + 1} a  $end sur $total resultats',
+                                    ? 'Affichage de 0 à 0 sur 0 résultats'
+                                    : 'Affichage de ${start + 1} à $end sur $total résultats',
                                 style: TextStyle(
-                                    fontSize: 13,
+                                    fontSize: 12,
                                     color: AppColors.textSecondary),
                               ),
-                              SizedBox(width: 16),
+                              const SizedBox(width: 12),
                               _pageButton(
                                 icon: Icons.chevron_left,
                                 enabled: page > 0,
                                 onTap: () =>
                                     setState(() => _currentPage = page - 1),
                               ),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               _pageButton(
                                 icon: Icons.chevron_right,
                                 enabled: page < totalPages - 1,
@@ -924,7 +877,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
             ],
           );
         }
-        return SizedBox();
+        return const SizedBox();
       },
     );
   }
@@ -948,14 +901,16 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
       color: index % 2 == 0
           ? AppColors.surface
           : AppColors.background.withValues(alpha: 0.3),
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         children: [
           SizedBox(
-            width: 32,
+            width: 28,
+            height: 28,
             child: Checkbox(
               value: false,
               onChanged: (_) {},
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               side: BorderSide(color: AppColors.border),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
             ),
@@ -966,16 +921,17 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
             flex: 2,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(note.number,
                     style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 13,
+                        fontSize: 12.5,
                         color: AppColors.textPrimary)),
-                SizedBox(height: 3),
+                const SizedBox(height: 1),
                 Text(formatDateTimeLong(note.date),
                     style: TextStyle(
-                        fontSize: 12, color: AppColors.textTertiary)),
+                        fontSize: 11, color: AppColors.textTertiary)),
               ],
             ),
           ),
@@ -987,12 +943,12 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
               children: [
                 Icon(Icons.person_outline,
                     size: 14, color: AppColors.textSecondary),
-                SizedBox(width: 6),
+                const SizedBox(width: 6),
                 Flexible(
                   child: Text(fournisseurLabel,
                       style: TextStyle(
                           fontWeight: FontWeight.w500,
-                          fontSize: 13,
+                          fontSize: 12.5,
                           color: AppColors.textPrimary),
                       overflow: TextOverflow.ellipsis),
                 ),
@@ -1007,16 +963,16 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
               alignment: Alignment.centerLeft,
               child: Container(
                 padding:
-                    EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: statusEnum.color.withValues(alpha: 0.12),
+                  color: statusEnum.color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   statusEnum.label,
                   style: TextStyle(
                       color: statusEnum.color,
-                      fontSize: 12,
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w500),
                 ),
               ),
@@ -1030,7 +986,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
               formatCurrencyDT(note.totalTTC),
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 13,
+                fontSize: 12.5,
                 color: isDraft ? AppColors.textSecondary : AppColors.textPrimary,
               ),
             ),
@@ -1038,12 +994,14 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
 
           // Actions
           SizedBox(
-            width: 80,
+            width: 60,
             child: Align(
               alignment: Alignment.centerRight,
               child: PopupMenuButton<String>(
                 icon: Icon(Icons.more_horiz,
-                    color: AppColors.textSecondary),
+                    size: 18, color: AppColors.textSecondary),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
                 color: AppColors.surface,
@@ -1060,21 +1018,16 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                   ],
                   const PopupMenuDivider(height: 1),
                   _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-                  PopupMenuDivider(height: 1),
+                  const PopupMenuDivider(height: 1),
                   _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
-                  PopupMenuDivider(height: 1),
-                  PopupMenuDivider(height: 1),
+                  const PopupMenuDivider(height: 1),
                   _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
-                  PopupMenuDivider(height: 1),
+                  const PopupMenuDivider(height: 1),
                   _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                  PopupMenuDivider(height: 1),
+                  const PopupMenuDivider(height: 1),
                   _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                  PopupMenuDivider(height: 1),
+                  const PopupMenuDivider(height: 1),
                   _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-//                   PopupMenuDivider(height: 1),
-//                   _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-//                   PopupMenuDivider(height: 1),
-//                   _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
                 ],
               ),
             ),

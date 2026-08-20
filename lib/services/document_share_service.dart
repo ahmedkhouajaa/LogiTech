@@ -1,7 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:printing/printing.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/document_wrapper.dart';
 import 'pdf_service.dart';
 
@@ -9,26 +9,22 @@ class DocumentShareService {
   static final DocumentShareService instance = DocumentShareService._();
   DocumentShareService._();
 
-  static Future<File> _generatePdfFile(DocumentWrapper doc) async {
-    final bytes = await PdfService.instance.generateDocumentBytes(doc);
-    final tempDir = await getTemporaryDirectory();
-    final sanitizedNumber = doc.number.replaceAll(RegExp(r'[^\w\.-]'), '_');
-    final fileName = '$sanitizedNumber.pdf';
-    final file = File('${tempDir.path}/$fileName');
-    await file.writeAsBytes(bytes, flush: true);
-    return file;
-  }
-
   static Future<void> shareViaEmail({
     required DocumentWrapper document,
     BuildContext? context,
   }) async {
     try {
-      final file = await _generatePdfFile(document);
+      final bytes = await PdfService.instance.generateDocumentBytes(document);
       final sanitizedNumber = document.number.replaceAll(RegExp(r'[^\w\.-]'), '_');
       final fileName = '$sanitizedNumber.pdf';
       final subject = 'Votre ${document.documentTitle} ${document.number}';
-      final xFile = XFile(file.path, mimeType: 'application/pdf', name: fileName);
+
+      if (kIsWeb) {
+        await Printing.sharePdf(bytes: bytes, filename: fileName);
+        return;
+      }
+
+      final xFile = XFile.fromData(bytes, mimeType: 'application/pdf', name: fileName);
       await Share.shareXFiles(
         [xFile],
         subject: subject,
@@ -49,10 +45,16 @@ class DocumentShareService {
     BuildContext? context,
   }) async {
     try {
-      final file = await _generatePdfFile(document);
+      final bytes = await PdfService.instance.generateDocumentBytes(document);
       final sanitizedNumber = document.number.replaceAll(RegExp(r'[^\w\.-]'), '_');
       final fileName = '$sanitizedNumber.pdf';
-      final xFile = XFile(file.path, mimeType: 'application/pdf', name: fileName);
+
+      if (kIsWeb) {
+        await Printing.sharePdf(bytes: bytes, filename: fileName);
+        return;
+      }
+
+      final xFile = XFile.fromData(bytes, mimeType: 'application/pdf', name: fileName);
       await Share.shareXFiles(
         [xFile],
         text: '${document.documentTitle} N° ${document.number}',

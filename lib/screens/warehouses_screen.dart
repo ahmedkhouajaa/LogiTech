@@ -98,44 +98,46 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
     return Column(
       children: [
         Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Entrepôts', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                  SizedBox(height: 4),
-                  Text('Gérer vos entrepôts', style: TextStyle(color: AppColors.textSecondary)),
+                  Text('Entrepôts', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  const SizedBox(height: 2),
+                  Text('Gérer vos entrepôts', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
-              Spacer(),
+              const Spacer(),
               if (PermissionService.instance.canCreate(UserPermissionResources.stockWarehouses))
                 ElevatedButton.icon(
                   onPressed: () => _showWarehouseDialog(),
-                  icon: Icon(Icons.add, size: 18),
-                  label: Text('Ajouter un Entrepôt'),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Ajouter un Entrepôt'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     elevation: 0,
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                   ),
                 ),
             ],
           ),
         ),
+        const SizedBox(height: 10),
         
         // Tabs
         Container(
           color: AppColors.surface,
-          padding: EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: TabBar(
             controller: _tabController,
             labelColor: AppColors.primary,
             unselectedLabelColor: AppColors.textSecondary,
             indicatorColor: AppColors.primary,
-            tabs: [
+            tabs: const [
               Tab(text: 'Entrepôts'),
               Tab(text: 'Départements'),
             ],
@@ -147,7 +149,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
             controller: _tabController,
             children: [
               _buildWarehousesTab(),
-              Center(child: Text('Les départements seront bientôt disponibles', style: TextStyle(color: AppColors.textSecondary))),
+              Center(child: Text('Les départements seront bientôt disponibles', style: TextStyle(color: AppColors.textSecondary, fontSize: 13))),
             ],
           ),
         ),
@@ -163,11 +165,10 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: ShimmerTable(
               headerColumns: [
-                const SizedBox(width: 32),
-                Expanded(flex: 3, child: Text('Nom de l\'entrepot', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                Expanded(flex: 2, child: Text('Emplacement', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                Expanded(flex: 3, child: Text('Nom', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                Expanded(flex: 3, child: Text('Adresse', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
               ],
             ),
           );
@@ -177,11 +178,11 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
           final warehouses = state.warehouses;
 
           if (warehouses.isEmpty) {
-            return Center(child: Text('Aucun entrepôt trouvé', style: TextStyle(color: AppColors.textSecondary)));
+            return Center(child: Text('Aucun entrepôt trouvé', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)));
           }
 
           return SingleChildScrollView(
-            padding: EdgeInsets.all(24),
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 10),
             child: Card(
               color: AppColors.surface,
               elevation: 0,
@@ -193,13 +194,18 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                 borderRadius: BorderRadius.circular(AppRadius.lg),
                 child: DataTable(
                   headingRowColor: WidgetStateProperty.all(AppColors.surfaceAlt),
-                  dataRowMaxHeight: 60,
-                  dataRowMinHeight: 60,
+                  headingRowHeight: 38,
+                  dataRowMinHeight: 42,
+                  dataRowMaxHeight: 46,
+                  columnSpacing: 20,
+                  horizontalMargin: 16,
+                  headingTextStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary),
+                  dataTextStyle: TextStyle(fontSize: 12.5, color: AppColors.textPrimary),
                   columns: const [
-                    DataColumn(label: Text('Nom', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Référence', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Adresse', style: TextStyle(fontWeight: FontWeight.bold))),
-                    DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Nom')),
+                    DataColumn(label: Text('Référence')),
+                    DataColumn(label: Text('Adresse')),
+                    DataColumn(label: Text('Actions')),
                   ],
                   rows: warehouses.map((w) {
                     final isDefault = w.isDefault ||
@@ -211,11 +217,11 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(w.name, style: TextStyle(fontWeight: FontWeight.w500)),
+                              Text(w.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5)),
                               if (isDefault) ...[
-                                SizedBox(width: 8),
+                                const SizedBox(width: 8),
                                 Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: AppColors.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
@@ -225,7 +231,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(Icons.lock_rounded, size: 10, color: AppColors.primary),
-                                      SizedBox(width: 2),
+                                      const SizedBox(width: 2),
                                       Text(
                                         'Par défaut',
                                         style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
@@ -237,25 +243,27 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                             ],
                           ),
                         ),
-                        DataCell(Text(w.reference?.isNotEmpty == true ? w.reference! : 'Aucune référence', style: TextStyle(color: AppColors.textSecondary))),
+                        DataCell(Text(w.reference?.isNotEmpty == true ? w.reference! : 'Aucune référence', style: TextStyle(color: AppColors.textSecondary, fontSize: 12))),
                         DataCell(
                           Row(
                             children: [
                               Icon(Icons.location_on_outlined, size: 14, color: AppColors.textSecondary),
-                              SizedBox(width: 4),
-                              Text(w.address?.isNotEmpty == true ? w.address! : 'Adresse par défaut', style: TextStyle(color: AppColors.textSecondary)),
+                              const SizedBox(width: 4),
+                              Text(w.address?.isNotEmpty == true ? w.address! : 'Adresse par défaut', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                             ],
                           ),
                         ),
                         DataCell(
                           PopupMenuButton(
-                            icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
+                            icon: Icon(Icons.more_horiz, size: 18, color: AppColors.textSecondary),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                             itemBuilder: (context) => [
                               if (!isDefault) ...[
                                 if (PermissionService.instance.canUpdate(UserPermissionResources.stockWarehouses))
                                   PopupMenuItem(
                                     value: 'edit',
-                                    child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')]),
+                                    child: Row(children: [Icon(Icons.edit_outlined, size: 16, color: AppColors.primary), const SizedBox(width: 8), const Text('Modifier')]),
                                     onTap: () {
                                       Future.delayed(Duration.zero, () {
                                         _showWarehouseDialog(w);
@@ -265,7 +273,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                                 if (PermissionService.instance.canDelete(UserPermissionResources.stockWarehouses))
                                   PopupMenuItem(
                                     value: 'delete',
-                                    child: Row(children: [Icon(Icons.delete_outline, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))]),
+                                    child: Row(children: [Icon(Icons.delete_outline, size: 16, color: AppColors.error), const SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))]),
                                     onTap: () {
                                       Future.delayed(Duration.zero, () {
                                         _deleteWarehouse(w);
@@ -277,9 +285,9 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                                   enabled: false,
                                   child: Row(
                                     children: [
-                                      Icon(Icons.lock_rounded, size: 16, color: AppColors.textTertiary),
-                                      SizedBox(width: 8),
-                                      Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                                      Icon(Icons.lock_rounded, size: 14, color: AppColors.textTertiary),
+                                      const SizedBox(width: 8),
+                                      Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
                                     ],
                                   ),
                                 ),
@@ -295,7 +303,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
             ),
           );
         }
-        return SizedBox();
+        return const SizedBox();
       },
     );
   }

@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import '../utils/platform_utils.dart';
 
 class ConnectivityService {
   static final ConnectivityService instance = ConnectivityService._();
@@ -9,67 +9,41 @@ class ConnectivityService {
 
   final _connectivity = Connectivity();
   final _controller = StreamController<bool>.broadcast();
-  bool _isOnline = false;
+  bool _isOnline = true;
 
   bool get isOnline => _isOnline;
   Stream<bool> get onConnectivityChanged => _controller.stream;
 
   Future<void> initialize() async {
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      _isOnline = await _checkInternetAccess();
+    try {
+      final result = await _connectivity.checkConnectivity();
+      _isOnline = !result.contains(ConnectivityResult.none);
       _controller.add(_isOnline);
-      Timer.periodic(const Duration(seconds: 10), (_) async {
-        try {
-          final online = await _checkInternetAccess();
-          if (online != _isOnline) {
-            _isOnline = online;
-            _controller.add(_isOnline);
-          }
-        } catch (_) {
-          // Ignore errors during periodic check
+
+      _connectivity.onConnectivityChanged.listen((results) {
+        final online = !results.contains(ConnectivityResult.none);
+        if (online != _isOnline) {
+          _isOnline = online;
+          _controller.add(_isOnline);
         }
       });
-    } else {
-      try {
-        final result = await _connectivity.checkConnectivity();
-        _isOnline = !result.contains(ConnectivityResult.none);
-        _controller.add(_isOnline);
-
-        _connectivity.onConnectivityChanged.listen((results) {
-          _isOnline = !results.contains(ConnectivityResult.none);
-          _controller.add(_isOnline);
-        });
-      } catch (_) {
-        _isOnline = true; // Fallback
-      }
+    } catch (_) {
+      _isOnline = true; // Safe fallback
+      _controller.add(_isOnline);
     }
   }
 
   Future<bool> checkConnectivity() async {
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      _isOnline = await _checkInternetAccess();
-    } else {
-      try {
-        final result = await _connectivity.checkConnectivity();
-        _isOnline = !result.contains(ConnectivityResult.none);
-      } catch (_) {
-        _isOnline = true;
-      }
+    try {
+      final result = await _connectivity.checkConnectivity();
+      _isOnline = !result.contains(ConnectivityResult.none);
+    } catch (_) {
+      _isOnline = true;
     }
     return _isOnline;
-  }
-
-  Future<bool> _checkInternetAccess() async {
-    try {
-      final result = await InternetAddress.lookup('google.com');
-      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } catch (_) {
-      return false;
-    }
   }
 
   void dispose() {
     _controller.close();
   }
 }
-

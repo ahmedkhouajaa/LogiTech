@@ -72,7 +72,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
       children: [
         // Header
         Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -81,15 +81,15 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                 children: [
                   Text(
                     'Commandes Client',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
-                  SizedBox(height: 4),
-                  Text('Gerer vos commandes client', style: TextStyle(color: AppColors.textSecondary)),
+                  const SizedBox(height: 2),
+                  Text('Gérer vos commandes client', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
               if (PermissionService.instance.canCreate(UserPermissionResources.salesOrders))
                 AppButton(
-                  label: 'Creer une Commande Client',
+                  label: 'Créer une Commande Client',
                   icon: Icons.add_rounded,
                   onPressed: () => Navigator.push(
                     context,
@@ -110,7 +110,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
             ],
           ),
         ),
-        SizedBox(height: AppSpacing.md),
+        const SizedBox(height: 10),
         // Filter bar
         Padding(
           padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -120,7 +120,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
             },
           ),
         ),
-        SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: 10),
         // Table
         Expanded(
           child: Padding(
@@ -128,7 +128,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
             child: _buildTable(),
           ),
         ),
-        SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: 10),
       ],
     );
   }
@@ -163,24 +163,21 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
       ),
-      padding: EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Client
+          // Client
           Expanded(
             flex: 3,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Client', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                Text('Client', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
                 SizedBox(
-                  height: 40,
+                  height: 32,
                   child: BlocBuilder<CustomersBloc, CustomersState>(
                     builder: (context, state) {
                       List<Customer> customers = [];
@@ -208,15 +205,15 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                             _applyFilters();
                           }
                         },
-                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderRadius: BorderRadius.circular(6),
                         child: Container(
-                          height: 40,
+                          height: 32,
                           decoration: BoxDecoration(
                             color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: AppColors.border),
                           ),
-                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
                           child: Row(
                             children: [
                               Expanded(
@@ -225,7 +222,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                       ? 'Tous les clients'
                                       : selectedCustomerName,
                                   style: TextStyle(
-                                    fontSize: 13,
+                                    fontSize: 12,
                                     color: _selectedClientId != null && _selectedClientId != 'all'
                                         ? AppColors.textPrimary
                                         : AppColors.textSecondary,
@@ -233,7 +230,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                              Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
                             ],
                           ),
                         ),
@@ -244,7 +241,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               ],
             ),
           ),
-          SizedBox(width: AppSpacing.md),
+          const SizedBox(width: 10),
           // Date From
           Expanded(
             flex: 2,
@@ -252,8 +249,8 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Date de debut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                Text('Date de début', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
                 InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -269,20 +266,20 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                     }
                   },
                   child: Container(
-                    height: 40,
-                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
+                        Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            _dateFrom != null ? formatDateLong(_dateFrom!) : 'Selectionner une date',
-                            style: TextStyle(fontSize: 13, color: _dateFrom != null ? AppColors.textPrimary : AppColors.textSecondary),
+                            _dateFrom != null ? formatDateLong(_dateFrom!) : 'Sélectionner date',
+                            style: TextStyle(fontSize: 12, color: _dateFrom != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -293,7 +290,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               ],
             ),
           ),
-          SizedBox(width: AppSpacing.md),
+          const SizedBox(width: 10),
           // Date To
           Expanded(
             flex: 2,
@@ -301,8 +298,8 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Date de fin', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                Text('Date de fin', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
                 InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -318,20 +315,20 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                     }
                   },
                   child: Container(
-                    height: 40,
-                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
                       border: Border.all(color: AppColors.border),
-                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
+                        Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                        const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            _dateTo != null ? formatDateLong(_dateTo!) : 'Selectionner une date',
-                            style: TextStyle(fontSize: 13, color: _dateTo != null ? AppColors.textPrimary : AppColors.textSecondary),
+                            _dateTo != null ? formatDateLong(_dateTo!) : 'Sélectionner date',
+                            style: TextStyle(fontSize: 12, color: _dateTo != null ? AppColors.textPrimary : AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -342,7 +339,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               ],
             ),
           ),
-          SizedBox(width: AppSpacing.md),
+          const SizedBox(width: 10),
           // Status
           Expanded(
             flex: 2,
@@ -350,19 +347,19 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Statut', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                SizedBox(height: 8),
+                Text('Statut', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
                 SizedBox(
-                  height: 40,
+                  height: 32,
                   child: PopupMenuButton<CustomerOrderStatus?>(
                     tooltip: 'Filtrer par statut',
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderRadius: BorderRadius.circular(6),
                       side: BorderSide(color: AppColors.border),
                     ),
                     color: AppColors.surface,
-                    elevation: 6,
-                    offset: const Offset(0, 44),
+                    elevation: 4,
+                    offset: const Offset(0, 36),
                     initialValue: _statusFilter,
                     onSelected: (val) {
                       setState(() => _statusFilter = val);
@@ -371,49 +368,48 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                     itemBuilder: (context) => [
                       PopupMenuItem<CustomerOrderStatus?>(
                         value: null,
-                        height: 38,
+                        height: 34,
                         child: Row(
                           children: [
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 color: AppColors.textTertiary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(AppRadius.sm),
+                                borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 'Tous',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                               ),
                             ),
-                            Spacer(),
+                            const Spacer(),
                             if (_statusFilter == null)
                               Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
                           ],
                         ),
                       ),
-                      const PopupMenuDivider(height: 1),
                       ...CustomerOrderStatus.values.map(
                         (s) => PopupMenuItem<CustomerOrderStatus?>(
                           value: s,
-                          height: 38,
+                          height: 34,
                           child: Row(
                             children: [
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: s.color.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
                                   s.label,
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
                                     color: s.color,
                                   ),
                                 ),
                               ),
-                              Spacer(),
+                              const Spacer(),
                               if (_statusFilter == s)
                                 Icon(Icons.check_rounded, size: 16, color: AppColors.primary),
                             ],
@@ -422,34 +418,34 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                       ),
                     ],
                     child: Container(
-                      height: 40,
+                      height: 32,
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        borderRadius: BorderRadius.circular(6),
                         border: Border.all(
                           color: _statusFilter != null ? AppColors.primary : AppColors.border,
                         ),
                       ),
-                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       child: Row(
                         children: [
                           Expanded(
                             child: _statusFilter == null
                                 ? Text(
                                     'Tous',
-                                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                                     overflow: TextOverflow.ellipsis,
                                   )
                                 : Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: _statusFilter!.color.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                                      borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       _statusFilter!.label,
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: 11,
                                         fontWeight: FontWeight.w600,
                                         color: _statusFilter!.color,
                                       ),
@@ -457,8 +453,8 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                     ),
                                   ),
                           ),
-                          SizedBox(width: 4),
-                          Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
+                          const SizedBox(width: 4),
+                          Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
                         ],
                       ),
                     ),
@@ -467,26 +463,11 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
               ],
             ),
           ),
-        ],
-      ),
-      if (activeFilterCount > 0)
-        Padding(
-          padding: EdgeInsets.only(top: 16),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '$totalItems résultat${totalItems > 1 ? 's' : ''}',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
-                ),
-              ),
-              const Spacer(),
-              TextButton.icon(
+          if (activeFilterCount > 0) ...[
+            const SizedBox(width: 8),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 1),
+              child: IconButton(
                 onPressed: () {
                   setState(() {
                     _selectedClientId = null;
@@ -497,16 +478,18 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                   });
                   _applyFilters();
                 },
-                icon: Icon(Icons.refresh_rounded, size: 16),
-                label: Text('Réinitialiser les filtres'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                tooltip: 'Réinitialiser les filtres',
+                style: IconButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  minimumSize: const Size(32, 32),
+                  padding: EdgeInsets.zero,
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+          ],
         ],
       ),
     );
@@ -682,12 +665,12 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   Widget _buildTableShimmer() {
     return ShimmerTable(
       headerColumns: [
-        const SizedBox(width: 32),
-        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-        Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)))),
-        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-        SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+        const SizedBox(width: 28),
+        Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+        Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+        SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
       ],
     );
   }
@@ -731,19 +714,19 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                       children: [
                         // Table header
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
                             border: Border(bottom: BorderSide(color: AppColors.border)),
                             color: AppColors.background,
                           ),
                           child: Row(
                             children: [
-                              SizedBox(width: 32), // Checkbox space
-                              Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                              Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary)))),
-                              Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                              SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                              const SizedBox(width: 28), // Checkbox space
+                              Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
+                              Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                              SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                             ],
                           ),
                         ),
@@ -754,9 +737,9 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.border),
-                                      SizedBox(height: 16),
-                                      Text("Aucune commande trouvee", style: TextStyle(color: AppColors.textSecondary)),
+                                      Icon(Icons.inventory_2_outlined, size: 40, color: AppColors.border),
+                                      const SizedBox(height: 12),
+                                      Text("Aucune commande trouvée", style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                                     ],
                                   ),
                                 )
@@ -771,15 +754,17 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                     );
 
                                     return Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withOpacity(0.3),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
                                       child: Row(
                                         children: [
                                           SizedBox(
-                                            width: 32,
+                                            width: 28,
+                                            height: 28,
                                             child: Checkbox(
                                               value: false,
                                               onChanged: (_) {},
+                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                               side: BorderSide(color: AppColors.border),
                                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
                                             ),
@@ -788,32 +773,27 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                             flex: 2,
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
-                                                Text(order.number, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textPrimary)),
-                                                SizedBox(height: 4),
-                                                Text(formatDateTimeLong(order.date), style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                                                Text(order.number, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5, color: AppColors.textPrimary)),
+                                                const SizedBox(height: 1),
+                                                Text(formatDateTimeLong(order.date), style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                                               ],
                                             ),
                                           ),
                                           Expanded(
                                             flex: 3,
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                            child: Row(
                                               children: [
-                                                Row(
-                                                  children: [
-                                                    Icon(Icons.person_outline, size: 14, color: AppColors.textSecondary),
-                                                    SizedBox(width: 6),
-                                                    Flexible(
-                                                      child: Text(
-                                                        order.customerCompany ?? order.customerName ?? 'Client Inconnu',
-                                                        style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: AppColors.textPrimary),
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
-                                                    ),
-                                                  ],
+                                                Icon(Icons.person_outline, size: 14, color: AppColors.textSecondary),
+                                                const SizedBox(width: 6),
+                                                Flexible(
+                                                  child: Text(
+                                                    order.customerCompany ?? order.customerName ?? 'Client Inconnu',
+                                                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12.5, color: AppColors.textPrimary),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
                                                 ),
-
                                               ],
                                             ),
                                           ),
@@ -822,14 +802,14 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                             child: Container(
                                               alignment: Alignment.centerLeft,
                                               child: Container(
-                                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                                 decoration: BoxDecoration(
-                                                  color: statusEnum.color.withOpacity(0.1),
+                                                  color: statusEnum.color.withValues(alpha: 0.1),
                                                   borderRadius: BorderRadius.circular(4),
                                                 ),
                                                 child: Text(
                                                   statusEnum.label,
-                                                  style: TextStyle(color: statusEnum.color, fontSize: 12, fontWeight: FontWeight.w500),
+                                                  style: TextStyle(color: statusEnum.color, fontSize: 11.5, fontWeight: FontWeight.w500),
                                                 ),
                                               ),
                                             ),
@@ -840,17 +820,19 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                               formatCurrencyDT(order.totalTTC),
                                               style: TextStyle(
                                                 fontWeight: FontWeight.w600,
-                                                fontSize: 13,
+                                                fontSize: 12.5,
                                                 color: statusEnum == CustomerOrderStatus.draft ? AppColors.textSecondary : AppColors.textPrimary,
                                               ),
                                             ),
                                           ),
                                           SizedBox(
-                                            width: 80,
+                                            width: 60,
                                             child: Align(
                                               alignment: Alignment.centerRight,
-                                            child: PopupMenuButton<String>(
-                                                icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
+                                              child: PopupMenuButton<String>(
+                                                icon: Icon(Icons.more_horiz, size: 18, color: AppColors.textSecondary),
+                                                padding: EdgeInsets.zero,
+                                                constraints: const BoxConstraints(),
                                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                                 color: AppColors.surface,
                                                 onSelected: (val) => _handleAction(context, val, order),
@@ -864,35 +846,31 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                                     const PopupMenuDivider(height: 1),
                                                     _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
                                                   ],
-                                                  PopupMenuDivider(height: 1),
+                                                  const PopupMenuDivider(height: 1),
                                                   _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-                                                  PopupMenuDivider(height: 1),
+                                                  const PopupMenuDivider(height: 1),
                                                   if (!order.isConvertedToInvoice && !order.isConvertedToDelivery) ...[
                                                     _buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture'),
-                                                    PopupMenuDivider(height: 1),
+                                                    const PopupMenuDivider(height: 1),
                                                     _buildMenuItem('to_delivery', Icons.local_shipping_outlined, AppColors.textSecondary, 'Transformer en Bon de Livraison'),
-                                                    PopupMenuDivider(height: 1),
+                                                    const PopupMenuDivider(height: 1),
                                                   ] else ...[
                                                     if (order.isConvertedToInvoice) ...[
                                                       _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture creee'),
-                                                      PopupMenuDivider(height: 1),
+                                                      const PopupMenuDivider(height: 1),
                                                     ],
                                                     if (order.isConvertedToDelivery) ...[
                                                       _buildMenuItem('view_delivery', Icons.local_shipping_outlined, AppColors.success, 'Voir le bon de livraison cree'),
-                                                      PopupMenuDivider(height: 1),
+                                                      const PopupMenuDivider(height: 1),
                                                     ],
                                                   ],
                                                   _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
-                                                  PopupMenuDivider(height: 1),
+                                                  const PopupMenuDivider(height: 1),
                                                   _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                                                  PopupMenuDivider(height: 1),
+                                                  const PopupMenuDivider(height: 1),
                                                   _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                                                  PopupMenuDivider(height: 1),
+                                                  const PopupMenuDivider(height: 1),
                                                   _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-//                                                   PopupMenuDivider(height: 1),
-//                                                   _buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'),
-//                                                   PopupMenuDivider(height: 1),
-//                                                   _buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gerer les pieces jointes'),
                                                 ],
                                               ),
                                             ),
@@ -905,18 +883,18 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                         ),
                         // Pagination footer
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                           decoration: BoxDecoration(
                             border: Border(top: BorderSide(color: AppColors.border)),
                             color: AppColors.background,
                           ),
                           child: Row(
                             children: [
-                              Text('Lignes', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                              SizedBox(width: 8),
+                              Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              const SizedBox(width: 8),
                               Container(
-                                height: 32,
-                                padding: EdgeInsets.symmetric(horizontal: 8),
+                                height: 28,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
                                 decoration: BoxDecoration(
                                   border: Border.all(color: AppColors.border),
                                   borderRadius: BorderRadius.circular(6),
@@ -924,10 +902,10 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                 ),
                                 child: DropdownButton<int>(
                                   value: _rowsPerPage,
-                                  underline: SizedBox(),
-                                  icon: Icon(Icons.keyboard_arrow_down, size: 16),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                  items: [10, 20, 50, 100].map((v) => DropdownMenuItem(value: v, child: Text(v.toString()))).toList(),
+                                  underline: const SizedBox(),
+                                  icon: Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textSecondary),
+                                  style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                                  items: [20, 50, 100].map((v) => DropdownMenuItem(value: v, child: Text(v.toString()))).toList(),
                                   onChanged: (v) {
                                     if (v != null) setState(() {
                                       _rowsPerPage = v;
@@ -936,39 +914,41 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                   },
                                 ),
                               ),
-                              SizedBox(width: 24),
-                              Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                              Spacer(),
+                              const SizedBox(width: 20),
+                              Text('Page ${_currentPage + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              const Spacer(),
                               Text(
-                                totalItems == 0 ? 'Affichage de 0 a 0 sur 0 resultats' : 'Affichage de ${startIndex + 1} a $endIndex sur $totalItems resultats',
-                                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                totalItems == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de ${startIndex + 1} à $endIndex sur $totalItems résultats',
+                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
                               ),
-                              SizedBox(width: 16),
+                              const SizedBox(width: 12),
                               Row(
                                 children: [
                                   InkWell(
                                     onTap: _currentPage > 0 ? () => setState(() => _currentPage--) : null,
+                                    borderRadius: BorderRadius.circular(4),
                                     child: Container(
-                                      padding: EdgeInsets.all(4),
+                                      padding: const EdgeInsets.all(3),
                                       decoration: BoxDecoration(
-                                        border: Border.all(color: _currentPage > 0 ? AppColors.border : AppColors.border.withOpacity(0.5)),
+                                        border: Border.all(color: _currentPage > 0 ? AppColors.border : AppColors.border.withValues(alpha: 0.5)),
                                         borderRadius: BorderRadius.circular(4),
                                         color: AppColors.surface,
                                       ),
-                                      child: Icon(Icons.chevron_left, size: 20, color: _currentPage > 0 ? AppColors.textPrimary : AppColors.textTertiary),
+                                      child: Icon(Icons.chevron_left, size: 18, color: _currentPage > 0 ? AppColors.textPrimary : AppColors.textTertiary),
                                     ),
                                   ),
-                                  SizedBox(width: 8),
+                                  const SizedBox(width: 6),
                                   InkWell(
                                     onTap: _currentPage < totalPages - 1 ? () => setState(() => _currentPage++) : null,
+                                    borderRadius: BorderRadius.circular(4),
                                     child: Container(
-                                      padding: EdgeInsets.all(4),
+                                      padding: const EdgeInsets.all(3),
                                       decoration: BoxDecoration(
-                                        border: Border.all(color: _currentPage < totalPages - 1 ? AppColors.border : AppColors.border.withOpacity(0.5)),
+                                        border: Border.all(color: _currentPage < totalPages - 1 ? AppColors.border : AppColors.border.withValues(alpha: 0.5)),
                                         borderRadius: BorderRadius.circular(4),
                                         color: AppColors.surface,
                                       ),
-                                      child: Icon(Icons.chevron_right, size: 20, color: _currentPage < totalPages - 1 ? AppColors.textPrimary : AppColors.textTertiary),
+                                      child: Icon(Icons.chevron_right, size: 18, color: _currentPage < totalPages - 1 ? AppColors.textPrimary : AppColors.textTertiary),
                                     ),
                                   ),
                                 ],

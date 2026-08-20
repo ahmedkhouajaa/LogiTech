@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 import 'shimmer_effect.dart';
 
-/// Skeleton table row matching the exact layout & proportions of desktop tables.
+/// Skeleton table row matching the exact layout & proportions of desktop high-density tables.
 class ShimmerTableRow extends StatelessWidget {
   final bool isEven;
   final List<Widget>? customCells;
@@ -42,21 +42,20 @@ class ShimmerTableRow extends StatelessWidget {
 
     if (customCells != null) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         color: bgColor,
         child: Row(children: customCells!),
       );
     }
 
     return Container(
-      // Exact same padding as real rows
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       color: bgColor,
       child: Row(
         children: [
           // ── Checkbox space ──────────────────────────────────────
           const SizedBox(
-            width: 32,
+            width: 28,
             child: Center(
               child: ShimmerBox(width: 16, height: 16, borderRadius: 3),
             ),
@@ -69,21 +68,21 @@ class ShimmerTableRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                ShimmerBox(width: refWidth, height: 13, borderRadius: 4),
-                const SizedBox(height: 6),
-                ShimmerBox(width: dateWidth, height: 11, borderRadius: 4),
+                ShimmerBox(width: refWidth, height: 12, borderRadius: 3),
+                const SizedBox(height: 3),
+                ShimmerBox(width: dateWidth, height: 10, borderRadius: 3),
               ],
             ),
           ),
 
-          // ── Client ──────────────────────────────────────────────
+          // ── Client / Supplier / Contact ──────────────────────────
           Expanded(
             flex: 3,
             child: Row(
               children: [
                 const ShimmerBox(width: 14, height: 14, borderRadius: 3),
                 const SizedBox(width: 6),
-                ShimmerBox(width: clientWidth, height: 13, borderRadius: 4),
+                ShimmerBox(width: clientWidth, height: 12, borderRadius: 3),
               ],
             ),
           ),
@@ -94,22 +93,22 @@ class ShimmerTableRow extends StatelessWidget {
             child: Align(
               alignment: Alignment.centerLeft,
               child: ShimmerBox(
-                  width: statusWidth, height: 22, borderRadius: 4),
+                  width: statusWidth, height: 20, borderRadius: 4),
             ),
           ),
 
           // ── Montant ─────────────────────────────────────────────
           Expanded(
             flex: 2,
-            child: ShimmerBox(width: amountWidth, height: 13, borderRadius: 4),
+            child: ShimmerBox(width: amountWidth, height: 12, borderRadius: 3),
           ),
 
           // ── Actions icon ─────────────────────────────────────────
-          SizedBox(
-            width: 80,
+          const SizedBox(
+            width: 60,
             child: Align(
               alignment: Alignment.centerRight,
-              child: ShimmerBox(width: 20, height: 13, borderRadius: 4),
+              child: ShimmerBox(width: 18, height: 14, borderRadius: 3),
             ),
           ),
         ],
@@ -118,15 +117,19 @@ class ShimmerTableRow extends StatelessWidget {
   }
 }
 
-/// A generic Desktop Skeleton Table helper that wraps header shell and 6 skeleton rows
+/// A generic Desktop Skeleton Table helper that wraps header shell, 12 skeleton rows, and pagination bar
 class ShimmerTable extends StatelessWidget {
   final List<Widget> headerColumns;
   final Widget Function(int index)? rowBuilder;
+  final bool showPagination;
+  final int rowCount;
 
   const ShimmerTable({
     super.key,
     required this.headerColumns,
     this.rowBuilder,
+    this.showPagination = true,
+    this.rowCount = 12,
   });
 
   @override
@@ -149,7 +152,7 @@ class ShimmerTable extends StatelessWidget {
                 children: [
                   // Table header
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       border: Border(bottom: BorderSide(color: AppColors.border)),
                       color: AppColors.background,
@@ -161,7 +164,7 @@ class ShimmerTable extends StatelessWidget {
                     child: AppShimmer(
                       child: ListView.separated(
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: 6,
+                        itemCount: rowCount,
                         separatorBuilder: (context, index) => Divider(height: 1, color: AppColors.border),
                         itemBuilder: (context, index) {
                           if (rowBuilder != null) {
@@ -179,6 +182,35 @@ class ShimmerTable extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // Shimmer Pagination Footer (matching loaded pagination bar)
+                  if (showPagination) ...[
+                    Divider(height: 1, color: AppColors.border),
+                    AppShimmer(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        color: AppColors.background,
+                        child: Row(
+                          children: [
+                            const ShimmerBox(width: 36, height: 12, borderRadius: 3),
+                            const SizedBox(width: 8),
+                            const ShimmerBox(width: 44, height: 28, borderRadius: 6),
+                            const SizedBox(width: 20),
+                            const ShimmerBox(width: 70, height: 12, borderRadius: 3),
+                            const Spacer(),
+                            const ShimmerBox(width: 160, height: 12, borderRadius: 3),
+                            const SizedBox(width: 12),
+                            Row(
+                              children: const [
+                                ShimmerBox(width: 24, height: 24, borderRadius: 4),
+                                SizedBox(width: 6),
+                                ShimmerBox(width: 24, height: 24, borderRadius: 4),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

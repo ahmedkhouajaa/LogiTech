@@ -1,14 +1,12 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
 import '../models/document_wrapper.dart';
 import '../models/project.dart'; // Contains CompanySettings
 import '../models/canvas/canvas_element.dart';
 import '../utils/helpers.dart';
 import '../database/database_helper.dart';
+import '../utils/file_download_helper.dart';
 
 class CanvasPdfGenerator {
   static Future<Uint8List> generateDocumentBytes(DocumentWrapper document, CanvasDocument doc) async {
@@ -119,12 +117,8 @@ class CanvasPdfGenerator {
 
   static Future<void> generateAndOpenDocument(DocumentWrapper document, CanvasDocument doc) async {
     final bytes = await generateDocumentBytes(document, doc);
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/${document.number}.pdf');
-    await file.writeAsBytes(bytes);
-    
-    // Open the PDF using OpenFilex
-    await OpenFilex.open(file.path);
+    final fileName = '${document.number}.pdf';
+    await FileDownloadHelper.saveAndOpenFile(bytes, fileName, mimeType: 'application/pdf');
   }
 
   static pw.Positioned _translateElement(

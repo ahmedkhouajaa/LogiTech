@@ -36,40 +36,41 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
       children: [
         // Header
         Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Cheques & Traites',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    'Chèques & Traites',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
-                  SizedBox(height: 4),
-                  Text('Gerer vos cheques et traites', style: TextStyle(color: AppColors.textSecondary)),
+                  const SizedBox(height: 2),
+                  Text('Gérer vos chèques et traites', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
-              Spacer(),
+              const Spacer(),
               // Type Filter
               Container(
-                height: 36,
-                padding: EdgeInsets.symmetric(horizontal: 12),
+                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: AppColors.border),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _filterType,
-                    style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                    style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                    icon: Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textSecondary),
                     items: const [
-                      DropdownMenuItem(value: 'all', child: Text('Tous les types')),
-                      DropdownMenuItem(value: 'check_received', child: Text('Cheque (Client)')),
-                      DropdownMenuItem(value: 'check_issued', child: Text('Cheque (Fournisseur)')),
-                      DropdownMenuItem(value: 'traite_received', child: Text('Traite (Client)')),
-                      DropdownMenuItem(value: 'traite_issued', child: Text('Traite (Fournisseur)')),
+                      DropdownMenuItem(value: 'all', child: Text('Tous les types', style: TextStyle(fontSize: 12))),
+                      DropdownMenuItem(value: 'check_received', child: Text('Chèque (Client)', style: TextStyle(fontSize: 12))),
+                      DropdownMenuItem(value: 'check_issued', child: Text('Chèque (Fournisseur)', style: TextStyle(fontSize: 12))),
+                      DropdownMenuItem(value: 'traite_received', child: Text('Traite (Client)', style: TextStyle(fontSize: 12))),
+                      DropdownMenuItem(value: 'traite_issued', child: Text('Traite (Fournisseur)', style: TextStyle(fontSize: 12))),
                     ],
                     onChanged: (val) {
                       if (val != null) setState(() => _filterType = val);
@@ -77,23 +78,31 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                   ),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 10),
               // Search
               SizedBox(
-                width: 250,
-                height: 36,
+                width: 220,
+                height: 32,
                 child: TextField(
                   onChanged: (v) => setState(() => _search = v.toLowerCase()),
+                  style: const TextStyle(fontSize: 12),
                   decoration: InputDecoration(
                     hintText: 'Rechercher un n° ou nom...',
-                    prefixIcon: Icon(Icons.search_rounded, size: 18),
-                    contentPadding: EdgeInsets.zero,
+                    hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                    prefixIcon: Icon(Icons.search_rounded, size: 16, color: AppColors.textTertiary),
+                    prefixIconConstraints: const BoxConstraints(minWidth: 32),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+                    filled: true,
+                    fillColor: AppColors.surfaceAlt,
                   ),
                 ),
               ),
             ],
           ),
         ),
+        const SizedBox(height: 10),
 
         // Table
         Expanded(
@@ -101,16 +110,17 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
             builder: (context, state) {
               if (state is ChecksTraitesLoading || state is ChecksTraitesInitial) {
                 return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: ShimmerTable(
                     headerColumns: [
-                      const SizedBox(width: 32),
-                      Expanded(flex: 2, child: Text('N° Document', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                      Expanded(flex: 2, child: Text('Type', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                      Expanded(flex: 3, child: Text('Tiers', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                      Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                      Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                      SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('N° Document', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Type', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 3, child: Text('Tiers', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Échéance', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Banque', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                     ],
                   ),
                 );
@@ -125,7 +135,7 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                 }).toList();
 
                 return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppColors.surface,
@@ -133,17 +143,17 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                       border: Border.all(color: AppColors.border),
                     ),
                     child: DataTableWidget<CheckTraite>(
-                      columns: ['N° Document', 'Type', 'Tiers', 'Montant', 'Echeance', 'Banque', 'Statut', 'Actions'],
+                      columns: const ['N° Document', 'Type', 'Tiers', 'Montant', 'Échéance', 'Banque', 'Statut', 'Actions'],
                       rows: filtered,
-                      emptyMessage: 'Aucun document trouve',
+                      emptyMessage: 'Aucun document trouvé',
                       cellBuilder: (doc) {
                         return [
-                          DataCell(Text(doc.documentNumber, style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary))),
-                          DataCell(Text(_getTypeLabel(doc.type))),
-                          DataCell(Text(doc.partyName, style: TextStyle(fontWeight: FontWeight.w500))),
-                          DataCell(Text(formatCurrencyDT(doc.amount), style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataCell(Text(DateFormat('dd/MM/yyyy').format(doc.maturityDate))),
-                          DataCell(Text(doc.bankName ?? '—')),
+                          DataCell(Text(doc.documentNumber, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5, color: AppColors.primary))),
+                          DataCell(Text(_getTypeLabel(doc.type), style: const TextStyle(fontSize: 12.5))),
+                          DataCell(Text(doc.partyName, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12.5))),
+                          DataCell(Text(formatCurrencyDT(doc.amount), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5))),
+                          DataCell(Text(DateFormat('dd/MM/yyyy').format(doc.maturityDate), style: const TextStyle(fontSize: 12))),
+                          DataCell(Text(doc.bankName ?? '—', style: const TextStyle(fontSize: 12))),
                           DataCell(_buildStatusBadge(doc.status)),
                           DataCell(
                             Row(
@@ -152,13 +162,18 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                                 if (doc.status == 'pending' && PermissionService.instance.canUpdate(UserPermissionResources.treasuryChecks)) ...[
                                   IconButton(
                                     icon: Icon(Icons.check_circle_outline_rounded, size: 18, color: AppColors.success),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
                                     onPressed: () => context.read<ChecksTraitesBloc>().add(UpdateCheckTraiteStatus(doc.id, 'cashed')),
-                                    tooltip: 'Marquer encaisse',
+                                    tooltip: 'Marquer encaissé',
                                   ),
+                                  const SizedBox(width: 8),
                                   IconButton(
                                     icon: Icon(Icons.cancel_outlined, size: 18, color: AppColors.error),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
                                     onPressed: () => context.read<ChecksTraitesBloc>().add(UpdateCheckTraiteStatus(doc.id, 'bounced')),
-                                    tooltip: 'Marquer impaye',
+                                    tooltip: 'Marquer impayé',
                                   ),
                                 ],
                               ],
@@ -170,11 +185,11 @@ class _ChecksTraitesScreenState extends State<ChecksTraitesScreen> {
                   ),
                 );
               }
-              return SizedBox();
+              return const SizedBox();
             },
           ),
         ),
-        SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: 10),
       ],
     );
   }

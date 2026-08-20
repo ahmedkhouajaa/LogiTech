@@ -197,10 +197,58 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
       child: BlocBuilder<StockBloc, StockState>(
         builder: (context, state) {
-          if (state is StockLoading) return const Center(child: CircularProgressIndicator());
+          if (state is StockLoading || state is StockInitial) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Mouvements de stock', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const SizedBox(height: 2),
+                Text('Gérer vos mouvements de stock', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(child: Container(height: 32, decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)))),
+                      const SizedBox(width: 10),
+                      Expanded(child: Container(height: 32, decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)))),
+                      const SizedBox(width: 10),
+                      Expanded(child: Container(height: 32, decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)))),
+                      const SizedBox(width: 10),
+                      Expanded(child: Container(height: 32, decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)))),
+                      const SizedBox(width: 10),
+                      Expanded(child: Container(height: 32, decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(6)))),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: AppCard(
+                    padding: EdgeInsets.zero,
+                    child: ShimmerTable(
+                      headerColumns: [
+                        Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 3, child: Text('Produit', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text('Entrepôt', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text('Type', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text('Quantité', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text('Raison', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
           if (state is StockLoaded) {
             final filteredMovements = state.movements.where((m) {
               if (m.type == MovementType.transfer_in) return false;
@@ -229,246 +277,236 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Mouvements de stock', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                SizedBox(height: 4),
-                Text('Gerer vos mouvements de stock', style: TextStyle(color: AppColors.textSecondary)),
-                SizedBox(height: AppSpacing.lg),
+                Text('Mouvements de stock', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const SizedBox(height: 2),
+                Text('Gérer vos mouvements de stock', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 10),
                 Container(
-                  padding: EdgeInsets.all(AppSpacing.md),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(AppRadius.lg),
                     border: Border.all(color: AppColors.border),
                   ),
-                  child: Column(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          // Entrepôt
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Entrepôt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  height: 36,
-                                  child: Builder(
-                                    builder: (context) {
-                                      final selectedWh = state.warehouses.cast<Warehouse?>().firstWhere(
-                                        (w) => w?.id == _filterWarehouseId,
-                                        orElse: () => null,
-                                      );
-                                      return SearchableSelectorField(
-                                        hint: 'Tous les Entrepôts',
-                                        selectedText: selectedWh?.name ?? 'Tous les Entrepôts',
-                                        onTap: () async {
-                                          final res = await showWarehouseSelectDialog(
-                                            context,
-                                            state.warehouses,
-                                            selectedWarehouseId: _filterWarehouseId,
-                                            includeAll: true,
-                                          );
-                                          if (res != null) {
-                                            setState(() => _filterWarehouseId = (res == '__all__' ? null : res));
-                                          }
-                                        },
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          
-                          // Type
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Type de mouvement', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  height: 36,
-                                  child: DropdownButtonFormField<MovementType?>(
-                                    value: _filterType,
-                                    isExpanded: true,
-                                    dropdownColor: AppColors.surfaceAlt,
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
-                                    style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                    decoration: InputDecoration(
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                      filled: true,
-                                      fillColor: AppColors.surfaceAlt,
-                                    ),
-                                    items: [
-                                      const DropdownMenuItem(value: null, child: Text('Tous les types', style: TextStyle(fontSize: 13))),
-                                      ...[MovementType.entry, MovementType.exit, MovementType.transfer, MovementType.adjustment].map((t) => DropdownMenuItem(value: t, child: Text(t.label, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis))),
-                                    ],
-                                    onChanged: (v) => setState(() => _filterType = v),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          
-                          // Article
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Article', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  height: 36,
-                                  child: TextField(
-                                    onChanged: (v) => setState(() => _searchQuery = v),
-                                    decoration: InputDecoration(
-                                      hintText: 'Rechercher produit...',
-                                      hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                                      prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textTertiary),
-                                      prefixIconConstraints: BoxConstraints(minWidth: 36),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                      filled: true,
-                                      fillColor: AppColors.surfaceAlt,
-                                    ),
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(width: 12),
-
-                          // Référence
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Référence', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  height: 36,
-                                  child: TextField(
-                                    onChanged: (v) => setState(() => _filterReference = v),
-                                    decoration: InputDecoration(
-                                      hintText: 'Rechercher réf...',
-                                      hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
-                                      prefixIcon: Icon(Icons.tag, size: 16, color: AppColors.textTertiary),
-                                      prefixIconConstraints: BoxConstraints(minWidth: 36),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.border)),
-                                      filled: true,
-                                      fillColor: AppColors.surfaceAlt,
-                                    ),
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(width: 12),
-
-                          // Date
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Période', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                                const SizedBox(height: 8),
-                                SizedBox(
-                                  height: 36,
-                                  child: OutlinedButton(
-                                    onPressed: () async {
-                                      final range = await CustomDateRangePicker.show(
+                      // Entrepôt
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Entrepôt', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            const SizedBox(height: 4),
+                            SizedBox(
+                              height: 32,
+                              child: Builder(
+                                builder: (context) {
+                                  final selectedWh = state.warehouses.cast<Warehouse?>().firstWhere(
+                                    (w) => w?.id == _filterWarehouseId,
+                                    orElse: () => null,
+                                  );
+                                  return SearchableSelectorField(
+                                    hint: 'Tous les Entrepôts',
+                                    selectedText: selectedWh?.name ?? 'Tous les Entrepôts',
+                                    onTap: () async {
+                                      final res = await showWarehouseSelectDialog(
                                         context,
-                                        initialRange: _filterDateRange,
+                                        state.warehouses,
+                                        selectedWarehouseId: _filterWarehouseId,
+                                        includeAll: true,
                                       );
-                                      if (range != null) {
-                                        setState(() => _filterDateRange = range);
+                                      if (res != null) {
+                                        setState(() => _filterWarehouseId = (res == '__all__' ? null : res));
                                       }
                                     },
-                                    style: OutlinedButton.styleFrom(
-                                      padding: EdgeInsets.symmetric(horizontal: 12),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      side: BorderSide(color: AppColors.border),
-                                      backgroundColor: AppColors.surface,
-                                      alignment: Alignment.centerLeft,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            _filterDateRange == null 
-                                                ? 'Toutes les dates' 
-                                                : '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}',
-                                            style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        if (_filterDateRange != null)
-                                          GestureDetector(
-                                            onTap: () => setState(() => _filterDateRange = null),
-                                            child: Icon(Icons.close, size: 14, color: AppColors.error),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      
+                      // Type
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Type de mouvement', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            const SizedBox(height: 4),
+                            SizedBox(
+                              height: 32,
+                              child: DropdownButtonFormField<MovementType?>(
+                                value: _filterType,
+                                isExpanded: true,
+                                dropdownColor: AppColors.surfaceAlt,
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                                decoration: InputDecoration(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+                                  filled: true,
+                                  fillColor: AppColors.surfaceAlt,
                                 ),
-                              ],
+                                items: [
+                                  const DropdownMenuItem(value: null, child: Text('Tous les types', style: TextStyle(fontSize: 12))),
+                                  ...[MovementType.entry, MovementType.exit, MovementType.transfer, MovementType.adjustment].map((t) => DropdownMenuItem(value: t, child: Text(t.label, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis))),
+                                ],
+                                onChanged: (v) => setState(() => _filterType = v),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      
+                      // Article
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Article', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            const SizedBox(height: 4),
+                            SizedBox(
+                              height: 32,
+                              child: TextField(
+                                onChanged: (v) => setState(() => _searchQuery = v),
+                                decoration: InputDecoration(
+                                  hintText: 'Rechercher produit...',
+                                  hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                                  prefixIcon: Icon(Icons.search, size: 16, color: AppColors.textTertiary),
+                                  prefixIconConstraints: const BoxConstraints(minWidth: 32),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+                                  filled: true,
+                                  fillColor: AppColors.surfaceAlt,
+                                ),
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+
+                      // Référence
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Référence', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            const SizedBox(height: 4),
+                            SizedBox(
+                              height: 32,
+                              child: TextField(
+                                onChanged: (v) => setState(() => _filterReference = v),
+                                decoration: InputDecoration(
+                                  hintText: 'Rechercher réf...',
+                                  hintStyle: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                                  prefixIcon: Icon(Icons.tag, size: 16, color: AppColors.textTertiary),
+                                  prefixIconConstraints: const BoxConstraints(minWidth: 32),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
+                                  filled: true,
+                                  fillColor: AppColors.surfaceAlt,
+                                ),
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+
+                      // Date
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Période', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                            const SizedBox(height: 4),
+                            SizedBox(
+                              height: 32,
+                              child: OutlinedButton(
+                                onPressed: () async {
+                                  final range = await CustomDateRangePicker.show(
+                                    context,
+                                    initialRange: _filterDateRange,
+                                  );
+                                  if (range != null) {
+                                    setState(() => _filterDateRange = range);
+                                  }
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                  side: BorderSide(color: AppColors.border),
+                                  backgroundColor: AppColors.surface,
+                                  alignment: Alignment.centerLeft,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        _filterDateRange == null 
+                                            ? 'Toutes les dates' 
+                                            : '${formatDate(_filterDateRange!.start)} - ${formatDate(_filterDateRange!.end)}',
+                                        style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (_filterDateRange != null)
+                                      GestureDetector(
+                                        onTap: () => setState(() => _filterDateRange = null),
+                                        child: Icon(Icons.close, size: 14, color: AppColors.error),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_filterWarehouseId != null || _filterType != null || _searchQuery.isNotEmpty || _filterReference.isNotEmpty || _filterDateRange != null) ...[
+                        const SizedBox(width: 8),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 1),
+                          child: IconButton(
+                            onPressed: () => setState(() {
+                              _filterWarehouseId = null;
+                              _filterType = null;
+                              _searchQuery = '';
+                              _filterReference = '';
+                              _filterDateRange = null;
+                            }),
+                            icon: const Icon(Icons.refresh_rounded, size: 18),
+                            tooltip: 'Réinitialiser les filtres',
+                            style: IconButton.styleFrom(
+                              foregroundColor: AppColors.error,
+                              backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                              minimumSize: const Size(32, 32),
+                              padding: EdgeInsets.zero,
                             ),
                           ),
-                        ],
-                      ),
-                      if (_filterWarehouseId != null || _filterType != null || _searchQuery.isNotEmpty || _filterReference.isNotEmpty || _filterDateRange != null)
-                        Padding(
-                          padding: EdgeInsets.only(top: 16),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '${filteredMovements.length} résultat${filteredMovements.length > 1 ? 's' : ''}',
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
-                                ),
-                              ),
-                              const Spacer(),
-                              TextButton.icon(
-                                onPressed: () => setState(() {
-                                  _filterWarehouseId = null;
-                                  _filterType = null;
-                                  _searchQuery = '';
-                                  _filterReference = '';
-                                  _filterDateRange = null;
-                                }),
-                                icon: Icon(Icons.refresh_rounded, size: 16),
-                                label: Text('Réinitialiser les filtres', style: TextStyle(fontSize: 13)),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: AppColors.textSecondary,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
+                      ],
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.lg),
+                const SizedBox(height: 10),
                 Expanded(
                   child: AppCard(
                     padding: EdgeInsets.zero,

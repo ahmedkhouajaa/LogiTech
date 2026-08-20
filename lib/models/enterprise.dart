@@ -57,7 +57,7 @@ class Enterprise {
         'updated_at': updatedAt.toIso8601String(),
       };
 
-  factory Enterprise.fromMap(Map<String, dynamic> map) {
+  factory Enterprise.fromMap(Map<String, dynamic> map, {String? id}) {
     List<EnterpriseMember> parsedMembers = [];
     if (map['members'] != null && map['members'] is List) {
       parsedMembers = (map['members'] as List)
@@ -66,17 +66,17 @@ class Enterprise {
     }
 
     return Enterprise(
-      id: map['id']?.toString() ?? '',
+      id: id ?? map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
       description: map['description']?.toString(),
       phone: map['phone']?.toString(),
       email: map['email']?.toString(),
       website: map['website']?.toString(),
-      taxId: map['tax_id']?.toString(),
-      rcNumber: map['rc_number']?.toString(),
+      taxId: map['tax_id']?.toString() ?? map['taxId']?.toString(),
+      rcNumber: map['rc_number']?.toString() ?? map['rcNumber']?.toString(),
       address: map['address']?.toString(),
       rib: map['rib']?.toString(),
-      ownerId: map['owner_id']?.toString() ?? '',
+      ownerId: map['owner_id']?.toString() ?? map['ownerId']?.toString() ?? map['userId']?.toString() ?? '',
       members: parsedMembers,
       defaultsCreated: map['defaults_created'] == true ||
           map['defaults_created'] == 1 ||
@@ -86,10 +86,14 @@ class Enterprise {
           map['defaultsCreated'] == 'true',
       createdAt: map['created_at'] != null
           ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now()
-          : DateTime.now(),
+          : (map['createdAt'] != null
+              ? DateTime.tryParse(map['createdAt'].toString()) ?? DateTime.now()
+              : DateTime.now()),
       updatedAt: map['updated_at'] != null
           ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now()
-          : DateTime.now(),
+          : (map['updatedAt'] != null
+              ? DateTime.tryParse(map['updatedAt'].toString()) ?? DateTime.now()
+              : DateTime.now()),
     );
   }
 
@@ -146,6 +150,41 @@ class Enterprise {
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Enterprise &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          description == other.description &&
+          phone == other.phone &&
+          email == other.email &&
+          website == other.website &&
+          taxId == other.taxId &&
+          rcNumber == other.rcNumber &&
+          address == other.address &&
+          rib == other.rib &&
+          ownerId == other.ownerId &&
+          defaultsCreated == other.defaultsCreated &&
+          updatedAt == other.updatedAt;
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      description.hashCode ^
+      phone.hashCode ^
+      email.hashCode ^
+      website.hashCode ^
+      taxId.hashCode ^
+      rcNumber.hashCode ^
+      address.hashCode ^
+      rib.hashCode ^
+      ownerId.hashCode ^
+      defaultsCreated.hashCode ^
+      updatedAt.hashCode;
 }
 
 class EnterpriseMember {
@@ -167,4 +206,15 @@ class EnterpriseMember {
         uid: map['uid']?.toString() ?? '',
         role: map['role']?.toString() ?? 'member',
       );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EnterpriseMember &&
+          runtimeType == other.runtimeType &&
+          uid == other.uid &&
+          role == other.role;
+
+  @override
+  int get hashCode => uid.hashCode ^ role.hashCode;
 }

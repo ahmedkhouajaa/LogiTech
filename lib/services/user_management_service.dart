@@ -169,42 +169,61 @@ class UserManagementService {
         // Fetch user profile from users collection
         try {
           final userDoc = await _firestore.collection('users').doc(uid).get();
-          if (userDoc.exists) {
-            final uData = userDoc.data() ?? {};
-            final userEnterprises = uData['enterprises'] != null ? List<String>.from(uData['enterprises']) : [enterpriseId];
+          final uData = userDoc.exists ? (userDoc.data() ?? {}) : <String, dynamic>{};
+          final userEnterprises = uData['enterprises'] != null ? List<String>.from(uData['enterprises']) : [enterpriseId];
 
-            users.add(EnterpriseUserModel(
-              uid: uid,
-              name: uData['name']?.toString() ?? member['name']?.toString() ?? (isOwner ? 'Propriétaire' : 'Utilisateur'),
-              email: uData['email']?.toString() ?? member['email']?.toString() ?? '',
-              phone: uData['phone']?.toString() ?? member['phone']?.toString(),
-              role: role,
-              enterprises: userEnterprises,
-              permissions: permissions,
-              isOwner: isOwner,
-              addedBy: member['addedBy']?.toString(),
-              addedAt: member['addedAt'] != null
-                  ? (member['addedAt'] is Timestamp
-                      ? (member['addedAt'] as Timestamp).toDate()
-                      : DateTime.tryParse(member['addedAt'].toString()))
-                  : null,
-              isActive: uData['isActive'] != false,
-            ));
-          } else {
-            // User doc missing in collection, fallback
-            users.add(EnterpriseUserModel(
-              uid: uid,
-              name: member['name']?.toString() ?? (isOwner ? 'Propriétaire' : 'Utilisateur'),
-              email: member['email']?.toString() ?? '',
-              phone: member['phone']?.toString(),
-              role: role,
-              enterprises: [enterpriseId],
-              permissions: permissions,
-              isOwner: isOwner,
-              addedBy: member['addedBy']?.toString(),
-              isActive: true,
-            ));
+          String? extractField(List<String> keys, List<Map<String, dynamic>?> maps) {
+            for (final m in maps) {
+              if (m == null) continue;
+              for (final k in keys) {
+                final v = m[k]?.toString().trim();
+                if (v != null && v.isNotEmpty && v != 'null') {
+                  return v;
+                }
+              }
+            }
+            return null;
           }
+
+          final name = extractField(
+            ['name', 'displayName', 'display_name', 'fullName', 'full_name', 'username'],
+            [uData, member],
+          ) ?? (isOwner ? 'Propriétaire' : 'Utilisateur');
+
+          final email = extractField(
+            ['email', 'userEmail', 'user_email', 'mail'],
+            [uData, member],
+          ) ?? (uid == FirebaseAuth.instance.currentUser?.uid ? (FirebaseAuth.instance.currentUser?.email ?? '') : '');
+
+          String? phone = extractField(
+            ['phone', 'phoneNumber', 'phone_number', 'telephone', 'tel', 'mobile', 'contactPhone', 'contact_phone'],
+            [uData, member, if (isOwner) entData],
+          );
+
+          if ((phone == null || phone.isEmpty) && uid == FirebaseAuth.instance.currentUser?.uid) {
+            final authPhone = FirebaseAuth.instance.currentUser?.phoneNumber;
+            if (authPhone != null && authPhone.isNotEmpty) {
+              phone = authPhone;
+            }
+          }
+
+          users.add(EnterpriseUserModel(
+            uid: uid,
+            name: name,
+            email: email,
+            phone: phone,
+            role: role,
+            enterprises: userEnterprises,
+            permissions: permissions,
+            isOwner: isOwner,
+            addedBy: member['addedBy']?.toString(),
+            addedAt: member['addedAt'] != null
+                ? (member['addedAt'] is Timestamp
+                    ? (member['addedAt'] as Timestamp).toDate()
+                    : DateTime.tryParse(member['addedAt'].toString()))
+                : null,
+            isActive: uData['isActive'] != false,
+          ));
         } catch (e) {
           debugPrint('Error fetching user profile for $uid: $e');
         }
@@ -332,7 +351,11 @@ class UserManagementService {
       'uid': newUid,
       'email': cleanEmail,
       'name': name,
-      if (phone != null && phone.isNotEmpty) 'phone': phone,
+      if (phone != null && phone.isNotEmpty) ...{
+        'phone': phone,
+        'phoneNumber': phone,
+        'phone_number': phone,
+      },
       'role': role,
       'permissions': permissionsMap,
       'addedBy': adminUid,
@@ -354,7 +377,11 @@ class UserManagementService {
       'uid': newUid,
       'email': cleanEmail,
       'name': name,
-      if (phone != null && phone.isNotEmpty) 'phone': phone,
+      if (phone != null && phone.isNotEmpty) ...{
+        'phone': phone,
+        'phoneNumber': phone,
+        'phone_number': phone,
+      },
       'enterprises': selectedEnterpriseIds,
       'enterpriseRoles': enterpriseRolesMap,
       'currentEnterpriseId': selectedEnterpriseIds.isNotEmpty ? selectedEnterpriseIds.first : null,
@@ -425,7 +452,11 @@ class UserManagementService {
 
     await userRef.set({
       'name': name,
-      if (phone != null && phone.isNotEmpty) 'phone': phone,
+      if (phone != null && phone.isNotEmpty) ...{
+        'phone': phone,
+        'phoneNumber': phone,
+        'phone_number': phone,
+      },
       'enterprises': currentEnterprises,
       'enterpriseRoles': enterpriseRolesUpdate,
       'updated_at': now.toIso8601String(),
@@ -448,7 +479,11 @@ class UserManagementService {
           'uid': targetUid,
           'email': email,
           'name': name,
-          if (phone != null && phone.isNotEmpty) 'phone': phone,
+          if (phone != null && phone.isNotEmpty) ...{
+            'phone': phone,
+            'phoneNumber': phone,
+            'phone_number': phone,
+          },
           'role': role,
           'permissions': permissionsMap,
           'addedBy': adminUid,

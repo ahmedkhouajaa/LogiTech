@@ -1,5 +1,5 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kDebugMode, kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 /// Global security configuration and logging utility.
 class SecurityConfig {
@@ -13,7 +13,7 @@ class SecurityConfig {
   /// True if the current platform is Windows Desktop and security checks apply.
   static bool get isWindowsDesktop {
     if (kIsWeb) return false;
-    return Platform.isWindows;
+    return defaultTargetPlatform == TargetPlatform.windows;
   }
 
   /// Whether security checks should actively execute.

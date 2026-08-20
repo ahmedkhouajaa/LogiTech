@@ -1,11 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:open_filex/open_filex.dart';
 import '../models/payment_model.dart';
 import '../services/tej_export_service.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../utils/file_download_helper.dart';
 
 class TejExportDialog extends StatefulWidget {
   final List<Payment> payments;
@@ -618,13 +617,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                             SizedBox(width: 12),
                                             ElevatedButton.icon(
                                               onPressed: () async {
-                                                try {
-                                                  if (Platform.isWindows) {
-                                                    await Process.run('explorer.exe', ['/select,', path]);
-                                                  } else {
-                                                    await OpenFilex.open(path);
-                                                  }
-                                                } catch (_) {}
+                                                await FileDownloadHelper.openFile(path);
                                               },
                                               icon: Icon(Icons.folder_open_rounded, size: 16, color: Colors.white),
                                               label: Text(

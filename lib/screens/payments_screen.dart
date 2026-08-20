@@ -34,7 +34,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   String _contactSearch = '';
   String _methodFilter = 'tous';
   String _statusFilter = 'tous';
-  final String _directionFilter = 'tous';
+  String _directionFilter = 'tous';
   int _rowsPerPage = 20;
   int _page = 0;
 
@@ -82,7 +82,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           children: [
             // ─── Toolbar ───────────────────────────────────────
             Padding(
-              padding: EdgeInsets.all(AppSpacing.lg),
+              padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
               child: Row(
                 children: [
                   Column(
@@ -90,20 +90,20 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     children: [
                       Text(
                         'Paiements',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
-                      SizedBox(height: 4),
-                      Text('Gerer vos paiements', style: TextStyle(color: AppColors.textSecondary)),
+                      const SizedBox(height: 2),
+                      Text('Gérer vos paiements', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                     ],
                   ),
                   const Spacer(),
                   // Actions button
                   PopupMenuButton<String>(
-                    offset: Offset(0, 44),
+                    offset: const Offset(0, 38),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     child: Container(
-                      height: 40,
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceAlt,
                         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -113,8 +113,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text('Actions',
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                          SizedBox(width: 6),
+                              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                          const SizedBox(width: 6),
                           Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textSecondary),
                         ],
                       ),
@@ -124,45 +124,45 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         value: 'export',
                         child: Row(children: [
                           Icon(Icons.file_download_rounded, size: 16, color: AppColors.primary),
-                          SizedBox(width: 10),
-                          Text('Exporter CSV'),
+                          const SizedBox(width: 10),
+                          const Text('Exporter CSV'),
                         ]),
                       ),
                       PopupMenuItem(
                         value: 'print',
                         child: Row(children: [
                           Icon(Icons.print_rounded, size: 16, color: AppColors.textSecondary),
-                          SizedBox(width: 10),
-                          Text('Imprimer'),
+                          const SizedBox(width: 10),
+                          const Text('Imprimer'),
                         ]),
                       ),
                     ],
                     onSelected: (val) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${val == 'export' ? 'Export' : 'Impression'} bientot disponible')),
+                        SnackBar(content: Text('${val == 'export' ? 'Export' : 'Impression'} bientôt disponible')),
                       );
                     },
                   ),
                   if (PermissionService.instance.canCreate(UserPermissionResources.payments)) ...[
-                    SizedBox(width: AppSpacing.md),
+                    const SizedBox(width: 10),
                     // New payment button
                     ElevatedButton.icon(
                       onPressed: () => _showCreateDialog(context),
-                      icon: Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                      label: Text('Nouveau paiement',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                      label: const Text('Nouveau paiement',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         elevation: 0,
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                       ),
                     ),
                   ],
                 ],
               ),
             ),
-            SizedBox(height: AppSpacing.md),
+            const SizedBox(height: 10),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Container(
@@ -171,166 +171,177 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   borderRadius: BorderRadius.circular(AppRadius.lg),
                   border: Border.all(color: AppColors.border),
                 ),
-                padding: EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        // Reference search
-                        Expanded(
-                          flex: 3,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('Référence',
-                                  style: TextStyle(
-                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                              SizedBox(height: 8),
-                              SizedBox(
-                                height: 40,
-                                child: _SearchField(
-                                  hint: 'Recherche des paiements...',
-                                  icon: Icons.search_rounded,
-                                  value: _searchQuery,
-                                  onChanged: (v) => setState(() {
-                                    _searchQuery = v;
-                                    _page = 0;
-                                  }),
-                                ),
-                              ),
-                            ],
+                    // Reference search
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Référence',
+                              style: TextStyle(
+                                  fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            height: 32,
+                            child: _SearchField(
+                              hint: 'Recherche référence...',
+                              icon: Icons.search_rounded,
+                              value: _searchQuery,
+                              onChanged: (v) => setState(() {
+                                _searchQuery = v;
+                                _page = 0;
+                              }),
+                            ),
                           ),
-                        ),
-                        SizedBox(width: AppSpacing.md),
-                        // Contact search
-                        Expanded(
-                          flex: 3,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('Contact',
-                                  style: TextStyle(
-                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                              SizedBox(height: 8),
-                              SizedBox(
-                                height: 40,
-                                child: _SearchField(
-                                  hint: 'Rechercher un contact...',
-                                  icon: Icons.person_search_rounded,
-                                  value: _contactSearch,
-                                  onChanged: (v) => setState(() {
-                                    _contactSearch = v;
-                                    _page = 0;
-                                  }),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: AppSpacing.md),
-                        // Method filter
-                        Expanded(
-                          flex: 2,
-                          child: _FilterDropdown(
-                            label: 'Methode',
-                            value: _methodFilter,
-                            items: const {
-                              'tous': 'Tous',
-                              'especes': 'Especes',
-                              'cheque': 'Cheque',
-                              'virement': 'Virement',
-                              'carte': 'Carte',
-                            },
-                            onChanged: (v) => setState(() {
-                              _methodFilter = v!;
-                              _page = 0;
-                            }),
-                          ),
-                        ),
-                        SizedBox(width: AppSpacing.md),
-                        // Status filter
-                        Expanded(
-                          flex: 2,
-                          child: _FilterDropdown(
-                            label: 'Statut',
-                            value: _statusFilter,
-                            items: const {
-                              'tous': 'Tous',
-                              'paid': 'Paye',
-                              'pending': 'En attente',
-                              'cancelled': 'Annule',
-                            },
-                            onChanged: (v) => setState(() {
-                              _statusFilter = v!;
-                              _page = 0;
-                            }),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    if (_searchQuery.isNotEmpty || _contactSearch.isNotEmpty || _methodFilter != 'tous' || _statusFilter != 'tous')
+                    const SizedBox(width: 10),
+                    // Contact search
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Contact',
+                              style: TextStyle(
+                                  fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            height: 32,
+                            child: _SearchField(
+                              hint: 'Rechercher contact...',
+                              icon: Icons.person_search_rounded,
+                              value: _contactSearch,
+                              onChanged: (v) => setState(() {
+                                _contactSearch = v;
+                                _page = 0;
+                              }),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Method filter
+                    Expanded(
+                      flex: 2,
+                      child: _FilterDropdown(
+                        label: 'Méthode',
+                        value: _methodFilter,
+                        items: const {
+                          'tous': 'Tous',
+                          'especes': 'Espèces',
+                          'cheque': 'Chèque',
+                          'virement': 'Virement',
+                          'carte': 'Carte',
+                        },
+                        onChanged: (v) => setState(() {
+                          _methodFilter = v!;
+                          _page = 0;
+                        }),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Status filter
+                    Expanded(
+                      flex: 2,
+                      child: _FilterDropdown(
+                        label: 'Statut',
+                        value: _statusFilter,
+                        items: const {
+                          'tous': 'Tous',
+                          'paid': 'Payé',
+                          'pending': 'En attente',
+                          'cancelled': 'Annulé',
+                        },
+                        onChanged: (v) => setState(() {
+                          _statusFilter = v!;
+                          _page = 0;
+                        }),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Direction filter
+                    Expanded(
+                      flex: 2,
+                      child: _FilterDropdown(
+                        label: 'Type',
+                        value: _directionFilter,
+                        items: const {
+                          'tous': 'Tous',
+                          'encaissement': 'Encaissement',
+                          'decaissement': 'Décaissement',
+                        },
+                        onChanged: (v) => setState(() {
+                          _directionFilter = v!;
+                          _page = 0;
+                        }),
+                      ),
+                    ),
+                    if (_searchQuery.isNotEmpty ||
+                        _contactSearch.isNotEmpty ||
+                        _methodFilter != 'tous' ||
+                        _statusFilter != 'tous' ||
+                        _directionFilter != 'tous') ...[
+                      const SizedBox(width: 8),
                       Padding(
-                        padding: EdgeInsets.only(top: 16),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                '${filtered.length} résultat${filtered.length > 1 ? 's' : ''}',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
-                              ),
-                            ),
-                            const Spacer(),
-                            TextButton.icon(
-                              onPressed: () {
-                                setState(() {
-                                  _searchQuery = '';
-                                  _contactSearch = '';
-                                  _methodFilter = 'tous';
-                                  _statusFilter = 'tous';
-                                  _page = 0;
-                                });
-                              },
-                              icon: Icon(Icons.refresh_rounded, size: 16),
-                              label: Text('Réinitialiser les filtres'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.textSecondary,
-                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              ),
-                            ),
-                          ],
+                        padding: const EdgeInsets.only(bottom: 1),
+                        child: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _searchQuery = '';
+                              _contactSearch = '';
+                              _methodFilter = 'tous';
+                              _statusFilter = 'tous';
+                              _directionFilter = 'tous';
+                              _page = 0;
+                            });
+                          },
+                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          tooltip: 'Réinitialiser les filtres',
+                          style: IconButton.styleFrom(
+                            foregroundColor: AppColors.error,
+                            backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                            minimumSize: const Size(32, 32),
+                            padding: EdgeInsets.zero,
+                          ),
                         ),
                       ),
+                    ],
                   ],
                 ),
               ),
             ),
-            SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: 10),
 
             // ─── Table ─────────────────────────────────────────────
             Expanded(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(24, 0, 24, 0),
-                child: AppCard(
-                  padding: EdgeInsets.zero,
+              child: Container(
+                margin: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                   child: state is PaymentsLoading || state is PaymentsInitial
                       ? ShimmerTable(
                           headerColumns: [
-                            const SizedBox(width: 32),
-                            Expanded(flex: 3, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                            Expanded(flex: 3, child: Text('Contact', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                            Expanded(flex: 2, child: Text('Mode', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                            Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                            Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                            SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                            Expanded(flex: 3, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            Expanded(flex: 3, child: Text('Contact', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text('Méthode', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                           ],
                         )
                       : filtered.isEmpty
@@ -345,7 +356,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                                         height: 1,
                                         color: AppColors.border),
                                     itemBuilder: (context, index) =>
-                                        _buildRow(context, pageRows[index]),
+                                        _buildRow(context, pageRows[index], index),
                                   ),
                                 ),
                                 _buildPagination(
@@ -355,7 +366,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 10),
           ],
         );
       },
@@ -368,25 +379,25 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 80,
-            height: 80,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.payment_rounded,
-                size: 40, color: AppColors.primary),
+                size: 32, color: AppColors.primary),
           ),
-          SizedBox(height: 16),
-          Text('Aucun paiement trouve',
+          const SizedBox(height: 12),
+          Text('Aucun paiement trouvé',
               style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary)),
-          SizedBox(height: 6),
-          Text('Creez votre premier paiement en cliquant sur le bouton ci-dessus.',
+          const SizedBox(height: 4),
+          Text('Créez votre premier paiement en cliquant sur le bouton ci-dessus.',
               style: TextStyle(
-                  fontSize: 13, color: AppColors.textSecondary)),
+                  fontSize: 12.5, color: AppColors.textSecondary)),
         ],
       ),
     );
@@ -394,59 +405,55 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
 
   Widget _buildTableHeader() {
     return Container(
-      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(AppRadius.lg),
-          topRight: Radius.circular(AppRadius.lg),
-        ),
+        color: AppColors.background,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
-      padding: EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
           Expanded(
               flex: 3,
-              child: Text('Reference',
+              child: Text('Référence',
                   style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary))),
           Expanded(
               flex: 3,
               child: Text('Contact',
                   style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary))),
           Expanded(
               flex: 2,
               child: Text('Montant',
                   style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary))),
           Expanded(
               flex: 2,
-              child: Text('Methode',
+              child: Text('Méthode',
                   style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary))),
           Expanded(
               flex: 2,
               child: Text('Statut',
                   style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary))),
-          SizedBox(width: 80),
+          const SizedBox(width: 60),
         ],
       ),
     );
   }
 
-  Widget _buildRow(BuildContext context, Payment p) {
+  Widget _buildRow(BuildContext context, Payment p, int index) {
     final isEncaissement = p.direction == 'encaissement';
     final amountColor =
         isEncaissement ? AppColors.success : AppColors.error;
@@ -459,7 +466,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       case 'paid':
         statusColor = AppColors.success;
         statusBg = AppColors.successLight;
-        statusLabel = 'Paye';
+        statusLabel = 'Payé';
         break;
       case 'pending':
         statusColor = AppColors.warning;
@@ -469,7 +476,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       case 'cancelled':
         statusColor = AppColors.error;
         statusBg = AppColors.errorLight;
-        statusLabel = 'Annule';
+        statusLabel = 'Annulé';
         break;
       default:
         statusColor = AppColors.textSecondary;
@@ -480,10 +487,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     String methodLabel;
     switch (p.method) {
       case 'especes':
-        methodLabel = 'Especes';
+        methodLabel = 'Espèces';
         break;
       case 'cheque':
-        methodLabel = 'Cheque';
+        methodLabel = 'Chèque';
         break;
       case 'virement':
         methodLabel = 'Virement';
@@ -496,8 +503,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      color: Colors.transparent,
+      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         children: [
           // Reference + date
@@ -508,10 +515,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
               children: [
                 Text(p.paymentNumber,
                     style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w600,
                         color: AppColors.primary)),
-                SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   formatDateTime(p.paymentDate),
                   style: TextStyle(
@@ -526,21 +533,21 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 14,
+                  radius: 12,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                   child: Text(
                     (p.contactName ?? '?')[0].toUpperCase(),
                     style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primary),
                   ),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Text(p.contactName ?? '—',
-                      style: TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w500),
                       overflow: TextOverflow.ellipsis),
                 ),
               ],
@@ -552,7 +559,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             child: Text(
               '$amountPrefix ${formatCurrency(p.amount, symbol: 'DT')}',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: amountColor,
               ),
@@ -564,7 +571,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceAlt,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -579,15 +586,15 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                           : p.method == 'virement' ? Icons.account_balance_rounded
                           : p.method == 'carte' ? Icons.credit_card_rounded
                           : Icons.payment_rounded,
-                      size: 14,
+                      size: 13,
                       color: AppColors.textSecondary,
                     ),
-                    SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Text(
                       methodLabel,
                       style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
                           color: AppColors.textSecondary),
                     ),
                   ],
@@ -608,7 +615,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           ),
           // Actions
           SizedBox(
-            width: 80,
+            width: 60,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -628,35 +635,38 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
   }
 
   Widget _buildPagination(int total, int totalPages) {
-    final start = _page * _rowsPerPage + 1;
+    final start = total == 0 ? 0 : _page * _rowsPerPage + 1;
     final end = ((_page + 1) * _rowsPerPage).clamp(0, total);
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
+        color: AppColors.background,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         children: [
           // Rows per page
-          Text('Lignes:',
+          Text('Lignes',
               style: TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Container(
-            height: 30,
+            height: 28,
             decoration: BoxDecoration(
               border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(AppRadius.sm),
+              borderRadius: BorderRadius.circular(6),
+              color: AppColors.surface,
             ),
-            padding: EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<int>(
                 value: _rowsPerPage,
                 style: TextStyle(
                     fontSize: 12, color: AppColors.textPrimary),
-                items: [10, 20, 50, 100].map((n) {
-                  return DropdownMenuItem(value: n, child: Text('$n'));
+                icon: Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textSecondary),
+                items: [20, 50, 100].map((n) {
+                  return DropdownMenuItem(value: n, child: Text('$n', style: const TextStyle(fontSize: 12)));
                 }).toList(),
                 onChanged: (v) => setState(() {
                   _rowsPerPage = v!;
@@ -665,15 +675,15 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
               ),
             ),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 20),
           Text('Page ${_page + 1} sur $totalPages',
               style: TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
-          Spacer(),
-          Text('Affichage de $start a $end sur $total resultats',
+          const Spacer(),
+          Text(total == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de $start à $end sur $total résultats',
               style: TextStyle(
                   fontSize: 12, color: AppColors.textSecondary)),
-          SizedBox(width: 16),
+          const SizedBox(width: 12),
           _PaginationButton(
             icon: Icons.chevron_left_rounded,
             enabled: _page > 0,

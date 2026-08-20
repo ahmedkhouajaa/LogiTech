@@ -105,59 +105,69 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Projets', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                  SizedBox(height: 4),
+                  Text('Projets', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  const SizedBox(height: 2),
                   Text('Gérez vos projets et suivez leur avancement', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                 ],
               ),
-              Spacer(),
+              const Spacer(),
               if (PermissionService.instance.canCreate(UserPermissionResources.projects))
                 ElevatedButton.icon(
                   onPressed: () => _editProject(null),
-                  icon: Icon(Icons.add_rounded, size: 18),
-                  label: Text('Nouveau Projet'),
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Nouveau Projet', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  ),
                 ),
             ],
           ),
         ),
+        const SizedBox(height: 10),
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: Container(
-            padding: EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(color: AppColors.border),
             ),
-            child: AppSearchBar(onChanged: (v) {}),
+            child: SizedBox(
+              height: 32,
+              child: AppSearchBar(onChanged: (v) {}),
+            ),
           ),
         ),
+        const SizedBox(height: 10),
         Expanded(
           child: BlocBuilder<ProjectsBloc, ProjectsState>(
             builder: (context, state) {
               if (state is ProjectsLoading || state is ProjectsInitial) {
                 return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: ShimmerTable(
                     headerColumns: [
-                      const SizedBox(width: 32),
-                      Expanded(flex: 3, child: Text('Nom du Projet', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                      Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                      Expanded(flex: 2, child: Text('Date de Creation', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                      SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 3, child: Text('Nom', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Date de Création', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                     ],
                   ),
                 );
               }
               if (state is ProjectsLoaded) {
                 return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, 10),
                   child: AppCard(
                     padding: EdgeInsets.zero,
                     child: DataTableWidget<Project>(

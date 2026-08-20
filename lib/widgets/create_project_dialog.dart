@@ -82,33 +82,6 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
       helpText: isStart ? 'SÉLECTIONNER LA DATE DE DÉBUT' : 'SÉLECTIONNER LA DATE DE FIN',
       cancelText: 'ANNULER',
       confirmText: 'CONFIRMER',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppColors.primary, // header background color and selected day color
-              onPrimary: AppColors.surface, // header text color and selected day text color
-              onSurface: AppColors.textPrimary, // body text color
-            ),
-            dialogBackgroundColor: AppColors.surface,
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary, // button text color
-              ),
-            ),
-            datePickerTheme: DatePickerThemeData(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-              ),
-              headerBackgroundColor: AppColors.primary,
-              headerForegroundColor: AppColors.surface,
-              backgroundColor: AppColors.surface,
-              elevation: 10,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
     if (picked != null) {
       setState(() {

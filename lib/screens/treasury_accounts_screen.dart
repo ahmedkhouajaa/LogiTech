@@ -82,7 +82,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
       children: [
         // Header
         Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: isMobile 
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,37 +90,37 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                   Row(
                     children: [
                       Text(
-                        'Comptes de Tresorerie',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        'Comptes de Trésorerie',
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
-                      SizedBox(width: 8),
-                      Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 20),
                     ],
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 10),
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () => _showAccountDialog(context),
-                          icon: Icon(Icons.add_rounded, size: 18),
-                          label: Text('Ajouter Compte'),
+                          icon: const Icon(Icons.add_rounded, size: 16),
+                          label: const Text('Ajouter Compte', style: TextStyle(fontSize: 12)),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
                             side: BorderSide(color: AppColors.border),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                            padding: EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
                           ),
                         ),
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () => _showExpenseDialog(context),
-                          icon: Icon(Icons.attach_money_rounded, size: 18),
-                          label: Text('Ajouter Depense'),
+                          icon: const Icon(Icons.attach_money_rounded, size: 16),
+                          label: const Text('Ajouter Dépense', style: TextStyle(fontSize: 12)),
                           style: ElevatedButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
                           ),
                         ),
                       ),
@@ -130,34 +130,51 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
               )
             : Row(
                 children: [
-                  Text(
-                    'Comptes de Tresorerie',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Comptes de Trésorerie',
+                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 20),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text('Gérer vos comptes de trésorerie', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                    ],
                   ),
-                  SizedBox(width: 8),
-                  Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary),
-                  Spacer(),
+                  const Spacer(),
                   if (PermissionService.instance.canCreate(UserPermissionResources.treasuryAccounts)) ...[
                     OutlinedButton.icon(
                       onPressed: () => _showAccountDialog(context),
-                      icon: Icon(Icons.add_rounded, size: 18),
-                      label: Text('Ajouter un Compte'),
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('Ajouter un Compte', style: TextStyle(fontSize: 13)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textPrimary,
                         side: BorderSide(color: AppColors.border),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       ),
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 10),
                   ],
                   ElevatedButton.icon(
                     onPressed: () => _showExpenseDialog(context),
-                    icon: Icon(Icons.attach_money_rounded, size: 18),
-                    label: Text('Ajouter une Depense'),
+                    icon: const Icon(Icons.attach_money_rounded, size: 18),
+                    label: const Text('Ajouter une Dépense', style: TextStyle(fontSize: 13)),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    ),
                   ),
                 ],
               ),
         ),
+        const SizedBox(height: 10),
 
         // Table
         Expanded(
@@ -168,11 +185,10 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                   padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: ShimmerTable(
                     headerColumns: [
-                      const SizedBox(width: 32),
-                      Expanded(flex: 3, child: Text('Nom du Compte', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                      Expanded(flex: 2, child: Text('Banque / Type', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                      Expanded(flex: 2, child: Text('Solde Actuel', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                      SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                      Expanded(flex: 3, child: Text('Nom du Compte', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Type', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      Expanded(flex: 2, child: Text('Solde', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                      SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                     ],
                   ),
                 );

@@ -67,12 +67,12 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
         final start = _page * _rowsPerPage;
         final end = (start + _rowsPerPage).clamp(0, filtered.length);
         final pageRows = start < filtered.length ? filtered.sublist(start, end) : <Payment>[];
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [            // Toolbar
+          children: [
+            // Toolbar
             Padding(
-              padding: EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
               child: Row(
                 children: [
                   Column(
@@ -80,10 +80,10 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                     children: [
                       Text(
                         widget.isSales ? 'Retenue à la source (Ventes)' : 'Retenue à la source (Achats)',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                       ),
-                      SizedBox(height: 4),
-                      Text('Gerer vos retenues à la source', style: TextStyle(color: AppColors.textSecondary)),
+                      const SizedBox(height: 2),
+                      Text('Gérer vos retenues à la source', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                     ],
                   ),
                   const Spacer(),
@@ -99,193 +99,179 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                       );
                     },
                     icon: Icon(Icons.file_download_outlined, size: 16, color: AppColors.textSecondary),
-                    label: Text('Export TEJ', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                    label: Text('Export TEJ', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600, fontSize: 13)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.surfaceAlt,
                       elevation: 0,
                       side: BorderSide(color: AppColors.border),
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                     ),
                   ),
                 ],
               ),
             ),
-            SizedBox(height: AppSpacing.md),
+            const SizedBox(height: 10),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Container(
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(AppRadius.lg),
                   border: Border.all(color: AppColors.border),
                 ),
-                padding: EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('Recherche',
-                                  style: TextStyle(
-                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                              SizedBox(height: 8),
-                              SizedBox(
-                                height: 40,
-                                child: _SearchField(
-                                  hint: 'Rechercher par ref. facture ou certificat..',
-                                  icon: Icons.search_rounded,
-                                  value: _searchQuery,
-                                  onChanged: (v) => setState(() {
-                                    _searchQuery = v;
-                                    _page = 0;
-                                  }),
-                                ),
-                              ),
-                            ],
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Recherche',
+                              style: TextStyle(
+                                  fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            height: 32,
+                            child: _SearchField(
+                              hint: 'Rechercher par réf. facture ou certificat..',
+                              icon: Icons.search_rounded,
+                              value: _searchQuery,
+                              onChanged: (v) => setState(() {
+                                _searchQuery = v;
+                                _page = 0;
+                              }),
+                            ),
                           ),
-                        ),
-                        SizedBox(width: AppSpacing.md),
-                        // Dummy dropdowns and date pickers to match screenshot
-                        Expanded(
-                          flex: 3,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(widget.isSales ? 'Client' : 'Fournisseur',
-                                  style: TextStyle(
-                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                              SizedBox(height: 8),
-                              SizedBox(
-                                height: 40,
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 12),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surface,
-                                    border: Border.all(color: AppColors.border),
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          widget.isSales ? 'Rechercher un client...' : 'Rechercher un fournisseur...',
-                                          style: TextStyle(color: AppColors.textTertiary, fontSize: 13),
-                                        ),
-                                      ),
-                                      Icon(Icons.unfold_more_rounded, size: 16, color: AppColors.textTertiary),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: AppSpacing.md),
-                        // Date Du
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('Date de début',
-                                  style: TextStyle(
-                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                              SizedBox(height: 8),
-                              SizedBox(
-                                height: 40,
-                                child: _buildDateDummy('Choisir une date', Icons.calendar_today_rounded),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: AppSpacing.md),
-                        // Date Au
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('Date de fin',
-                                  style: TextStyle(
-                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                              SizedBox(height: 8),
-                              SizedBox(
-                                height: 40,
-                                child: _buildDateDummy('Choisir une date', Icons.calendar_today_rounded),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    if (_searchQuery.isNotEmpty) // Placeholder logic for active filter
-                      Padding(
-                        padding: EdgeInsets.only(top: 16),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    const SizedBox(width: 10),
+                    // Dummy dropdowns and date pickers to match screenshot
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(widget.isSales ? 'Client' : 'Fournisseur',
+                              style: TextStyle(
+                                  fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            height: 32,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
+                                color: AppColors.surfaceAlt,
+                                border: Border.all(color: AppColors.border),
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                              child: Text(
-                                '${filtered.length} résultat${filtered.length > 1 ? 's' : ''}',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
-                              ),
-                            ),
-                            const Spacer(),
-                            TextButton.icon(
-                              onPressed: () {
-                                setState(() {
-                                  _searchQuery = '';
-                                  _page = 0;
-                                });
-                              },
-                              icon: Icon(Icons.refresh_rounded, size: 16),
-                              label: Text('Réinitialiser les filtres'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: AppColors.textSecondary,
-                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      widget.isSales ? 'Rechercher un client...' : 'Rechercher un fournisseur...',
+                                      style: TextStyle(color: AppColors.textTertiary, fontSize: 12),
+                                    ),
+                                  ),
+                                  Icon(Icons.unfold_more_rounded, size: 14, color: AppColors.textTertiary),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Date Du
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Date de début',
+                              style: TextStyle(
+                                  fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            height: 32,
+                            child: _buildDateDummy('Choisir une date', Icons.calendar_today_rounded),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Date Au
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Date de fin',
+                              style: TextStyle(
+                                  fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            height: 32,
+                            child: _buildDateDummy('Choisir une date', Icons.calendar_today_rounded),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_searchQuery.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 1),
+                        child: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _searchQuery = '';
+                              _page = 0;
+                            });
+                          },
+                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          tooltip: 'Réinitialiser les filtres',
+                          style: IconButton.styleFrom(
+                            foregroundColor: AppColors.error,
+                            backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                            minimumSize: const Size(32, 32),
+                            padding: EdgeInsets.zero,
+                          ),
                         ),
                       ),
+                    ],
                   ],
                 ),
               ),
             ),
-            SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: 10),
 
             // Table
             Expanded(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(24, 0, 24, 0),
-                child: AppCard(
-                  padding: EdgeInsets.zero,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                   child: state is PaymentsLoading || state is PaymentsInitial
                       ? ShimmerTable(
                           headerColumns: [
-                            const SizedBox(width: 32),
-                            Expanded(flex: 3, child: Text('Ref. Facture', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                            Expanded(flex: 3, child: Text('Tiers', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                            Expanded(flex: 2, child: Text('Taux R.S.', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                            Expanded(flex: 2, child: Text('Montant R.S.', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                            Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
-                            SizedBox(width: 80, child: Text('Actions', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.textSecondary))),
+                            Expanded(flex: 3, child: Text('Facture / Réf', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            Expanded(flex: 3, child: Text(widget.isSales ? 'Client' : 'Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text('Date', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            Expanded(flex: 2, child: Text('Montant RS', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
+                            SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                           ],
                         )
                       : filtered.isEmpty
@@ -297,7 +283,7 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                                   child: ListView.separated(
                                     itemCount: pageRows.length,
                                     separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.border),
-                                    itemBuilder: (context, index) => _buildRow(pageRows[index]),
+                                    itemBuilder: (context, index) => _buildRow(pageRows[index], index),
                                   ),
                                 ),
                                 _buildPagination(filtered.length, totalPages),
@@ -306,7 +292,7 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 10),
           ],
         );
       },
@@ -315,18 +301,18 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
 
   Widget _buildDateDummy(String hint, IconData icon) {
     return Container(
-      height: 40,
-      padding: EdgeInsets.symmetric(horizontal: 12),
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surfaceAlt,
         border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: AppColors.textTertiary),
-          SizedBox(width: 8),
-          Text(hint, style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+          Icon(icon, size: 14, color: AppColors.textTertiary),
+          const SizedBox(width: 6),
+          Text(hint, style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
         ],
       ),
     );
@@ -338,15 +324,15 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 80,
-            height: 80,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.08), shape: BoxShape.circle),
-            child: Icon(Icons.account_balance_rounded, size: 40, color: AppColors.primary),
+            child: Icon(Icons.account_balance_rounded, size: 32, color: AppColors.primary),
           ),
-          SizedBox(height: 16),
-          Text('Aucun certificat trouvé', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          SizedBox(height: 6),
-          Text('Les retenues à la source s\'afficheront ici', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          const SizedBox(height: 12),
+          Text('Aucun certificat trouvé', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          const SizedBox(height: 4),
+          Text('Les retenues à la source s\'afficheront ici', style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
         ],
       ),
     );
@@ -354,27 +340,27 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
 
   Widget _buildTableHeader() {
     return Container(
-      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(AppRadius.lg), topRight: Radius.circular(AppRadius.lg)),
+        color: AppColors.background,
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
-      padding: EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          Expanded(flex: 3, child: Text('Facture / Réf', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
-          Expanded(flex: 3, child: Text(widget.isSales ? 'Client' : 'Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
-          Expanded(flex: 2, child: Text('Date', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
-          Expanded(flex: 2, child: Text('Montant RS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
-          SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+          Expanded(flex: 3, child: Text('Facture / Réf', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+          Expanded(flex: 3, child: Text(widget.isSales ? 'Client' : 'Fournisseur', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+          Expanded(flex: 2, child: Text('Date', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+          Expanded(flex: 2, child: Text('Montant RS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
+          SizedBox(width: 60, child: Text('Actions', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary))),
         ],
       ),
     );
   }
 
-  Widget _buildRow(Payment p) {
+  Widget _buildRow(Payment p, int index) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         children: [
           Expanded(
@@ -382,8 +368,8 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
             child: Row(
               children: [
                 Icon(Icons.description_outlined, size: 16, color: AppColors.primary),
-                SizedBox(width: 8),
-                Text(p.reference ?? p.paymentNumber, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                const SizedBox(width: 6),
+                Text(p.reference ?? p.paymentNumber, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.primary)),
               ],
             ),
           ),
@@ -391,13 +377,13 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
             flex: 3,
             child: Row(
               children: [
-                Icon(widget.isSales ? Icons.person_outline : Icons.business_outlined, size: 16, color: AppColors.textSecondary),
-                SizedBox(width: 8),
+                Icon(widget.isSales ? Icons.person_outline : Icons.business_outlined, size: 14, color: AppColors.textSecondary),
+                const SizedBox(width: 6),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(p.contactName ?? '—', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+                      Text(p.contactName ?? '—', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
                       Text(widget.isSales ? 'Client' : 'Fournisseur', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                     ],
                   ),
@@ -407,18 +393,20 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
           ),
           Expanded(
             flex: 2,
-            child: Text(formatDate(p.paymentDate), style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+            child: Text(formatDate(p.paymentDate), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           ),
           Expanded(
             flex: 2,
-            child: Text('${formatCurrency(p.amount, symbol: '')} DT', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            child: Text('${formatCurrency(p.amount, symbol: '')} DT', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
           ),
           SizedBox(
             width: 60,
             child: Align(
               alignment: Alignment.centerRight,
               child: PopupMenuButton<String>(
-                icon: Icon(Icons.more_horiz_rounded, color: AppColors.textSecondary),
+                icon: Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textSecondary),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 color: AppColors.surface,
                 onSelected: (val) {
@@ -440,11 +428,11 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                 itemBuilder: (_) => [
                   PopupMenuItem<String>(
                     value: 'view',
-                    height: 40,
+                    height: 36,
                     child: Row(
                       children: [
-                        Icon(Icons.visibility_outlined, size: 18, color: AppColors.info),
-                        const SizedBox(width: 12),
+                        Icon(Icons.visibility_outlined, size: 16, color: AppColors.info),
+                        const SizedBox(width: 8),
                         Text('Voir', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
                       ],
                     ),
@@ -452,11 +440,11 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                   const PopupMenuDivider(height: 1),
                   PopupMenuItem<String>(
                     value: 'print',
-                    height: 40,
+                    height: 36,
                     child: Row(
                       children: [
-                        Icon(Icons.print_outlined, size: 18, color: AppColors.primary),
-                        const SizedBox(width: 12),
+                        Icon(Icons.print_outlined, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 8),
                         Text('Imprimer', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
                       ],
                     ),
@@ -464,11 +452,11 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                   const PopupMenuDivider(height: 1),
                   PopupMenuItem<String>(
                     value: 'pdf',
-                    height: 40,
+                    height: 36,
                     child: Row(
                       children: [
-                        Icon(Icons.picture_as_pdf_outlined, size: 18, color: AppColors.error),
-                        const SizedBox(width: 12),
+                        Icon(Icons.picture_as_pdf_outlined, size: 16, color: AppColors.error),
+                        const SizedBox(width: 8),
                         Text('Télécharger PDF', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
                       ],
                     ),
@@ -483,25 +471,33 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
   }
 
   Widget _buildPagination(int total, int totalPages) {
-    final start = _page * _rowsPerPage + 1;
+    final start = total == 0 ? 0 : _page * _rowsPerPage + 1;
     final end = ((_page + 1) * _rowsPerPage).clamp(0, total);
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.border))),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
       child: Row(
         children: [
           Text('Lignes', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Container(
-            height: 30,
-            decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(AppRadius.sm)),
-            padding: EdgeInsets.symmetric(horizontal: 8),
+            height: 28,
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(6),
+              color: AppColors.surface,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<int>(
                 value: _rowsPerPage,
                 style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
-                items: [10, 20, 50, 100].map((n) => DropdownMenuItem(value: n, child: Text('$n'))).toList(),
+                icon: Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textSecondary),
+                items: [20, 50, 100].map((n) => DropdownMenuItem(value: n, child: Text('$n', style: const TextStyle(fontSize: 12)))).toList(),
                 onChanged: (v) => setState(() {
                   _rowsPerPage = v!;
                   _page = 0;
@@ -509,13 +505,13 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
               ),
             ),
           ),
-          SizedBox(width: 24),
-          Text('Page ${_page + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
-          Spacer(),
-          Text('Affichage de $start à $end sur $total résultats', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          SizedBox(width: 16),
+          const SizedBox(width: 20),
+          Text('Page ${_page + 1} sur $totalPages', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const Spacer(),
+          Text(total == 0 ? 'Affichage de 0 à 0 sur 0 résultats' : 'Affichage de $start à $end sur $total résultats', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const SizedBox(width: 12),
           _PaginationButton(icon: Icons.chevron_left_rounded, enabled: _page > 0, onTap: () => setState(() => _page--)),
-          SizedBox(width: 4),
+          const SizedBox(width: 4),
           _PaginationButton(icon: Icons.chevron_right_rounded, enabled: _page < totalPages - 1, onTap: () => setState(() => _page++)),
         ],
       ),

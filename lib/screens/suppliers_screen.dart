@@ -35,44 +35,42 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Modern Action Bar
-        Container(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            border: Border(bottom: BorderSide(color: Colors.transparent)),
-          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Fournisseurs', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                  SizedBox(height: 4),
-                  Text('Gerer vos fournisseurs', style: TextStyle(color: AppColors.textSecondary)),
+                  Text('Fournisseurs', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  const SizedBox(height: 2),
+                  Text('Gérer vos fournisseurs', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
               const Spacer(),
               SizedBox(
-                width: 300,
+                width: 250,
+                height: 32,
                 child: AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
               ),
               if (PermissionService.instance.canCreate(UserPermissionResources.suppliers)) ...[
-                SizedBox(width: AppSpacing.md),
+                const SizedBox(width: 10),
                 ElevatedButton.icon(
                   onPressed: () => _showDialog(context, null),
-                  icon: Icon(Icons.factory_rounded, size: 20, color: Colors.white),
-                  label: Text('Nouveau Fournisseur', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  icon: const Icon(Icons.factory_rounded, size: 18, color: Colors.white),
+                  label: const Text('Nouveau Fournisseur', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                   ),
                 ),
               ],
             ],
           ),
         ),
+        const SizedBox(height: 10),
         
         Expanded(
           child: BlocBuilder<SuppliersBloc, SuppliersState>(
@@ -80,33 +78,33 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
               if (state is SuppliersLoading || state is SuppliersInitial) {
                 return AppShimmer(
                   child: ListView.separated(
-                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-                    itemCount: 6,
-                    separatorBuilder: (_, __) => SizedBox(height: 12),
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, 10),
+                    itemCount: 8,
+                    separatorBuilder: (_, __) => const SizedBox(height: 6),
                     itemBuilder: (_, index) => Container(
-                      height: 80,
+                      height: 52,
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(color: AppColors.border),
                       ),
-                      padding: EdgeInsets.all(16),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       child: Row(
                         children: [
-                          ShimmerBox(width: 44, height: 44, borderRadius: 14),
-                          SizedBox(width: 16),
+                          ShimmerBox(width: 36, height: 36, borderRadius: 10),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: const [
-                                ShimmerBox(width: 150, height: 14, borderRadius: 4),
-                                SizedBox(height: 8),
-                                ShimmerBox(width: 100, height: 11, borderRadius: 4),
+                                ShimmerBox(width: 150, height: 12, borderRadius: 4),
+                                SizedBox(height: 6),
+                                ShimmerBox(width: 100, height: 10, borderRadius: 4),
                               ],
                             ),
                           ),
-                          ShimmerBox(width: 80, height: 24, borderRadius: 6),
+                          ShimmerBox(width: 70, height: 20, borderRadius: 4),
                         ],
                       ),
                     ),
@@ -123,36 +121,35 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.factory_outlined, size: 64, color: AppColors.textTertiary.withValues(alpha: 0.5)),
-                        SizedBox(height: 16),
-                        Text('Aucun fournisseur trouve', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
+                        Icon(Icons.factory_outlined, size: 48, color: AppColors.textTertiary.withValues(alpha: 0.5)),
+                        const SizedBox(height: 12),
+                        Text('Aucun fournisseur trouvé', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
                       ],
                     ),
                   );
                 }
 
                 return ListView.separated(
-                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, 10),
                   itemCount: filtered.length,
-                  separatorBuilder: (context, index) => SizedBox(height: 12),
+                  separatorBuilder: (context, index) => const SizedBox(height: 6),
                   itemBuilder: (context, index) {
                     final s = filtered[index];
                     final isDefault = s.isDefault || s.name.trim().toLowerCase() == 'fournisseur passager';
                     return Container(
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: Offset(0, 4)),
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.01), blurRadius: 4, offset: Offset(0, 2)),
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 1)),
                         ],
-                        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
                       ),
                       child: Material(
                         color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
                           onTap: () {
                             if (isDefault) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -168,27 +165,27 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                           },
                           hoverColor: AppColors.primary.withValues(alpha: 0.02),
                           child: Padding(
-                            padding: EdgeInsets.all(20),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             child: Row(
                               children: [
                                 // Avatar
                                 Container(
-                                  width: 50,
-                                  height: 50,
+                                  width: 36,
+                                  height: 36,
                                   decoration: BoxDecoration(
                                     color: AppColors.surfaceAlt.withValues(alpha: 0.5),
-                                    borderRadius: BorderRadius.circular(14),
+                                    borderRadius: BorderRadius.circular(10),
                                     border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
                                   ),
                                   child: Center(
                                     child: Icon(
                                       s.supplierType == 'entreprise' ? Icons.domain_rounded : Icons.person_outline_rounded,
                                       color: AppColors.textSecondary,
-                                      size: 24,
+                                      size: 18,
                                     ),
                                   ),
                                 ),
-                                SizedBox(width: 16),
+                                const SizedBox(width: 12),
                                 
                                 // Info
                                 Expanded(
@@ -200,40 +197,40 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                         children: [
                                           Text(
                                             s.name,
-                                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                                            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
-                                          SizedBox(width: 8),
+                                          const SizedBox(width: 8),
                                           Container(
-                                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: s.supplierType == 'entreprise' ? AppColors.infoLight : Colors.purple.shade50,
-                                              borderRadius: BorderRadius.circular(6),
+                                              borderRadius: BorderRadius.circular(4),
                                               border: Border.all(color: s.supplierType == 'entreprise' ? AppColors.info.withValues(alpha: 0.2) : Colors.purple.withValues(alpha: 0.2)),
                                             ),
                                             child: Text(
                                               s.supplierType == 'entreprise' ? 'Entreprise' : 'Particulier',
-                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: s.supplierType == 'entreprise' ? AppColors.info : Colors.purple),
+                                              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: s.supplierType == 'entreprise' ? AppColors.info : Colors.purple),
                                             ),
                                           ),
                                           if (isDefault) ...[
-                                            SizedBox(width: 6),
+                                            const SizedBox(width: 6),
                                             Container(
-                                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                               decoration: BoxDecoration(
                                                 color: AppColors.primary.withValues(alpha: 0.1),
-                                                borderRadius: BorderRadius.circular(6),
+                                                borderRadius: BorderRadius.circular(4),
                                                 border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                                               ),
                                               child: Row(
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
-                                                  Icon(Icons.lock_rounded, size: 11, color: AppColors.primary),
-                                                  SizedBox(width: 3),
+                                                  Icon(Icons.lock_rounded, size: 10, color: AppColors.primary),
+                                                  const SizedBox(width: 2),
                                                   Text(
                                                     'Par défaut',
-                                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                                                    style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.primary),
                                                   ),
                                                 ],
                                               ),
@@ -241,23 +238,23 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                           ],
                                         ],
                                       ),
-                                      SizedBox(height: 6),
+                                      const SizedBox(height: 3),
                                       Row(
                                         children: [
-                                          Icon(Icons.tag_rounded, size: 14, color: AppColors.textTertiary),
-                                          SizedBox(width: 4),
-                                          Text(s.code, style: TextStyle(fontSize: 13, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+                                          Icon(Icons.tag_rounded, size: 12, color: AppColors.textTertiary),
+                                          const SizedBox(width: 3),
+                                          Text(s.code, style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
                                           if (s.email != null && s.email!.isNotEmpty) ...[
-                                            SizedBox(width: 12),
-                                            Icon(Icons.email_outlined, size: 14, color: AppColors.textTertiary),
-                                            SizedBox(width: 4),
-                                            Text(s.email!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                            const SizedBox(width: 10),
+                                            Icon(Icons.email_outlined, size: 12, color: AppColors.textTertiary),
+                                            const SizedBox(width: 3),
+                                            Text(s.email!, style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
                                           ],
                                           if (s.phone != null && s.phone!.isNotEmpty) ...[
-                                            SizedBox(width: 12),
-                                            Icon(Icons.phone_outlined, size: 14, color: AppColors.textTertiary),
-                                            SizedBox(width: 4),
-                                            Text(s.phone!, style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                                            const SizedBox(width: 10),
+                                            Icon(Icons.phone_outlined, size: 12, color: AppColors.textTertiary),
+                                            const SizedBox(width: 3),
+                                            Text(s.phone!, style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
                                           ],
                                         ],
                                       ),
@@ -266,10 +263,12 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                 ),
                                 
                                 // Actions
-                                SizedBox(width: 16),
+                                const SizedBox(width: 12),
                                 PopupMenuButton<String>(
-                                  icon: Icon(Icons.more_vert_rounded, color: AppColors.textTertiary),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  icon: Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textTertiary),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   elevation: 4,
                                   onSelected: (val) {
                                     if (val == 'edit') _showDialog(context, s);
@@ -278,17 +277,18 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                   itemBuilder: (context) => [
                                     if (!isDefault) ...[
                                       if (PermissionService.instance.canUpdate(UserPermissionResources.suppliers))
-                                        PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_outlined, size: 18), SizedBox(width: 8), Text('Modifier')])),
+                                        PopupMenuItem(value: 'edit', height: 36, child: Row(children: [Icon(Icons.edit_outlined, size: 16, color: AppColors.primary), const SizedBox(width: 8), const Text('Modifier', style: TextStyle(fontSize: 13))])),
                                       if (PermissionService.instance.canDelete(UserPermissionResources.suppliers))
-                                        PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error), SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))])),
+                                        PopupMenuItem(value: 'delete', height: 36, child: Row(children: [Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.error), const SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error, fontSize: 13))])),
                                     ] else ...[
                                       PopupMenuItem(
                                         enabled: false,
+                                        height: 36,
                                         child: Row(
                                           children: [
-                                            Icon(Icons.lock_rounded, size: 16, color: AppColors.textTertiary),
-                                            SizedBox(width: 8),
-                                            Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+                                            Icon(Icons.lock_rounded, size: 14, color: AppColors.textTertiary),
+                                            const SizedBox(width: 8),
+                                            Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
                                           ],
                                         ),
                                       ),
@@ -304,7 +304,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                   },
                 );
               }
-              return SizedBox();
+              return const SizedBox();
             },
           ),
         ),

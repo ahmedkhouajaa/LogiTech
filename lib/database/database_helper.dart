@@ -619,7 +619,42 @@ class DatabaseHelper {
     } catch (_) {}
     return CompanySettings();
   }
-  Future<void> updateCompanySettings(dynamic settings) async {}
+  Future<void> updateCompanySettings(dynamic settings) async {
+    if (settings is CompanySettings) {
+      final eid = settings.id.isNotEmpty ? settings.id : (currentEnterpriseId ?? '');
+      if (eid.isNotEmpty) {
+        final now = DateTime.now();
+        final updateMap = {
+          'name': settings.name.trim(),
+          'phone': settings.phone?.trim(),
+          'email': settings.email?.trim(),
+          'website': settings.website?.trim(),
+          'tax_id': settings.taxId?.trim(),
+          'taxId': settings.taxId?.trim(),
+          'rc_number': settings.rcNumber?.trim(),
+          'rcNumber': settings.rcNumber?.trim(),
+          'address': settings.address?.trim(),
+          'rib': settings.rib?.trim(),
+          'updated_at': now.toIso8601String(),
+          'updatedAt': now.toIso8601String(),
+        };
+
+        if (FirebaseAuth.instance.currentUser != null) {
+          await _firestore.collection('enterprises').doc(eid).set(updateMap, SetOptions(merge: true));
+          try {
+            await _firestore.collection('enterprises').doc(eid).collection('settings').doc('company_settings').set(updateMap, SetOptions(merge: true));
+          } catch (_) {}
+          try {
+            await _firestore.collection('company_settings').doc(eid).set({
+              ...updateMap,
+              'enterprise_id': eid,
+              'userId': FirebaseAuth.instance.currentUser?.uid,
+            }, SetOptions(merge: true));
+          } catch (_) {}
+        }
+      }
+    }
+  }
   Future<dynamic> getDefaultTemplate(String type) async => null;
   Future<List<dynamic>> getPendingSyncItems() async => [];
   Future<void> markSynced(int id) async {}
