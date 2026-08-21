@@ -12,6 +12,14 @@ class DocumentWrapper {
   final String? notes;
   final String? conditionsGenerales;
   final List<DocumentItemWrapper> items;
+  final String? customerAddress;
+  final String? customerPhone;
+  final String? customerEmail;
+  final String? customerCode;
+  final String? customerTaxId;
+  final DateTime? validityDate;
+  final double? subtotalHT;
+  final double? totalDiscountAmount;
   final Map<String, dynamic> customData;
 
   DocumentWrapper({
@@ -19,6 +27,14 @@ class DocumentWrapper {
     required this.number,
     required this.documentTitle,
     this.customerName,
+    this.customerAddress,
+    this.customerPhone,
+    this.customerEmail,
+    this.customerCode,
+    this.customerTaxId,
+    this.validityDate,
+    this.subtotalHT,
+    this.totalDiscountAmount,
     required this.date,
     this.dueDate,
     required this.totalHT,
@@ -30,6 +46,20 @@ class DocumentWrapper {
     required this.items,
     this.customData = const {},
   });
+
+  double get totalDiscount {
+    if (totalDiscountAmount != null) return totalDiscountAmount!;
+    if (customData.containsKey('totalDiscount')) {
+      return (customData['totalDiscount'] as num?)?.toDouble() ?? 0.0;
+    }
+    double sum = 0;
+    for (final item in items) {
+      if (item.discountPercent > 0) {
+        sum += (item.quantity * item.unitPrice) * (item.discountPercent / 100);
+      }
+    }
+    return sum;
+  }
 
   static String _extractItemName(dynamic item) {
     try {

@@ -308,32 +308,67 @@ class TotalFieldEditor extends StatelessWidget {
           onVisibleChanged: (v) => _update('visible', v),
         ),
         if (isVisible) ...[
-          Row(
-            children: [
-              Expanded(
-                child: TemplateMeasurementInput(
-                  label: 'Taille police',
-                  value: (config['fontSize'] as num?)?.toDouble() ?? 10,
-                  unit: 'pt',
-                  onChanged: (v) => _update('fontSize', v),
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: TemplateColorPicker(
-                  label: 'Couleur',
-                  color: Color(config['color'] as int? ?? 0xFF000000),
-                  onChanged: (c) => _update('color', c.toARGB32()),
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: TemplateFontStyleSelector(
-                  value: config['style'] as String? ?? 'Normal',
-                  onChanged: (v) => _update('style', v),
-                ),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 360) {
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TemplateMeasurementInput(
+                            label: 'Taille police',
+                            value: (config['fontSize'] as num?)?.toDouble() ?? 10,
+                            unit: 'pt',
+                            onChanged: (v) => _update('fontSize', v),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TemplateColorPicker(
+                            label: 'Couleur',
+                            color: Color(config['color'] as int? ?? 0xFF000000),
+                            onChanged: (c) => _update('color', c.toARGB32()),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    TemplateFontStyleSelector(
+                      value: config['style'] as String? ?? 'Normal',
+                      onChanged: (v) => _update('style', v),
+                    ),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(
+                    child: TemplateMeasurementInput(
+                      label: 'Taille police',
+                      value: (config['fontSize'] as num?)?.toDouble() ?? 10,
+                      unit: 'pt',
+                      onChanged: (v) => _update('fontSize', v),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TemplateColorPicker(
+                      label: 'Couleur',
+                      color: Color(config['color'] as int? ?? 0xFF000000),
+                      onChanged: (c) => _update('color', c.toARGB32()),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TemplateFontStyleSelector(
+                      value: config['style'] as String? ?? 'Normal',
+                      onChanged: (v) => _update('style', v),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           if (extraWidgets != null) ...extraWidgets!,
         ],

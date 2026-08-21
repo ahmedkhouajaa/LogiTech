@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/enterprise_service.dart';
@@ -20,7 +21,6 @@ import '../models/return_note.dart';
 import '../models/supplier_return.dart';
 import '../models/inventory_sheet.dart';
 import '../models/stock_movement.dart';
-import '../models/treasury_account.dart';
 import '../models/payment_model.dart';
 import '../models/project.dart';
 import '../models/check_traite.dart';
@@ -585,11 +585,111 @@ class DatabaseHelper {
   Future<void> insertAccount(dynamic item) async {}
   Future<List<TransactionModel>> getTransactions() async => [];
 
-  Future<List<DocumentTemplate>> getDocumentTemplates() async => [];
-  Future<void> insertDocumentTemplate(dynamic item) async {}
-  Future<void> updateDocumentTemplate(dynamic item) async {}
-  Future<void> deleteDocumentTemplate(String id) async {}
-  Future<void> setDefaultTemplate(String type, String id) async {}
+  Future<List<DocumentTemplate>> getDocumentTemplates() async {
+    final eid = currentEnterpriseId;
+    if (eid == null || eid.isEmpty) return [];
+
+    try {
+      final snap = await _firestore
+          .collection('document_templates')
+          .where('enterprise_id', isEqualTo: eid)
+          .get();
+
+      if (snap.docs.isEmpty) {
+        final snapCamel = await _firestore
+            .collection('document_templates')
+            .where('enterpriseId', isEqualTo: eid)
+            .get();
+
+        if (snapCamel.docs.isNotEmpty) {
+          final list = snapCamel.docs
+              .map((d) => DocumentTemplate.fromMap(d.data(), id: d.id))
+              .where((t) => t.id.isNotEmpty)
+              .toList();
+          list.sort((a, b) => (b.isDefault ? 1 : 0).compareTo(a.isDefault ? 1 : 0));
+          return list;
+        }
+
+        // Auto-seed the 5 default templates for this enterprise
+        final defaults = DocumentTemplate.createDefaultTemplates(enterpriseId: eid);
+        final batch = _firestore.batch();
+        final uid = currentUid ?? 'local-user';
+
+        for (final tpl in defaults) {
+          final ref = _firestore.collection('document_templates').doc(tpl.id);
+          final map = tpl.toMap();
+          map['userId'] = uid;
+          batch.set(ref, map, SetOptions(merge: true));
+        }
+        await batch.commit();
+        return defaults;
+      }
+
+      final list = snap.docs
+          .map((d) => DocumentTemplate.fromMap(d.data(), id: d.id))
+          .where((t) => t.id.isNotEmpty)
+          .toList();
+      list.sort((a, b) => (b.isDefault ? 1 : 0).compareTo(a.isDefault ? 1 : 0));
+      return list;
+    } catch (e) {
+      debugPrint('[DatabaseHelper.getDocumentTemplates] Error: $e');
+      return DocumentTemplate.createDefaultTemplates(enterpriseId: eid);
+    }
+  }
+
+  Future<void> insertDocumentTemplate(dynamic item) async {
+    if (item is DocumentTemplate) {
+      final eid = item.enterpriseId ?? currentEnterpriseId;
+      final docId = item.id.isNotEmpty ? item.id : _firestore.collection('document_templates').doc().id;
+      final tpl = item.copyWith(id: docId, enterpriseId: eid);
+      final map = tpl.toMap();
+      map['userId'] = currentUid;
+      await _firestore.collection('document_templates').doc(docId).set(map, SetOptions(merge: true));
+    }
+  }
+
+  Future<void> updateDocumentTemplate(dynamic item) async {
+    if (item is DocumentTemplate) {
+      final map = item.toMap();
+      map['userId'] = currentUid;
+      map['updated_at'] = DateTime.now().toIso8601String();
+      map['updatedAt'] = DateTime.now().toIso8601String();
+      await _firestore.collection('document_templates').doc(item.id).set(map, SetOptions(merge: true));
+    }
+  }
+
+  Future<void> deleteDocumentTemplate(String id) async {
+    await _firestore.collection('document_templates').doc(id).delete();
+  }
+
+  Future<void> setDefaultTemplate(String id, String type) async {
+    final eid = currentEnterpriseId;
+    if (eid == null || eid.isEmpty) return;
+
+    try {
+      final snap = await _firestore
+          .collection('document_templates')
+          .where('enterprise_id', isEqualTo: eid)
+          .get();
+
+      final batch = _firestore.batch();
+      for (final doc in snap.docs) {
+        final docType = doc.data()['document_type'] ?? doc.data()['type'] ?? 'invoice';
+        if (docType == type || type.isEmpty) {
+          final isTarget = doc.id == id;
+          batch.update(doc.reference, {
+            'is_default': isTarget,
+            'isDefault': isTarget,
+            'updated_at': DateTime.now().toIso8601String(),
+            'updatedAt': DateTime.now().toIso8601String(),
+          });
+        }
+      }
+      await batch.commit();
+    } catch (e) {
+      debugPrint('[DatabaseHelper.setDefaultTemplate] Error: $e');
+    }
+  }
 
   // Dashboard Stats
   Future<double> getTotalInvoiced() async => 0.0;
@@ -655,7 +755,55 @@ class DatabaseHelper {
       }
     }
   }
-  Future<dynamic> getDefaultTemplate(String type) async => null;
+  Future<DocumentTemplate?> getDefaultTemplate(String type) async {
+    final eid = currentEnterpriseId;
+    if (eid == null || eid.isEmpty) {
+      return DocumentTemplate.classicTemplate(
+        id: 'default_classic',
+        enterpriseId: 'default',
+        isDefault: true,
+        documentType: type,
+      );
+    }
+
+    try {
+      final snap = await _firestore
+          .collection('document_templates')
+          .where('enterprise_id', isEqualTo: eid)
+          .where('is_default', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      if (snap.docs.isNotEmpty) {
+        return DocumentTemplate.fromMap(snap.docs.first.data(), id: snap.docs.first.id);
+      }
+
+      final snapCamel = await _firestore
+          .collection('document_templates')
+          .where('enterprise_id', isEqualTo: eid)
+          .where('isDefault', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      if (snapCamel.docs.isNotEmpty) {
+        return DocumentTemplate.fromMap(snapCamel.docs.first.data(), id: snapCamel.docs.first.id);
+      }
+
+      final all = await getDocumentTemplates();
+      if (all.isNotEmpty) {
+        return all.firstWhere((t) => t.isDefault, orElse: () => all.first);
+      }
+    } catch (e) {
+      debugPrint('[DatabaseHelper.getDefaultTemplate] Error: $e');
+    }
+
+    return DocumentTemplate.classicTemplate(
+      id: '${eid}_tpl_classic',
+      enterpriseId: eid,
+      isDefault: true,
+      documentType: type,
+    );
+  }
   Future<List<dynamic>> getPendingSyncItems() async => [];
   Future<void> markSynced(int id) async {}
   Future<void> markSyncError(int id, String error) async {}

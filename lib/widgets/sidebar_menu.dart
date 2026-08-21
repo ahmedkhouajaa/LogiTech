@@ -139,7 +139,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
                       const _SidebarDivider(),
                       _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
                       _buildItem(AppModule.companyInfo, Icons.business_rounded, 'Informations de la societe'),
-                      // _buildItem(AppModule.documentTemplates, Icons.description_rounded, 'Modeles de documents'),
+                      _buildItem(AppModule.documentTemplates, Icons.design_services_rounded, 'Modeles de documents'),
                       if (PermissionService.instance.isAdmin)
                         _buildItem(AppModule.userManagement, Icons.manage_accounts_rounded, 'Gestion des utilisateurs'),
                       const SizedBox(height: 16),

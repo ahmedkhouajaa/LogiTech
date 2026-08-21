@@ -123,6 +123,15 @@ class DocumentTemplatesBloc
   Future<void> _onDelete(
       DeleteDocumentTemplate event, Emitter<DocumentTemplatesState> emit) async {
     try {
+      if (state is DocumentTemplatesLoaded) {
+        final currentTemplates = (state as DocumentTemplatesLoaded).templates;
+        final target = currentTemplates.where((t) => t.id == event.id).firstOrNull;
+        if (target != null && target.isDefault) {
+          emit(const DocumentTemplatesError('Le modèle par défaut ne peut pas être supprimé.'));
+          add(LoadDocumentTemplates());
+          return;
+        }
+      }
       await DatabaseHelper.instance.deleteDocumentTemplate(event.id);
       add(LoadDocumentTemplates());
     } catch (e) {

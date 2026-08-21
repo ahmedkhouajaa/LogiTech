@@ -11,6 +11,7 @@ import '../models/customer.dart';
 import '../models/supplier.dart';
 import '../models/treasury_account.dart';
 import '../models/project.dart';
+import '../models/document_template.dart';
 import '../utils/constants.dart';
 import '../database/database_helper.dart';
 import '../models/user_management_model.dart';
@@ -34,6 +35,8 @@ class EnterpriseService {
   List<Enterprise> _enterprises = [];
   final Set<String> _pendingDefaultCreations = {};
   bool _isCreatingEnterprise = false;
+  bool _isLoadingEnterprises = false;
+  List<String> _lastSyncedEnterpriseIds = [];
 
   final _enterpriseController = StreamController<String?>.broadcast();
   final _enterpriseListController = StreamController<List<Enterprise>>.broadcast();
@@ -102,7 +105,6 @@ class EnterpriseService {
       if (data == null) return;
 
       final List<String> enterpriseIds = List<String>.from(data['enterprises'] ?? []);
-      final currentIds = _enterprises.map((e) => e.id).toList();
 
       // Check if currentEnterpriseId was changed remotely
       final remoteCurrentId = data['currentEnterpriseId']?.toString();
@@ -117,11 +119,11 @@ class EnterpriseService {
         currentEnterpriseNotifier.value = currentEnterprise;
       }
 
-      // Check if enterprise list in Firestore has new/removed enterprises
-      final hasChanges = enterpriseIds.length != currentIds.length ||
-          !enterpriseIds.every((id) => currentIds.contains(id));
+      // Check if enterprise list in Firestore has new/removed enterprises compared to last synced
+      final hasChanges = enterpriseIds.length != _lastSyncedEnterpriseIds.length ||
+          !enterpriseIds.every((id) => _lastSyncedEnterpriseIds.contains(id));
 
-      if (hasChanges) {
+      if (hasChanges && !_isLoadingEnterprises) {
         debugPrint('[EnterpriseService] Detected enterprise list change in Firestore! Syncing...');
         await loadEnterprisesFromFirestore();
       } else {
@@ -232,6 +234,8 @@ class EnterpriseService {
     _enterpriseDocSubscriptions.clear();
     _currentEnterpriseId = null;
     _enterprises = [];
+    _lastSyncedEnterpriseIds = [];
+    _isLoadingEnterprises = false;
     currentEnterpriseNotifier.value = null;
     enterprisesNotifier.value = [];
     final prefs = await SharedPreferences.getInstance();
@@ -248,7 +252,10 @@ class EnterpriseService {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return [];
 
-    startRealtimeSync();
+    if (_isLoadingEnterprises) {
+      return _enterprises;
+    }
+    _isLoadingEnterprises = true;
 
     try {
       // Read user doc to get enterprise IDs
@@ -258,9 +265,16 @@ class EnterpriseService {
           .get();
 
       List<String> enterpriseIds = [];
-      if (userDoc.exists && userDoc.data()?['enterprises'] != null) {
-        enterpriseIds = List<String>.from(userDoc.data()!['enterprises']);
+      String? remoteCurrentId;
+      if (userDoc.exists && userDoc.data() != null) {
+        final data = userDoc.data()!;
+        if (data['enterprises'] != null) {
+          enterpriseIds = List<String>.from(data['enterprises']);
+        }
+        remoteCurrentId = data['currentEnterpriseId']?.toString();
       }
+
+      _lastSyncedEnterpriseIds = List<String>.from(enterpriseIds);
 
       if (enterpriseIds.isEmpty) {
         _enterprises = [];
@@ -273,14 +287,25 @@ class EnterpriseService {
 
       // Fetch enterprise docs
       final List<Enterprise> result = [];
+      final List<String> validIds = [];
       for (final eid in enterpriseIds) {
         final doc = await FirebaseFirestore.instance
             .collection('enterprises')
             .doc(eid)
             .get();
-        if (doc.exists) {
+        if (doc.exists && doc.data() != null) {
           result.add(Enterprise.fromMap({...doc.data()!, 'id': doc.id}));
+          validIds.add(doc.id);
         }
+      }
+
+      // If user doc contained deleted/ghost enterprise IDs, sanitize user doc once
+      if (validIds.length != enterpriseIds.length) {
+        _lastSyncedEnterpriseIds = List<String>.from(validIds);
+        unawaited(FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .set({'enterprises': validIds}, SetOptions(merge: true)));
       }
 
       _enterprises = List.unmodifiable(result);
@@ -288,14 +313,14 @@ class EnterpriseService {
 
       // If current enterprise is not in list, switch to first
       if (_currentEnterpriseId == null ||
-          !enterpriseIds.contains(_currentEnterpriseId)) {
-        _currentEnterpriseId = result.isNotEmpty ? result.first.id : null;
+          !validIds.contains(_currentEnterpriseId)) {
+        _currentEnterpriseId = validIds.isNotEmpty ? validIds.first : null;
       }
 
       currentEnterpriseNotifier.value = currentEnterprise;
 
-      // Also update Firestore user doc's currentEnterpriseId
-      if (_currentEnterpriseId != null) {
+      // Only update Firestore user doc's currentEnterpriseId if it actually changed
+      if (_currentEnterpriseId != null && _currentEnterpriseId != remoteCurrentId) {
         await FirebaseFirestore.instance
             .collection('users')
             .doc(uid)
@@ -311,6 +336,8 @@ class EnterpriseService {
     } catch (e) {
       debugPrint('EnterpriseService.loadEnterprisesFromFirestore error: $e');
       return _enterprises; // Return cached list on failure
+    } finally {
+      _isLoadingEnterprises = false;
     }
   }
 
@@ -382,6 +409,11 @@ class EnterpriseService {
 
       final projectsQuery = await FirebaseFirestore.instance
           .collection('projects')
+          .where('enterprise_id', isEqualTo: enterpriseId)
+          .get();
+
+      final templatesQuery = await FirebaseFirestore.instance
+          .collection('document_templates')
           .where('enterprise_id', isEqualTo: enterpriseId)
           .get();
 
@@ -609,6 +641,22 @@ class EnterpriseService {
         );
         hasNewDefaults = true;
         debugPrint('[EnterpriseDefaults] Staged default project: ${defaultProject.id}');
+      }
+
+      // Document Templates: create default 5 templates if none exist
+      if (templatesQuery.docs.isEmpty) {
+        final defaultTemplates = DocumentTemplate.createDefaultTemplates(enterpriseId: enterpriseId);
+        for (final tpl in defaultTemplates) {
+          final tplData = tpl.toMap();
+          tplData['userId'] = uid;
+          batch.set(
+            FirebaseFirestore.instance.collection('document_templates').doc(tpl.id),
+            tplData,
+            SetOptions(merge: true),
+          );
+        }
+        hasNewDefaults = true;
+        debugPrint('[EnterpriseDefaults] Staged 5 default document templates for enterprise $enterpriseId');
       }
 
       // Mark enterprise document with defaultsCreated: true in the same batch

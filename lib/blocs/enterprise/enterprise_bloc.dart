@@ -84,6 +84,9 @@ class EnterprisesUpdated extends EnterpriseEvent {
   List<Object?> get props => [enterprises, currentEnterpriseId];
 }
 
+/// Reset enterprise bloc to initial state (e.g. on user logout).
+class ResetEnterprises extends EnterpriseEvent {}
+
 // ─── States ──────────────────────────────────────────────────────────
 
 abstract class EnterpriseState extends Equatable {
@@ -133,6 +136,7 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
     on<CreateEnterprise>(_onCreateEnterprise);
     on<UpdateEnterprise>(_onUpdateEnterprise);
     on<EnterprisesUpdated>(_onEnterprisesUpdated);
+    on<ResetEnterprises>((event, emit) => emit(EnterpriseInitial()));
 
     // Reactively update BLoC whenever EnterpriseService streams a refreshed enterprise list
     _enterprisesSub = _service.enterprisesStream.listen((enterprises) {
@@ -162,6 +166,9 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
     EnterprisesUpdated event,
     Emitter<EnterpriseState> emit,
   ) {
+    if (event.enterprises.isEmpty && (state is EnterpriseInitial || state is EnterpriseLoading)) {
+      return;
+    }
     emit(EnterpriseLoaded(
       enterprises: List<Enterprise>.from(event.enterprises),
       currentEnterpriseId: event.currentEnterpriseId ?? _service.currentEnterpriseId,

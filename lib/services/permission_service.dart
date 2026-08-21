@@ -209,16 +209,19 @@ class PermissionService {
         _role = 'admin';
         _permissions = UserPermissionResources.getAdminDefaultPermissions();
 
-        // Auto-heal: Ensure user document and enterprise members list in Firestore are updated with admin role
-        final adminPerms = UserPermissionResources.getAdminDefaultPermissions()
-            .map((k, v) => MapEntry(k, v.toMap()));
-        FirebaseFirestore.instance.collection('users').doc(uid).set({
-          'role': 'admin',
-          'isOwner': true,
-          'permissions': adminPerms,
-          if (eid.isNotEmpty) 'currentEnterpriseId': eid,
-          if (eid.isNotEmpty) 'enterprises': FieldValue.arrayUnion([eid]),
-        }, SetOptions(merge: true)).ignore();
+        // Only write to Firestore if user doc is missing role or permissions (avoid infinite write-snapshot loop)
+        final needsInit = uData['role'] == null || uData['permissions'] == null;
+        if (needsInit) {
+          final adminPerms = UserPermissionResources.getAdminDefaultPermissions()
+              .map((k, v) => MapEntry(k, v.toMap()));
+          FirebaseFirestore.instance.collection('users').doc(uid).set({
+            'role': 'admin',
+            'isOwner': true,
+            'permissions': adminPerms,
+            if (eid.isNotEmpty) 'currentEnterpriseId': eid,
+            if (eid.isNotEmpty) 'enterprises': FieldValue.arrayUnion([eid]),
+          }, SetOptions(merge: true)).ignore();
+        }
       } else {
         _isAdmin = false;
         _isOwner = false;

@@ -627,15 +627,18 @@ class _EnterpriseGateState extends State<_EnterpriseGate> {
   @override
   void initState() {
     super.initState();
-    // Trigger enterprise load when this widget first appears
-    context.read<EnterpriseBloc>().add(LoadEnterprises());
+    // Only trigger LoadEnterprises if not already loaded with a valid enterprise
+    final currentBlocState = context.read<EnterpriseBloc>().state;
+    if (currentBlocState is! EnterpriseLoaded || currentBlocState.currentEnterpriseId == null) {
+      context.read<EnterpriseBloc>().add(LoadEnterprises());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<EnterpriseBloc, EnterpriseState>(
       listener: (context, state) {
-        if (state is EnterpriseLoaded && state.currentEnterpriseId != null) {
+        if (state is EnterpriseLoaded && state.currentEnterpriseId != null && state.currentEnterpriseId!.isNotEmpty) {
           // Re-fetch enterprise-scoped data across ALL BLoCs
           context.read<DashboardBloc>().add(DashboardRefreshRequested());
           context.read<InvoicesBloc>().add(LoadInvoices());
@@ -670,48 +673,154 @@ class _EnterpriseGateState extends State<_EnterpriseGate> {
         }
       },
       builder: (context, state) {
+        Widget content;
         if (state is EnterpriseLoading || state is EnterpriseInitial) {
-          return Scaffold(
-            backgroundColor: AppColors.sidebarBg,
-            body: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(color: AppColors.primary),
-                  SizedBox(height: 16),
-                  Text('Chargement de l\'entreprise...', style: TextStyle(color: Colors.white60, fontSize: 14)),
-                ],
-              ),
-            ),
+          content = const _EnterpriseSplashLoadingScreen(
+            key: ValueKey('enterprise_loading'),
+            message: 'Chargement de l\'entreprise...',
           );
-        }
-        if (state is EnterpriseSwitching) {
-          return Scaffold(
-            backgroundColor: AppColors.sidebarBg,
-            body: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(color: AppColors.primary),
-                  SizedBox(height: 16),
-                  Text('Changement d\'entreprise...', style: TextStyle(color: Colors.white60, fontSize: 14)),
-                ],
-              ),
-            ),
+        } else if (state is EnterpriseSwitching) {
+          content = const _EnterpriseSplashLoadingScreen(
+            key: ValueKey('enterprise_switching'),
+            message: 'Changement d\'entreprise...',
           );
-        }
-        if (state is EnterpriseLoaded) {
+        } else if (state is EnterpriseError) {
+          content = _EnterpriseErrorScreen(
+            key: const ValueKey('enterprise_error'),
+            message: state.message,
+            onRetry: () => context.read<EnterpriseBloc>().add(LoadEnterprises()),
+          );
+        } else if (state is EnterpriseLoaded) {
           if (state.enterprises.isEmpty || state.currentEnterpriseId == null || state.currentEnterpriseId!.isEmpty) {
-            return const OnboardingEnterpriseScreen();
+            content = const OnboardingEnterpriseScreen(
+              key: ValueKey('enterprise_onboarding'),
+            );
+          } else {
+            content = KeyedSubtree(
+              key: ValueKey('shell_${state.currentEnterpriseId}'),
+              child: const _ResponsiveShellGate(),
+            );
           }
-          // KeyedSubtree: changing the key forces a full rebuild of the UI shell
-          return KeyedSubtree(
-            key: ValueKey(state.currentEnterpriseId),
-            child: _ResponsiveShellGate(),
+        } else {
+          content = const _EnterpriseSplashLoadingScreen(
+            key: ValueKey('enterprise_loading_fallback'),
+            message: 'Chargement de l\'entreprise...',
           );
         }
-        return const OnboardingEnterpriseScreen();
+
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          child: content,
+        );
       },
+    );
+  }
+}
+
+class _EnterpriseSplashLoadingScreen extends StatelessWidget {
+  final String message;
+  const _EnterpriseSplashLoadingScreen({super.key, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.sidebarBg,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: AppColors.primary),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: const TextStyle(color: Colors.white60, fontSize: 14),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EnterpriseErrorScreen extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const _EnterpriseErrorScreen({
+    super.key,
+    required this.message,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
+      body: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+          constraints: const BoxConstraints(maxWidth: 440),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF334155)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.cloud_off_rounded, color: AppColors.error, size: 32),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Impossible de charger l\'entreprise',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                style: const TextStyle(color: Colors.white60, fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
+                    icon: const Icon(Icons.logout_rounded, size: 16, color: Colors.white70),
+                    label: const Text('Déconnexion', style: TextStyle(color: Colors.white70)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF475569)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('Réessayer'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

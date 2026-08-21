@@ -50,21 +50,21 @@ class SettingsScreen extends StatelessWidget {
               _buildSettingItem(Icons.language_rounded, 'Langue et region', 'Francais , devise par defaut'),
             ],
           ),
-          // SizedBox(height: AppSpacing.lg),
-          // _buildSettingsGroup(
-          //   'Documents',
-          //   [
-          //     _buildSettingItem(
-          //       Icons.description_rounded,
-          //       'Modèles de documents',
-          //       'Personnaliser les modèles de factures et documents',
-          //       onTap: () {
-          //         final shell = context.findAncestorStateOfType<AppShellScreenState>();
-          //         shell?.setActiveModule(AppModule.documentTemplates);
-          //       },
-          //     ),
-          //   ],
-          // ),
+          SizedBox(height: AppSpacing.lg),
+          _buildSettingsGroup(
+            'Documents',
+            [
+              _buildSettingItem(
+                Icons.design_services_rounded,
+                'Modèles de documents',
+                'Personnaliser les modèles de factures et documents',
+                onTap: () {
+                  final shell = context.findAncestorStateOfType<AppShellScreenState>();
+                  shell?.setActiveModule(AppModule.documentTemplates);
+                },
+              ),
+            ],
+          ),
           SizedBox(height: AppSpacing.lg),
           _buildSettingsGroup(
             'Synchronisation',

@@ -75,9 +75,11 @@ class _MobileDrawerState extends State<MobileDrawer> {
                         _buildItem(AppModule.withholdingTaxSales, Icons.description_rounded, 'RS vente'),
                         _buildItem(AppModule.withholdingTaxPurchase, Icons.receipt_rounded, 'RS achat'),
                       ]),
-                      _buildGroup('tiers', 'Tiers', Icons.people_rounded, [
+                      _buildGroup('contacts', 'Contacts', Icons.people_rounded, [
                         _buildItem(AppModule.customers, Icons.person_rounded, 'Clients'),
                         _buildItem(AppModule.suppliers, Icons.business_rounded, 'Fournisseurs'),
+                      ]),
+                      _buildGroup('articles', 'Articles', Icons.inventory_2_rounded, [
                         _buildItem(AppModule.products, Icons.inventory_2_rounded, 'Articles'),
                         _buildItem(AppModule.productSettings, Icons.tune_rounded, 'Parametres Articles'),
                       ]),
@@ -95,7 +97,7 @@ class _MobileDrawerState extends State<MobileDrawer> {
                       _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
                       _buildThemeToggleItem(),
                       _buildItem(AppModule.companyInfo, Icons.business_center_rounded, 'Ma Societe'),
-                      // _buildItem(AppModule.documentTemplates, Icons.design_services_rounded, 'Modeles'),
+                       _buildItem(AppModule.documentTemplates, Icons.design_services_rounded, 'Modeles'),
                       if (PermissionService.instance.isAdmin)
                         _buildItem(AppModule.userManagement, Icons.manage_accounts_rounded, 'Gestion des utilisateurs'),
                     ],

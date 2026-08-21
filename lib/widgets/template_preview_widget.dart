@@ -7,91 +7,126 @@ import '../utils/constants.dart';
 class TemplatePreviewWidget extends StatelessWidget {
   final DocumentTemplate template;
   final void Function(String itemKey, double newX, double newY)? onPositionChanged;
+  final bool showHeader;
 
   const TemplatePreviewWidget({
     super.key, 
     required this.template,
     this.onPositionChanged,
+    this.showHeader = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-      ),
-      padding: EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Éditeur de modèle',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+    final pageCanvas = Center(
+      child: AspectRatio(
+        aspectRatio: 210 / 297, // A4 proportions
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: AppColors.border),
+            boxShadow: AppShadows.md,
           ),
-          SizedBox(height: 16),
-          Expanded(
-            child: Center(
-              child: AspectRatio(
-                aspectRatio: 210 / 297, // A4 proportions
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppColors.border),
-                    boxShadow: AppShadows.md,
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final scale = constraints.maxWidth / 210; // scale factor (mm → px)
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: Stack(
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(10 * scale),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SizedBox(height: 85 * scale), // Space for absolute header
-                                  _buildTableArea(scale),
-                                  const Spacer(),
-                                  _buildTotalsArea(scale),
-                                  SizedBox(height: 6 * scale),
-                                  _buildFooterArea(scale),
-                                ],
-                              ),
-                            ),
-                            // Header and Client Elements
-                            _buildDraggableLogo(scale),
-                            _buildDraggableCompanyName(scale),
-                            _buildDraggableCompanyDetails(scale),
-                            _buildDraggableDocumentTitle(scale),
-                            _buildDraggableClientDetails(scale),
-                            // E-Facture elements
-                            if (template.qrCodeConfig['enabled'] == true)
-                              _buildQrCodeOverlay(scale),
-                            if (template.ttnReferenceConfig['enabled'] == true)
-                              _buildTtnOverlay(scale),
-                            if (template.submissionDateConfig['enabled'] == true)
-                              _buildSubmissionDateOverlay(scale),
-                            if (template.statusBadgeConfig['enabled'] == true)
-                              _buildStatusBadgeOverlay(scale),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+          child: LayoutBuilder(
+            builder: (context, innerConstraints) {
+              final scale = innerConstraints.maxWidth / 210; // scale factor (mm → px)
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Stack(
+                  children: [
+                    // Header & Client Elements
+                    _buildDraggableLogo(scale),
+                    _buildDraggableCompanyName(scale),
+                    _buildDraggableCompanyDetails(scale),
+                    _buildDraggableDocumentTitle(scale),
+                    _buildDraggableClientDetails(scale),
+                    // Article Table
+                    _buildDraggableTable(scale),
+                    // Notes & Conditions
+                    _buildDraggableNotes(scale),
+                    // Totals
+                    _buildDraggableTotals(scale),
+                    // Signature
+                    _buildDraggableSignature(scale),
+                    // Mentions légales & Footer
+                    _buildDraggableLegalNotice(scale),
+                    // E-Facture elements
+                    if (template.qrCodeConfig['enabled'] == true)
+                      _buildQrCodeOverlay(scale),
+                    if (template.ttnReferenceConfig['enabled'] == true)
+                      _buildTtnOverlay(scale),
+                    if (template.submissionDateConfig['enabled'] == true)
+                      _buildSubmissionDateOverlay(scale),
+                    if (template.statusBadgeConfig['enabled'] == true)
+                      _buildStatusBadgeOverlay(scale),
+                  ],
                 ),
-              ),
-            ),
+              );
+            },
           ),
-        ],
+        ),
       ),
+    );
+
+    if (!showHeader) {
+      return pageCanvas;
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 600;
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.surfaceAlt,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+          ),
+          padding: EdgeInsets.all(isNarrow ? 10 : 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.preview_rounded, size: isNarrow ? 16 : 18, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Aperçu du document A4',
+                    style: TextStyle(
+                      fontSize: isNarrow ? 13 : 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                    ),
+                    child: Text(
+                      'Temps réel',
+                      style: TextStyle(
+                        fontSize: isNarrow ? 10 : 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.success,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: isNarrow ? 8 : 14),
+              Expanded(child: pageCanvas),
+            ],
+          ),
+        );
+      },
     );
   }
 
   Widget _buildDraggableLogo(double scale) {
+    if (template.companyInfoConfig['showLogo'] != true) return const SizedBox.shrink();
+
     final cfg = template.logoConfig;
     final x = (cfg['positionX'] as num?)?.toDouble() ?? 15;
     final y = (cfg['positionY'] as num?)?.toDouble() ?? 15;
@@ -116,9 +151,13 @@ class TemplatePreviewWidget extends StatelessWidget {
   }
 
   Widget _buildDraggableCompanyName(double scale) {
+    if (template.companyInfoConfig['showName'] == false) return const SizedBox.shrink();
+
+    final showLogo = template.companyInfoConfig['showLogo'] == true;
+    final defaultX = showLogo ? 40.0 : 15.0;
     final cfg = template.companyNameConfig;
-    final x = (cfg['positionX'] as num?)?.toDouble() ?? 40;
-    final y = (cfg['positionY'] as num?)?.toDouble() ?? 15;
+    final x = (cfg['positionX'] as num?)?.toDouble() ?? defaultX;
+    final y = (cfg['positionY'] as num?)?.toDouble() ?? 15.0;
 
     return _buildDraggableOverlay(
       'companyName', x, y, scale,
@@ -137,43 +176,93 @@ class TemplatePreviewWidget extends StatelessWidget {
   }
 
   Widget _buildDraggableCompanyDetails(double scale) {
+    final comp = template.companyInfoConfig;
+    final showLogo = comp['showLogo'] == true;
+    final defaultX = showLogo ? 40.0 : 15.0;
     final cfg = template.companyDetailsConfig;
-    final x = (cfg['positionX'] as num?)?.toDouble() ?? 40;
-    final y = (cfg['positionY'] as num?)?.toDouble() ?? 22;
+    final x = (cfg['positionX'] as num?)?.toDouble() ?? defaultX;
+    final y = (cfg['positionY'] as num?)?.toDouble() ?? 22.0;
+
+    final List<String> details = [];
+    if (comp['showAddress'] != false) details.add('Adresse de l\'entreprise');
+    if (comp['showPhone'] != false) details.add('Tél: +216 00 000 000');
+    if (comp['showEmail'] != false) details.add('contact@entreprise.com');
+    if (comp['showWebsite'] != false) details.add('www.entreprise.com');
+    if (comp['showTaxId'] != false) details.add('NIF: 0000000/A/P/000');
+    if (comp['showRcNumber'] != false) details.add('RC: B0000000000');
+    if (comp['showRib'] != false) details.add('RIB: 00 000 0000000000000 00');
+
+    if (details.isEmpty) return const SizedBox.shrink();
 
     return _buildDraggableOverlay(
       'companyDetails', x, y, scale,
-      Text('Détails de l\'entreprise', style: TextStyle(fontSize: 3 * scale, color: AppColors.textTertiary)),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: details.take(4).map((d) => Text(
+          d,
+          style: TextStyle(fontSize: 2.8 * scale, color: AppColors.textSecondary, height: 1.3),
+        )).toList(),
+      ),
     );
   }
 
   Widget _buildDraggableDocumentTitle(double scale) {
+    final docInfo = template.documentInfoConfig;
     final cfg = template.documentTitleConfig;
     final x = (cfg['positionX'] as num?)?.toDouble() ?? 140;
     final y = (cfg['positionY'] as num?)?.toDouble() ?? 15;
 
     return _buildDraggableOverlay(
       'documentTitle', x, y, scale,
-      Container(
-        padding: EdgeInsets.symmetric(horizontal: 4 * scale, vertical: 2 * scale),
-        decoration: BoxDecoration(
-          color: Color(template.headerBgColor),
-          borderRadius: BorderRadius.circular(2),
-        ),
-        child: Text(
-          'FACTURE',
-          style: TextStyle(fontSize: 4 * scale, fontWeight: FontWeight.bold, color: Color(template.headerTextColor)),
-        ),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (docInfo['showTitle'] != false)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 4 * scale, vertical: 2 * scale),
+              decoration: BoxDecoration(
+                color: Color(template.headerBgColor),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: Text(
+                'FACTURE',
+                style: TextStyle(fontSize: 4 * scale, fontWeight: FontWeight.bold, color: Color(template.headerTextColor)),
+              ),
+            ),
+          if (docInfo['showNumber'] != false) ...[
+            SizedBox(height: 1 * scale),
+            Text('N° FC-2026-0001', style: TextStyle(fontSize: 2.8 * scale, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          ],
+          if (docInfo['showDate'] != false) ...[
+            SizedBox(height: 0.5 * scale),
+            Text('Date: 20/08/2026', style: TextStyle(fontSize: 2.5 * scale, color: AppColors.textSecondary)),
+          ],
+          if (docInfo['showDueDate'] != false) ...[
+            SizedBox(height: 0.5 * scale),
+            Text('Échéance: 20/09/2026', style: TextStyle(fontSize: 2.5 * scale, color: AppColors.textSecondary)),
+          ],
+        ],
       ),
     );
   }
 
   Widget _buildDraggableClientDetails(double scale) {
+    final cli = template.clientInfoConfig;
     final cfg = template.clientDetailsConfig;
     final x = (cfg['positionX'] as num?)?.toDouble() ?? 15;
     final y = (cfg['positionY'] as num?)?.toDouble() ?? 45;
     final w = ((cfg['width'] as num?)?.toDouble() ?? 180) * scale;
     final h = ((cfg['height'] as num?)?.toDouble() ?? 30) * scale;
+
+    final List<String> clientLines = [];
+    if (cli['showName'] != false) clientLines.add('Client Passager / SARL Société');
+    if (cli['showAddress'] != false) clientLines.add('Adresse: Rue Principale, Tunis');
+    if (cli['showPhone'] != false) clientLines.add('Tél: +216 99 999 999');
+    if (cli['showEmail'] != false) clientLines.add('client@email.com');
+    if (cli['showCode'] != false) clientLines.add('Code: CLI-0012');
+    if (cli['showTaxId'] != false) clientLines.add('MF: 1234567/B/M/000');
 
     return _buildDraggableOverlay(
       'clientDetails', x, y, scale,
@@ -182,17 +271,19 @@ class TemplatePreviewWidget extends StatelessWidget {
         height: h,
         padding: EdgeInsets.all(3 * scale),
         decoration: BoxDecoration(
+          color: AppColors.surface,
           border: Border.all(color: AppColors.border, width: 0.5),
           borderRadius: BorderRadius.circular(2),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Détails client', style: TextStyle(fontSize: 3.5 * scale, fontWeight: FontWeight.w600)),
+            Text('Adressé à :', style: TextStyle(fontSize: 3 * scale, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             SizedBox(height: 1 * scale),
-            Container(height: 2 * scale, width: w * 0.6, color: AppColors.surfaceAlt),
-            SizedBox(height: 1 * scale),
-            Container(height: 2 * scale, width: w * 0.4, color: AppColors.surfaceAlt),
+            ...clientLines.take(3).map((l) => Text(
+              l,
+              style: TextStyle(fontSize: 2.6 * scale, color: AppColors.textSecondary, height: 1.2),
+            )),
           ],
         ),
       ),
@@ -273,82 +364,106 @@ class TemplatePreviewWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildTotalsArea(double scale) {
-    final cfg = template.totalsConfig;
-    final currentX = (cfg['positionX'] as num?)?.toDouble() ?? 130.0;
-    final width = ((cfg['width'] as num?)?.toDouble() ?? 70) * scale;
+  Widget _buildDraggableTable(double scale) {
+    final cfg = template.tableConfig;
+    final x = (cfg['positionX'] as num?)?.toDouble() ?? 15.0;
+    final y = (cfg['positionY'] as num?)?.toDouble() ?? 82.0;
+    final w = ((cfg['width'] as num?)?.toDouble() ?? 180.0) * scale;
 
-    final child = Container(
-      width: width,
+    return _buildDraggableOverlay(
+      'table',
+      x,
+      y,
+      scale,
+      SizedBox(
+        width: w,
+        child: _buildTableArea(scale),
+      ),
+    );
+  }
+
+  Widget _buildDraggableTotals(double scale) {
+    final cfg = template.totalsConfig;
+    final x = (cfg['positionX'] as num?)?.toDouble() ?? 115.0;
+    final y = (cfg['positionY'] as num?)?.toDouble() ?? 175.0;
+    final w = ((cfg['width'] as num?)?.toDouble() ?? 80.0) * scale;
+
+    return _buildDraggableOverlay(
+      'totals',
+      x,
+      y,
+      scale,
+      SizedBox(
+        width: w,
+        child: _buildTotalsCard(scale),
+      ),
+    );
+  }
+
+  Widget _buildTotalsCard(double scale) {
+    return Container(
       padding: EdgeInsets.all(3 * scale),
       decoration: BoxDecoration(
+        color: AppColors.surface,
         border: Border.all(color: AppColors.border.withValues(alpha: 0.5), width: 0.5),
         borderRadius: BorderRadius.circular(2),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           if (template.totalBrutConfig['visible'] == true)
             _buildTotalsRow('Sous-total HT:', scale),
-          if (template.totalRemisesConfig['visible'] == true)
+          if (template.totalRemisesConfig['visible'] != false)
             _buildTotalsRow('Remises:', scale),
-          _buildTotalsRow('Total HT:', scale),
-          _buildTotalsRow('Taxes:', scale),
-          Container(
-            margin: EdgeInsets.only(top: 1.5 * scale),
-            padding: EdgeInsets.symmetric(vertical: 1.5 * scale, horizontal: 2 * scale),
-            decoration: BoxDecoration(
-              color: template.totalTTCConfig['showColoredBg'] == true
-                  ? Color(template.totalTTCConfig['bgColor'] as int? ?? 0xFF2D3748)
-                  : null,
-              borderRadius: BorderRadius.circular(1),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'TOTAL:',
-                  style: TextStyle(
-                    fontSize: 3.5 * scale,
-                    fontWeight: FontWeight.bold,
-                    color: template.totalTTCConfig['showColoredBg'] == true ? AppColors.surface : AppColors.textPrimary,
+          if (template.totalHTConfig['visible'] != false)
+            _buildTotalsRow('Total HT:', scale),
+          if (template.taxesConfig['visible'] != false)
+            _buildTotalsRow('TVA:', scale),
+          if (template.timbreConfig['visible'] != false)
+            _buildTotalsRow('Timbre Fiscal:', scale),
+          if (template.totalTTCConfig['visible'] != false)
+            Container(
+              margin: EdgeInsets.only(top: 1.5 * scale),
+              padding: EdgeInsets.symmetric(vertical: 1.5 * scale, horizontal: 2 * scale),
+              decoration: BoxDecoration(
+                color: template.totalTTCConfig['showColoredBg'] == true
+                    ? Color(template.totalTTCConfig['bgColor'] as int? ?? 0xFF2D3748)
+                    : null,
+                borderRadius: BorderRadius.circular(1),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'TOTAL TTC:',
+                    style: TextStyle(
+                      fontSize: 3.5 * scale,
+                      fontWeight: FontWeight.bold,
+                      color: template.totalTTCConfig['showColoredBg'] == true ? AppColors.surface : AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                Text(
-                  '0,00',
-                  style: TextStyle(
-                    fontSize: 3.5 * scale,
-                    fontWeight: FontWeight.bold,
-                    color: template.totalTTCConfig['showColoredBg'] == true ? AppColors.surface : AppColors.textPrimary,
+                  Text(
+                    '0,00',
+                    style: TextStyle(
+                      fontSize: 3.5 * scale,
+                      fontWeight: FontWeight.bold,
+                      color: template.totalTTCConfig['showColoredBg'] == true ? AppColors.surface : AppColors.textPrimary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           if (template.totalLettersConfig['visible'] == true)
             Padding(
               padding: EdgeInsets.only(top: 2 * scale),
               child: Text(
-                'Montant en lettres...',
+                'Arrêté la présente facture à...',
                 style: TextStyle(fontSize: 2.5 * scale, color: AppColors.textSecondary, fontStyle: FontStyle.italic),
               ),
             ),
         ],
       ),
-    );
-
-    if (onPositionChanged == null) {
-      return Padding(
-        padding: EdgeInsets.only(left: currentX * scale),
-        child: child,
-      );
-    }
-
-    return _InteractiveHorizontalOverlay(
-      itemKey: 'totals',
-      initialX: currentX,
-      scale: scale,
-      onPositionChanged: onPositionChanged!,
-      child: child,
     );
   }
 
@@ -365,31 +480,119 @@ class TemplatePreviewWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildFooterArea(double scale) {
-    return Column(
-      children: [
-        Divider(height: 1, color: AppColors.border),
-        SizedBox(height: 2 * scale),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildDraggableNotes(double scale) {
+    final foot = template.footerConfig;
+    if (foot['showNotes'] == false && foot['showPaymentTerms'] == false) return const SizedBox.shrink();
+
+    final cfg = template.config['notes'] as Map<String, dynamic>? ?? {};
+    final x = (cfg['positionX'] as num?)?.toDouble() ?? 15.0;
+    final y = (cfg['positionY'] as num?)?.toDouble() ?? 175.0;
+    final w = ((cfg['width'] as num?)?.toDouble() ?? 95.0) * scale;
+
+    return _buildDraggableOverlay(
+      'notes',
+      x,
+      y,
+      scale,
+      Container(
+        width: w,
+        padding: EdgeInsets.all(3 * scale),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.4), width: 0.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Notes de document', style: TextStyle(fontSize: 2.5 * scale, color: AppColors.textTertiary)),
-            Text('Conditions de paiement', style: TextStyle(fontSize: 2.5 * scale, color: AppColors.textTertiary)),
+            if (foot['showNotes'] != false) ...[
+              Text('Notes :', style: TextStyle(fontSize: 2.6 * scale, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+              SizedBox(height: 1 * scale),
+              Text('Merci pour votre confiance.', style: TextStyle(fontSize: 2.3 * scale, color: AppColors.textTertiary)),
+              SizedBox(height: 2 * scale),
+            ],
+            if (foot['showPaymentTerms'] != false) ...[
+              Text('Conditions Générales :', style: TextStyle(fontSize: 2.6 * scale, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+              SizedBox(height: 1 * scale),
+              Text('Paiement selon conditions convenues.', style: TextStyle(fontSize: 2.3 * scale, color: AppColors.textTertiary)),
+            ],
           ],
         ),
-        SizedBox(height: 2 * scale),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(2 * scale),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceAlt,
-            borderRadius: BorderRadius.circular(1),
-          ),
-          child: Center(
-            child: Text('Texte de pied de page', style: TextStyle(fontSize: 2.5 * scale, color: AppColors.textTertiary)),
-          ),
+      ),
+    );
+  }
+
+  Widget _buildDraggableSignature(double scale) {
+    final foot = template.footerConfig;
+    if (foot['showSignature'] == false) return const SizedBox.shrink();
+
+    final cfg = template.config['signature'] as Map<String, dynamic>? ?? {};
+    final x = (cfg['positionX'] as num?)?.toDouble() ?? 135.0;
+    final y = (cfg['positionY'] as num?)?.toDouble() ?? 230.0;
+    final w = ((cfg['width'] as num?)?.toDouble() ?? 60.0) * scale;
+
+    return _buildDraggableOverlay(
+      'signature',
+      x,
+      y,
+      scale,
+      Container(
+        width: w,
+        padding: EdgeInsets.symmetric(horizontal: 3 * scale, vertical: 2 * scale),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.3), width: 0.5),
         ),
-      ],
+        child: Column(
+          children: [
+            Text('Signature & Cachet', style: TextStyle(fontSize: 2.6 * scale, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+            SizedBox(height: 10 * scale),
+            Container(height: 0.5 * scale, color: AppColors.textTertiary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDraggableLegalNotice(double scale) {
+    final foot = template.footerConfig;
+    if (foot['showLegalNotice'] == false && foot['showPageNumbers'] == false) return const SizedBox.shrink();
+
+    final cfg = template.config['legalNotice'] as Map<String, dynamic>? ?? {};
+    final x = (cfg['positionX'] as num?)?.toDouble() ?? 15.0;
+    final y = (cfg['positionY'] as num?)?.toDouble() ?? 272.0;
+    final w = ((cfg['width'] as num?)?.toDouble() ?? 180.0) * scale;
+
+    return _buildDraggableOverlay(
+      'legalNotice',
+      x,
+      y,
+      scale,
+      Container(
+        width: w,
+        padding: EdgeInsets.symmetric(horizontal: 3 * scale, vertical: 1.5 * scale),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(1),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.3), width: 0.5),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (foot['showLegalNotice'] != false)
+              Text('Mentions légales - RIB & Identification fiscale', style: TextStyle(fontSize: 2.4 * scale, color: AppColors.textTertiary)),
+            if (foot['showPageNumbers'] != false) ...[
+              SizedBox(height: 1 * scale),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text('Page 1 / 1', style: TextStyle(fontSize: 2.0 * scale, color: AppColors.textTertiary)),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -604,86 +807,6 @@ class _InteractiveOverlayState extends State<_InteractiveOverlay> {
                 color: _isDragging 
                     ? AppColors.primary 
                     : AppColors.primary.withValues(alpha: 0.3),
-                width: _isDragging ? 2 : 1,
-              ),
-            ),
-            child: widget.child,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InteractiveHorizontalOverlay extends StatefulWidget {
-  final String itemKey;
-  final double initialX;
-  final double scale;
-  final void Function(String itemKey, double newX, double newY) onPositionChanged;
-  final Widget child;
-
-  const _InteractiveHorizontalOverlay({
-    required this.itemKey,
-    required this.initialX,
-    required this.scale,
-    required this.onPositionChanged,
-    required this.child,
-  });
-
-  @override
-  State<_InteractiveHorizontalOverlay> createState() => _InteractiveHorizontalOverlayState();
-}
-
-class _InteractiveHorizontalOverlayState extends State<_InteractiveHorizontalOverlay> {
-  late double _currentX;
-  bool _isDragging = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentX = widget.initialX;
-  }
-
-  @override
-  void didUpdateWidget(covariant _InteractiveHorizontalOverlay oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!_isDragging) {
-      _currentX = widget.initialX;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(left: _currentX * widget.scale),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onPanStart: (_) => setState(() => _isDragging = true),
-        onPanUpdate: (details) {
-          setState(() {
-            _currentX += details.delta.dx / widget.scale;
-            // Constrain width somewhat
-            // A4 width is 210mm. _currentX + width must be <= 210 to avoid overflow.
-            // Width is not passed, but totals width is usually max 120mm. Let's clamp at 140.
-            _currentX = _currentX.clamp(0.0, 140.0);
-          });
-        },
-        onPanEnd: (_) {
-          setState(() => _isDragging = false);
-          widget.onPositionChanged(widget.itemKey, _currentX, 0); // Y is ignored for totals
-        },
-        onPanCancel: () {
-          setState(() => _isDragging = false);
-          widget.onPositionChanged(widget.itemKey, _currentX, 0);
-        },
-        child: MouseRegion(
-          cursor: SystemMouseCursors.resizeLeftRight,
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: _isDragging 
-                    ? AppColors.primary 
-                    : AppColors.primary.withValues(alpha: 0.1),
                 width: _isDragging ? 2 : 1,
               ),
             ),
