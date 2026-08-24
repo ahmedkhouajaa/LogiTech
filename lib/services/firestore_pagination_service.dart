@@ -24,6 +24,7 @@ import '../models/product.dart';
 import '../database/database_helper.dart';
 import 'enterprise_service.dart';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 
 Query _applyEnterpriseFilter(Query query) {
@@ -44,6 +45,8 @@ class FirestorePaginationService {
   FirestorePaginationService._();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Duration get _queryTimeout => kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 15);
 
   // Pagination state tracking
   DocumentSnapshot? _lastDevisSnapshot;
@@ -98,10 +101,10 @@ class FirestorePaginationService {
       QuerySnapshot snapshot;
       try {
         final orderedQuery = baseQuery.orderBy('created_at', descending: true).limit(pageSize);
-        snapshot = await orderedQuery.get(const GetOptions(source: Source.server));
+        snapshot = await orderedQuery.get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await baseQuery.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await baseQuery.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await baseQuery.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -212,8 +215,13 @@ class FirestorePaginationService {
         query = query.where('status', isEqualTo: status.toLowerCase());
       }
 
-      final aggregateSnapshot = await query.count().get();
-      return aggregateSnapshot.count ?? 0;
+      try {
+        final countSnapshot = await query.count().get().timeout(_queryTimeout);
+        return countSnapshot.count ?? 0;
+      } catch (_) {
+        final aggregateSnapshot = await query.get().timeout(_queryTimeout);
+        return aggregateSnapshot.docs.length;
+      }
     } catch (e) {
       return 0;
     }
@@ -254,10 +262,10 @@ class FirestorePaginationService {
       QuerySnapshot snapshot;
       try {
         final orderedQuery = baseQuery.orderBy('created_at', descending: true).limit(pageSize);
-        snapshot = await orderedQuery.get(const GetOptions(source: Source.server));
+        snapshot = await orderedQuery.get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await baseQuery.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await baseQuery.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await baseQuery.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -327,7 +335,7 @@ class FirestorePaginationService {
           query = query.startAfterDocument(_lastInvoiceSnapshot!);
         }
         query = query.orderBy('created_at', descending: true).limit(pageSize);
-        snapshot = await query.get(const GetOptions(source: Source.server));
+        snapshot = await query.get().timeout(_queryTimeout);
       } catch (_) {
         snapshot = await baseQuery.limit(pageSize * 10).get();
       }
@@ -391,8 +399,13 @@ class FirestorePaginationService {
         query = query.where('status', isEqualTo: status.toLowerCase());
       }
 
-      final aggregateSnapshot = await query.count().get();
-      return aggregateSnapshot.count ?? 0;
+      try {
+        final countSnapshot = await query.count().get().timeout(_queryTimeout);
+        return countSnapshot.count ?? 0;
+      } catch (_) {
+        final aggregateSnapshot = await query.get().timeout(_queryTimeout);
+        return aggregateSnapshot.docs.length;
+      }
     } catch (e) {
       return 0;
     }
@@ -431,10 +444,10 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get(const GetOptions(source: Source.server));
+        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -586,7 +599,7 @@ class FirestorePaginationService {
       // Always fetch from server for cross-device sync
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.server));
+        snapshot = await query.get().timeout(_queryTimeout);
       } catch (_) {
         // Fallback to cache if server is unreachable
         snapshot = await query.get(const GetOptions(source: Source.cache));
@@ -682,8 +695,8 @@ class FirestorePaginationService {
             .where('name', isLessThanOrEqualTo: '$q\uf8ff');
       }
 
-      final aggregateSnapshot = await query.count().get();
-      return aggregateSnapshot.count ?? 0;
+      final aggregateSnapshot = await query.get().timeout(_queryTimeout);
+      return aggregateSnapshot.docs.length;
     } catch (e) {
       return 0;
     }
@@ -716,7 +729,7 @@ class FirestorePaginationService {
       // Always fetch from server for cross-device sync
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.server));
+        snapshot = await query.get().timeout(_queryTimeout);
       } catch (_) {
         // Fallback to cache if server is unreachable
         snapshot = await query.get(const GetOptions(source: Source.cache));
@@ -816,8 +829,8 @@ class FirestorePaginationService {
             .where('name', isLessThanOrEqualTo: '$q\uf8ff');
       }
 
-      final aggregateSnapshot = await query.count().get();
-      return aggregateSnapshot.count ?? 0;
+      final aggregateSnapshot = await query.get().timeout(_queryTimeout);
+      return aggregateSnapshot.docs.length;
     } catch (e) {
       return 0;
     }
@@ -857,10 +870,10 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get(const GetOptions(source: Source.server));
+        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -1031,10 +1044,10 @@ class FirestorePaginationService {
       QuerySnapshot snapshot;
       try {
         final orderedQuery = baseQuery.orderBy('created_at', descending: true).limit(pageSize);
-        snapshot = await orderedQuery.get(const GetOptions(source: Source.server));
+        snapshot = await orderedQuery.get().timeout(_queryTimeout);
       } catch (e) {
         try {
-          snapshot = await baseQuery.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await baseQuery.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await baseQuery.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -1106,7 +1119,7 @@ class FirestorePaginationService {
           query = query.startAfterDocument(_lastCustomerOrderSnapshot!);
         }
         query = query.orderBy('created_at', descending: true).limit(pageSize);
-        snapshot = await query.get(const GetOptions(source: Source.server));
+        snapshot = await query.get().timeout(_queryTimeout);
       } catch (_) {
         snapshot = await baseQuery.limit(pageSize * 10).get();
       }
@@ -1175,9 +1188,15 @@ class FirestorePaginationService {
         query = query.where('status', isEqualTo: status.toLowerCase());
       }
 
-      final aggregateSnapshot = await query.count().get();
-      final count = aggregateSnapshot.count;
-      if (count != null) return count;
+      try {
+        final countSnapshot = await query.count().get().timeout(_queryTimeout);
+        final count = countSnapshot.count ?? 0;
+        if (count > 0) return count;
+      } catch (_) {
+        final aggregateSnapshot = await query.get().timeout(_queryTimeout);
+        final count = aggregateSnapshot.docs.length;
+        if (count > 0) return count;
+      }
     } catch (_) {}
 
     // ── Fallback to local SQLite ──
@@ -1229,10 +1248,10 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get(const GetOptions(source: Source.server));
+        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -1395,10 +1414,10 @@ class FirestorePaginationService {
       QuerySnapshot snapshot;
       try {
         final orderedQuery = baseQuery.orderBy('created_at', descending: true).limit(pageSize);
-        snapshot = await orderedQuery.get(const GetOptions(source: Source.server));
+        snapshot = await orderedQuery.get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await baseQuery.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await baseQuery.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await baseQuery.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -1469,7 +1488,7 @@ class FirestorePaginationService {
           query = query.startAfterDocument(_lastDeliveryNoteSnapshot!);
         }
         query = query.orderBy('created_at', descending: true).limit(pageSize);
-        snapshot = await query.get(const GetOptions(source: Source.server));
+        snapshot = await query.get().timeout(_queryTimeout);
       } catch (_) {
         snapshot = await baseQuery.limit(pageSize * 10).get();
       }
@@ -1534,8 +1553,13 @@ class FirestorePaginationService {
         query = query.where('status', isEqualTo: status.toLowerCase());
       }
 
-      final aggregateSnapshot = await query.count().get();
-      return aggregateSnapshot.count ?? 0;
+      try {
+        final countSnapshot = await query.count().get().timeout(_queryTimeout);
+        return countSnapshot.count ?? 0;
+      } catch (_) {
+        final aggregateSnapshot = await query.get().timeout(_queryTimeout);
+        return aggregateSnapshot.docs.length;
+      }
     } catch (e) {
       return 0;
     }
@@ -1576,10 +1600,10 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get(const GetOptions(source: Source.server));
+        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -1741,10 +1765,10 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get(const GetOptions(source: Source.server));
+        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -1908,10 +1932,10 @@ class FirestorePaginationService {
       QuerySnapshot snapshot;
       try {
         final orderedQuery = baseQuery.orderBy('created_at', descending: true).limit(pageSize);
-        snapshot = await orderedQuery.get(const GetOptions(source: Source.server));
+        snapshot = await orderedQuery.get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await baseQuery.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await baseQuery.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           // 100% Firebase mode (offline cache fallback disabled)
           rethrow;
@@ -1984,7 +2008,7 @@ class FirestorePaginationService {
           query = query.startAfterDocument(_lastExitVoucherSnapshot!);
         }
         query = query.orderBy('created_at', descending: true).limit(pageSize);
-        snapshot = await query.get(const GetOptions(source: Source.server));
+        snapshot = await query.get().timeout(_queryTimeout);
       } catch (_) {
         snapshot = await baseQuery.limit(pageSize * 10).get();
       }
@@ -2049,8 +2073,8 @@ class FirestorePaginationService {
         query = query.where('status', isEqualTo: status.toLowerCase());
       }
 
-      final aggregateSnapshot = await query.count().get();
-      return aggregateSnapshot.count ?? 0;
+      final aggregateSnapshot = await query.get().timeout(_queryTimeout);
+      return aggregateSnapshot.docs.length;
     } catch (e) {
       return 0;
     }
@@ -2093,10 +2117,10 @@ class FirestorePaginationService {
       QuerySnapshot snapshot;
       try {
         final ordered = query.orderBy('created_at', descending: true).limit(pageSize);
-        snapshot = await ordered.get(const GetOptions(source: Source.server));
+        snapshot = await ordered.get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           // 100% Firebase mode (offline cache fallback disabled)
           rethrow;
@@ -2216,9 +2240,9 @@ class FirestorePaginationService {
         query = query.where('status', isEqualTo: status.toLowerCase());
       }
 
-      final aggregateSnapshot = await query.count().get();
-      final count = aggregateSnapshot.count;
-      if (count != null && count > 0) return count;
+      final aggregateSnapshot = await query.get().timeout(_queryTimeout);
+      final count = aggregateSnapshot.docs.length;
+      return count;
     } catch (_) {}
 
     return 0;
@@ -2259,10 +2283,10 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize).get(const GetOptions(source: Source.server));
+        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize).get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -2377,8 +2401,13 @@ class FirestorePaginationService {
         query = query.where('status', isEqualTo: status.toLowerCase());
       }
 
-      final aggregateSnapshot = await query.count().get();
-      return aggregateSnapshot.count ?? 0;
+      try {
+        final countSnapshot = await query.count().get().timeout(_queryTimeout);
+        return countSnapshot.count ?? 0;
+      } catch (_) {
+        final aggregateSnapshot = await query.get().timeout(_queryTimeout);
+        return aggregateSnapshot.docs.length;
+      }
     } catch (e) {
       return 0;
     }
@@ -2419,10 +2448,10 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get(const GetOptions(source: Source.server));
+        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -2584,10 +2613,10 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get(const GetOptions(source: Source.server));
+        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -2749,10 +2778,10 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get(const GetOptions(source: Source.server));
+        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -2914,10 +2943,10 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get(const GetOptions(source: Source.server));
+        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -3038,8 +3067,8 @@ class FirestorePaginationService {
         query = query.where('status', isEqualTo: status.toLowerCase());
       }
 
-      final aggregateSnapshot = await query.count().get();
-      return aggregateSnapshot.count ?? 0;
+      final aggregateSnapshot = await query.get().timeout(_queryTimeout);
+      return aggregateSnapshot.docs.length;
     } catch (e) {
       return 0;
     }
@@ -3083,10 +3112,10 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get(const GetOptions(source: Source.server));
+        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -3213,8 +3242,8 @@ class FirestorePaginationService {
         query = query.where('status', isEqualTo: status.toLowerCase());
       }
 
-      final aggregateSnapshot = await query.count().get();
-      return aggregateSnapshot.count ?? 0;
+      final aggregateSnapshot = await query.get().timeout(_queryTimeout);
+      return aggregateSnapshot.docs.length;
     } catch (e) {
       return 0;
     }
@@ -3244,7 +3273,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.server));
+        snapshot = await query.get().timeout(_queryTimeout);
       } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.cache));
       }
@@ -3294,7 +3323,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.get(const GetOptions(source: Source.server));
+        snapshot = await query.get().timeout(_queryTimeout);
       } catch (_) {
         snapshot = await query.get(const GetOptions(source: Source.cache));
       }
@@ -3375,10 +3404,10 @@ class FirestorePaginationService {
       QuerySnapshot snapshot;
       try {
         final orderedQuery = query.orderBy('created_at', descending: true).limit(pageSize);
-        snapshot = await orderedQuery.get(const GetOptions(source: Source.server));
+        snapshot = await orderedQuery.get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -3449,10 +3478,10 @@ class FirestorePaginationService {
         final orderedQuery = query.orderBy('created_at', descending: true)
             .startAfterDocument(_lastTreasuryTransactionSnapshot!)
             .limit(pageSize);
-        snapshot = await orderedQuery.get(const GetOptions(source: Source.server));
+        snapshot = await orderedQuery.get().timeout(_queryTimeout);
       } catch (_) {
         try {
-          snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.server));
+          snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
         } catch (_) {
           snapshot = await query.limit(pageSize * 10).get(const GetOptions(source: Source.cache));
         }
@@ -3503,8 +3532,8 @@ class FirestorePaginationService {
         );
       }
 
-      final AggregateQuerySnapshot snapshot = await query.count().get();
-      return snapshot.count ?? 0;
+      final QuerySnapshot snapshot = await query.get().timeout(_queryTimeout);
+      return snapshot.docs.length;
     } catch (e) {
       return 0;
     }
@@ -3803,8 +3832,8 @@ class FirestorePaginationService {
             .where('reference', isLessThanOrEqualTo: '$q\uf8ff');
       }
 
-      final AggregateQuerySnapshot snapshot = await query.count().get();
-      int count = snapshot.count ?? 0;
+      final QuerySnapshot snapshot = await query.get().timeout(_queryTimeout);
+      int count = snapshot.docs.length;
       if (count > 0) return count;
     } catch (e) {
       print("Error getting count from Firebase: $e");
@@ -3989,9 +4018,15 @@ class FirestorePaginationService {
             .where('name', isLessThanOrEqualTo: '$q\uf8ff');
       }
 
-      final AggregateQuerySnapshot snapshot = await query.count().get();
-      int count = snapshot.count ?? 0;
-      if (count > 0) return count;
+      try {
+        final countSnapshot = await query.count().get().timeout(_queryTimeout);
+        int count = countSnapshot.count ?? 0;
+        if (count > 0) return count;
+      } catch (_) {
+        final QuerySnapshot snapshot = await query.get().timeout(_queryTimeout);
+        int count = snapshot.docs.length;
+        if (count > 0) return count;
+      }
     } catch (e) {
       print("Error getting products count from Firebase: $e");
     }

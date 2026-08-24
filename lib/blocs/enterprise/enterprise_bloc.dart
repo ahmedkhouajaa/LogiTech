@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../models/enterprise.dart';
 import '../../services/enterprise_service.dart';
+import '../../services/permission_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ──────────────────────────────────────────────────────────
@@ -166,9 +167,6 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
     EnterprisesUpdated event,
     Emitter<EnterpriseState> emit,
   ) {
-    if (event.enterprises.isEmpty && (state is EnterpriseInitial || state is EnterpriseLoading)) {
-      return;
-    }
     emit(EnterpriseLoaded(
       enterprises: List<Enterprise>.from(event.enterprises),
       currentEnterpriseId: event.currentEnterpriseId ?? _service.currentEnterpriseId,
@@ -181,13 +179,20 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
   ) async {
     emit(EnterpriseLoading());
     try {
-      final enterprises = await _service.loadEnterprisesFromFirestore();
+      final enterprises = await _service.loadEnterprisesFromFirestore(maxRetries: 2);
       emit(EnterpriseLoaded(
         enterprises: List<Enterprise>.from(enterprises),
         currentEnterpriseId: _service.currentEnterpriseId,
       ));
     } catch (e) {
-      emit(EnterpriseError(ErrorHandler.parseError(e)));
+      if (_service.enterprises.isNotEmpty) {
+        emit(EnterpriseLoaded(
+          enterprises: List<Enterprise>.from(_service.enterprises),
+          currentEnterpriseId: _service.currentEnterpriseId,
+        ));
+      } else {
+        emit(EnterpriseError('Impossible de charger les entreprises: $e'));
+      }
     }
   }
 
@@ -212,6 +217,12 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
     Emitter<EnterpriseState> emit,
   ) async {
     if (state is EnterpriseLoading) return;
+
+    if (PermissionService.instance.isLoaded && !PermissionService.instance.isAdmin && _service.enterprises.isNotEmpty) {
+      emit(const EnterpriseError('Action non autorisée. Seuls les administrateurs peuvent créer une entreprise.'));
+      return;
+    }
+
     emit(EnterpriseLoading());
     try {
       final enterprise = await _service.createEnterprise(

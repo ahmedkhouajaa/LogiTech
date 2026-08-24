@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/firestore_safe_helper.dart';
 import '../models/purchase_invoice.dart';
 import '../models/payment_model.dart';
 import '../blocs/payments/payments_bloc.dart';
@@ -254,10 +256,12 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
       if (item.productId.isEmpty) continue;
       
       try {
-        final productDoc = await FirebaseFirestore.instance.collection('articles').doc(item.productId).get();
-        if (productDoc.exists && productDoc.data() != null) {
-          final productData = productDoc.data()!;
-          productData['id'] = productDoc.id;
+        final productData = await FirestoreSafeHelper.getDocData(
+          FirebaseFirestore.instance.collection('articles'),
+          item.productId,
+        );
+        if (productData != null) {
+          productData['id'] = item.productId;
           final product = Product.fromMap(productData);
           
           final newStock = product.stockQty + item.quantity;

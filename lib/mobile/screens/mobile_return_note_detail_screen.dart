@@ -164,27 +164,39 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentReturnNote),
-              itemBuilder: (_) => [
-                _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
-                if (PermissionService.instance.canUpdate(UserPermissionResources.salesReturnVouchers)) ...[
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                ],
-                if (PermissionService.instance.canDelete(UserPermissionResources.salesReturnVouchers)) ...[
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                ],
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-              ],
+              itemBuilder: (_) {
+                final canRead = PermissionService.instance.canRead(UserPermissionResources.salesReturnVouchers);
+                final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.salesReturnVouchers);
+                final canDelete = PermissionService.instance.canDelete(UserPermissionResources.salesReturnVouchers);
+                final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.salesReturnVouchers);
+
+                final entries = <PopupMenuEntry<String>>[];
+                void addItem(String val, IconData icon, Color col, String label) {
+                  if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                  entries.add(_buildMenuItem(val, icon, col, label));
+                }
+
+                if (canRead) {
+                  addItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir');
+                }
+                if (canUpdate) {
+                  addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+                }
+                if (canDelete) {
+                  addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+                }
+                if (hasAnyAccess) {
+                  addItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer');
+                  addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
+                  addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
+                  addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                }
+                if (PermissionService.instance.isAdmin) {
+                  addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+                }
+
+                return entries;
+              },
             ),
           ],
         ),

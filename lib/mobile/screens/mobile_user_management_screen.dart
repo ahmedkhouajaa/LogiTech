@@ -71,6 +71,26 @@ class _MobileUserManagementScreenState extends State<MobileUserManagementScreen>
   }
 
   void _navigateToEditUser(EnterpriseUserModel user) {
+    if (user.isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Le propriétaire de l\'entreprise ne peut pas être modifié.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (user.isAdmin && !PermissionService.instance.isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Seul le propriétaire de l\'entreprise peut gérer un administrateur.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => AddEditUserScreen(userToEdit: user)))
         .then((_) => _loadUsers());
@@ -84,6 +104,16 @@ class _MobileUserManagementScreenState extends State<MobileUserManagementScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Impossible de supprimer le propriétaire de l\'entreprise.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (user.isAdmin && !PermissionService.instance.isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Seul le propriétaire de l\'entreprise peut retirer un administrateur.'),
           backgroundColor: AppColors.error,
         ),
       );

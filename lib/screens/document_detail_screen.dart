@@ -4,6 +4,8 @@ import '../blocs/products/products_bloc.dart';
 import '../database/database_helper.dart';
 import '../models/document_wrapper.dart';
 import '../models/product.dart';
+import '../models/user_management_model.dart';
+import '../services/permission_service.dart';
 import '../services/pdf_service.dart';
 import '../services/document_share_service.dart';
 import '../utils/constants.dart';
@@ -96,10 +98,35 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
     return null;
   }
 
+  String? _getResourceKey(String title) {
+    final t = title.toUpperCase().trim();
+    if (t.contains('DEVIS')) return UserPermissionResources.salesQuotes;
+    if (t.contains('COMMANDE FOURNISSEUR')) return UserPermissionResources.purchasesSupplierOrders;
+    if (t.contains('COMMANDE')) return UserPermissionResources.salesOrders;
+    if (t.contains('LIVRAISON')) return UserPermissionResources.salesDeliveryNotes;
+    if (t.contains('ACHAT') || t.contains('FOURNISSEUR')) {
+      if (t.contains('AVOIR')) return UserPermissionResources.purchasesSupplierCreditNotes;
+      if (t.contains('RETOUR')) return UserPermissionResources.purchasesSupplierReturns;
+      if (t.contains('RECEPTION')) return UserPermissionResources.purchasesReceivingVouchers;
+      if (t.contains('FACTURE')) return UserPermissionResources.purchasesPurchaseInvoices;
+    }
+    if (t.contains('AVOIR')) return UserPermissionResources.salesCreditNotes;
+    if (t.contains('RETOUR')) return UserPermissionResources.salesReturnVouchers;
+    if (t.contains('SORTIE')) return UserPermissionResources.salesExitVouchers;
+    if (t.contains('RETENUE')) return UserPermissionResources.withholdingTax;
+    if (t.contains('FACTURE')) return UserPermissionResources.salesInvoices;
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final document = widget.document;
     final docStatus = widget.status ?? 'Validé';
+    final resKey = _getResourceKey(document.documentTitle);
+    final canRead = resKey != null ? PermissionService.instance.canRead(resKey) : PermissionService.instance.isAdmin;
+    final canUpdate = resKey != null ? PermissionService.instance.canUpdate(resKey) : PermissionService.instance.isAdmin;
+    final canDelete = resKey != null ? PermissionService.instance.canDelete(resKey) : PermissionService.instance.isAdmin;
+    final hasAnyAccess = resKey != null ? PermissionService.instance.hasAnyPermission(resKey) : PermissionService.instance.isAdmin;
 
     // Build Information Sections
     final infoFields = <PremiumInfoField>[
@@ -244,92 +271,43 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> {
                   }
               }
             },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'preview',
-                child: Row(
-                  children: [
-                    Icon(Icons.print_outlined, size: 18, color: AppColors.primary),
-                    const SizedBox(width: 12),
-                    const Text('Aperçu & Imprimer'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(height: 1),
-              PopupMenuItem(
-                value: 'pdf',
-                child: Row(
-                  children: [
-                    Icon(Icons.download_rounded, size: 18, color: AppColors.error),
-                    const SizedBox(width: 12),
-                    const Text('Télécharger PDF'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(height: 1),
-              PopupMenuItem(
-                value: 'email',
-                child: Row(
-                  children: [
-                    Icon(Icons.email_outlined, size: 18, color: const Color(0xFF64748B)),
-                    const SizedBox(width: 12),
-                    const Text('Envoyer par email'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(height: 1),
-              PopupMenuItem(
-                value: 'whatsapp',
-                child: Row(
-                  children: [
-                    Icon(Icons.chat_outlined, size: 18, color: const Color(0xFF64748B)),
-                    const SizedBox(width: 12),
-                    const Text('Envoyer par WhatsApp'),
-                  ],
-                ),
-              ),
-              if (widget.onEdit != null) ...[
-                const PopupMenuDivider(height: 1),
-                PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit_outlined, size: 18, color: AppColors.primary),
-                      const SizedBox(width: 12),
-                      const Text('Modifier'),
-                    ],
-                  ),
-                ),
-              ],
-              if (widget.onDelete != null) ...[
-                const PopupMenuDivider(height: 1),
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-                      const SizedBox(width: 12),
-                      const Text('Supprimer'),
-                    ],
-                  ),
-                ),
-              ],
-              if (widget.additionalActions != null) ...[
-                for (var a in widget.additionalActions!) ...[
-                  const PopupMenuDivider(height: 1),
+            itemBuilder: (_) {
+              final entries = <PopupMenuEntry<String>>[];
+              void addEntry(String val, IconData icon, Color col, String label) {
+                if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                entries.add(
                   PopupMenuItem(
-                    value: a.label,
+                    value: val,
                     child: Row(
                       children: [
-                        Icon(a.icon, size: 18, color: a.customColor ?? (a.isDanger ? AppColors.error : AppColors.primary)),
+                        Icon(icon, size: 18, color: col),
                         const SizedBox(width: 12),
-                        Text(a.label),
+                        Text(label),
                       ],
                     ),
                   ),
-                ],
-              ],
-            ],
+                );
+              }
+
+              if (hasAnyAccess) {
+                addEntry('preview', Icons.print_outlined, AppColors.primary, 'Aperçu & Imprimer');
+                addEntry('pdf', Icons.download_rounded, AppColors.error, 'Télécharger PDF');
+                addEntry('email', Icons.email_outlined, const Color(0xFF64748B), 'Envoyer par email');
+                addEntry('whatsapp', Icons.chat_outlined, const Color(0xFF64748B), 'Envoyer par WhatsApp');
+              }
+              if (widget.onEdit != null && canUpdate) {
+                addEntry('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+              }
+              if (widget.onDelete != null && canDelete) {
+                addEntry('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+              }
+              if (widget.additionalActions != null) {
+                for (var a in widget.additionalActions!) {
+                  addEntry(a.label, a.icon, a.customColor ?? (a.isDanger ? AppColors.error : AppColors.primary), a.label);
+                }
+              }
+              return entries;
+            },
           ),
         ],
       ),

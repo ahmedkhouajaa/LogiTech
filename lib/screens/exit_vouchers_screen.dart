@@ -15,6 +15,7 @@ import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
 import '../services/pdf_service.dart';
+import '../services/document_share_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
@@ -1182,74 +1183,51 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                     _showChangeStatusDialog(context, note);
                   }
                 },
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                      value: 'view',
-                      child: Row(children: [
-                        Icon(Icons.visibility_outlined,
-                            size: 16, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Text('Voir')
-                      ])),
-                  if (PermissionService.instance.canUpdate(UserPermissionResources.salesExitVouchers))
-                    PopupMenuItem(
-                        value: 'edit',
-                        child: Row(children: [
-                          Icon(Icons.edit_rounded,
-                              size: 16, color: AppColors.textSecondary),
-                          SizedBox(width: 8),
-                          Text('Modifier')
-                        ])),
-                  if (PermissionService.instance.canDelete(UserPermissionResources.salesExitVouchers))
-                    PopupMenuItem(
-                        value: 'delete',
-                        child: Row(children: [
-                          Icon(Icons.delete_rounded,
-                              size: 16, color: AppColors.textSecondary),
-                          SizedBox(width: 8),
-                          Text('Supprimer')
-                        ])),
-                  PopupMenuItem(
-                      value: 'print',
-                      child: Row(children: [
-                        Icon(Icons.print_rounded,
-                            size: 16, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Text('Imprimer')
-                      ])),
-                  PopupMenuItem(
-                      value: 'pdf',
-                      child: Row(children: [
-                        Icon(Icons.picture_as_pdf_outlined,
-                            size: 16, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Text('Télécharger PDF')
-                      ])),
-                  PopupMenuItem(
-                      value: 'email',
-                      child: Row(children: [
-                        Icon(Icons.email_outlined,
-                            size: 16, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Text('Envoyer par email')
-                      ])),
-                  PopupMenuItem(
-                      value: 'whatsapp',
-                      child: Row(children: [
-                        Icon(Icons.chat_outlined,
-                            size: 16, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Text('Envoyer par WhatsApp')
-                      ])),
-                  PopupMenuItem(
-                      value: 'status',
-                      child: Row(children: [
-                        Icon(Icons.swap_horiz_outlined,
-                            size: 16, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Text('Changer le statut')
-                      ])),
-                ],
+                itemBuilder: (_) {
+                  final canRead = PermissionService.instance.hasPermission('exit_vouchers', action: 'read');
+                  final canUpdate = PermissionService.instance.hasPermission('exit_vouchers', action: 'update');
+                  final canDelete = PermissionService.instance.hasPermission('exit_vouchers', action: 'delete');
+                  final hasAnyAccess = PermissionService.instance.hasAnyPermission('exit_vouchers');
+
+                  final entries = <PopupMenuEntry<String>>[];
+
+                  void addItem(String val, IconData icon, Color col, String label) {
+                    if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                    entries.add(
+                      PopupMenuItem(
+                        value: val,
+                        child: Row(
+                          children: [
+                            Icon(icon, size: 16, color: col),
+                            const SizedBox(width: 8),
+                            Text(label),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (canRead) {
+                    addItem('view', Icons.visibility_outlined, AppColors.info, 'Voir');
+                  }
+                  if (canUpdate) {
+                    addItem('edit', Icons.edit_rounded, AppColors.primary, 'Modifier');
+                  }
+                  if (canDelete) {
+                    addItem('delete', Icons.delete_rounded, AppColors.error, 'Supprimer');
+                  }
+                  if (hasAnyAccess) {
+                    addItem('print', Icons.print_rounded, AppColors.textSecondary, 'Imprimer');
+                    addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
+                    addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
+                    addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                  }
+                  if (PermissionService.instance.isAdmin) {
+                    addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+                  }
+
+                  return entries;
+                },
               ),
             ),
           ),
@@ -1281,14 +1259,14 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
           borderRadius: BorderRadius.circular(AppRadius.md),
           onTap: () => _navigate(context, note),
           child: Padding(
-            padding: EdgeInsets.all(14),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -1304,7 +1282,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                     ),
                     const Spacer(),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: statusEnum.color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(4),
@@ -1317,41 +1295,100 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                             fontWeight: FontWeight.w500),
                       ),
                     ),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 4),
                     PopupMenuButton<String>(
                       icon: Icon(Icons.more_vert, color: AppColors.textSecondary, size: 20),
                       padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(),
+                      constraints: const BoxConstraints(),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       color: AppColors.surface,
                       onSelected: (val) {
-                        if (val == 'edit') _navigate(context, note);
-                        if (val == 'delete') _confirmDelete(note);
+                        if (val == 'view') {
+                          final doc = _createDocumentWrapper(note);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DocumentDetailScreen(
+                                document: doc,
+                                status: statusEnum.label,
+                                statusColor: statusEnum.color,
+                              ),
+                            ),
+                          );
+                        } else if (val == 'print') {
+                          final doc = _createDocumentWrapper(note);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DocumentPreviewScreen(document: doc),
+                            ),
+                          );
+                        } else if (val == 'edit') {
+                          _navigate(context, note);
+                        } else if (val == 'delete') {
+                          _confirmDelete(note);
+                        } else if (val == 'pdf') {
+                          final doc = _createDocumentWrapper(note);
+                          PdfService.instance.downloadDocument(context, doc);
+                        } else if (val == 'email' || val == 'whatsapp') {
+                          final doc = _createDocumentWrapper(note);
+                          DocumentShareService.shareDocument(doc, isEmail: val == 'email');
+                        } else if (val == 'status') {
+                          _showChangeStatusDialog(context, note);
+                        }
                       },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                            value: 'edit',
-                            child: Row(children: [
-                              Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
-                              SizedBox(width: 8),
-                              Text('Modifier')
-                            ])),
-                        PopupMenuItem(
-                            value: 'delete',
-                            child: Row(children: [
-                              Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
-                              SizedBox(width: 8),
-                              Text('Supprimer', style: TextStyle(color: AppColors.error))
-                            ])),
-                      ],
+                      itemBuilder: (_) {
+                        final canRead = PermissionService.instance.hasPermission('exit_vouchers', action: 'read');
+                        final canUpdate = PermissionService.instance.hasPermission('exit_vouchers', action: 'update');
+                        final canDelete = PermissionService.instance.hasPermission('exit_vouchers', action: 'delete');
+                        final hasAnyAccess = PermissionService.instance.hasAnyPermission('exit_vouchers');
+
+                        final entries = <PopupMenuEntry<String>>[];
+
+                        void addItem(String val, IconData icon, Color col, String label) {
+                          if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                          entries.add(
+                            PopupMenuItem(
+                              value: val,
+                              child: Row(
+                                children: [
+                                  Icon(icon, size: 16, color: col),
+                                  const SizedBox(width: 8),
+                                  Text(label),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (canRead) {
+                          addItem('view', Icons.visibility_outlined, AppColors.info, 'Voir');
+                        }
+                        if (canUpdate) {
+                          addItem('edit', Icons.edit_rounded, AppColors.primary, 'Modifier');
+                        }
+                        if (canDelete) {
+                          addItem('delete', Icons.delete_rounded, AppColors.error, 'Supprimer');
+                        }
+                        if (hasAnyAccess) {
+                          addItem('print', Icons.print_rounded, AppColors.textSecondary, 'Imprimer');
+                          addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
+                          addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
+                          addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                        }
+                        if (PermissionService.instance.isAdmin) {
+                          addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+                        }
+                        return entries;
+                      },
                     ),
                   ],
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Icon(Icons.person_outline, size: 14, color: AppColors.textTertiary),
-                    SizedBox(width: 6),
+                    const SizedBox(width: 6),
                     Flexible(
                       child: Text(
                         clientLabel,
@@ -1361,14 +1398,14 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
                       child: Row(
                         children: [
                           Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textTertiary),
-                          SizedBox(width: 6),
+                          const SizedBox(width: 6),
                           Text(formatDateTimeLong(note.date), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                         ],
                       ),

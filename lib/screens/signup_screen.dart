@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/auth/auth_bloc.dart';
 
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+  final VoidCallback? onBackToLanding;
+  const SignUpScreen({super.key, this.onBackToLanding});
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -264,6 +266,33 @@ class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderSt
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Optional Web Back to Landing Button
+          if (kIsWeb && widget.onBackToLanding != null) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  }
+                  widget.onBackToLanding?.call();
+                },
+                icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                label: const Text(
+                  'Retour au site',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: _textSecondary,
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(50, 28),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+
           // App Name Header
           const Center(
             child: Text(
@@ -519,6 +548,8 @@ class _SignUpScreenState extends State<SignUpScreen> with SingleTickerProviderSt
                             Image.network(
                               'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png',
                               height: 18,
+                              cacheWidth: 48,
+                              cacheHeight: 48,
                             ),
                             const SizedBox(width: 8),
                             const Text(

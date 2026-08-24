@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import '../models/enterprise.dart';
 import '../models/user_management_model.dart';
 import 'enterprise_service.dart';
+import '../utils/firestore_safe_helper.dart';
 import 'auth_service.dart';
 import 'permission_service.dart';
 
@@ -53,10 +55,12 @@ class UserManagementService {
     if (uid == null) return false;
 
     try {
-      final enterpriseDoc = await _firestore.collection('enterprises').doc(enterpriseId).get();
-      if (!enterpriseDoc.exists) return false;
+      final data = await FirestoreSafeHelper.getDocData(
+        _firestore.collection('enterprises'),
+        enterpriseId,
+      );
+      if (data == null) return false;
 
-      final data = enterpriseDoc.data() ?? {};
       final ownerId = data['owner_id']?.toString() ?? data['userId']?.toString();
       if (ownerId == uid) return true;
 
@@ -91,17 +95,23 @@ class UserManagementService {
       }
 
       // Query from Firestore if cache is empty
-      final userDoc = await _firestore.collection('users').doc(uid).get();
+      final userData = await FirestoreSafeHelper.getDocData(
+        _firestore.collection('users'),
+        uid,
+      );
       List<String> enterpriseIds = [];
-      if (userDoc.exists && userDoc.data()?['enterprises'] != null) {
-        enterpriseIds = List<String>.from(userDoc.data()!['enterprises']);
+      if (userData != null && userData['enterprises'] != null) {
+        enterpriseIds = List<String>.from(userData['enterprises']);
       }
 
       final List<Enterprise> result = [];
       for (final eid in enterpriseIds) {
-        final doc = await _firestore.collection('enterprises').doc(eid).get();
-        if (doc.exists) {
-          final ent = Enterprise.fromMap({...doc.data()!, 'id': doc.id});
+        final entData = await FirestoreSafeHelper.getDocData(
+          _firestore.collection('enterprises'),
+          eid,
+        );
+        if (entData != null) {
+          final ent = Enterprise.fromMap({...entData, 'id': eid});
           if (ent.ownerId == uid || ent.members.any((m) => m.uid == uid && (m.role.toLowerCase() == 'admin' || m.role.toLowerCase() == 'administrateur'))) {
             result.add(ent);
           }
@@ -117,10 +127,12 @@ class UserManagementService {
   /// Get list of all users who have access to the current enterprise
   Future<List<EnterpriseUserModel>> getUsersForEnterprise(String enterpriseId) async {
     try {
-      final enterpriseDoc = await _firestore.collection('enterprises').doc(enterpriseId).get();
-      if (!enterpriseDoc.exists) return [];
+      final entData = await FirestoreSafeHelper.getDocData(
+        _firestore.collection('enterprises'),
+        enterpriseId,
+      );
+      if (entData == null) return [];
 
-      final entData = enterpriseDoc.data() ?? {};
       final ownerId = entData['owner_id']?.toString() ?? entData['userId']?.toString() ?? '';
       final rawMembers = entData['members'];
 
@@ -133,12 +145,14 @@ class UserManagementService {
         }
       }
 
-      // Ensure owner is in member list
-      if (ownerId.isNotEmpty && !memberList.any((m) => m['uid'] == ownerId)) {
+      // Ensure owner is included in the list
+      final ownerExistsInMembers = memberList.any((m) => m['uid'] == ownerId);
+      if (ownerId.isNotEmpty && !ownerExistsInMembers) {
         memberList.insert(0, {
           'uid': ownerId,
           'role': 'admin',
           'isOwner': true,
+          'addedAt': null,
         });
       }
 
@@ -148,14 +162,13 @@ class UserManagementService {
         final uid = member['uid']?.toString() ?? '';
         if (uid.isEmpty) continue;
 
-        final isOwner = (uid == ownerId) || (member['isOwner'] == true);
-        final role = isOwner ? 'admin' : (member['role']?.toString() ?? 'collaborator');
+        final role = member['role']?.toString() ?? 'collaborator';
+        final isOwner = uid == ownerId || member['isOwner'] == true;
 
-        // Parse member permissions
         Map<String, UserResourcePermission> permissions = {};
         if (member['permissions'] is Map) {
-          final pMap = Map<String, dynamic>.from(member['permissions']);
-          pMap.forEach((k, v) {
+          final rawPerms = member['permissions'] as Map;
+          rawPerms.forEach((k, v) {
             if (v is Map) {
               permissions[k] = UserResourcePermission.fromMap(Map<String, dynamic>.from(v));
             }
@@ -168,8 +181,10 @@ class UserManagementService {
 
         // Fetch user profile from users collection
         try {
-          final userDoc = await _firestore.collection('users').doc(uid).get();
-          final uData = userDoc.exists ? (userDoc.data() ?? {}) : <String, dynamic>{};
+          final uData = await FirestoreSafeHelper.getDocData(
+            _firestore.collection('users'),
+            uid,
+          ) ?? <String, dynamic>{};
           final userEnterprises = uData['enterprises'] != null ? List<String>.from(uData['enterprises']) : [enterpriseId];
 
           String? extractField(List<String> keys, List<Map<String, dynamic>?> maps) {
@@ -264,9 +279,12 @@ class UserManagementService {
       }
 
       // 2. Check if email is already in any enterprise members list
-      final enterpriseDoc = await _firestore.collection('enterprises').doc(currentEnterpriseId).get();
-      if (enterpriseDoc.exists) {
-        final members = enterpriseDoc.data()?['members'];
+      final entData = await FirestoreSafeHelper.getDocData(
+        _firestore.collection('enterprises'),
+        currentEnterpriseId,
+      );
+      if (entData != null) {
+        final members = entData['members'];
         if (members is List) {
           for (final m in members) {
             if (m is Map && m['email'] != null && m['email'].toString().toLowerCase() == cleanEmail) {
@@ -295,6 +313,11 @@ class UserManagementService {
     required List<String> selectedEnterpriseIds,
     required Map<String, UserResourcePermission> permissions,
   }) async {
+    final isAdminRole = role.toLowerCase() == 'admin' || role.toLowerCase() == 'administrateur';
+    if (isAdminRole && !PermissionService.instance.isOwner) {
+      throw 'Seul le propriétaire de l\'entreprise peut attribuer le rôle Administrateur.';
+    }
+
     final adminUid = currentUid ?? 'admin';
     final now = DateTime.now();
     final cleanEmail = email.trim().toLowerCase();
@@ -377,6 +400,7 @@ class UserManagementService {
       'uid': newUid,
       'email': cleanEmail,
       'name': name,
+      'role': role,
       if (phone != null && phone.isNotEmpty) ...{
         'phone': phone,
         'phoneNumber': phone,
@@ -423,6 +447,38 @@ class UserManagementService {
   }) async {
     final adminUid = currentUid ?? 'admin';
     final now = DateTime.now();
+
+    // Security hierarchy check:
+    // 1. Owner cannot be modified by ANY user
+    final entData = await FirestoreSafeHelper.getDocData(
+      _firestore.collection('enterprises'),
+      currentEnterpriseId,
+    );
+    final ownerId = entData?['owner_id']?.toString() ?? entData?['userId']?.toString() ?? '';
+    if (ownerId.isNotEmpty && ownerId == targetUid) {
+      throw 'Impossible de modifier le profil du propriétaire de l\'entreprise.';
+    }
+
+    // 2. Only Owner can manage an Admin or assign the Admin role
+    if (!PermissionService.instance.isOwner) {
+      final isAdminRole = role.toLowerCase() == 'admin' || role.toLowerCase() == 'administrateur';
+      if (isAdminRole) {
+        throw 'Seul le propriétaire de l\'entreprise peut attribuer le rôle Administrateur.';
+      }
+
+      final members = entData?['members'];
+      if (members is List) {
+        for (final m in members) {
+          if (m is Map && m['uid'] == targetUid) {
+            final mRole = m['role']?.toString().toLowerCase() ?? '';
+            if (mRole == 'admin' || mRole == 'administrateur' || m['isOwner'] == true) {
+              throw 'Seul le propriétaire de l\'entreprise peut gérer un administrateur.';
+            }
+          }
+        }
+      }
+    }
+
     final permissionsMap = permissions.map((k, v) => MapEntry(k, v.toMap()));
 
     // 1. Update user profile document in users collection
@@ -452,6 +508,7 @@ class UserManagementService {
 
     await userRef.set({
       'name': name,
+      'role': role,
       if (phone != null && phone.isNotEmpty) ...{
         'phone': phone,
         'phoneNumber': phone,
@@ -505,6 +562,32 @@ class UserManagementService {
   /// Remove user from a specific enterprise
   Future<void> removeUserFromEnterprise(String enterpriseId, String targetUid) async {
     final now = DateTime.now();
+
+    // Security hierarchy check:
+    // 1. Owner cannot be removed by ANY user
+    final entData = await FirestoreSafeHelper.getDocData(
+      _firestore.collection('enterprises'),
+      enterpriseId,
+    );
+    final ownerId = entData?['owner_id']?.toString() ?? entData?['userId']?.toString() ?? '';
+    if (ownerId.isNotEmpty && ownerId == targetUid) {
+      throw 'Impossible de retirer le propriétaire de l\'entreprise.';
+    }
+
+    // 2. Only Owner can remove an Admin
+    if (!PermissionService.instance.isOwner) {
+      final members = entData?['members'];
+      if (members is List) {
+        for (final m in members) {
+          if (m is Map && m['uid'] == targetUid) {
+            final mRole = m['role']?.toString().toLowerCase() ?? '';
+            if (mRole == 'admin' || mRole == 'administrateur' || m['isOwner'] == true) {
+              throw 'Seul le propriétaire de l\'entreprise peut retirer un administrateur.';
+            }
+          }
+        }
+      }
+    }
 
     // 1. Remove from enterprise document members list
     final enterpriseRef = _firestore.collection('enterprises').doc(enterpriseId);

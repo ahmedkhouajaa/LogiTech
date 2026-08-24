@@ -190,42 +190,56 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentCustomerOrder),
-              itemBuilder: (_) => [
-                _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
-                if (PermissionService.instance.canUpdate(UserPermissionResources.salesOrders)) ...[
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                ],
-                if (PermissionService.instance.canDelete(UserPermissionResources.salesOrders)) ...[
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                ],
-                const PopupMenuDivider(height: 1),
-                if (!currentCustomerOrder.isConvertedToInvoice && !currentCustomerOrder.isConvertedToDelivery) ...[
-                  _buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('to_delivery', Icons.local_shipping_outlined, AppColors.textSecondary, 'Transformer en Bon de Livraison'),
-                  const PopupMenuDivider(height: 1),
-                ] else ...[
-                  if (currentCustomerOrder.isConvertedToInvoice) ...[
-                    _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture créée'),
-                    const PopupMenuDivider(height: 1),
-                  ],
-                  if (currentCustomerOrder.isConvertedToDelivery) ...[
-                    _buildMenuItem('view_delivery', Icons.local_shipping_outlined, AppColors.success, 'Voir le bon de livraison créé'),
-                    const PopupMenuDivider(height: 1),
-                  ],
-                ],
-                _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-              ],
+              itemBuilder: (_) {
+                final canRead = PermissionService.instance.canRead(UserPermissionResources.salesOrders);
+                final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.salesOrders);
+                final canDelete = PermissionService.instance.canDelete(UserPermissionResources.salesOrders);
+                final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.salesOrders);
+                final canCreateInvoice = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.salesInvoices);
+                final canCreateDelivery = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.salesDeliveryNotes);
+
+                final entries = <PopupMenuEntry<String>>[];
+                void addItem(String val, IconData icon, Color col, String label) {
+                  if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                  entries.add(_buildMenuItem(val, icon, col, label));
+                }
+
+                if (canRead) {
+                  addItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir');
+                }
+                if (canUpdate) {
+                  addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+                }
+                if (canDelete) {
+                  addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+                }
+                if (!currentCustomerOrder.isConvertedToInvoice && !currentCustomerOrder.isConvertedToDelivery) {
+                  if (canCreateInvoice) {
+                    addItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture');
+                  }
+                  if (canCreateDelivery) {
+                    addItem('to_delivery', Icons.local_shipping_outlined, AppColors.textSecondary, 'Transformer en Bon de Livraison');
+                  }
+                } else {
+                  if (currentCustomerOrder.isConvertedToInvoice && canRead) {
+                    addItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture créée');
+                  }
+                  if (currentCustomerOrder.isConvertedToDelivery && canRead) {
+                    addItem('view_delivery', Icons.local_shipping_outlined, AppColors.success, 'Voir le bon de livraison créé');
+                  }
+                }
+                if (hasAnyAccess) {
+                  addItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer');
+                  addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
+                  addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
+                  addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                }
+                if (PermissionService.instance.isAdmin) {
+                  addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+                }
+
+                return entries;
+              },
             ),
           ],
         ),

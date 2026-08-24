@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../blocs/auth/auth_bloc.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final VoidCallback? onBackToLanding;
+  const LoginScreen({super.key, this.onBackToLanding});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -247,6 +249,28 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Optional Web Back to Landing Button
+          if (kIsWeb && widget.onBackToLanding != null) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: widget.onBackToLanding,
+                icon: const Icon(Icons.arrow_back_rounded, size: 16),
+                label: const Text(
+                  'Retour au site',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: _textSecondary,
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(50, 28),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+
           // App Name Header
           const Center(
             child: Text(
@@ -466,6 +490,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             Image.network(
                               'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png',
                               height: 18,
+                              cacheWidth: 48,
+                              cacheHeight: 48,
                             ),
                             const SizedBox(width: 8),
                             const Text(
@@ -499,7 +525,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => SignUpScreen(onBackToLanding: widget.onBackToLanding),
+                    ),
                   );
                 },
                 child: const Text(

@@ -131,11 +131,12 @@ class UserPermissionResources {
   // 32. Projects
   static const String projects = 'projects';
 
-  // 33-34. Settings (Paramètres)
+  // 33-35. Settings (Paramètres)
   static const String settingsCompanyInfo = 'settings_company_info';
   static const String settingsDocTemplates = 'settings_doc_templates';
+  static const String importExport = 'import_export';
 
-  // 35. User Management (Admin Only)
+  // 36. User Management (Admin Only)
   static const String userManagement = 'user_management';
 
   static const List<Map<String, dynamic>> allResources = [
@@ -146,7 +147,7 @@ class UserPermissionResources {
       'category': 'Général',
       'icon': Icons.dashboard_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.readOnly,
+      'defaultCollab': UserResourcePermission.empty,
     },
     // 2-8. Ventes
     {
@@ -155,7 +156,7 @@ class UserPermissionResources {
       'category': 'Ventes',
       'icon': Icons.description_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': salesOrders,
@@ -163,7 +164,7 @@ class UserPermissionResources {
       'category': 'Ventes',
       'icon': Icons.shopping_cart_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': salesDeliveryNotes,
@@ -171,7 +172,7 @@ class UserPermissionResources {
       'category': 'Ventes',
       'icon': Icons.local_shipping_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': salesInvoices,
@@ -179,7 +180,7 @@ class UserPermissionResources {
       'category': 'Ventes',
       'icon': Icons.receipt_long_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': salesExitVouchers,
@@ -187,7 +188,7 @@ class UserPermissionResources {
       'category': 'Ventes',
       'icon': Icons.outbox_rounded,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': salesCreditNotes,
@@ -195,7 +196,7 @@ class UserPermissionResources {
       'category': 'Ventes',
       'icon': Icons.assignment_return_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': salesReturnVouchers,
@@ -203,7 +204,7 @@ class UserPermissionResources {
       'category': 'Ventes',
       'icon': Icons.keyboard_return_rounded,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     // 9-13. Achats
     {
@@ -212,7 +213,7 @@ class UserPermissionResources {
       'category': 'Achats',
       'icon': Icons.shopping_bag_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': purchasesReceivingVouchers,
@@ -220,7 +221,7 @@ class UserPermissionResources {
       'category': 'Achats',
       'icon': Icons.inventory_2_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': purchasesPurchaseInvoices,
@@ -228,7 +229,7 @@ class UserPermissionResources {
       'category': 'Achats',
       'icon': Icons.receipt_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': purchasesSupplierCreditNotes,
@@ -236,7 +237,7 @@ class UserPermissionResources {
       'category': 'Achats',
       'icon': Icons.assignment_returned_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': purchasesSupplierReturns,
@@ -244,7 +245,7 @@ class UserPermissionResources {
       'category': 'Achats',
       'icon': Icons.assignment_return_rounded,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     // 14. Paiements
     {
@@ -253,7 +254,7 @@ class UserPermissionResources {
       'category': 'Finances',
       'icon': Icons.credit_card_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     // 15-17. Retenue à la source
     {
@@ -262,7 +263,7 @@ class UserPermissionResources {
       'category': 'Taxes',
       'icon': Icons.request_page_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.readOnly,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': withholdingTaxSales,
@@ -270,7 +271,7 @@ class UserPermissionResources {
       'category': 'Taxes',
       'icon': Icons.price_check_rounded,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.readOnly,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': withholdingTaxPurchases,
@@ -278,7 +279,7 @@ class UserPermissionResources {
       'category': 'Taxes',
       'icon': Icons.receipt_rounded,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.readOnly,
+      'defaultCollab': UserResourcePermission.empty,
     },
     // 18-20. Trésorerie
     {
@@ -287,7 +288,7 @@ class UserPermissionResources {
       'category': 'Trésorerie',
       'icon': Icons.account_balance_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.readOnly,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': treasuryTransactions,
@@ -295,7 +296,7 @@ class UserPermissionResources {
       'category': 'Trésorerie',
       'icon': Icons.sync_alt_rounded,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.readOnly,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': treasuryChecks,
@@ -303,7 +304,7 @@ class UserPermissionResources {
       'category': 'Trésorerie',
       'icon': Icons.style_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.readOnly,
+      'defaultCollab': UserResourcePermission.empty,
     },
     // 21-22. Contacts
     {
@@ -312,7 +313,7 @@ class UserPermissionResources {
       'category': 'Contacts',
       'icon': Icons.people_outline,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': suppliers,
@@ -320,7 +321,7 @@ class UserPermissionResources {
       'category': 'Contacts',
       'icon': Icons.storefront_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     // 23-24. Articles
     {
@@ -329,7 +330,7 @@ class UserPermissionResources {
       'category': 'Articles',
       'icon': Icons.inventory_2_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': productsSettings,
@@ -337,7 +338,7 @@ class UserPermissionResources {
       'category': 'Articles',
       'icon': Icons.tune_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.readOnly,
+      'defaultCollab': UserResourcePermission.empty,
     },
     // 25-31. Stock
     {
@@ -346,7 +347,7 @@ class UserPermissionResources {
       'category': 'Stock',
       'icon': Icons.all_inbox_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.readOnly,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': stockMovements,
@@ -354,7 +355,7 @@ class UserPermissionResources {
       'category': 'Stock',
       'icon': Icons.compare_arrows_rounded,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': stockEntryVouchers,
@@ -362,7 +363,7 @@ class UserPermissionResources {
       'category': 'Stock',
       'icon': Icons.move_to_inbox_rounded,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': stockWithdrawalVouchers,
@@ -370,7 +371,7 @@ class UserPermissionResources {
       'category': 'Stock',
       'icon': Icons.unarchive_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': stockTransferVouchers,
@@ -378,7 +379,7 @@ class UserPermissionResources {
       'category': 'Stock',
       'icon': Icons.swap_horiz_rounded,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': stockInventorySheets,
@@ -386,7 +387,7 @@ class UserPermissionResources {
       'category': 'Stock',
       'icon': Icons.assignment_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.readOnly,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': stockWarehouses,
@@ -394,7 +395,7 @@ class UserPermissionResources {
       'category': 'Stock',
       'icon': Icons.warehouse_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     // 32. Projets
     {
@@ -403,7 +404,7 @@ class UserPermissionResources {
       'category': 'Projets',
       'icon': Icons.folder_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.standardCollaborator,
+      'defaultCollab': UserResourcePermission.empty,
     },
     // 33-34. Paramètres
     {
@@ -412,7 +413,7 @@ class UserPermissionResources {
       'category': 'Paramètres',
       'icon': Icons.business_outlined,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.readOnly,
+      'defaultCollab': UserResourcePermission.empty,
     },
     {
       'key': settingsDocTemplates,
@@ -420,9 +421,17 @@ class UserPermissionResources {
       'category': 'Paramètres',
       'icon': Icons.description_rounded,
       'defaultAdmin': UserResourcePermission.full,
-      'defaultCollab': UserResourcePermission.readOnly,
+      'defaultCollab': UserResourcePermission.empty,
     },
-    // 35. Gestion des utilisateurs
+    {
+      'key': importExport,
+      'label': 'Import / Export des données',
+      'category': 'Paramètres',
+      'icon': Icons.sync_alt_rounded,
+      'defaultAdmin': UserResourcePermission.full,
+      'defaultCollab': UserResourcePermission.empty,
+    },
+    // 36. Gestion des utilisateurs
     {
       'key': userManagement,
       'label': 'Gestion des utilisateurs',

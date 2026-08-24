@@ -47,6 +47,7 @@ enum AppModule {
   companyInfo,
   documentTemplates,
   userManagement,
+  importExport,
 }
 
 class SidebarMenu extends StatefulWidget {
@@ -140,6 +141,7 @@ class _SidebarMenuState extends State<SidebarMenu> {
                       _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
                       _buildItem(AppModule.companyInfo, Icons.business_rounded, 'Informations de la societe'),
                       _buildItem(AppModule.documentTemplates, Icons.design_services_rounded, 'Modeles de documents'),
+                      _buildItem(AppModule.importExport, Icons.sync_alt_rounded, 'Import / Export des données'),
                       if (PermissionService.instance.isAdmin)
                         _buildItem(AppModule.userManagement, Icons.manage_accounts_rounded, 'Gestion des utilisateurs'),
                       const SizedBox(height: 16),

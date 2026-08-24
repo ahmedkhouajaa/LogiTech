@@ -117,3 +117,7 @@ Future<void> openFileImpl(String path) async {
     } catch (_) {}
   }
 }
+
+Future<void> downloadUrlImpl(String url, String fileName) async {
+  // Not used in IO mode
+}

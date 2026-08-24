@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/receiving_voucher.dart';
-import '../../database/database_helper.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
@@ -118,7 +119,6 @@ class ReceivingVoucherAdded extends ReceivingVouchersState {}
 // ─── BLoC ──────────────────────────────────────────────────────────
 class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouchersState> {
   static const int pageSize = 10;
-  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
   ReceivingVouchersBloc() : super(ReceivingVouchersInitial()) {
     on<LoadReceivingVouchers>(_onLoadReceivingVouchers);
@@ -212,6 +212,10 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
   }
 
   Future<void> _onAddReceivingVoucher(AddReceivingVoucher event, Emitter<ReceivingVouchersState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.purchasesReceivingVouchers)) {
+      emit(ReceivingVouchersError('Permission refusée : Vous n\'avez pas le droit de créer un bon de réception.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveReceivingVoucher(event.voucher);
       add(LoadFirstReceivingVouchers());
@@ -221,6 +225,10 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
   }
 
   Future<void> _onUpdateReceivingVoucher(UpdateReceivingVoucher event, Emitter<ReceivingVouchersState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.purchasesReceivingVouchers)) {
+      emit(ReceivingVouchersError('Permission refusée : Vous n\'avez pas le droit de modifier un bon de réception.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveReceivingVoucher(event.voucher);
       add(LoadFirstReceivingVouchers());
@@ -230,6 +238,10 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
   }
 
   Future<void> _onDeleteReceivingVoucher(DeleteReceivingVoucher event, Emitter<ReceivingVouchersState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.purchasesReceivingVouchers)) {
+      emit(ReceivingVouchersError('Permission refusée : Vous n\'avez pas le droit de supprimer un bon de réception.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('receiving_vouchers', event.id);
       add(LoadFirstReceivingVouchers());

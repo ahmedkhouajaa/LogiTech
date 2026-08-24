@@ -803,36 +803,57 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
             offset: const Offset(0, 30),
             onSelected: (val) => _handleAction(context, val, inv),
-            itemBuilder: (_) => [
-              _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
-              if (PermissionService.instance.canUpdate(UserPermissionResources.salesInvoices)) ...[
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-              ],
-              if (PermissionService.instance.canDelete(UserPermissionResources.salesInvoices)) ...[
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-              ],
-              const PopupMenuDivider(height: 1),
-              _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-              const PopupMenuDivider(height: 1),
-              if (inv.status != InvoiceStatus.paid) ...[
-                _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'),
-                const PopupMenuDivider(height: 1),
-              ],
-              if (inv.creditNoteId != null && inv.creditNoteId!.isNotEmpty)
-                _buildMenuItem('view_credit_note', Icons.receipt_long_outlined, AppColors.primary, 'Voir l\'avoir')
-              else
-                _buildMenuItem('to_credit_note', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Avoir'),
-              const PopupMenuDivider(height: 1),
-              _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
-              const PopupMenuDivider(height: 1),
-              _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-              const PopupMenuDivider(height: 1),
-              _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-              const PopupMenuDivider(height: 1),
-              _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-            ],
+            itemBuilder: (_) {
+              final canRead = PermissionService.instance.hasPermission('invoices', action: 'read');
+              final canUpdate = PermissionService.instance.hasPermission('invoices', action: 'update');
+              final canDelete = PermissionService.instance.hasPermission('invoices', action: 'delete');
+              final hasAnyAccess = PermissionService.instance.hasAnyPermission('invoices');
+              final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create');
+              final canCreateCreditNote = canUpdate && PermissionService.instance.hasPermission('credit_notes', action: 'create');
+
+              debugPrint('[Invoices.3dot] Invoice #${inv.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, canCreatePayment=$canCreatePayment, canCreateCreditNote=$canCreateCreditNote, isAdmin=${PermissionService.instance.isAdmin}');
+
+              final entries = <PopupMenuEntry<String>>[];
+
+              void addItem(String val, IconData icon, Color col, String label) {
+                if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                entries.add(_buildMenuItem(val, icon, col, label));
+              }
+
+              if (canRead) {
+                addItem('view', Icons.visibility_outlined, AppColors.info, 'Voir');
+              }
+              if (canUpdate) {
+                addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+              }
+              if (canDelete) {
+                addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+              }
+
+              if (inv.status != InvoiceStatus.paid && canCreatePayment) {
+                addItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement');
+              }
+
+              if (inv.creditNoteId != null && inv.creditNoteId!.isNotEmpty) {
+                if (canRead) {
+                  addItem('view_credit_note', Icons.receipt_long_outlined, AppColors.primary, 'Voir l\'avoir');
+                }
+              } else if (canCreateCreditNote) {
+                addItem('to_credit_note', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Avoir');
+              }
+
+              if (hasAnyAccess) {
+                addItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer');
+                addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
+                addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
+                addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+              }
+              if (PermissionService.instance.isAdmin) {
+                addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+              }
+
+              return entries;
+            },
           ),
         ),
       ],

@@ -40,4 +40,9 @@ class FileDownloadHelper {
   static Future<void> openFile(String path) {
     return openFileImpl(path);
   }
+
+  /// Downloads a static URL/file asset directly in browser.
+  static Future<void> downloadUrl(String url, String fileName) {
+    return downloadUrlImpl(url, fileName);
+  }
 }

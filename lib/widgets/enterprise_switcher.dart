@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/enterprise/enterprise_bloc.dart';
 import '../models/enterprise.dart';
 import '../services/enterprise_service.dart';
+import '../services/permission_service.dart';
 import '../utils/constants.dart';
 import 'create_enterprise_wizard.dart';
 
@@ -19,34 +20,39 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Enterprise?>(
-      valueListenable: EnterpriseService.instance.currentEnterpriseNotifier,
-      builder: (context, currentNotifierEnt, _) {
-        return BlocBuilder<EnterpriseBloc, EnterpriseState>(
-          builder: (context, state) {
-            final enterprises = (state is EnterpriseLoaded && state.enterprises.isNotEmpty)
-                ? state.enterprises
-                : EnterpriseService.instance.enterprises;
+    return ValueListenableBuilder<bool>(
+      valueListenable: PermissionService.instance.permissionsNotifier,
+      builder: (context, _, __) {
+        return ValueListenableBuilder<Enterprise?>(
+          valueListenable: EnterpriseService.instance.currentEnterpriseNotifier,
+          builder: (context, currentNotifierEnt, _) {
+            return BlocBuilder<EnterpriseBloc, EnterpriseState>(
+              builder: (context, state) {
+                final enterprises = (state is EnterpriseLoaded && state.enterprises.isNotEmpty)
+                    ? state.enterprises
+                    : EnterpriseService.instance.enterprises;
 
-            final currentId = (state is EnterpriseLoaded)
-                ? (state.currentEnterpriseId ?? EnterpriseService.instance.currentEnterpriseId)
-                : EnterpriseService.instance.currentEnterpriseId;
+                final currentId = (state is EnterpriseLoaded)
+                    ? (state.currentEnterpriseId ?? EnterpriseService.instance.currentEnterpriseId)
+                    : EnterpriseService.instance.currentEnterpriseId;
 
-            final currentEnterprise = currentNotifierEnt ??
-                enterprises.firstWhere(
-                  (e) => e.id == currentId,
-                  orElse: () => Enterprise(
-                    id: currentId ?? '',
-                    name: 'Mon Entreprise',
-                    ownerId: '',
-                  ),
-                );
+                final currentEnterprise = currentNotifierEnt ??
+                    enterprises.firstWhere(
+                      (e) => e.id == currentId,
+                      orElse: () => Enterprise(
+                        id: currentId ?? '',
+                        name: 'Mon Entreprise',
+                        ownerId: '',
+                      ),
+                    );
 
-            if (isMobile) {
-              return _buildMobileSwitcher(context, currentEnterprise, enterprises);
-            }
+                if (isMobile) {
+                  return _buildMobileSwitcher(context, currentEnterprise, enterprises);
+                }
 
-            return _buildDesktopSwitcher(context, currentEnterprise, enterprises);
+                return _buildDesktopSwitcher(context, currentEnterprise, enterprises);
+              },
+            );
           },
         );
       },
@@ -92,70 +98,84 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
       ),
       onSelected: (value) {
         if (value == '__create_new__') {
+          if (!PermissionService.instance.isAdmin && EnterpriseService.instance.enterprises.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Action réservée aux administrateurs'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+            return;
+          }
           showCreateEnterpriseDialog(context);
         } else {
           context.read<EnterpriseBloc>().add(SwitchEnterprise(value));
         }
       },
-      itemBuilder: (context) => [
-        PopupMenuItem<String>(
-          enabled: false,
-          child: Text(
-            'MES ENTREPRISES',
-            style: TextStyle(
-              color: AppColors.textTertiary,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.1,
+      itemBuilder: (context) {
+        final isAdmin = PermissionService.instance.isAdmin || EnterpriseService.instance.enterprises.isEmpty;
+        return [
+          PopupMenuItem<String>(
+            enabled: false,
+            child: Text(
+              'MES ENTREPRISES',
+              style: TextStyle(
+                color: AppColors.textTertiary,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.1,
+              ),
             ),
           ),
-        ),
-        ...enterprises.map((e) {
-          final isSelected = e.id == current.id;
-          return PopupMenuItem<String>(
-            value: e.id,
-            child: Row(
-              children: [
-                Icon(
-                  isSelected ? Icons.check_circle_rounded : Icons.business_rounded,
-                  size: 18,
-                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    e.name,
+          ...enterprises.map((e) {
+            final isSelected = e.id == current.id;
+            return PopupMenuItem<String>(
+              value: e.id,
+              child: Row(
+                children: [
+                  Icon(
+                    isSelected ? Icons.check_circle_rounded : Icons.business_rounded,
+                    size: 18,
+                    color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      e.name,
+                      style: TextStyle(
+                        color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontSize: 13,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          if (isAdmin) ...[
+            const PopupMenuDivider(),
+            PopupMenuItem<String>(
+              value: '__create_new__',
+              child: Row(
+                children: [
+                  Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primary),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Créer une entreprise',
                     style: TextStyle(
-                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
                       fontSize: 13,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
-            ),
-          );
-        }),
-        const PopupMenuDivider(),
-        PopupMenuItem<String>(
-          value: '__create_new__',
-          child: Row(
-            children: [
-              Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primary),
-              const SizedBox(width: 10),
-              Text(
-                'Créer une entreprise',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        ];
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
@@ -360,25 +380,27 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
                         },
                       ),
                     ),
-                    const Divider(),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                        child: Icon(Icons.add, color: AppColors.primary),
-                      ),
-                      title: Text(
-                        'Créer une entreprise',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
+                    if (PermissionService.instance.isAdmin || EnterpriseService.instance.enterprises.isEmpty) ...[
+                      const Divider(),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                          child: Icon(Icons.add, color: AppColors.primary),
                         ),
+                        title: Text(
+                          'Créer une entreprise',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.pop(bottomSheetContext);
+                          showCreateEnterpriseDialog(context);
+                        },
                       ),
-                      onTap: () {
-                        Navigator.pop(bottomSheetContext);
-                        showCreateEnterpriseDialog(context);
-                      },
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -390,6 +412,15 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
   }
 
   static void showCreateEnterpriseDialog(BuildContext context, {bool isDismissible = true}) {
+    if (!PermissionService.instance.isAdmin && EnterpriseService.instance.enterprises.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Action réservée aux administrateurs'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
     showDialog(
       context: context,
       barrierDismissible: isDismissible,

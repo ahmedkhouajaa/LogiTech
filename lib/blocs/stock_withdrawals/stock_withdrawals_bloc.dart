@@ -3,6 +3,8 @@ import 'package:uuid/uuid.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/stock_withdrawal.dart';
 import '../../models/stock_movement.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../utils/constants.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
@@ -152,7 +154,6 @@ class StockWithdrawalsError extends StockWithdrawalsState {
 class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsState> {
   static const int pageSize = 10;
   final DatabaseHelper _dbHelper = DatabaseHelper.instance;
-  final _uuid = const Uuid();
 
   StockWithdrawalsBloc() : super(StockWithdrawalsInitial()) {
     on<LoadStockWithdrawals>(_onLoad);
@@ -255,6 +256,10 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
   }
 
   Future<void> _onAdd(AddStockWithdrawal event, Emitter<StockWithdrawalsState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.stockWithdrawalVouchers)) {
+      emit(StockWithdrawalsError('Permission refusée : Vous n\'avez pas le droit de créer un bon de prélèvement.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveStockWithdrawal(event.withdrawal);
 
@@ -326,6 +331,10 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
   }
 
   Future<void> _onUpdate(UpdateStockWithdrawal event, Emitter<StockWithdrawalsState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.stockWithdrawalVouchers)) {
+      emit(StockWithdrawalsError('Permission refusée : Vous n\'avez pas le droit de modifier un bon de prélèvement.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveStockWithdrawal(event.withdrawal);
 
@@ -391,6 +400,10 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
   }
 
   Future<void> _onDelete(DeleteStockWithdrawal event, Emitter<StockWithdrawalsState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.stockWithdrawalVouchers)) {
+      emit(StockWithdrawalsError('Permission refusée : Vous n\'avez pas le droit de supprimer un bon de prélèvement.'));
+      return;
+    }
     final currentState = state;
     if (currentState is StockWithdrawalsLoaded) {
       final updatedList = currentState.withdrawals.where((w) => w.id != event.withdrawalId).toList();

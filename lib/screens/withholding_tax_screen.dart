@@ -5,7 +5,9 @@ import '../widgets/shimmer_table_row.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../models/document_wrapper.dart';
 import '../models/payment_model.dart';
+import '../models/user_management_model.dart';
 import '../services/pdf_service.dart';
+import '../services/permission_service.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/dashboard_card.dart';
@@ -425,43 +427,59 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                     PdfService.instance.downloadDocument(context, doc);
                   }
                 },
-                itemBuilder: (_) => [
-                  PopupMenuItem<String>(
-                    value: 'view',
-                    height: 36,
-                    child: Row(
-                      children: [
-                        Icon(Icons.visibility_outlined, size: 16, color: AppColors.info),
-                        const SizedBox(width: 8),
-                        Text('Voir', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuDivider(height: 1),
-                  PopupMenuItem<String>(
-                    value: 'print',
-                    height: 36,
-                    child: Row(
-                      children: [
-                        Icon(Icons.print_outlined, size: 16, color: AppColors.primary),
-                        const SizedBox(width: 8),
-                        Text('Imprimer', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuDivider(height: 1),
-                  PopupMenuItem<String>(
-                    value: 'pdf',
-                    height: 36,
-                    child: Row(
-                      children: [
-                        Icon(Icons.picture_as_pdf_outlined, size: 16, color: AppColors.error),
-                        const SizedBox(width: 8),
-                        Text('Télécharger PDF', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
-                      ],
-                    ),
-                  ),
-                ],
+                itemBuilder: (_) {
+                  final res = widget.isSales ? UserPermissionResources.withholdingTaxSales : UserPermissionResources.withholdingTaxPurchases;
+                  final canRead = PermissionService.instance.canRead(res) || PermissionService.instance.canRead(UserPermissionResources.withholdingTax);
+                  final hasAnyAccess = PermissionService.instance.hasAnyPermission(res) || PermissionService.instance.hasAnyPermission(UserPermissionResources.withholdingTax);
+
+                  final entries = <PopupMenuEntry<String>>[];
+                  if (canRead) {
+                    entries.add(
+                      PopupMenuItem<String>(
+                        value: 'view',
+                        height: 36,
+                        child: Row(
+                          children: [
+                            Icon(Icons.visibility_outlined, size: 16, color: AppColors.info),
+                            const SizedBox(width: 8),
+                            Text('Voir', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  if (hasAnyAccess) {
+                    if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                    entries.add(
+                      PopupMenuItem<String>(
+                        value: 'print',
+                        height: 36,
+                        child: Row(
+                          children: [
+                            Icon(Icons.print_outlined, size: 16, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            Text('Imprimer', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                          ],
+                        ),
+                      ),
+                    );
+                    entries.add(const PopupMenuDivider(height: 1));
+                    entries.add(
+                      PopupMenuItem<String>(
+                        value: 'pdf',
+                        height: 36,
+                        child: Row(
+                          children: [
+                            Icon(Icons.picture_as_pdf_outlined, size: 16, color: AppColors.error),
+                            const SizedBox(width: 8),
+                            Text('Télécharger PDF', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return entries;
+                },
               ),
             ),
           ),

@@ -2,6 +2,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../models/treasury_transaction.dart';
 import '../../models/transaction_category.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
@@ -247,6 +249,10 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
   }
 
   Future<void> _onCreateTransaction(CreateTreasuryTransaction event, Emitter<TreasuryTransactionsState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions)) {
+      emit(const TreasuryTransactionsError('Permission refusée : Vous n\'avez pas le droit d\'ajouter une transaction.'));
+      return;
+    }
     try {
       final seq = await databaseHelper.getNextTreasuryTransactionSequence();
       final prefix = event.transaction.transactionNumber.contains('-') 
@@ -283,6 +289,10 @@ class TreasuryTransactionsBloc extends Bloc<TreasuryTransactionsEvent, TreasuryT
   }
 
   Future<void> _onDeleteTransaction(DeleteTreasuryTransaction event, Emitter<TreasuryTransactionsState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.treasuryTransactions)) {
+      emit(const TreasuryTransactionsError('Permission refusée : Vous n\'avez pas le droit de supprimer une transaction.'));
+      return;
+    }
     try {
       // First fetch the transaction to know its amount and type
       final docSnap = await FirebaseFirestore.instance.collection('treasury_transactions').doc(event.id).get();

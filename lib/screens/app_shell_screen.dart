@@ -3,11 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/dashboard/dashboard_bloc.dart';
 import '../widgets/sidebar_menu.dart';
 import '../widgets/sync_indicator.dart';
-import '../widgets/custom_app_bar.dart';
-import '../widgets/enterprise_switcher.dart';
-import '../services/enterprise_service.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../utils/constants.dart';
+import '../services/permission_service.dart';
 
 import 'dashboard_screen.dart';
 import 'customers_screen.dart';
@@ -26,12 +24,8 @@ import 'treasury_accounts_screen.dart';
 import 'projects_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
-import 'package:business_manager_pro/screens/return_notes_screen.dart';
-import 'package:business_manager_pro/screens/supplier_returns_screen.dart';
-import 'package:business_manager_pro/screens/stock_withdrawals_screen.dart';
-import 'package:business_manager_pro/screens/exit_vouchers_screen.dart';
-import 'package:business_manager_pro/screens/supplier_orders_screen.dart';
-import 'package:business_manager_pro/screens/supplier_credit_notes_screen.dart';
+import 'supplier_returns_screen.dart';
+import 'supplier_credit_notes_screen.dart';
 import 'credit_notes_screen.dart';
 import 'purchase_invoices_screen.dart';
 import 'supplier_orders_screen.dart';
@@ -39,14 +33,16 @@ import 'receiving_vouchers_screen.dart';
 import 'withholding_tax_screen.dart';
 import 'warehouses_screen.dart';
 import 'payments_screen.dart';
+import 'exit_vouchers_screen.dart';
 import 'stock_withdrawals_screen.dart';
 import 'stock_entries_screen.dart';
 import 'company_info_screen.dart';
 import 'document_templates_screen.dart';
 import 'stock_transfers_screen.dart';
 import 'inventory_sheets_screen.dart';
+import 'diagnostic_screen.dart';
 import 'user_management_screen.dart';
-import '../services/permission_service.dart';
+import 'import_export_screen.dart';
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
 
@@ -67,32 +63,73 @@ class AppShellScreenState extends State<AppShellScreen> {
   @override
   void initState() {
     super.initState();
+    _checkInitialModule();
+    PermissionService.instance.permissionsNotifier.addListener(_onPermissionsChanged);
     context.read<DashboardBloc>().add(DashboardRefreshRequested());
   }
 
-  Widget _buildContent() {
+  @override
+  void dispose() {
+    PermissionService.instance.permissionsNotifier.removeListener(_onPermissionsChanged);
+    super.dispose();
+  }
+
+  void _onPermissionsChanged() {
+    if (!mounted) return;
     if (!PermissionService.instance.canAccessModule(_activeModule)) {
-      return const UnauthorizedView();
+      final firstPermitted = PermissionService.instance.getFirstAccessibleModule();
+      if (firstPermitted != null && firstPermitted != _activeModule) {
+        setState(() {
+          _activeModule = firstPermitted;
+        });
+      } else {
+        setState(() {});
+      }
+    } else {
+      setState(() {});
     }
-    switch (_activeModule) {
-      case AppModule.dashboard:
-        return const DashboardScreen();
-      case AppModule.customers:
-        return const CustomersScreen();
-      case AppModule.accounts:
-        return const TreasuryAccountsScreen();
-      case AppModule.suppliers:
-        return const SuppliersScreen();
-      case AppModule.products:
-        return const ProductsScreen();
-      case AppModule.productSettings:
-        return const ProductSettingsScreen();
-      case AppModule.invoices:
-        return const InvoicesScreen();
-      case AppModule.customerOrders:
-        return const CustomerOrdersScreen();
-      case AppModule.quotes:
-        return const QuotesScreen();
+  }
+
+  void _checkInitialModule() {
+    if (PermissionService.instance.isLoaded && !PermissionService.instance.canAccessModule(_activeModule)) {
+      final firstPermitted = PermissionService.instance.getFirstAccessibleModule();
+      if (firstPermitted != null) {
+        _activeModule = firstPermitted;
+      }
+    }
+  }
+
+  Widget _buildContent() {
+    return ValueListenableBuilder<bool>(
+      valueListenable: PermissionService.instance.permissionsNotifier,
+      builder: (context, _, __) {
+        if (!PermissionService.instance.isLoaded) {
+          return Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
+        }
+        if (!PermissionService.instance.canAccessModule(_activeModule)) {
+          return const UnauthorizedView();
+        }
+        switch (_activeModule) {
+          case AppModule.dashboard:
+            return const DashboardScreen();
+          case AppModule.customers:
+            return const CustomersScreen();
+          case AppModule.accounts:
+            return const TreasuryAccountsScreen();
+          case AppModule.suppliers:
+            return const SuppliersScreen();
+          case AppModule.products:
+            return const ProductsScreen();
+          case AppModule.productSettings:
+            return const ProductSettingsScreen();
+          case AppModule.invoices:
+            return const InvoicesScreen();
+          case AppModule.customerOrders:
+            return const CustomerOrdersScreen();
+          case AppModule.quotes:
+            return const QuotesScreen();
       case AppModule.deliveryNotes:
         return const DeliveryNotesScreen();
       case AppModule.stockDashboard:
@@ -146,9 +183,11 @@ class AppShellScreenState extends State<AppShellScreen> {
         return const StockEntriesScreen();
       case AppModule.userManagement:
         return const UserManagementScreen();
-      default:
-        return _ComingSoonScreen(module: _activeModule);
+      case AppModule.importExport:
+        return const ImportExportScreen();
     }
+  },
+);
   }
 
   String _getModuleTitle() {
@@ -189,6 +228,7 @@ class AppShellScreenState extends State<AppShellScreen> {
       case AppModule.companyInfo: return 'Informations sur la societe';
       case AppModule.documentTemplates: return 'Modeles de documents';
       case AppModule.userManagement: return 'Gestion des utilisateurs';
+      case AppModule.importExport: return 'Import / Export des données';
     }
   }
 
@@ -282,6 +322,14 @@ class AppShellScreenState extends State<AppShellScreen> {
                             child: const Row(children: [Icon(Icons.settings_rounded, size: 16), SizedBox(width: 8), Text('Parametres')]),
                           ),
                           PopupMenuItem(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const DiagnosticScreen()),
+                              );
+                            },
+                            child: const Row(children: [Icon(Icons.troubleshoot, size: 16), SizedBox(width: 8), Text('Diagnostic Système')]),
+                          ),
+                          PopupMenuItem(
                             onTap: () => context.read<AuthBloc>().add(AuthLogoutRequested()),
                             child: Row(children: [Icon(Icons.logout_rounded, size: 16, color: AppColors.error), const SizedBox(width: 8), Text('Deconnexion', style: TextStyle(color: AppColors.error))]),
                           ),
@@ -320,27 +368,6 @@ class AppShellScreenState extends State<AppShellScreen> {
           ),
         );
       },
-    );
-  }
-}
-
-class _ComingSoonScreen extends StatelessWidget {
-  final AppModule module;
-  const _ComingSoonScreen({required this.module});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.construction_rounded, size: 64, color: AppColors.warning),
-          SizedBox(height: 16),
-          Text('Module en developpement', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          SizedBox(height: 8),
-          Text('Ce module sera disponible prochainement.', style: TextStyle(color: AppColors.textSecondary)),
-        ],
-      ),
     );
   }
 }

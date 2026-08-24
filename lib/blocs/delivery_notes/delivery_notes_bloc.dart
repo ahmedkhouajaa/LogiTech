@@ -1,5 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/delivery_note.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
@@ -241,6 +243,10 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
   }
 
   Future<void> _onAdd(AddDeliveryNote event, Emitter<DeliveryNotesState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.salesDeliveryNotes)) {
+      emit(DeliveryNotesError('Permission refusée : Vous n\'avez pas le droit de créer un bon de livraison.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveDeliveryNote(event.note);
       add(const LoadFirstDeliveryNotes());
@@ -250,6 +256,10 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
   }
 
   Future<void> _onUpdate(UpdateDeliveryNote event, Emitter<DeliveryNotesState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.salesDeliveryNotes)) {
+      emit(DeliveryNotesError('Permission refusée : Vous n\'avez pas le droit de modifier un bon de livraison.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveDeliveryNote(event.note);
       add(const LoadFirstDeliveryNotes());
@@ -259,6 +269,10 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
   }
 
   Future<void> _onDelete(DeleteDeliveryNote event, Emitter<DeliveryNotesState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.salesDeliveryNotes)) {
+      emit(DeliveryNotesError('Permission refusée : Vous n\'avez pas le droit de supprimer un bon de livraison.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('delivery_notes', event.noteId);
       add(const LoadFirstDeliveryNotes());

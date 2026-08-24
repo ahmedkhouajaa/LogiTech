@@ -16,6 +16,8 @@ import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../services/article_import_export_service.dart';
+import '../widgets/import_export/article_import_dialog.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -58,6 +60,107 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 child: AppSearchBar(
                   onChanged: (v) => setState(() => _search = v.toLowerCase()),
                 ),
+              ),
+              const SizedBox(width: 10),
+              // ... Actions Button Popup
+              PopupMenuButton<String>(
+                tooltip: 'Actions Import / Export Articles',
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                color: AppColors.surface,
+                elevation: 4,
+                child: Container(
+                  height: 34,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textPrimary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Actions',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                itemBuilder: (ctx) {
+                  final canExport = PermissionService.instance.canCreate(UserPermissionResources.importExport);
+                  final canImport = PermissionService.instance.canUpdate(UserPermissionResources.importExport);
+                  final items = <PopupMenuEntry<String>>[];
+                  if (canExport) {
+                    items.addAll([
+                      const PopupMenuItem(
+                        value: 'export_excel',
+                        child: Text('Exporter Excel', style: TextStyle(fontSize: 13)),
+                      ),
+                      const PopupMenuItem(
+                        value: 'export_csv',
+                        child: Text('Exporter CSV', style: TextStyle(fontSize: 13)),
+                      ),
+                      const PopupMenuItem(
+                        value: 'export_json',
+                        child: Text('Exporter JSON', style: TextStyle(fontSize: 13)),
+                      ),
+                    ]);
+                  }
+                  if (canExport && canImport) {
+                    items.add(const PopupMenuDivider());
+                  }
+                  if (canImport) {
+                    items.add(
+                      const PopupMenuItem(
+                        value: 'import_excel',
+                        child: Text(
+                          'Importer depuis Excel',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    );
+                  }
+                  return items;
+                },
+                onSelected: (val) async {
+                  final state = context.read<ProductsBloc>().state;
+                  final products = state is ProductsLoaded ? state.products : <Product>[];
+
+                  if (val == 'export_excel') {
+                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                    await ArticleImportExportService.instance.exportArticlesToExcel(
+                      context: context,
+                      products: products,
+                    );
+                  } else if (val == 'export_csv') {
+                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                    await ArticleImportExportService.instance.exportArticlesToCsv(
+                      context: context,
+                      products: products,
+                    );
+                  } else if (val == 'export_json') {
+                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                    await ArticleImportExportService.instance.exportArticlesToJson(
+                      context: context,
+                      products: products,
+                    );
+                  } else if (val == 'import_excel') {
+                    if (!PermissionService.instance.canUpdate(UserPermissionResources.importExport)) return;
+                    ArticleImportDialog.show(
+                      context,
+                      onImportSuccess: () {
+                        context.read<ProductsBloc>().add(const LoadFirstProducts());
+                        context.read<StockBloc>().add(LoadStock());
+                      },
+                    );
+                  }
+                },
               ),
               if (PermissionService.instance.canCreate(UserPermissionResources.productsList)) ...[
                 const SizedBox(width: 10),
@@ -307,15 +410,68 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   elevation: 4,
                                   onSelected: (val) {
-                                    if (val == 'edit') _navigateToCreate(context, p);
+                                    if (val == 'view' || val == 'edit') _navigateToCreate(context, p);
                                     if (val == 'delete') context.read<ProductsBloc>().add(DeleteProduct(p.id));
                                   },
-                                  itemBuilder: (context) => [
-                                    if (PermissionService.instance.canUpdate(UserPermissionResources.productsList))
-                                      PopupMenuItem(value: 'edit', height: 36, child: Row(children: [Icon(Icons.edit_outlined, size: 16, color: AppColors.primary), const SizedBox(width: 8), const Text('Modifier', style: TextStyle(fontSize: 13))])),
-                                    if (PermissionService.instance.canDelete(UserPermissionResources.productsList))
-                                      PopupMenuItem(value: 'delete', height: 36, child: Row(children: [Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.error), const SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error, fontSize: 13))])),
-                                  ],
+                                  itemBuilder: (context) {
+                                    final canRead = PermissionService.instance.canRead(UserPermissionResources.productsList);
+                                    final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.productsList);
+                                    final canDelete = PermissionService.instance.canDelete(UserPermissionResources.productsList);
+
+                                    final entries = <PopupMenuEntry<String>>[];
+
+                                    if (canRead) {
+                                      entries.add(
+                                        PopupMenuItem(
+                                          value: 'view',
+                                          height: 36,
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.visibility_outlined, size: 16, color: AppColors.info),
+                                              const SizedBox(width: 8),
+                                              const Text('Voir', style: TextStyle(fontSize: 13)),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    if (canUpdate) {
+                                      if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                                      entries.add(
+                                        PopupMenuItem(
+                                          value: 'edit',
+                                          height: 36,
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
+                                              const SizedBox(width: 8),
+                                              const Text('Modifier', style: TextStyle(fontSize: 13)),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    if (canDelete) {
+                                      if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                                      entries.add(
+                                        PopupMenuItem(
+                                          value: 'delete',
+                                          height: 36,
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.error),
+                                              const SizedBox(width: 8),
+                                              Text('Supprimer', style: TextStyle(color: AppColors.error, fontSize: 13)),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    return entries;
+                                  },
                                 ),
                               ],
                             ),

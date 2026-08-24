@@ -61,8 +61,8 @@ class MobileGenericListScreen extends StatelessWidget {
       valueListenable: PermissionService.instance.permissionsNotifier,
       builder: (context, _, __) {
         final resKey = PermissionService.instance.getResourceKeyForModule(activeModule);
-        final canRead = resKey == null || PermissionService.instance.canRead(resKey);
-        final canCreate = resKey == null || PermissionService.instance.canCreate(resKey);
+        final canRead = PermissionService.instance.canAccessModule(activeModule);
+        final canCreate = resKey != null ? PermissionService.instance.canCreate(resKey) : PermissionService.instance.isAdmin;
 
         if (!canRead) {
           return Scaffold(

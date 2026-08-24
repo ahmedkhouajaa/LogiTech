@@ -170,25 +170,35 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentSheet),
-              itemBuilder: (_) => [
-                _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
-                if (currentSheet.status != 'validated' && PermissionService.instance.canUpdate(UserPermissionResources.stockInventorySheets)) ...[
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                ],
-                if (currentSheet.status != 'validated' && PermissionService.instance.canDelete(UserPermissionResources.stockInventorySheets)) ...[
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                ],
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-              ],
+              itemBuilder: (_) {
+                final canRead = PermissionService.instance.canRead(UserPermissionResources.stockInventorySheets);
+                final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.stockInventorySheets);
+                final canDelete = PermissionService.instance.canDelete(UserPermissionResources.stockInventorySheets);
+
+                final entries = <PopupMenuEntry<String>>[];
+                void addItem(String val, IconData icon, Color col, String label) {
+                  if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                  entries.add(_buildMenuItem(val, icon, col, label));
+                }
+
+                if (canRead) {
+                  addItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir');
+                }
+                if (currentSheet.status != 'validated' && canUpdate) {
+                  addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+                }
+                if (currentSheet.status != 'validated' && canDelete) {
+                  addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+                }
+                if (canRead) {
+                  addItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer');
+                  addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
+                  addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
+                  addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                }
+
+                return entries;
+              },
             ),
           ],
         ),

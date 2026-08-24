@@ -197,44 +197,60 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (val) => _handleAction(context, val, currentDeliveryNote),
-              itemBuilder: (_) => [
-                _buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'),
-                if (PermissionService.instance.canUpdate(UserPermissionResources.salesDeliveryNotes)) ...[
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                ],
-                if (PermissionService.instance.canDelete(UserPermissionResources.salesDeliveryNotes)) ...[
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                ],
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter Paiement'),
-                const PopupMenuDivider(height: 1),
-                if (!currentDeliveryNote.isConvertedToInvoice && !currentDeliveryNote.isConvertedToReturn) ...[
-                  _buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('to_return', Icons.assignment_return_outlined, AppColors.textSecondary, 'Créer un Bon de Retour'),
-                  const PopupMenuDivider(height: 1),
-                ] else ...[
-                  if (currentDeliveryNote.isConvertedToInvoice) ...[
-                    _buildMenuItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture créée'),
-                    const PopupMenuDivider(height: 1),
-                  ],
-                  if (currentDeliveryNote.isConvertedToReturn) ...[
-                    _buildMenuItem('view_return', Icons.assignment_return_outlined, AppColors.success, 'Voir le bon de retour créé'),
-                    const PopupMenuDivider(height: 1),
-                  ],
-                ],
-                _buildMenuItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                const PopupMenuDivider(height: 1),
-                _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-              ],
+              itemBuilder: (_) {
+                final canRead = PermissionService.instance.canRead(UserPermissionResources.salesDeliveryNotes);
+                final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.salesDeliveryNotes);
+                final canDelete = PermissionService.instance.canDelete(UserPermissionResources.salesDeliveryNotes);
+                final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.salesDeliveryNotes);
+                final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
+                final canCreateInvoice = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.salesInvoices);
+                final canCreateReturn = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.salesReturnVouchers);
+
+                final entries = <PopupMenuEntry<String>>[];
+                void addItem(String val, IconData icon, Color col, String label) {
+                  if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                  entries.add(_buildMenuItem(val, icon, col, label));
+                }
+
+                if (canRead) {
+                  addItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir');
+                }
+                if (canUpdate) {
+                  addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+                }
+                if (canDelete) {
+                  addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+                }
+                if (canCreatePayment) {
+                  addItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter Paiement');
+                }
+                if (!currentDeliveryNote.isConvertedToInvoice && !currentDeliveryNote.isConvertedToReturn) {
+                  if (canCreateInvoice) {
+                    addItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Facture');
+                  }
+                  if (canCreateReturn) {
+                    addItem('to_return', Icons.assignment_return_outlined, AppColors.textSecondary, 'Créer un Bon de Retour');
+                  }
+                } else {
+                  if (currentDeliveryNote.isConvertedToInvoice && canRead) {
+                    addItem('view_invoice', Icons.receipt_long_outlined, AppColors.success, 'Voir la facture créée');
+                  }
+                  if (currentDeliveryNote.isConvertedToReturn && canRead) {
+                    addItem('view_return', Icons.assignment_return_outlined, AppColors.success, 'Voir le bon de retour créé');
+                  }
+                }
+                if (hasAnyAccess) {
+                  addItem('print', Icons.print_outlined, AppColors.primary, 'Imprimer');
+                  addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
+                  addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
+                  addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                }
+                if (PermissionService.instance.isAdmin) {
+                  addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+                }
+
+                return entries;
+              },
             ),
           ],
         ),

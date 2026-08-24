@@ -7,6 +7,8 @@ import 'inventory_sheets_state.dart';
 import '../../database/database_helper.dart';
 import '../../models/inventory_sheet.dart';
 import '../../models/stock_movement.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
@@ -109,6 +111,10 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
   }
 
   Future<void> _onSheetAdded(InventorySheetAdded event, Emitter<InventorySheetsState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.stockInventorySheets)) {
+      emit(InventorySheetsError('Permission refusée : Vous n\'avez pas le droit de créer une fiche d\'inventaire.'));
+      return;
+    }
     try {
       String number = event.sheet.number;
       if (number.isEmpty) {
@@ -173,6 +179,10 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
   }
 
   Future<void> _onSheetUpdated(InventorySheetUpdated event, Emitter<InventorySheetsState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.stockInventorySheets)) {
+      emit(InventorySheetsError('Permission refusée : Vous n\'avez pas le droit de modifier une fiche d\'inventaire.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveInventorySheet(event.sheet);
       add(LoadFirstInventorySheets());
@@ -182,6 +192,10 @@ class InventorySheetsBloc extends Bloc<InventorySheetsEvent, InventorySheetsStat
   }
 
   Future<void> _onSheetDeleted(InventorySheetDeleted event, Emitter<InventorySheetsState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.stockInventorySheets)) {
+      emit(InventorySheetsError('Permission refusée : Vous n\'avez pas le droit de supprimer une fiche d\'inventaire.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('inventory_sheets', event.sheetId);
       add(LoadFirstInventorySheets());

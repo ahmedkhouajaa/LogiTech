@@ -249,43 +249,49 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
   }
 
   List<PopupMenuEntry<String>> _buildActionMenu(BuildContext context, PurchaseInvoice inv) {
-    final List<PopupMenuEntry<String>> items = [];
+    final canRead = PermissionService.instance.canRead(UserPermissionResources.purchasesPurchaseInvoices);
+    final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.purchasesPurchaseInvoices);
+    final canDelete = PermissionService.instance.canDelete(UserPermissionResources.purchasesPurchaseInvoices);
+    final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.purchasesPurchaseInvoices);
+    final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
+    final canCreateCreditNote = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierCreditNotes);
 
-    items.add(_buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'));
-    if (PermissionService.instance.canUpdate(UserPermissionResources.purchasesPurchaseInvoices)) {
-      items.add(const PopupMenuDivider(height: 1));
-      items.add(_buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'));
+    final List<PopupMenuEntry<String>> items = [];
+    void addItem(String val, IconData icon, Color col, String label) {
+      if (items.isNotEmpty) items.add(const PopupMenuDivider(height: 1));
+      items.add(_buildMenuItem(val, icon, col, label));
     }
-    if (PermissionService.instance.canDelete(UserPermissionResources.purchasesPurchaseInvoices)) {
-      items.add(const PopupMenuDivider(height: 1));
-      items.add(_buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'));
+
+    if (canRead) {
+      addItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir');
     }
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'));
-    items.add(const PopupMenuDivider(height: 1));
-    
-    if (inv.status != InvoiceStatus.paid) {
-      items.add(_buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'));
-      items.add(const PopupMenuDivider(height: 1));
+    if (canUpdate) {
+      addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+    }
+    if (canDelete) {
+      addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+    }
+    if (inv.status != InvoiceStatus.paid && canCreatePayment) {
+      addItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement');
     }
     if (inv.creditNoteId != null && inv.creditNoteId!.isNotEmpty) {
-      items.add(_buildMenuItem('view_credit_note', Icons.receipt_long_outlined, AppColors.primary, 'Voir l\'avoir'));
+      if (canRead) {
+        addItem('view_credit_note', Icons.receipt_long_outlined, AppColors.primary, 'Voir l\'avoir');
+      }
     } else {
-      items.add(_buildMenuItem('to_credit_note', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Avoir'));
+      if (canCreateCreditNote) {
+        addItem('to_credit_note', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en Avoir');
+      }
     }
-    items.add(const PopupMenuDivider(height: 1));
-    
-    items.add(_buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'));
-//     items.add(const PopupMenuDivider(height: 1));
-//     items.add(_buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'));
-//     items.add(const PopupMenuDivider(height: 1));
-//     items.add(_buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'));
+    if (hasAnyAccess) {
+      addItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer');
+      addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
+      addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
+      addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+    }
+    if (PermissionService.instance.isAdmin) {
+      addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+    }
 
     return items;
   }

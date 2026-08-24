@@ -1,8 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:uuid/uuid.dart';
 import '../../database/database_helper.dart';
 import '../../models/stock_movement.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
 import 'warehouses_event.dart';
@@ -74,6 +75,10 @@ class WarehousesBloc extends Bloc<WarehousesEvent, WarehousesState> {
   }
 
   Future<void> _onAddWarehouse(AddWarehouse event, Emitter<WarehousesState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.stockWarehouses)) {
+      emit(WarehousesError("Permission refusée : Vous n'avez pas le droit d'ajouter un entrepôt."));
+      return;
+    }
     final currentState = state;
     List<Warehouse> currentList = [];
     if (currentState is WarehousesLoaded) {
@@ -114,6 +119,10 @@ class WarehousesBloc extends Bloc<WarehousesEvent, WarehousesState> {
   }
 
   Future<void> _onUpdateWarehouse(UpdateWarehouse event, Emitter<WarehousesState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.stockWarehouses)) {
+      emit(WarehousesError("Permission refusée : Vous n'avez pas le droit de modifier un entrepôt."));
+      return;
+    }
     final currentState = state;
     final nameLower = event.warehouse.name.trim().toLowerCase();
     if (event.warehouse.isDefault || nameLower == 'entrepôt par défaut' || nameLower == 'entrepot par defaut') {
@@ -145,6 +154,10 @@ class WarehousesBloc extends Bloc<WarehousesEvent, WarehousesState> {
   }
 
   Future<void> _onDeleteWarehouse(DeleteWarehouse event, Emitter<WarehousesState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.stockWarehouses)) {
+      emit(WarehousesError("Permission refusée : Vous n'avez pas le droit de supprimer un entrepôt."));
+      return;
+    }
     final currentState = state;
     if (currentState is WarehousesLoaded) {
       final target = currentState.warehouses.firstWhere(

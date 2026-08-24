@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../database/database_helper.dart';
 import '../../models/supplier_credit_note.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import 'supplier_credit_notes_event.dart';
@@ -103,6 +104,10 @@ class SupplierCreditNotesBloc extends Bloc<SupplierCreditNotesEvent, SupplierCre
   }
 
   Future<void> _onAddSupplierCreditNote(AddSupplierCreditNote event, Emitter<SupplierCreditNotesState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierCreditNotes)) {
+      emit(SupplierCreditNotesError('Permission refusée : Vous n\'avez pas le droit de créer un avoir fournisseur.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveSupplierCreditNote(event.supplierCreditNote);
       add(const LoadFirstSupplierCreditNotes());
@@ -112,6 +117,10 @@ class SupplierCreditNotesBloc extends Bloc<SupplierCreditNotesEvent, SupplierCre
   }
 
   Future<void> _onUpdateSupplierCreditNote(UpdateSupplierCreditNote event, Emitter<SupplierCreditNotesState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierCreditNotes)) {
+      emit(SupplierCreditNotesError('Permission refusée : Vous n\'avez pas le droit de modifier un avoir fournisseur.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveSupplierCreditNote(event.supplierCreditNote);
       add(const LoadFirstSupplierCreditNotes());
@@ -121,6 +130,10 @@ class SupplierCreditNotesBloc extends Bloc<SupplierCreditNotesEvent, SupplierCre
   }
 
   Future<void> _onDeleteSupplierCreditNote(DeleteSupplierCreditNote event, Emitter<SupplierCreditNotesState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierCreditNotes)) {
+      emit(SupplierCreditNotesError('Permission refusée : Vous n\'avez pas le droit de supprimer un avoir fournisseur.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('supplier_credit_notes', event.id);
       add(const LoadFirstSupplierCreditNotes());

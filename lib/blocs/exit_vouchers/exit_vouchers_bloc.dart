@@ -1,12 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:uuid/uuid.dart';
 import '../../models/stock_withdrawal.dart';
-import '../../models/stock_movement.dart';
-import '../../utils/constants.dart';
-import '../../database/database_helper.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../services/firestore_pagination_service.dart';
-import '../../services/sync_service.dart';
-import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
@@ -145,8 +141,6 @@ class ExitVouchersError extends ExitVouchersState {
 // ─── BLoC ────────────────────────────────────────────────────────
 class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
   static const int pageSize = 10;
-  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
-  final _uuid = const Uuid();
 
   ExitVouchersBloc() : super(ExitVouchersInitial()) {
     on<LoadExitVouchers>(_onLoad);
@@ -249,6 +243,10 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
   }
 
   Future<void> _onAdd(AddExitVoucher event, Emitter<ExitVouchersState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.salesExitVouchers)) {
+      emit(ExitVouchersError('Permission refusée : Vous n\'avez pas le droit de créer un bon de sortie.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveStockWithdrawal(event.withdrawal);
       final currentState = state;
@@ -268,6 +266,10 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
   }
 
   Future<void> _onUpdate(UpdateExitVoucher event, Emitter<ExitVouchersState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.salesExitVouchers)) {
+      emit(ExitVouchersError('Permission refusée : Vous n\'avez pas le droit de modifier un bon de sortie.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveStockWithdrawal(event.withdrawal);
       final currentState = state;
@@ -287,6 +289,10 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
   }
 
   Future<void> _onDelete(DeleteExitVoucher event, Emitter<ExitVouchersState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.salesExitVouchers)) {
+      emit(ExitVouchersError('Permission refusée : Vous n\'avez pas le droit de supprimer un bon de sortie.'));
+      return;
+    }
     final currentState = state;
     if (currentState is ExitVouchersLoaded) {
       final updatedList = currentState.withdrawals.where((w) => w.id != event.withdrawalId).toList();

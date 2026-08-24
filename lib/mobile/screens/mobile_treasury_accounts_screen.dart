@@ -112,20 +112,31 @@ class _MobileTreasuryAccountsScreenState extends State<MobileTreasuryAccountsScr
                 onSelected: (val) {
                   widget.handleAction(context, val, account, items);
                 },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'depot', child: Text('Dépôt')),
-                  const PopupMenuItem(value: 'transfer', child: Text('Transférer')),
-                  if (!isDefault) ...[
-                    if (PermissionService.instance.canUpdate(UserPermissionResources.treasuryAccounts)) ...[
-                      const PopupMenuDivider(),
-                      const PopupMenuItem(value: 'edit', child: Text('Modifier')),
-                    ],
-                    if (PermissionService.instance.canDelete(UserPermissionResources.treasuryAccounts)) ...[
-                      const PopupMenuDivider(),
-                      PopupMenuItem(value: 'delete', child: Text('Supprimer', style: TextStyle(color: AppColors.error))),
-                    ],
-                  ],
-                ],
+                itemBuilder: (_) {
+                  final canCreateTx = PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions);
+                  final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.treasuryAccounts);
+                  final canDelete = PermissionService.instance.canDelete(UserPermissionResources.treasuryAccounts);
+
+                  final entries = <PopupMenuEntry<String>>[];
+
+                  if (canCreateTx) {
+                    entries.add(const PopupMenuItem(value: 'depot', child: Text('Dépôt')));
+                    entries.add(const PopupMenuItem(value: 'transfer', child: Text('Transférer')));
+                  }
+
+                  if (!isDefault) {
+                    if (canUpdate) {
+                      if (entries.isNotEmpty) entries.add(const PopupMenuDivider());
+                      entries.add(const PopupMenuItem(value: 'edit', child: Text('Modifier')));
+                    }
+                    if (canDelete) {
+                      if (entries.isNotEmpty) entries.add(const PopupMenuDivider());
+                      entries.add(PopupMenuItem(value: 'delete', child: Text('Supprimer', style: TextStyle(color: AppColors.error))));
+                    }
+                  }
+
+                  return entries;
+                },
               ),
               onTap: () {
                 if (isDefault) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/permission_service.dart';
 import '../utils/constants.dart';
 
 /// A generic reusable data table with search, sorting, and row actions.
@@ -12,6 +13,7 @@ class DataTableWidget<T> extends StatefulWidget {
   final void Function(T row)? onPrint;
   final Widget Function(T row)? customActionsBuilder;
   final String emptyMessage;
+  final String? resourceKey;
 
   const DataTableWidget({
     super.key,
@@ -24,6 +26,7 @@ class DataTableWidget<T> extends StatefulWidget {
     this.onPrint,
     this.customActionsBuilder,
     this.emptyMessage = 'Aucun enregistrement',
+    this.resourceKey,
   });
 
   @override
@@ -49,20 +52,29 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
     if (widget.rows.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(48),
+          padding: const EdgeInsets.all(40),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.inbox_rounded, size: 48, color: AppColors.textTertiary),
+              Icon(Icons.inbox_outlined, size: 48, color: AppColors.textTertiary),
               const SizedBox(height: 12),
-              Text(widget.emptyMessage, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+              Text(widget.emptyMessage, style: TextStyle(color: AppColors.textTertiary, fontSize: 14)),
             ],
           ),
         ),
       );
     }
 
-    final hasActions = widget.onEdit != null || widget.onDelete != null || widget.onView != null || widget.onPrint != null || widget.customActionsBuilder != null;
+    final canRead = widget.resourceKey == null || PermissionService.instance.canRead(widget.resourceKey!);
+    final canUpdate = widget.resourceKey == null || PermissionService.instance.canUpdate(widget.resourceKey!);
+    final canDelete = widget.resourceKey == null || PermissionService.instance.canDelete(widget.resourceKey!);
+
+    final showView = widget.onView != null && canRead;
+    final showEdit = widget.onEdit != null && canUpdate;
+    final showPrint = widget.onPrint != null && canRead;
+    final showDelete = widget.onDelete != null && canDelete;
+
+    final hasActions = showEdit || showDelete || showView || showPrint || widget.customActionsBuilder != null;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -109,14 +121,14 @@ class _DataTableWidgetState<T> extends State<DataTableWidget<T>> {
                           }
                         },
                         itemBuilder: (_) => [
-                          if (widget.onView != null)
+                          if (showView)
                             PopupMenuItem(value: 'view', height: 36, child: Row(children: [Icon(Icons.visibility_outlined, size: 16, color: AppColors.info), const SizedBox(width: 8), const Text('Voir', style: TextStyle(fontSize: 13))])),
-                          if (widget.onEdit != null)
+                          if (showEdit)
                             PopupMenuItem(value: 'edit', height: 36, child: Row(children: [Icon(Icons.edit_outlined, size: 16, color: AppColors.primary), const SizedBox(width: 8), const Text('Modifier', style: TextStyle(fontSize: 13))])),
-                          if (widget.onPrint != null)
+                          if (showPrint)
                             PopupMenuItem(value: 'print', height: 36, child: Row(children: [Icon(Icons.print_outlined, size: 16, color: AppColors.success), const SizedBox(width: 8), const Text('Imprimer', style: TextStyle(fontSize: 13))])),
-                          if (widget.onDelete != null) ...[
-                            if (widget.onView != null || widget.onEdit != null || widget.onPrint != null)
+                          if (showDelete) ...[
+                            if (showView || showEdit || showPrint)
                               const PopupMenuDivider(height: 1),
                             PopupMenuItem(value: 'delete', height: 36, child: Row(children: [Icon(Icons.delete_outline, size: 16, color: AppColors.error), const SizedBox(width: 8), Text('Supprimer', style: TextStyle(fontSize: 13, color: AppColors.error))])),
                           ],

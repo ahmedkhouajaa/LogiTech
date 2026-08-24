@@ -246,53 +246,74 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                   _deleteProject(p);
                                 }
                               },
-                              itemBuilder: (context) => [
-                                PopupMenuItem(
-                                  value: 'voir',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.visibility_outlined, size: 18, color: AppColors.textSecondary),
-                                      SizedBox(width: 8),
-                                      Text('Voir'),
-                                    ],
-                                  ),
-                                ),
-                                if (!isDefault) ...[
-                                  if (PermissionService.instance.canUpdate(UserPermissionResources.projects))
+                              itemBuilder: (context) {
+                                final canRead = PermissionService.instance.canRead(UserPermissionResources.projects);
+                                final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.projects);
+                                final canDelete = PermissionService.instance.canDelete(UserPermissionResources.projects);
+
+                                final entries = <PopupMenuEntry<String>>[];
+
+                                if (canRead) {
+                                  entries.add(
                                     PopupMenuItem(
-                                      value: 'modifier',
+                                      value: 'voir',
                                       child: Row(
                                         children: [
-                                          Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary),
-                                          SizedBox(width: 8),
-                                          Text('Modifier'),
+                                          Icon(Icons.visibility_outlined, size: 18, color: AppColors.textSecondary),
+                                          const SizedBox(width: 8),
+                                          const Text('Voir'),
                                         ],
                                       ),
                                     ),
-                                  if (PermissionService.instance.canDelete(UserPermissionResources.projects))
+                                  );
+                                }
+
+                                if (!isDefault) {
+                                  if (canUpdate) {
+                                    entries.add(
+                                      PopupMenuItem(
+                                        value: 'modifier',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary),
+                                            const SizedBox(width: 8),
+                                            const Text('Modifier'),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  if (canDelete) {
+                                    entries.add(
+                                      PopupMenuItem(
+                                        value: 'supprimer',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                                            const SizedBox(width: 8),
+                                            Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  entries.add(
                                     PopupMenuItem(
-                                      value: 'supprimer',
+                                      enabled: false,
                                       child: Row(
                                         children: [
-                                          Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-                                          SizedBox(width: 8),
-                                          Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                                          Icon(Icons.lock_rounded, size: 16, color: AppColors.textTertiary),
+                                          const SizedBox(width: 8),
+                                          Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
                                         ],
                                       ),
                                     ),
-                                ] else ...[
-                                  PopupMenuItem(
-                                    enabled: false,
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.lock_rounded, size: 16, color: AppColors.textTertiary),
-                                        SizedBox(width: 8),
-                                        Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
+                                  );
+                                }
+
+                                return entries;
+                              },
                             ),
                           ),
                         ];

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/user_management_model.dart';
 import '../../utils/constants.dart';
+import '../../services/permission_service.dart';
 
 class MobileUserCard extends StatelessWidget {
   final EnterpriseUserModel user;
@@ -21,6 +22,7 @@ class MobileUserCard extends StatelessWidget {
     final isAdmin = user.isAdmin;
     final roleColor = isAdmin ? const Color(0xFF2563EB) : const Color(0xFF64748B);
     final roleBg = isAdmin ? const Color(0xFF2563EB).withValues(alpha: 0.1) : const Color(0xFFF1F5F9);
+    final isCurrentUserOwner = PermissionService.instance.isOwner;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -34,7 +36,7 @@ class MobileUserCard extends StatelessWidget {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         child: InkWell(
-          onTap: onTap,
+          onTap: (user.isOwner || (user.isAdmin && !isCurrentUserOwner)) ? null : onTap,
           borderRadius: BorderRadius.circular(AppRadius.lg),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -79,41 +81,78 @@ class MobileUserCard extends StatelessWidget {
                       ),
                     ],
                     const Spacer(),
-                    PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert_rounded, size: 20, color: AppColors.textTertiary),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      color: AppColors.surface,
-                      onSelected: (val) {
-                        if (val == 'edit') {
-                          onEdit();
-                        } else if (val == 'delete' && onDelete != null) {
-                          onDelete!();
-                        }
-                      },
-                      itemBuilder: (ctx) => [
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit_outlined, size: 18, color: Color(0xFF2563EB)),
-                              SizedBox(width: 10),
-                              Text('Modifier'),
-                            ],
+                    if (user.isOwner)
+                      Tooltip(
+                        message: 'Propriétaire de l\'entreprise (Profil protégé)',
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: const Icon(
+                            Icons.lock_rounded,
+                            size: 14,
+                            color: Color(0xFFD97706),
                           ),
                         ),
-                        if (onDelete != null && !user.isOwner)
-                          PopupMenuItem(
-                            value: 'delete',
+                      )
+                    else if (user.isAdmin && !isCurrentUserOwner)
+                      Tooltip(
+                        message: 'Seul le propriétaire peut gérer un administrateur',
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: AppColors.isDarkMode ? AppColors.surfaceAlt : const Color(0xFFF1F5F9),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Icon(
+                            Icons.lock_outline_rounded,
+                            size: 14,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      )
+                    else
+                      PopupMenuButton<String>(
+                        icon: Icon(Icons.more_vert_rounded, size: 20, color: AppColors.textTertiary),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        color: AppColors.surface,
+                        onSelected: (val) {
+                          if (val == 'edit') {
+                            onEdit();
+                          } else if (val == 'delete' && onDelete != null) {
+                            onDelete!();
+                          }
+                        },
+                        itemBuilder: (ctx) => [
+                          const PopupMenuItem(
+                            value: 'edit',
                             child: Row(
                               children: [
-                                Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-                                const SizedBox(width: 10),
-                                Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                                Icon(Icons.edit_outlined, size: 18, color: Color(0xFF2563EB)),
+                                SizedBox(width: 10),
+                                Text('Modifier'),
                               ],
                             ),
                           ),
-                      ],
-                    ),
+                          if (onDelete != null && !user.isOwner)
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                                  const SizedBox(width: 10),
+                                  Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
                   ],
                 ),
                 const SizedBox(height: 10),

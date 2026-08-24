@@ -258,41 +258,89 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
                             icon: Icon(Icons.more_horiz, size: 18, color: AppColors.textSecondary),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
-                            itemBuilder: (context) => [
-                              if (!isDefault) ...[
-                                if (PermissionService.instance.canUpdate(UserPermissionResources.stockWarehouses))
+                            itemBuilder: (context) {
+                              final canRead = PermissionService.instance.canRead(UserPermissionResources.stockWarehouses);
+                              final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.stockWarehouses);
+                              final canDelete = PermissionService.instance.canDelete(UserPermissionResources.stockWarehouses);
+
+                              final entries = <PopupMenuEntry>[];
+
+                              if (canRead) {
+                                entries.add(
                                   PopupMenuItem(
-                                    value: 'edit',
-                                    child: Row(children: [Icon(Icons.edit_outlined, size: 16, color: AppColors.primary), const SizedBox(width: 8), const Text('Modifier')]),
+                                    value: 'view',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.visibility_outlined, size: 16, color: AppColors.info),
+                                        const SizedBox(width: 8),
+                                        const Text('Voir'),
+                                      ],
+                                    ),
                                     onTap: () {
                                       Future.delayed(Duration.zero, () {
                                         _showWarehouseDialog(w);
                                       });
                                     },
                                   ),
-                                if (PermissionService.instance.canDelete(UserPermissionResources.stockWarehouses))
+                                );
+                              }
+
+                              if (!isDefault) {
+                                if (canUpdate) {
+                                  entries.add(
+                                    PopupMenuItem(
+                                      value: 'edit',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
+                                          const SizedBox(width: 8),
+                                          const Text('Modifier'),
+                                        ],
+                                      ),
+                                      onTap: () {
+                                        Future.delayed(Duration.zero, () {
+                                          _showWarehouseDialog(w);
+                                        });
+                                      },
+                                    ),
+                                  );
+                                }
+                                if (canDelete) {
+                                  entries.add(
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.delete_outline, size: 16, color: AppColors.error),
+                                          const SizedBox(width: 8),
+                                          Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                                        ],
+                                      ),
+                                      onTap: () {
+                                        Future.delayed(Duration.zero, () {
+                                          _deleteWarehouse(w);
+                                        });
+                                      },
+                                    ),
+                                  );
+                                }
+                              } else {
+                                entries.add(
                                   PopupMenuItem(
-                                    value: 'delete',
-                                    child: Row(children: [Icon(Icons.delete_outline, size: 16, color: AppColors.error), const SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error))]),
-                                    onTap: () {
-                                      Future.delayed(Duration.zero, () {
-                                        _deleteWarehouse(w);
-                                      });
-                                    },
+                                    enabled: false,
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.lock_rounded, size: 14, color: AppColors.textTertiary),
+                                        const SizedBox(width: 8),
+                                        Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                      ],
+                                    ),
                                   ),
-                              ] else ...[
-                                PopupMenuItem(
-                                  enabled: false,
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.lock_rounded, size: 14, color: AppColors.textTertiary),
-                                      const SizedBox(width: 8),
-                                      Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ],
+                                );
+                              }
+
+                              return entries;
+                            },
                           ),
                         ),
                       ],

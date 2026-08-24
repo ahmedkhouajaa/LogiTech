@@ -22,3 +22,5 @@ Future<String?> saveStringFileImpl(
 Future<void> openFileImpl(String path) async {
   // No-op on unsupported platform
 }
+
+Future<void> downloadUrlImpl(String url, String fileName) async {}

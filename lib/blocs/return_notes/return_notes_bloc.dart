@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../database/database_helper.dart';
 import '../../models/return_note.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import 'return_notes_event.dart';
@@ -112,6 +113,10 @@ class ReturnNotesBloc extends Bloc<ReturnNotesEvent, ReturnNotesState> {
   }
 
   Future<void> _onAddReturnNote(AddReturnNote event, Emitter<ReturnNotesState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.salesReturnVouchers)) {
+      emit(ReturnNotesError('Permission refusée : Vous n\'avez pas le droit de créer un bon de retour.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveReturnNote(event.note);
       add(LoadFirstReturnNotes());
@@ -121,6 +126,10 @@ class ReturnNotesBloc extends Bloc<ReturnNotesEvent, ReturnNotesState> {
   }
 
   Future<void> _onUpdateReturnNote(UpdateReturnNote event, Emitter<ReturnNotesState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.salesReturnVouchers)) {
+      emit(ReturnNotesError('Permission refusée : Vous n\'avez pas le droit de modifier un bon de retour.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveReturnNote(event.note);
       add(LoadFirstReturnNotes());
@@ -130,6 +139,10 @@ class ReturnNotesBloc extends Bloc<ReturnNotesEvent, ReturnNotesState> {
   }
 
   Future<void> _onDeleteReturnNote(DeleteReturnNote event, Emitter<ReturnNotesState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.salesReturnVouchers)) {
+      emit(ReturnNotesError('Permission refusée : Vous n\'avez pas le droit de supprimer un bon de retour.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('return_notes', event.id);
       add(LoadFirstReturnNotes());

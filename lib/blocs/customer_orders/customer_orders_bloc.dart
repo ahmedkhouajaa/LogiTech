@@ -1,9 +1,10 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/customer_order.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
-import '../../services/sync_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ────────────────────────────────────────────────────────
@@ -243,6 +244,10 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
   }
 
   Future<void> _onAddCustomerOrder(AddCustomerOrder event, Emitter<CustomerOrdersState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.salesOrders)) {
+      emit(CustomerOrdersError('Permission refusée : Vous n\'avez pas le droit de créer une commande client.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveCustomerOrder(event.order);
       add(const LoadFirstCustomerOrders());
@@ -252,6 +257,10 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
   }
 
   Future<void> _onUpdateCustomerOrder(UpdateCustomerOrder event, Emitter<CustomerOrdersState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.salesOrders)) {
+      emit(CustomerOrdersError('Permission refusée : Vous n\'avez pas le droit de modifier une commande client.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveCustomerOrder(event.order);
       add(const LoadFirstCustomerOrders());
@@ -261,6 +270,10 @@ class CustomerOrdersBloc extends Bloc<CustomerOrdersEvent, CustomerOrdersState> 
   }
 
   Future<void> _onDeleteCustomerOrder(DeleteCustomerOrder event, Emitter<CustomerOrdersState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.salesOrders)) {
+      emit(CustomerOrdersError('Permission refusée : Vous n\'avez pas le droit de supprimer une commande client.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('customer_orders', event.orderId);
       add(const LoadFirstCustomerOrders());

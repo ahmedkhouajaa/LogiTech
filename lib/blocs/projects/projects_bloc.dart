@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:uuid/uuid.dart';
-import '../../database/database_helper.dart';
 import '../../models/project.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -104,6 +104,10 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
   }
 
   Future<void> _onAdd(AddProject event, Emitter<ProjectsState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.projects)) {
+      emit(const ProjectsError('Permission refusée : Vous n\'avez pas le droit de créer un projet.'));
+      return;
+    }
     final currentEntId = EnterpriseService.instance.currentEnterpriseId;
     final project = (event.project.enterpriseId == null || event.project.enterpriseId!.isEmpty)
         ? Project(
@@ -143,6 +147,10 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
   }
 
   Future<void> _onUpdate(UpdateProject event, Emitter<ProjectsState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.projects)) {
+      emit(const ProjectsError('Permission refusée : Vous n\'avez pas le droit de modifier un projet.'));
+      return;
+    }
     if (event.project.isDefault ||
         event.project.name.trim().toLowerCase() == 'projet par défaut' ||
         event.project.name.trim().toLowerCase() == 'projet principal par défaut') {
@@ -169,6 +177,10 @@ class ProjectsBloc extends Bloc<ProjectsEvent, ProjectsState> {
   }
 
   Future<void> _onDelete(DeleteProject event, Emitter<ProjectsState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.projects)) {
+      emit(const ProjectsError('Permission refusée : Vous n\'avez pas le droit de supprimer un projet.'));
+      return;
+    }
     final currentState = state;
     if (currentState is ProjectsLoaded) {
       final target = currentState.projects.where((p) => p.id == event.id).firstOrNull;

@@ -992,36 +992,46 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                 color: AppColors.surface,
                 onSelected: (val) => _handleAction(context, val, note),
                 itemBuilder: (_) {
-                  final items = <PopupMenuEntry<String>>[
-                    _buildMenuItem('view', Icons.visibility_outlined, AppColors.info, 'Voir'),
-                    if (PermissionService.instance.canUpdate(UserPermissionResources.salesReturnVouchers)) ...[
-                      const PopupMenuDivider(height: 1),
-                      _buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'),
-                    ],
-                    if (PermissionService.instance.canDelete(UserPermissionResources.salesReturnVouchers)) ...[
-                      const PopupMenuDivider(height: 1),
-                      _buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'),
-                    ],
-                    const PopupMenuDivider(height: 1),
-                    _buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'),
-                    const PopupMenuDivider(height: 1),
-                  ];
+                  final canRead = PermissionService.instance.hasPermission('return_notes', action: 'read');
+                  final canUpdate = PermissionService.instance.hasPermission('return_notes', action: 'update');
+                  final canDelete = PermissionService.instance.hasPermission('return_notes', action: 'delete');
+                  final hasAnyAccess = PermissionService.instance.hasAnyPermission('return_notes');
+                  final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create');
 
-                  if (note.status != 'paid') {
-                    items.add(_buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'));
-                    items.add(const PopupMenuDivider(height: 1));
+                  debugPrint('[ReturnNotes.3dot] ReturnNote #${note.returnNumber} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, canCreatePayment=$canCreatePayment, isAdmin=${PermissionService.instance.isAdmin}');
+
+                  final entries = <PopupMenuEntry<String>>[];
+
+                  void addItem(String val, IconData icon, Color col, String label) {
+                    if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                    entries.add(_buildMenuItem(val, icon, col, label));
                   }
 
-                  items.addAll([
-                    _buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Telecharger PDF'),
-                    const PopupMenuDivider(height: 1),
-                  _buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'),
-                  const PopupMenuDivider(height: 1),
-                  _buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'),
-                  ]);
-                  return items;
+                  if (canRead) {
+                    addItem('view', Icons.visibility_outlined, AppColors.info, 'Voir');
+                  }
+                  if (canUpdate) {
+                    addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+                  }
+                  if (canDelete) {
+                    addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+                  }
+
+                  if (note.status != 'paid' && canCreatePayment) {
+                    addItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement');
+                  }
+
+                  if (hasAnyAccess) {
+                    addItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer');
+                    addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
+                    addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
+                    addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                  }
+                  if (PermissionService.instance.isAdmin) {
+                    addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+                  }
+
+                  return entries;
                 },
               ),
             ),

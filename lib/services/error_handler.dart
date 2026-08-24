@@ -39,6 +39,8 @@ class ErrorHandler {
         code = 'user-disabled';
       } else if (message.contains('account-exists-with-different-credential') || message.contains('credential-already-in-use') || message.contains('email-already-in-use')) {
         code = 'account-exists-with-different-credential';
+      } else if (message.contains('permission-denied') || message.contains('missing or insufficient permissions') || message.contains('permission denied') || message.contains('insuffisantes')) {
+        code = 'permission-denied';
       } else if (message.contains('network') || message.contains('socket') || message.contains('connection timed out')) {
         code = 'network-request-failed';
       } else if (message.contains('token-expired') || message.contains('user-token-expired') || message.contains('session expired')) {
@@ -63,6 +65,7 @@ class ErrorHandler {
       case 'invalid-verification-id':
       case 'wrong-password':
         return "Identifiants de connexion invalides ou expirés. Veuillez réessayer.";
+      case 'user-found':
       case 'user-not-found':
         return "Aucun compte n'a été trouvé avec cette adresse email.";
       case 'operation-not-allowed':
@@ -75,7 +78,8 @@ class ErrorHandler {
       case 'network-request-failed':
         return "Impossible de se connecter aux serveurs. Veuillez vérifier votre connexion Internet.";
       case 'permission-denied':
-        return "Accès refusé. Vous n'avez pas les autorisations nécessaires pour cette opération.";
+      case 'insufficient-permissions':
+        return "Permissions insuffisantes : Vos droits d'accès ne permettent pas cette opération. Veuillez vérifier votre connexion ou vous reconnecter.";
       case 'not-found':
         return "Les données demandées sont introuvables.";
       case 'already-exists':
@@ -94,8 +98,6 @@ class ErrorHandler {
         return "Trop de tentatives. Veuillez réessayer dans quelques minutes.";
       case 'deadline-exceeded':
         return "La requête a mis trop de temps à répondre. Veuillez réessayer.";
-      case 'insufficient-permissions':
-        return "Autorisations insuffisantes. Veuillez autoriser l'accès à votre profil et votre adresse email.";
       default:
         return "Une erreur est survenue lors de l'opération. Veuillez réessayer.";
     }

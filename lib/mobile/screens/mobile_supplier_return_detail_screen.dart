@@ -171,33 +171,40 @@ class _MobileSupplierReturnDetailScreenState extends State<MobileSupplierReturnD
   }
 
   List<PopupMenuEntry<String>> _buildActionMenu(BuildContext context, SupplierReturn note) {
-    final List<PopupMenuEntry<String>> items = [];
+    final canRead = PermissionService.instance.canRead(UserPermissionResources.purchasesSupplierReturns);
+    final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierReturns);
+    final canDelete = PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierReturns);
+    final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
 
-    items.add(_buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'));
-    if (PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierReturns)) {
-      items.add(const PopupMenuDivider(height: 1));
-      items.add(_buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'));
+    final List<PopupMenuEntry<String>> items = [];
+    void addItem(String val, IconData icon, Color col, String label) {
+      if (items.isNotEmpty) items.add(const PopupMenuDivider(height: 1));
+      items.add(_buildMenuItem(val, icon, col, label));
     }
-    if (PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierReturns)) {
-      items.add(const PopupMenuDivider(height: 1));
-      items.add(_buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'));
+
+    if (canRead) {
+      addItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir');
     }
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'));
-//     items.add(const PopupMenuDivider(height: 1));
-//     items.add(_buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'));
-//     items.add(const PopupMenuDivider(height: 1));
-//     items.add(_buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'));
+    if (canUpdate) {
+      addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+    }
+    if (canDelete) {
+      addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+    }
+    if (canRead) {
+      addItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer');
+    }
+    if (canCreatePayment) {
+      addItem('add_payment', Icons.payment_outlined, AppColors.success, 'Ajouter un paiement');
+    }
+    if (canRead) {
+      addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
+      addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
+      addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+    }
+    if (PermissionService.instance.isAdmin) {
+      addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+    }
 
     return items;
   }

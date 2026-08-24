@@ -16,6 +16,7 @@ import '../utils/constants.dart';
 import '../database/database_helper.dart';
 import '../models/user_management_model.dart';
 import 'permission_service.dart';
+import '../utils/firestore_safe_helper.dart';
 
 /// Singleton service that manages the current enterprise context.
 ///
@@ -76,6 +77,14 @@ class EnterpriseService {
 
   /// Cached enterprise list (may be stale until refreshed from Firestore).
   List<Enterprise> get enterprises => List.unmodifiable(_enterprises);
+
+  /// Helper for unit testing
+  void setEnterprisesForTesting(List<Enterprise> list, {String? currentId}) {
+    _enterprises = List.from(list);
+    _currentEnterpriseId = currentId ?? (list.isNotEmpty ? list.first.id : null);
+    currentEnterpriseNotifier.value = currentEnterprise;
+    enterprisesNotifier.value = _enterprises;
+  }
 
   // ─── Realtime Sync ────────────────────────────────────────────────
 
@@ -191,6 +200,7 @@ class EnterpriseService {
             _enterpriseController.add(_currentEnterpriseId);
           }
           _enterpriseListController.add(_enterprises);
+          unawaited(PermissionService.instance.loadPermissions(enterpriseId: doc.id));
         }
       }, onError: (e) {
         debugPrint('[EnterpriseService] Realtime enterprise doc ($eid) error: $e');
@@ -248,7 +258,7 @@ class EnterpriseService {
   // ─── Enterprise CRUD ─────────────────────────────────────────────
 
   /// Loads enterprises for the current user from Firestore and updates cache.
-  Future<List<Enterprise>> loadEnterprisesFromFirestore() async {
+  Future<List<Enterprise>> loadEnterprisesFromFirestore({int maxRetries = 3}) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return [];
 
@@ -257,99 +267,159 @@ class EnterpriseService {
     }
     _isLoadingEnterprises = true;
 
-    try {
-      // Read user doc to get enterprise IDs
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
+    final timeout = kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 30);
 
-      List<String> enterpriseIds = [];
-      String? remoteCurrentId;
-      if (userDoc.exists && userDoc.data() != null) {
-        final data = userDoc.data()!;
-        if (data['enterprises'] != null) {
-          enterpriseIds = List<String>.from(data['enterprises']);
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // 1. Read user doc to get enterprise IDs
+        final userData = await FirestoreSafeHelper.getDocData(
+          FirebaseFirestore.instance.collection('users'),
+          uid,
+          timeout: timeout,
+        );
+
+        final Set<String> enterpriseIdSet = {};
+        final Map<String, Map<String, dynamic>> entDataMap = {};
+        String? remoteCurrentId;
+
+        if (userData != null) {
+          if (userData['enterprises'] != null) {
+            for (final id in (userData['enterprises'] as List)) {
+              if (id != null && id.toString().trim().isNotEmpty) {
+                enterpriseIdSet.add(id.toString().trim());
+              }
+            }
+          }
+          remoteCurrentId = userData['currentEnterpriseId']?.toString();
         }
-        remoteCurrentId = data['currentEnterpriseId']?.toString();
-      }
 
-      _lastSyncedEnterpriseIds = List<String>.from(enterpriseIds);
+        // 2. Also query enterprises where owner_id == uid or userId == uid in parallel
+        try {
+          final queryResults = await Future.wait([
+            FirebaseFirestore.instance
+                .collection('enterprises')
+                .where('owner_id', isEqualTo: uid)
+                .get()
+                .timeout(timeout),
+            FirebaseFirestore.instance
+                .collection('enterprises')
+                .where('userId', isEqualTo: uid)
+                .get()
+                .timeout(timeout),
+          ]);
+          for (final snap in queryResults) {
+            for (final doc in snap.docs) {
+              enterpriseIdSet.add(doc.id);
+              entDataMap[doc.id] = doc.data();
+            }
+          }
+        } catch (e) {
+          debugPrint('[EnterpriseService] Parallel queries attempt $attempt warning: $e');
+        }
 
-      if (enterpriseIds.isEmpty) {
+        // 3. For any missing enterprise docs, fetch them safely in parallel
+        final missingIds = enterpriseIdSet.where((id) => !entDataMap.containsKey(id)).toList();
+        if (missingIds.isNotEmpty) {
+          final fetchedDocs = await Future.wait(
+            missingIds.map((eid) => FirestoreSafeHelper.getDocData(
+              FirebaseFirestore.instance.collection('enterprises'),
+              eid,
+              timeout: timeout,
+            )),
+          );
+          for (int i = 0; i < missingIds.length; i++) {
+            final docData = fetchedDocs[i];
+            if (docData != null) {
+              entDataMap[missingIds[i]] = docData;
+            }
+          }
+        }
+
+        // 4. Build list of valid enterprises
+        final List<Enterprise> result = [];
+        final List<String> validIds = [];
+        for (final eid in enterpriseIdSet) {
+          final entData = entDataMap[eid];
+          if (entData != null) {
+            result.add(Enterprise.fromMap({...entData, 'id': eid}));
+            validIds.add(eid);
+          }
+        }
+
+        // If we found enterprises in Firestore:
+        if (result.isNotEmpty) {
+          _lastSyncedEnterpriseIds = List<String>.from(validIds);
+          _enterprises = List.unmodifiable(result);
+          enterprisesNotifier.value = _enterprises;
+
+          // Choose active enterprise: current > remote > first
+          if (_currentEnterpriseId == null || !validIds.contains(_currentEnterpriseId)) {
+            if (remoteCurrentId != null && validIds.contains(remoteCurrentId)) {
+              _currentEnterpriseId = remoteCurrentId;
+            } else {
+              _currentEnterpriseId = validIds.first;
+            }
+          }
+
+          currentEnterpriseNotifier.value = currentEnterprise;
+
+          // Sync back to Firestore user doc
+          unawaited(FirebaseFirestore.instance
+              .collection('users')
+              .doc(uid)
+              .set({
+                'enterprises': validIds,
+                if (_currentEnterpriseId != null) 'currentEnterpriseId': _currentEnterpriseId,
+              }, SetOptions(merge: true)));
+
+          await _persistToPrefs();
+          _enterpriseController.add(_currentEnterpriseId);
+          _enterpriseListController.add(_enterprises);
+          _updateEnterpriseSubscriptions();
+          await PermissionService.instance.loadPermissions(enterpriseId: _currentEnterpriseId);
+          return _enterprises;
+        }
+
+        // If Firestore queries returned 0 enterprises, but we have cached enterprises, keep the cache!
+        if (_enterprises.isNotEmpty) {
+          return _enterprises;
+        }
+
+        // If this attempt returned empty but we still have retries left, exponential backoff delay (2s, 4s, 8s)
+        if (attempt < maxRetries) {
+          final backoffMs = (attempt == 0) ? 2000 : (attempt == 1 ? 4000 : 8000);
+          debugPrint('[EnterpriseService] Attempt $attempt found 0 enterprises. Retrying with ${backoffMs}ms backoff (${attempt + 1}/$maxRetries)...');
+          await Future.delayed(Duration(milliseconds: backoffMs));
+          continue;
+        }
+
+        // If user genuinely has 0 enterprises anywhere after all retries:
         _enterprises = [];
         _currentEnterpriseId = null;
         await _persistToPrefs();
         _enterpriseController.add(_currentEnterpriseId);
         _enterpriseListController.add(_enterprises);
         return _enterprises;
-      }
-
-      // Fetch enterprise docs
-      final List<Enterprise> result = [];
-      final List<String> validIds = [];
-      for (final eid in enterpriseIds) {
-        final doc = await FirebaseFirestore.instance
-            .collection('enterprises')
-            .doc(eid)
-            .get();
-        if (doc.exists && doc.data() != null) {
-          result.add(Enterprise.fromMap({...doc.data()!, 'id': doc.id}));
-          validIds.add(doc.id);
+      } catch (e) {
+        debugPrint('[EnterpriseService.loadEnterprisesFromFirestore] Attempt $attempt failed with: $e');
+        if (attempt < maxRetries) {
+          await Future.delayed(const Duration(milliseconds: 600));
+          continue;
+        }
+        return _enterprises; // Return cached list on failure
+      } finally {
+        if (attempt == maxRetries || _enterprises.isNotEmpty) {
+          _isLoadingEnterprises = false;
         }
       }
-
-      // If user doc contained deleted/ghost enterprise IDs, sanitize user doc once
-      if (validIds.length != enterpriseIds.length) {
-        _lastSyncedEnterpriseIds = List<String>.from(validIds);
-        unawaited(FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .set({'enterprises': validIds}, SetOptions(merge: true)));
-      }
-
-      _enterprises = List.unmodifiable(result);
-      enterprisesNotifier.value = _enterprises;
-
-      // If current enterprise is not in list, switch to first
-      if (_currentEnterpriseId == null ||
-          !validIds.contains(_currentEnterpriseId)) {
-        _currentEnterpriseId = validIds.isNotEmpty ? validIds.first : null;
-      }
-
-      currentEnterpriseNotifier.value = currentEnterprise;
-
-      // Only update Firestore user doc's currentEnterpriseId if it actually changed
-      if (_currentEnterpriseId != null && _currentEnterpriseId != remoteCurrentId) {
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .set({'currentEnterpriseId': _currentEnterpriseId}, SetOptions(merge: true));
-      }
-
-      await _persistToPrefs();
-      _enterpriseController.add(_currentEnterpriseId);
-      _enterpriseListController.add(_enterprises);
-      _updateEnterpriseSubscriptions();
-      await PermissionService.instance.loadPermissions(enterpriseId: _currentEnterpriseId);
-      return _enterprises;
-    } catch (e) {
-      debugPrint('EnterpriseService.loadEnterprisesFromFirestore error: $e');
-      return _enterprises; // Return cached list on failure
-    } finally {
-      _isLoadingEnterprises = false;
     }
+
+    _isLoadingEnterprises = false;
+    return _enterprises;
   }
 
   /// Ensures all required default records (Warehouse, Customer, Supplier, TreasuryAccount, Project)
   /// exist for the given enterprise.
-  /// 
-  /// - Guaranteed to be atomic and idempotent.
-  /// - Prevents concurrent duplicate runs via [_pendingDefaultCreations].
-  /// - Checks the [defaultsCreated] flag on the enterprise document.
-  /// - Verifies if records already exist before creating missing defaults.
-  /// - Uses [WriteBatch] to commit all missing default records atomically.
-  /// - Automatically cleans up existing duplicate default records if any exist.
   Future<void> ensureDefaultRecordsCreated(
     String enterpriseId, {
     String? ownerUid,
@@ -371,15 +441,17 @@ class EnterpriseService {
 
       // 1. Check if enterprise doc already has defaultsCreated == true in Firestore
       final entDocRef = FirebaseFirestore.instance.collection('enterprises').doc(enterpriseId);
-      final entSnap = await entDocRef.get();
-      if (!force && entSnap.exists) {
-        final data = entSnap.data();
-        final isAlreadyCreated = data?['defaults_created'] == true ||
-            data?['defaults_created'] == 1 ||
-            data?['defaults_created'] == 'true' ||
-            data?['defaultsCreated'] == true ||
-            data?['defaultsCreated'] == 1 ||
-            data?['defaultsCreated'] == 'true';
+      final entData = await FirestoreSafeHelper.getDocData(
+        FirebaseFirestore.instance.collection('enterprises'),
+        enterpriseId,
+      );
+      if (!force && entData != null) {
+        final isAlreadyCreated = entData['defaults_created'] == true ||
+            entData['defaults_created'] == 1 ||
+            entData['defaults_created'] == 'true' ||
+            entData['defaultsCreated'] == true ||
+            entData['defaultsCreated'] == 1 ||
+            entData['defaultsCreated'] == 'true';
         if (isAlreadyCreated) {
           debugPrint('[EnterpriseDefaults] Enterprise $enterpriseId already has defaultsCreated=true. Skipping default generation.');
           return;
@@ -804,6 +876,10 @@ class EnterpriseService {
     String? address,
     String? rib,
   }) async {
+    if (PermissionService.instance.isLoaded && !PermissionService.instance.isAdmin && enterprises.isNotEmpty) {
+      throw 'Action non autorisée. Seuls les administrateurs peuvent créer une entreprise.';
+    }
+
     if (_isCreatingEnterprise) {
       debugPrint('[EnterpriseService] Enterprise creation already in progress. Rejecting duplicate call.');
       throw 'Une création d\'entreprise est déjà en cours. Veuillez patienter.';

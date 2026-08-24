@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../database/database_helper.dart';
 import '../../models/supplier_return.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import 'supplier_returns_event.dart';
@@ -103,6 +104,10 @@ class SupplierReturnsBloc extends Bloc<SupplierReturnsEvent, SupplierReturnsStat
   }
 
   Future<void> _onAddSupplierReturn(AddSupplierReturn event, Emitter<SupplierReturnsState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierReturns)) {
+      emit(SupplierReturnsError('Permission refusée : Vous n\'avez pas le droit de créer un retour fournisseur.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveSupplierReturn(event.supplierReturn);
       add(const LoadFirstSupplierReturns());
@@ -112,6 +117,10 @@ class SupplierReturnsBloc extends Bloc<SupplierReturnsEvent, SupplierReturnsStat
   }
 
   Future<void> _onUpdateSupplierReturn(UpdateSupplierReturn event, Emitter<SupplierReturnsState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierReturns)) {
+      emit(SupplierReturnsError('Permission refusée : Vous n\'avez pas le droit de modifier un retour fournisseur.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveSupplierReturn(event.supplierReturn);
       add(const LoadFirstSupplierReturns());
@@ -121,6 +130,10 @@ class SupplierReturnsBloc extends Bloc<SupplierReturnsEvent, SupplierReturnsStat
   }
 
   Future<void> _onDeleteSupplierReturn(DeleteSupplierReturn event, Emitter<SupplierReturnsState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierReturns)) {
+      emit(SupplierReturnsError('Permission refusée : Vous n\'avez pas le droit de supprimer un retour fournisseur.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('supplier_returns', event.id);
       add(const LoadFirstSupplierReturns());

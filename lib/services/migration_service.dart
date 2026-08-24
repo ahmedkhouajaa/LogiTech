@@ -43,11 +43,18 @@ class MigrationService {
     final currentEntId = EnterpriseService.instance.currentEnterpriseId;
     if (currentEntId == null || currentEntId.isEmpty) return;
 
+    try {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (token == null || token.isEmpty) return;
+    } catch (_) {
+      return;
+    }
+
     final firestore = FirebaseFirestore.instance;
 
     for (final col in erpCollections) {
       try {
-        final snap = await firestore.collection(col).where('userId', isEqualTo: uid).get();
+        final snap = await firestore.collection(col).where('userId', isEqualTo: uid).get().timeout(const Duration(seconds: 4));
         for (final doc in snap.docs) {
           final data = doc.data();
           final bool needsUserId = !data.containsKey('userId') || data['userId'] == null || data['userId'].toString().isEmpty;
@@ -67,8 +74,8 @@ class MigrationService {
             await firestore.collection(col).doc(doc.id).set(updates, SetOptions(merge: true));
           }
         }
-      } catch (e) {
-        print('MigrationService warning for collection $col: $e');
+      } catch (_) {
+        // Silent ignore during startup sync
       }
     }
   }

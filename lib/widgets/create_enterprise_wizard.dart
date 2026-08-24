@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/enterprise/enterprise_bloc.dart';
+import '../services/enterprise_service.dart';
+import '../services/permission_service.dart';
 import '../utils/constants.dart';
 
 /// 3-Step Wizard for Creating a New Enterprise (Dialog or Full-Screen Onboarding).
@@ -72,6 +74,16 @@ class _CreateEnterpriseWizardState extends State<CreateEnterpriseWizard> {
 
   void _submitForm() {
     if (_isSubmitting) return;
+
+    if (!widget.isOnboarding && !PermissionService.instance.isAdmin && EnterpriseService.instance.enterprises.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Action réservée aux administrateurs'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
 
     if (_step3Key.currentState?.validate() ?? true) {
       setState(() => _isSubmitting = true);

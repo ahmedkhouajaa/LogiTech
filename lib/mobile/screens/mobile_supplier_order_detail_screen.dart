@@ -242,49 +242,59 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
   }
 
   List<PopupMenuEntry<String>> _buildActionMenu(BuildContext context, SupplierOrder order) {
-    final List<PopupMenuEntry<String>> items = [];
+    final canRead = PermissionService.instance.canRead(UserPermissionResources.purchasesSupplierOrders);
+    final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierOrders);
+    final canDelete = PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierOrders);
+    final canCreateInvoice = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.purchasesPurchaseInvoices);
+    final canCreateReceipt = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.purchasesReceivingVouchers);
+    final canCreateCreditNote = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierCreditNotes);
 
-    items.add(_buildMenuItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir'));
-    if (PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierOrders)) {
-      items.add(const PopupMenuDivider(height: 1));
-      items.add(_buildMenuItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier'));
+    final List<PopupMenuEntry<String>> items = [];
+    void addItem(String val, IconData icon, Color col, String label) {
+      if (items.isNotEmpty) items.add(const PopupMenuDivider(height: 1));
+      items.add(_buildMenuItem(val, icon, col, label));
     }
-    if (PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierOrders)) {
-      items.add(const PopupMenuDivider(height: 1));
-      items.add(_buildMenuItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer'));
+
+    if (canRead) {
+      addItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir');
     }
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer'));
-    items.add(const PopupMenuDivider(height: 1));
+    if (canUpdate) {
+      addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+    }
+    if (canDelete) {
+      addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
+    }
+    if (canRead) {
+      addItem('print', Icons.print_outlined, AppColors.textSecondary, 'Imprimer');
+    }
 
     if (!order.isConvertedToInvoice && !order.isConvertedToReceipt) {
-      items.add(_buildMenuItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en facture d\'achat'));
-      items.add(const PopupMenuDivider(height: 1));
-      items.add(_buildMenuItem('to_receipt', Icons.local_shipping_outlined, AppColors.textSecondary, 'Transformer en bon de réception'));
-      items.add(const PopupMenuDivider(height: 1));
-    }
-    if (order.isConvertedToInvoice) {
-      items.add(_buildMenuItem('view_invoice', Icons.visibility_outlined, AppColors.textSecondary, 'Voir la facture d\'achat créée'));
-      items.add(const PopupMenuDivider(height: 1));
-    }
-    if (order.isConvertedToReceipt) {
-      items.add(_buildMenuItem('view_receipt', Icons.visibility_outlined, AppColors.textSecondary, 'Voir le bon de réception créé'));
-      items.add(const PopupMenuDivider(height: 1));
+      if (canCreateInvoice) {
+        addItem('to_invoice', Icons.receipt_long_outlined, AppColors.textSecondary, 'Transformer en facture d\'achat');
+      }
+      if (canCreateReceipt) {
+        addItem('to_receipt', Icons.local_shipping_outlined, AppColors.textSecondary, 'Transformer en bon de réception');
+      }
+    } else {
+      if (order.isConvertedToInvoice && canRead) {
+        addItem('view_invoice', Icons.visibility_outlined, AppColors.textSecondary, 'Voir la facture d\'achat créée');
+      }
+      if (order.isConvertedToReceipt && canRead) {
+        addItem('view_receipt', Icons.visibility_outlined, AppColors.textSecondary, 'Voir le bon de réception créé');
+      }
     }
     
-    items.add(_buildMenuItem('credit_note', Icons.receipt_outlined, AppColors.textSecondary, 'Transformer en Avoir'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp'));
-    items.add(const PopupMenuDivider(height: 1));
-    items.add(_buildMenuItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut'));
-//     items.add(const PopupMenuDivider(height: 1));
-//     items.add(_buildMenuItem('duplicate', Icons.content_copy_outlined, AppColors.textSecondary, 'Dupliquer'));
-//     items.add(const PopupMenuDivider(height: 1));
-//     items.add(_buildMenuItem('attachments', Icons.attach_file_outlined, AppColors.textSecondary, 'Gérer les pièces jointes'));
+    if (canCreateCreditNote) {
+      addItem('credit_note', Icons.receipt_outlined, AppColors.textSecondary, 'Transformer en Avoir');
+    }
+    if (canRead) {
+      addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
+      addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
+      addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+    }
+    if (PermissionService.instance.isAdmin) {
+      addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+    }
 
     return items;
   }

@@ -1,7 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import '../../database/database_helper.dart';
 import '../../models/credit_note.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
@@ -235,6 +236,10 @@ class CreditNotesBloc extends Bloc<CreditNotesEvent, CreditNotesState> {
   }
 
   Future<void> _onAdd(AddCreditNote event, Emitter<CreditNotesState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.salesCreditNotes)) {
+      emit(CreditNotesError('Permission refusée : Vous n\'avez pas le droit de créer un avoir client.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveCreditNote(event.creditNote);
       add(const LoadFirstCreditNotes());
@@ -244,6 +249,10 @@ class CreditNotesBloc extends Bloc<CreditNotesEvent, CreditNotesState> {
   }
 
   Future<void> _onUpdate(UpdateCreditNote event, Emitter<CreditNotesState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.salesCreditNotes)) {
+      emit(CreditNotesError('Permission refusée : Vous n\'avez pas le droit de modifier un avoir client.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveCreditNote(event.creditNote);
       add(const LoadFirstCreditNotes());
@@ -253,6 +262,10 @@ class CreditNotesBloc extends Bloc<CreditNotesEvent, CreditNotesState> {
   }
 
   Future<void> _onDelete(DeleteCreditNote event, Emitter<CreditNotesState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.salesCreditNotes)) {
+      emit(CreditNotesError('Permission refusée : Vous n\'avez pas le droit de supprimer un avoir client.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('credit_notes', event.id);
       add(const LoadFirstCreditNotes());

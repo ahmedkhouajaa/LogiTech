@@ -1,7 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import '../../database/database_helper.dart';
 import '../../models/purchase_invoice.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
@@ -286,15 +287,23 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
   }
 
   Future<void> _onAdd(AddPurchaseInvoice event, Emitter<PurchaseInvoicesState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.purchasesPurchaseInvoices)) {
+      emit(const PurchaseInvoicesError('Permission refusée : Vous n\'avez pas le droit de créer une facture d\'achat.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.savePurchaseInvoice(event.purchaseInvoice);
       add(const LoadFirstPurchaseInvoices());
-    } catch (e, s) {
+    } catch (e) {
       emit(PurchaseInvoicesError(ErrorHandler.parseError(e)));
     }
   }
 
   Future<void> _onUpdate(UpdatePurchaseInvoice event, Emitter<PurchaseInvoicesState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.purchasesPurchaseInvoices)) {
+      emit(const PurchaseInvoicesError('Permission refusée : Vous n\'avez pas le droit de modifier une facture d\'achat.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.savePurchaseInvoice(event.purchaseInvoice);
       add(const LoadFirstPurchaseInvoices());
@@ -304,6 +313,10 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
   }
 
   Future<void> _onDelete(DeletePurchaseInvoice event, Emitter<PurchaseInvoicesState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.purchasesPurchaseInvoices)) {
+      emit(const PurchaseInvoicesError('Permission refusée : Vous n\'avez pas le droit de supprimer une facture d\'achat.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('purchase_invoices', event.id);
       add(const LoadFirstPurchaseInvoices());

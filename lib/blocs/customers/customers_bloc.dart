@@ -1,8 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:uuid/uuid.dart';
 import '../../services/firestore_repository.dart';
 import '../../database/database_helper.dart';
 import '../../models/customer.dart';
@@ -195,7 +195,7 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
 
       // Phase 2: Always fetch from server for cross-device sync
       try {
-        final serverSnapshot = await buildQuery().get(const GetOptions(source: Source.server));
+        final serverSnapshot = await buildQuery().get().timeout(kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 15));
         List<Customer> customers = deduplicateDefaults(parseSnapshot(serverSnapshot));
 
         if (!emit.isDone) {

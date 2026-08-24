@@ -5,12 +5,14 @@ import '../models/user_management_model.dart';
 import '../widgets/sidebar_menu.dart' show AppModule;
 import '../utils/constants.dart';
 import 'enterprise_service.dart';
+import '../utils/firestore_safe_helper.dart';
 
 /// Singleton service that manages active user permissions for the current enterprise context.
 class PermissionService {
   static final PermissionService instance = PermissionService._();
   PermissionService._();
 
+  bool _isLoaded = false;
   bool _isAdmin = false;
   bool _isOwner = false;
   String _role = 'collaborator';
@@ -20,9 +22,11 @@ class PermissionService {
 
   final ValueNotifier<bool> permissionsNotifier = ValueNotifier<bool>(false);
 
-  bool get isAdmin => _isAdmin || _isOwner;
-  bool get isOwner => _isOwner;
+  bool get isLoaded => _isLoaded;
+  bool get isAdmin => (_isAdmin || _isOwner) && _isLoaded;
+  bool get isOwner => _isOwner && _isLoaded;
   String get role => _role;
+  String get userEmail => _userEmail;
   String get userName {
     if (_userName.isNotEmpty) return _userName;
     final fbUser = FirebaseAuth.instance.currentUser;
@@ -40,6 +44,35 @@ class PermissionService {
   }
   Map<String, UserResourcePermission> get permissions => Map.unmodifiable(_permissions);
 
+  /// Reset in-memory permissions state on logout
+  void reset() {
+    debugPrint('[PermissionService.reset] Resetting in-memory permissions state.');
+    _isLoaded = false;
+    _isAdmin = false;
+    _isOwner = false;
+    _role = 'collaborator';
+    _userName = '';
+    _userEmail = '';
+    _permissions = {};
+    permissionsNotifier.value = !permissionsNotifier.value;
+  }
+
+  /// Helper for testing to inject specific permission scenarios
+  void setPermissionsForTesting({
+    required bool isAdmin,
+    required bool isOwner,
+    required String role,
+    required Map<String, UserResourcePermission> permissions,
+    bool isLoaded = true,
+  }) {
+    _isLoaded = isLoaded;
+    _isAdmin = isAdmin;
+    _isOwner = isOwner;
+    _role = role;
+    _permissions = Map.from(permissions);
+    permissionsNotifier.value = !permissionsNotifier.value;
+  }
+
   /// Load user permissions for the specified or current enterprise from Firestore
   Future<void> loadPermissions({String? enterpriseId}) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -53,21 +86,29 @@ class PermissionService {
       _userEmail = fbUser!.email!;
     }
 
+    debugPrint('[PermissionService.loadPermissions] START loading permissions for UID: $uid, Email: $_userEmail, targetEnterpriseId: $eid');
+
     if (uid == null) {
+      _isLoaded = false;
       _isAdmin = false;
       _isOwner = false;
       _role = 'collaborator';
       _permissions = {};
+      debugPrint('[PermissionService.loadPermissions] No authenticated user. State cleared.');
       permissionsNotifier.value = !permissionsNotifier.value;
       return;
     }
 
     try {
-      // 1. Fetch user doc for profile name & currentEnterpriseId fallback
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      Map<String, dynamic> uData = {};
-      if (userDoc.exists) {
-        uData = userDoc.data() ?? {};
+      // 1. Fetch user doc for profile name & enterprise roles
+      final uData = await FirestoreSafeHelper.getDocData(
+        FirebaseFirestore.instance.collection('users'),
+        uid,
+      ) ?? {};
+
+      debugPrint('[PermissionService.loadPermissions] Step 1: User doc (users/$uid) -> found: ${uData.isNotEmpty}, role: ${uData['role']}, currentEnterpriseId: ${uData['currentEnterpriseId']}, enterprises: ${uData['enterprises']}');
+
+      if (uData.isNotEmpty) {
         if (uData['name']?.toString().isNotEmpty == true) {
           _userName = uData['name'].toString();
         }
@@ -76,124 +117,161 @@ class PermissionService {
         }
       }
 
-      // If eid is missing, try to resolve from user document or enterprises collection
+      // If eid is missing, try to resolve from user document or enterprises list
       if (eid == null || eid.isEmpty) {
         if (uData['currentEnterpriseId']?.toString().isNotEmpty == true) {
           eid = uData['currentEnterpriseId'].toString();
         } else if (uData['enterprises'] is List && (uData['enterprises'] as List).isNotEmpty) {
           eid = (uData['enterprises'] as List).first.toString();
+        } else if (EnterpriseService.instance.enterprises.isNotEmpty) {
+          eid = EnterpriseService.instance.enterprises.first.id;
         }
       }
 
-      // If user has no enterprise at all yet, check if self-registered / admin
       if (eid == null || eid.isEmpty) {
-        final isUserAdmin = uData['role'] == null ||
-            uData['role'] == 'admin' ||
-            uData['role'] == 'administrateur' ||
-            uData['isOwner'] == true ||
-            uData['role'] != 'collaborator';
-        _isAdmin = isUserAdmin;
-        _isOwner = isUserAdmin;
-        _role = isUserAdmin ? 'admin' : 'collaborator';
-        _permissions = isUserAdmin ? UserPermissionResources.getAdminDefaultPermissions() : {};
+        _isLoaded = true;
+        _isAdmin = false;
+        _isOwner = false;
+        _role = 'collaborator';
+        _permissions = {};
+        debugPrint('[PermissionService.loadPermissions] No active enterprise found for user $uid. ZERO permissions granted.');
         permissionsNotifier.value = !permissionsNotifier.value;
         return;
       }
 
-      // 2. Check enterprise document to check ownership and members list
-      final enterpriseDoc = await FirebaseFirestore.instance.collection('enterprises').doc(eid).get();
-      if (enterpriseDoc.exists) {
-        final entData = enterpriseDoc.data() ?? {};
+      debugPrint('[PermissionService.loadPermissions] Step 2: Querying enterprise doc (enterprises/$eid)...');
+
+      // 2. Check enterprise document for ownership & members list
+      final entData = await FirestoreSafeHelper.getDocData(
+        FirebaseFirestore.instance.collection('enterprises'),
+        eid,
+      );
+
+      if (entData != null) {
         final ownerId = entData['owner_id']?.toString() ??
             entData['userId']?.toString() ??
             entData['ownerId']?.toString() ??
             entData['createdBy']?.toString() ??
             '';
 
+        debugPrint('[PermissionService.loadPermissions] Step 2: Enterprise $eid loaded -> ownerId: $ownerId, isOwnerMatch: ${ownerId.isNotEmpty && ownerId == uid}');
+
         // Check if user is the enterprise creator / owner
-        if (ownerId == uid || ownerId.isEmpty) {
+        if (ownerId.isNotEmpty && ownerId == uid) {
+          _isLoaded = true;
           _isOwner = true;
           _isAdmin = true;
           _role = 'admin';
           _permissions = UserPermissionResources.getAdminDefaultPermissions();
+          debugPrint('[PermissionService.loadPermissions] User $uid is OWNER of enterprise $eid -> FULL ADMIN access granted (all 36 resources).');
           permissionsNotifier.value = !permissionsNotifier.value;
           return;
         }
 
         final members = entData['members'];
         if (members is List && members.isNotEmpty) {
+          debugPrint('[PermissionService.loadPermissions] Step 2: Scanning ${members.length} members in enterprise $eid...');
           for (final m in members) {
-            if (m is Map && m['uid'] == uid) {
-              if (m['name']?.toString().isNotEmpty == true) {
-                _userName = m['name'].toString();
-              }
-              final r = m['role']?.toString().toLowerCase() ?? '';
-              final isMemOwner = m['isOwner'] == true;
-              final isMemAdmin = isMemOwner || r == 'admin' || r == 'administrateur';
+            if (m is Map) {
+              final mUid = m['uid']?.toString() ?? '';
+              final mEmail = m['email']?.toString().toLowerCase().trim() ?? '';
+              final matchUid = mUid.isNotEmpty && mUid == uid;
+              final matchEmail = mEmail.isNotEmpty && _userEmail.isNotEmpty && mEmail == _userEmail.toLowerCase().trim();
 
-              if (isMemAdmin || r.isEmpty) {
-                _isOwner = isMemOwner || ownerId == uid;
-                _isAdmin = true;
-                _role = 'admin';
-                _permissions = UserPermissionResources.getAdminDefaultPermissions();
-              } else if (r == 'collaborator') {
-                _isOwner = false;
-                _isAdmin = false;
-                _role = 'collaborator';
-                if (m['permissions'] is Map) {
-                  final pMap = Map<String, dynamic>.from(m['permissions']);
+              if (matchUid || matchEmail) {
+                if (m['name']?.toString().isNotEmpty == true) {
+                  _userName = m['name'].toString();
+                }
+                final r = m['role']?.toString().toLowerCase().trim() ?? '';
+                final isMemOwner = m['isOwner'] == true;
+                final isMemAdmin = isMemOwner || r == 'admin' || r == 'administrateur';
+
+                debugPrint('[PermissionService.loadPermissions] Member match found! uid: $mUid, email: $mEmail, role: $r, isMemAdmin: $isMemAdmin');
+
+                if (isMemAdmin) {
+                  _isLoaded = true;
+                  _isOwner = isMemOwner;
+                  _isAdmin = true;
+                  _role = 'admin';
+                  _permissions = UserPermissionResources.getAdminDefaultPermissions();
+                  debugPrint('[PermissionService.loadPermissions] User $uid is MEMBER ADMIN of enterprise $eid -> FULL ADMIN access granted.');
+                } else {
+                  _isLoaded = true;
+                  _isOwner = false;
+                  _isAdmin = false;
+                  _role = 'collaborator';
+
                   final parsed = <String, UserResourcePermission>{};
-                  for (final res in UserPermissionResources.allResources) {
-                    final k = res['key'] as String;
-                    if (pMap[k] is Map) {
-                      parsed[k] = UserResourcePermission.fromMap(Map<String, dynamic>.from(pMap[k]));
-                    } else {
-                      parsed[k] = UserResourcePermission.empty;
+                  if (m['permissions'] is Map) {
+                    final pMap = Map<String, dynamic>.from(m['permissions']);
+                    for (final res in UserPermissionResources.allResources) {
+                      final k = res['key'] as String;
+                      if (pMap.containsKey(k) && pMap[k] is Map) {
+                        parsed[k] = UserResourcePermission.fromMap(Map<String, dynamic>.from(pMap[k]));
+                      } else {
+                        parsed[k] = UserResourcePermission.empty;
+                      }
+                    }
+                  } else {
+                    // Empty or null permissions -> strictly NO PERMISSIONS (all false)
+                    for (final res in UserPermissionResources.allResources) {
+                      parsed[res['key'] as String] = UserResourcePermission.empty;
                     }
                   }
                   _permissions = parsed;
-                } else {
-                  _permissions = UserPermissionResources.getCollaboratorDefaultPermissions();
+                  final readableList = _permissions.entries.where((e) => e.value.read).map((e) => e.key).toList();
+                  debugPrint('[PermissionService.loadPermissions] User $uid is COLLABORATOR in enterprise $eid with ${readableList.length}/36 readable resources: $readableList');
                 }
-              }
 
-              permissionsNotifier.value = !permissionsNotifier.value;
-              return;
+                permissionsNotifier.value = !permissionsNotifier.value;
+                return;
+              }
             }
           }
         }
       }
 
-      // 3. Check user profile doc users/{uid} for enterpriseRoles[eid]
-      if (userDoc.exists) {
+      // 3. Fallback: Check user profile doc users/{uid} for enterpriseRoles[eid]
+      if (uData.isNotEmpty) {
         final entRoles = uData['enterpriseRoles'];
+        debugPrint('[PermissionService.loadPermissions] Step 3: Checking users/$uid enterpriseRoles for $eid -> found: ${entRoles is Map && entRoles[eid] is Map}');
         if (entRoles is Map && entRoles[eid] is Map) {
           final info = Map<String, dynamic>.from(entRoles[eid]);
-          final r = info['role']?.toString().toLowerCase() ?? '';
+          final r = info['role']?.toString().toLowerCase().trim() ?? '';
           final isRoleAdmin = r == 'admin' || r == 'administrateur' || info['isOwner'] == true;
 
           if (isRoleAdmin) {
+            _isLoaded = true;
             _isOwner = info['isOwner'] == true;
             _isAdmin = true;
             _role = 'admin';
             _permissions = UserPermissionResources.getAdminDefaultPermissions();
-          } else if (r == 'collaborator' && info['permissions'] is Map) {
+            debugPrint('[PermissionService.loadPermissions] User $uid resolved as ADMIN from user.enterpriseRoles[$eid].');
+          } else {
+            _isLoaded = true;
             _isAdmin = false;
             _isOwner = false;
             _role = 'collaborator';
-            final pMap = Map<String, dynamic>.from(info['permissions']);
             final parsed = <String, UserResourcePermission>{};
-            for (final res in UserPermissionResources.allResources) {
-              final k = res['key'] as String;
-              if (pMap[k] is Map) {
-                parsed[k] = UserResourcePermission.fromMap(Map<String, dynamic>.from(pMap[k]));
-              } else {
-                parsed[k] = UserResourcePermission.empty;
+            if (info['permissions'] is Map) {
+              final pMap = Map<String, dynamic>.from(info['permissions']);
+              for (final res in UserPermissionResources.allResources) {
+                final k = res['key'] as String;
+                if (pMap.containsKey(k) && pMap[k] is Map) {
+                  parsed[k] = UserResourcePermission.fromMap(Map<String, dynamic>.from(pMap[k]));
+                } else {
+                  parsed[k] = UserResourcePermission.empty;
+                }
+              }
+            } else {
+              // Empty or null permissions -> strictly NO PERMISSIONS (all false)
+              for (final res in UserPermissionResources.allResources) {
+                parsed[res['key'] as String] = UserResourcePermission.empty;
               }
             }
             _permissions = parsed;
-          } else {
-            _permissions = UserPermissionResources.getCollaboratorDefaultPermissions();
+            final readableList = _permissions.entries.where((e) => e.value.read).map((e) => e.key).toList();
+            debugPrint('[PermissionService.loadPermissions] User $uid resolved as COLLABORATOR from user.enterpriseRoles[$eid] with ${readableList.length}/36 readable resources: $readableList');
           }
 
           permissionsNotifier.value = !permissionsNotifier.value;
@@ -201,48 +279,226 @@ class PermissionService {
         }
       }
 
-      // 4. Default for self-registered users: if not explicitly marked as restricted collaborator, grant full admin access!
-      final isSelfRegisteredAdmin = uData['role'] != 'collaborator';
-      if (isSelfRegisteredAdmin) {
-        _isAdmin = true;
-        _isOwner = true;
-        _role = 'admin';
-        _permissions = UserPermissionResources.getAdminDefaultPermissions();
-
-        // Only write to Firestore if user doc is missing role or permissions (avoid infinite write-snapshot loop)
-        final needsInit = uData['role'] == null || uData['permissions'] == null;
-        if (needsInit) {
-          final adminPerms = UserPermissionResources.getAdminDefaultPermissions()
-              .map((k, v) => MapEntry(k, v.toMap()));
-          FirebaseFirestore.instance.collection('users').doc(uid).set({
-            'role': 'admin',
-            'isOwner': true,
-            'permissions': adminPerms,
-            if (eid.isNotEmpty) 'currentEnterpriseId': eid,
-            if (eid.isNotEmpty) 'enterprises': FieldValue.arrayUnion([eid]),
-          }, SetOptions(merge: true)).ignore();
-        }
-      } else {
-        _isAdmin = false;
-        _isOwner = false;
-        _role = 'collaborator';
-        _permissions = {};
-      }
+      // 4. If user has no membership in this enterprise, deny all access
+      _isLoaded = true;
+      _isAdmin = false;
+      _isOwner = false;
+      _role = 'collaborator';
+      _permissions = {};
+      debugPrint('[PermissionService.loadPermissions] User $uid has NO active membership or roles in enterprise $eid -> ZERO permissions granted.');
       permissionsNotifier.value = !permissionsNotifier.value;
     } catch (e) {
-      debugPrint('Error loading permissions: $e');
-      // On error, if the user is authenticated, default to full admin permissions so they are not locked out
-      _isAdmin = true;
-      _isOwner = true;
-      _role = 'admin';
-      _permissions = UserPermissionResources.getAdminDefaultPermissions();
+      debugPrint('[PermissionService.loadPermissions] EXCEPTION loading permissions: $e -> Access LOCKED (fail-secure)');
+      _isLoaded = true;
+      _isAdmin = false;
+      _isOwner = false;
+      _role = 'collaborator';
+      _permissions = {};
       permissionsNotifier.value = !permissionsNotifier.value;
     }
   }
 
+  /// Normalize resource keys to canonical UserPermissionResources constants.
+  /// Supports friendly alias names (e.g. 'devis' -> 'sales_quotes', 'customer_orders' -> 'sales_orders', 'invoices' -> 'sales_invoices', 'delivery_notes' -> 'sales_delivery_notes').
+  static String normalizeResourceKey(String rawKey) {
+    final k = rawKey.toLowerCase().trim().replaceAll('-', '_').replaceAll(' ', '_');
+    switch (k) {
+      case 'devis':
+      case 'quotes':
+      case 'quote':
+      case 'salesquotes':
+      case 'sales_quotes':
+        return UserPermissionResources.salesQuotes;
+      case 'commandes':
+      case 'commande':
+      case 'customer_orders':
+      case 'customer_order':
+      case 'customerorders':
+      case 'orders':
+      case 'order':
+      case 'salesorders':
+      case 'sales_orders':
+        return UserPermissionResources.salesOrders;
+      case 'delivery_notes':
+      case 'delivery_note':
+      case 'deliverynotes':
+      case 'bons_livraison':
+      case 'bon_livraison':
+      case 'bl':
+      case 'salesdeliverynotes':
+      case 'sales_delivery_notes':
+        return UserPermissionResources.salesDeliveryNotes;
+      case 'invoices':
+      case 'invoice':
+      case 'factures':
+      case 'facture':
+      case 'salesinvoices':
+      case 'sales_invoices':
+        return UserPermissionResources.salesInvoices;
+      case 'exit_vouchers':
+      case 'exit_voucher':
+      case 'exitvouchers':
+      case 'bons_sortie':
+      case 'bon_sortie':
+      case 'bs':
+      case 'salesexitvouchers':
+      case 'sales_exit_vouchers':
+        return UserPermissionResources.salesExitVouchers;
+      case 'credit_notes':
+      case 'credit_note':
+      case 'creditnotes':
+      case 'avoirs':
+      case 'avoir':
+      case 'salescreditnotes':
+      case 'sales_credit_notes':
+        return UserPermissionResources.salesCreditNotes;
+      case 'return_vouchers':
+      case 'return_voucher':
+      case 'returnvouchers':
+      case 'return_notes':
+      case 'return_note':
+      case 'returnnotes':
+      case 'bons_retour':
+      case 'bon_retour':
+      case 'br':
+      case 'salesreturnvouchers':
+      case 'sales_return_vouchers':
+        return UserPermissionResources.salesReturnVouchers;
+      case 'supplier_orders':
+      case 'supplier_order':
+      case 'supplierorders':
+      case 'commandes_fournisseur':
+      case 'commande_fournisseur':
+      case 'purchasessupplierorders':
+      case 'purchases_supplier_orders':
+        return UserPermissionResources.purchasesSupplierOrders;
+      case 'receiving_vouchers':
+      case 'receiving_voucher':
+      case 'receivingvouchers':
+      case 'bons_reception':
+      case 'bon_reception':
+      case 'purchasesreceivingvouchers':
+      case 'purchases_receiving_vouchers':
+        return UserPermissionResources.purchasesReceivingVouchers;
+      case 'purchase_invoices':
+      case 'purchase_invoice':
+      case 'purchaseinvoices':
+      case 'factures_achat':
+      case 'facture_achat':
+      case 'purchasespurchaseinvoices':
+      case 'purchases_purchase_invoices':
+        return UserPermissionResources.purchasesPurchaseInvoices;
+      case 'supplier_credit_notes':
+      case 'supplier_credit_note':
+      case 'suppliercreditnotes':
+      case 'avoirs_fournisseur':
+      case 'avoir_fournisseur':
+      case 'purchasessuppliercreditnotes':
+      case 'purchases_supplier_credit_notes':
+        return UserPermissionResources.purchasesSupplierCreditNotes;
+      case 'supplier_returns':
+      case 'supplier_return':
+      case 'supplierreturns':
+      case 'retours_fournisseur':
+      case 'retour_fournisseur':
+      case 'purchasessupplierreturns':
+      case 'purchases_supplier_returns':
+        return UserPermissionResources.purchasesSupplierReturns;
+      case 'payments':
+      case 'payment':
+      case 'paiements':
+      case 'paiement':
+        return UserPermissionResources.payments;
+      case 'withholding_tax':
+      case 'withholdingtax':
+      case 'retenue_source':
+        return UserPermissionResources.withholdingTax;
+      case 'withholding_tax_sales':
+      case 'rs_vente':
+        return UserPermissionResources.withholdingTaxSales;
+      case 'withholding_tax_purchases':
+      case 'rs_achat':
+        return UserPermissionResources.withholdingTaxPurchases;
+      case 'treasury_accounts':
+      case 'treasuryaccounts':
+      case 'comptes_tresorerie':
+        return UserPermissionResources.treasuryAccounts;
+      case 'treasury_transactions':
+      case 'treasurytransactions':
+      case 'transactions_tresorerie':
+        return UserPermissionResources.treasuryTransactions;
+      case 'treasury_checks':
+      case 'treasurychecks':
+      case 'cheques_tresorerie':
+        return UserPermissionResources.treasuryChecks;
+      case 'customers':
+      case 'customer':
+      case 'clients':
+      case 'client':
+        return UserPermissionResources.customers;
+      case 'suppliers':
+      case 'supplier':
+      case 'fournisseurs':
+      case 'fournisseur':
+        return UserPermissionResources.suppliers;
+      case 'products':
+      case 'product':
+      case 'products_list':
+      case 'articles':
+      case 'article':
+        return UserPermissionResources.productsList;
+      case 'products_settings':
+      case 'parametres_articles':
+        return UserPermissionResources.productsSettings;
+      case 'stock_overview':
+      case 'vue_stock':
+        return UserPermissionResources.stockOverview;
+      case 'stock_movements':
+      case 'mouvements_stock':
+        return UserPermissionResources.stockMovements;
+      case 'stock_entry_vouchers':
+      case 'bons_entree':
+        return UserPermissionResources.stockEntryVouchers;
+      case 'stock_withdrawal_vouchers':
+      case 'bons_prelevement':
+        return UserPermissionResources.stockWithdrawalVouchers;
+      case 'stock_transfer_vouchers':
+      case 'bons_transfert':
+        return UserPermissionResources.stockTransferVouchers;
+      case 'stock_inventory_sheets':
+      case 'fiches_inventaire':
+        return UserPermissionResources.stockInventorySheets;
+      case 'stock_warehouses':
+      case 'entrepots':
+        return UserPermissionResources.stockWarehouses;
+      case 'projects':
+      case 'projets':
+        return UserPermissionResources.projects;
+      case 'settings_company_info':
+      case 'infos_societe':
+        return UserPermissionResources.settingsCompanyInfo;
+      case 'settings_doc_templates':
+      case 'modeles_documents':
+        return UserPermissionResources.settingsDocTemplates;
+      case 'import_export':
+      case 'importexport':
+        return UserPermissionResources.importExport;
+      case 'user_management':
+      case 'usermanagement':
+      case 'gestion_utilisateurs':
+        return UserPermissionResources.userManagement;
+      case 'dashboard':
+      case 'tableau_de_bord':
+        return UserPermissionResources.dashboard;
+      default:
+        return rawKey;
+    }
+  }
+
   /// Check whether user has specific permission for a resource key.
-  /// Supports action as string ('read', 'create', 'update', 'delete', 'lire', 'créer', 'modifier', 'supprimer')
+  /// Supports action as string ('read', 'create', 'update', 'delete', 'all', 'lire', 'créer', 'modifier', 'supprimer', 'tous')
   /// or named flags (read, create, update, delete).
+  /// Automatically normalizes resource key aliases (e.g. 'devis' -> 'sales_quotes', 'customer_orders' -> 'sales_orders').
   bool hasPermission(
     String resourceKey, {
     dynamic action,
@@ -251,46 +507,74 @@ class PermissionService {
     bool? update,
     bool? delete,
   }) {
-    if (_isAdmin || _isOwner) return true;
-    final perm = _permissions[resourceKey] ?? const UserResourcePermission();
+    final normKey = normalizeResourceKey(resourceKey);
 
-    if (read == true && !perm.read) return false;
-    if (create == true && !perm.create) return false;
-    if (update == true && !perm.update) return false;
-    if (delete == true && !perm.delete) return false;
-    if (read != null || create != null || update != null || delete != null) {
+    // GUARD: Block ALL actions if permissions not loaded yet!
+    if (!_isLoaded) {
+      debugPrint('[PermissionService.hasPermission] BLOCKED (not loaded): resource="$resourceKey" ($normKey), action="$action" -> result=false');
+      return false;
+    }
+
+    if (_isAdmin || _isOwner) {
+      debugPrint('[PermissionService.hasPermission] ADMIN/OWNER bypass for resource="$resourceKey" ($normKey), action="$action" -> result=true');
       return true;
     }
 
-    if (action is String) {
+    final perm = _permissions[normKey] ?? _permissions[resourceKey];
+    if (perm == null) {
+      debugPrint('[PermissionService.hasPermission] NO PERMISSION ENTRY: resource="$resourceKey" ($normKey), action="$action" -> result=false');
+      return false;
+    }
+
+    bool result = false;
+
+    if (read != null || create != null || update != null || delete != null) {
+      result = (read != true || perm.read) &&
+               (create != true || perm.create) &&
+               (update != true || perm.update) &&
+               (delete != true || perm.delete);
+    } else if (action is String) {
       final act = action.toLowerCase().trim();
       switch (act) {
         case 'read':
         case 'lire':
         case 'view':
         case 'voir':
-          return perm.read;
+          result = perm.read;
+          break;
         case 'create':
         case 'creer':
         case 'créer':
         case 'add':
         case 'ajouter':
-          return perm.create;
+          result = perm.create;
+          break;
         case 'update':
         case 'modifier':
         case 'edit':
-          return perm.update;
+          result = perm.update;
+          break;
         case 'delete':
         case 'supprimer':
         case 'suppr':
         case 'remove':
-          return perm.delete;
+          result = perm.delete;
+          break;
+        case 'all':
+        case 'tous':
+        case 'full':
+          result = perm.all;
+          break;
         default:
-          return false;
+          result = false;
+          break;
       }
+    } else {
+      result = perm.read;
     }
 
-    return perm.read;
+    debugPrint('[PermissionService.hasPermission] CHECK: resource="$resourceKey" ($normKey), action="$action" -> result=$result (user=$_userEmail, role=$_role, perm=[read:${perm.read}, create:${perm.create}, update:${perm.update}, delete:${perm.delete}])');
+    return result;
   }
 
   bool canRead(String resourceKey) => hasPermission(resourceKey, action: 'read');
@@ -300,6 +584,27 @@ class PermissionService {
   bool canUpdate(String resourceKey) => hasPermission(resourceKey, action: 'update');
 
   bool canDelete(String resourceKey) => hasPermission(resourceKey, action: 'delete');
+
+  /// Returns true if the user has AT LEAST ONE permission on the resource (read, create, update, or delete), or is Admin/Owner.
+  bool hasAnyPermission(String resourceKey) {
+    final normKey = normalizeResourceKey(resourceKey);
+    if (!_isLoaded) {
+      debugPrint('[PermissionService.hasAnyPermission] BLOCKED (not loaded): resource="$resourceKey" ($normKey) -> result=false');
+      return false;
+    }
+    if (isAdmin || isOwner) {
+      debugPrint('[PermissionService.hasAnyPermission] ADMIN/OWNER: resource="$resourceKey" ($normKey) -> result=true');
+      return true;
+    }
+    final perm = _permissions[normKey] ?? _permissions[resourceKey];
+    if (perm == null) {
+      debugPrint('[PermissionService.hasAnyPermission] NO PERMISSION ENTRY: resource="$resourceKey" ($normKey) -> result=false');
+      return false;
+    }
+    final result = perm.read || perm.create || perm.update || perm.delete;
+    debugPrint('[PermissionService.hasAnyPermission] CHECK: resource="$resourceKey" ($normKey) -> result=$result (perm=[read:${perm.read}, create:${perm.create}, update:${perm.update}, delete:${perm.delete}])');
+    return result;
+  }
 
   /// Map an AppModule enum to its corresponding UserPermissionResources key
   String? getResourceKeyForModule(AppModule module) {
@@ -370,6 +675,8 @@ class PermissionService {
         return UserPermissionResources.settingsCompanyInfo;
       case AppModule.documentTemplates:
         return UserPermissionResources.settingsDocTemplates;
+      case AppModule.importExport:
+        return UserPermissionResources.importExport;
       case AppModule.userManagement:
         return UserPermissionResources.userManagement;
       case AppModule.settings:
@@ -380,11 +687,34 @@ class PermissionService {
 
   /// Check if the active user can view the given module
   bool canAccessModule(AppModule module) {
+    if (!_isLoaded) return false;
     if (_isAdmin || _isOwner) return true;
     if (module == AppModule.userManagement) return false;
+
+    if (module == AppModule.settings) {
+      return canRead(UserPermissionResources.settingsCompanyInfo) ||
+             canRead(UserPermissionResources.settingsDocTemplates) ||
+             canRead(UserPermissionResources.importExport);
+    }
+    if (module == AppModule.reports) {
+      return canRead(UserPermissionResources.dashboard);
+    }
+
     final resKey = getResourceKeyForModule(module);
-    if (resKey == null) return true;
+    if (resKey == null) return false;
     return canRead(resKey);
+  }
+
+  /// Get the first accessible AppModule for the current user, or null if 0 permissions.
+  AppModule? getFirstAccessibleModule() {
+    if (!_isLoaded) return null;
+    if (isAdmin || isOwner) return AppModule.dashboard;
+    for (final mod in AppModule.values) {
+      if (canAccessModule(mod)) {
+        return mod;
+      }
+    }
+    return null;
   }
 }
 

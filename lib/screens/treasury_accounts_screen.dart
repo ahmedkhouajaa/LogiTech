@@ -100,30 +100,34 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _showAccountDialog(context),
-                          icon: const Icon(Icons.add_rounded, size: 16),
-                          label: const Text('Ajouter Compte', style: TextStyle(fontSize: 12)),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.textPrimary,
-                            side: BorderSide(color: AppColors.border),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                      if (PermissionService.instance.canCreate(UserPermissionResources.treasuryAccounts)) ...[
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _showAccountDialog(context),
+                            icon: const Icon(Icons.add_rounded, size: 16),
+                            label: const Text('Ajouter Compte', style: TextStyle(fontSize: 12)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.textPrimary,
+                              side: BorderSide(color: AppColors.border),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _showExpenseDialog(context),
-                          icon: const Icon(Icons.attach_money_rounded, size: 16),
-                          label: const Text('Ajouter Dépense', style: TextStyle(fontSize: 12)),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                        if (PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions))
+                          const SizedBox(width: 8),
+                      ],
+                      if (PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions))
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showExpenseDialog(context),
+                            icon: const Icon(Icons.attach_money_rounded, size: 16),
+                            label: const Text('Ajouter Dépense', style: TextStyle(fontSize: 12)),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ],
@@ -162,15 +166,16 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                     ),
                     const SizedBox(width: 10),
                   ],
-                  ElevatedButton.icon(
-                    onPressed: () => _showExpenseDialog(context),
-                    icon: const Icon(Icons.attach_money_rounded, size: 18),
-                    label: const Text('Ajouter une Dépense', style: TextStyle(fontSize: 13)),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  if (PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions))
+                    ElevatedButton.icon(
+                      onPressed: () => _showExpenseDialog(context),
+                      icon: const Icon(Icons.attach_money_rounded, size: 18),
+                      label: const Text('Ajouter une Dépense', style: TextStyle(fontSize: 13)),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
                     ),
-                  ),
                 ],
               ),
         ),
@@ -258,23 +263,35 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                       },
                       customActionsBuilder: (acc) {
                         final isDefault = acc.isDefault || acc.name.trim().toLowerCase() == 'compte principal';
+                        final canCreateTx = PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions);
+                        final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.treasuryAccounts);
+                        final canDelete = PermissionService.instance.canDelete(UserPermissionResources.treasuryAccounts);
+
                         return PopupMenuButton<String>(
                           icon: Icon(Icons.more_horiz, color: AppColors.textSecondary),
                           onSelected: (val) => _handleAction(context, val, acc, state is TreasuryAccountsLoaded ? state.accounts : []),
-                          itemBuilder: (_) => [
-                            _buildMenuItem('depot', Icons.file_upload_outlined, 'Dépôt'),
-                            _buildMenuItem('transfer', Icons.swap_horiz_outlined, 'Transférer'),
-                            if (!isDefault) ...[
-                              if (PermissionService.instance.canUpdate(UserPermissionResources.treasuryAccounts)) ...[
-                                PopupMenuDivider(height: 1),
-                                _buildMenuItem('edit', Icons.edit_outlined, 'Modifier'),
-                              ],
-                              if (PermissionService.instance.canDelete(UserPermissionResources.treasuryAccounts)) ...[
-                                PopupMenuDivider(height: 1),
-                                _buildMenuItem('delete', Icons.delete_outline, 'Supprimer', isDestructive: true),
-                              ],
-                            ],
-                          ],
+                          itemBuilder: (_) {
+                            final entries = <PopupMenuEntry<String>>[];
+
+                            if (canCreateTx) {
+                              entries.add(_buildMenuItem('depot', Icons.file_upload_outlined, 'Dépôt'));
+                              entries.add(const PopupMenuDivider(height: 1));
+                              entries.add(_buildMenuItem('transfer', Icons.swap_horiz_outlined, 'Transférer'));
+                            }
+
+                            if (!isDefault) {
+                              if (canUpdate) {
+                                if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                                entries.add(_buildMenuItem('edit', Icons.edit_outlined, 'Modifier'));
+                              }
+                              if (canDelete) {
+                                if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                                entries.add(_buildMenuItem('delete', Icons.delete_outline, 'Supprimer', isDestructive: true));
+                              }
+                            }
+
+                            return entries;
+                          },
                         );
                       },
                     ),

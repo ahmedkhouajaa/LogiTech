@@ -51,8 +51,10 @@ import 'blocs/user_management/user_management_bloc.dart';
 import 'blocs/theme/theme_cubit.dart';
 import 'services/auth_service.dart';
 import 'services/enterprise_service.dart';
+import 'services/permission_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_service.dart';
+import 'services/data_prefetch_service.dart';
 import 'database/database_helper.dart';
 import 'utils/constants.dart';
 
@@ -61,9 +63,10 @@ import 'screens/app_shell_screen.dart';
 import 'screens/onboarding_enterprise_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
+import 'screens/diagnostic_screen.dart';
 import 'screens/account_deactivated_screen.dart';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 
 import 'dart:ui';
@@ -72,6 +75,8 @@ import 'mobile/mobile_login_screen.dart';
 import 'mobile/mobile_shell_screen.dart';
 import 'services/migration_service.dart';
 import 'services/security/security_manager.dart';
+
+import 'dart:async';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -98,6 +103,7 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    debugPrint('[FIREBASE] Windows Desktop initialized: project=${DefaultFirebaseOptions.currentPlatform.projectId}');
   } catch (e, stack) {
     print('FIREBASE INIT ERROR: $e');
     print(stack);
@@ -105,7 +111,7 @@ void main() async {
 
   // Initialize Security Engine (License verification & DPAPI storage)
   try {
-    await SecurityManager.instance.initialize();
+    await SecurityManager.instance.initialize().timeout(const Duration(seconds: 3));
   } catch (e, stack) {
     print('SECURITY INIT ERROR: $e');
     print(stack);
@@ -113,8 +119,8 @@ void main() async {
 
   // Initialize enterprise service (loads cached enterprise from SharedPreferences)
   try {
-    await EnterpriseService.instance.initialize();
-    await MigrationService.instance.runEnterpriseMigration();
+    await EnterpriseService.instance.initialize().timeout(const Duration(seconds: 3));
+    unawaited(MigrationService.instance.runEnterpriseMigration());
   } catch (e, stack) {
     print('ENTERPRISE SERVICE INIT ERROR: $e');
     print(stack);
@@ -132,15 +138,6 @@ void main() async {
     SyncService.instance.startPeriodicSync();
   } catch (e, stack) {
     print('SYNC INIT ERROR: $e');
-    print(stack);
-  }
-
-  // Warm up the database
-  try {
-    
-    print('Database initialized successfully.');
-  } catch (e, stack) {
-    print('DATABASE INIT ERROR: $e');
     print(stack);
   }
 
@@ -627,9 +624,8 @@ class _EnterpriseGateState extends State<_EnterpriseGate> {
   @override
   void initState() {
     super.initState();
-    // Only trigger LoadEnterprises if not already loaded with a valid enterprise
     final currentBlocState = context.read<EnterpriseBloc>().state;
-    if (currentBlocState is! EnterpriseLoaded || currentBlocState.currentEnterpriseId == null) {
+    if (currentBlocState is! EnterpriseLoaded || currentBlocState.enterprises.isEmpty) {
       context.read<EnterpriseBloc>().add(LoadEnterprises());
     }
   }
@@ -639,6 +635,7 @@ class _EnterpriseGateState extends State<_EnterpriseGate> {
     return BlocConsumer<EnterpriseBloc, EnterpriseState>(
       listener: (context, state) {
         if (state is EnterpriseLoaded && state.currentEnterpriseId != null && state.currentEnterpriseId!.isNotEmpty) {
+          unawaited(PermissionService.instance.loadPermissions(enterpriseId: state.currentEnterpriseId));
           // Re-fetch enterprise-scoped data across ALL BLoCs
           context.read<DashboardBloc>().add(DashboardRefreshRequested());
           context.read<InvoicesBloc>().add(LoadInvoices());
@@ -670,6 +667,7 @@ class _EnterpriseGateState extends State<_EnterpriseGate> {
           context.read<InventorySheetsBloc>().add(InventorySheetsLoadRequested());
           context.read<ProductSettingsBloc>().add(LoadFamilies());
           context.read<ReportsBloc>().add(ReportsRefreshRequested(dateRange: 'Cette Année'));
+          unawaited(DataPrefetchService.instance.prefetchEnterpriseData());
         }
       },
       builder: (context, state) {
@@ -691,13 +689,16 @@ class _EnterpriseGateState extends State<_EnterpriseGate> {
             onRetry: () => context.read<EnterpriseBloc>().add(LoadEnterprises()),
           );
         } else if (state is EnterpriseLoaded) {
-          if (state.enterprises.isEmpty || state.currentEnterpriseId == null || state.currentEnterpriseId!.isEmpty) {
+          if (state.enterprises.isEmpty) {
             content = const OnboardingEnterpriseScreen(
               key: ValueKey('enterprise_onboarding'),
             );
           } else {
+            final activeId = (state.currentEnterpriseId != null && state.currentEnterpriseId!.isNotEmpty)
+                ? state.currentEnterpriseId!
+                : state.enterprises.first.id;
             content = KeyedSubtree(
-              key: ValueKey('shell_${state.currentEnterpriseId}'),
+              key: ValueKey('shell_$activeId'),
               child: const _ResponsiveShellGate(),
             );
           }
@@ -816,6 +817,16 @@ class _EnterpriseErrorScreen extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const DiagnosticScreen()),
+                  );
+                },
+                icon: const Icon(Icons.troubleshoot, size: 16, color: Colors.white60),
+                label: const Text('Ouvrir le Diagnostic Système', style: TextStyle(color: Colors.white60, fontSize: 12)),
               ),
             ],
           ),

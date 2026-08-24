@@ -1045,34 +1045,59 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                   if (val == 'edit') _navigate(context, entry);
                   if (val == 'delete') _confirmDelete(entry);
                 },
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'voir',
-                    child: Row(children: [
-                      Icon(Icons.visibility_outlined, size: 16, color: AppColors.textSecondary),
-                      const SizedBox(width: 8),
-                      const Text('Voir'),
-                    ]),
-                  ),
-                  if (PermissionService.instance.canUpdate(UserPermissionResources.stockWithdrawalVouchers))
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Row(children: [
-                        Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
-                        const SizedBox(width: 8),
-                        const Text('Modifier'),
-                      ]),
-                    ),
-                  if (PermissionService.instance.canDelete(UserPermissionResources.stockWithdrawalVouchers))
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Row(children: [
-                        Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
-                        const SizedBox(width: 8),
-                        Text('Supprimer', style: TextStyle(color: AppColors.error)),
-                      ]),
-                    ),
-                ],
+                itemBuilder: (_) {
+                  final canRead = PermissionService.instance.canRead(UserPermissionResources.stockWithdrawalVouchers);
+                  final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.stockWithdrawalVouchers);
+                  final canDelete = PermissionService.instance.canDelete(UserPermissionResources.stockWithdrawalVouchers);
+
+                  final entries = <PopupMenuEntry<String>>[];
+
+                  if (canRead) {
+                    entries.add(
+                      PopupMenuItem(
+                        value: 'voir',
+                        child: Row(
+                          children: [
+                            Icon(Icons.visibility_outlined, size: 16, color: AppColors.textSecondary),
+                            const SizedBox(width: 8),
+                            const Text('Voir'),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  if (canUpdate) {
+                    if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                    entries.add(
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_rounded, size: 16, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            const Text('Modifier'),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  if (canDelete) {
+                    if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                    entries.add(
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
+                            const SizedBox(width: 8),
+                            Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return entries;
+                },
               ),
             ),
           ),

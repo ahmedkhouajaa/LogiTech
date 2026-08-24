@@ -16,6 +16,8 @@ import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../services/contact_import_export_service.dart';
+import '../widgets/import_export/contact_import_dialog.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -55,6 +57,110 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 width: 250,
                 height: 32,
                 child: AppSearchBar(onChanged: (v) => setState(() => _search = v.toLowerCase())),
+              ),
+              const SizedBox(width: 10),
+              // ... Actions Button Popup
+              PopupMenuButton<String>(
+                tooltip: 'Actions Import / Export',
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                color: AppColors.surface,
+                elevation: 4,
+                child: Container(
+                  height: 34,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textPrimary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Actions',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                itemBuilder: (ctx) {
+                  final canExport = PermissionService.instance.canCreate(UserPermissionResources.importExport);
+                  final canImport = PermissionService.instance.canUpdate(UserPermissionResources.importExport);
+                  final items = <PopupMenuEntry<String>>[];
+                  if (canExport) {
+                    items.addAll([
+                      const PopupMenuItem(
+                        value: 'export_excel',
+                        child: Text('Exporter Excel', style: TextStyle(fontSize: 13)),
+                      ),
+                      const PopupMenuItem(
+                        value: 'export_csv',
+                        child: Text('Exporter CSV', style: TextStyle(fontSize: 13)),
+                      ),
+                      const PopupMenuItem(
+                        value: 'export_json',
+                        child: Text('Exporter JSON', style: TextStyle(fontSize: 13)),
+                      ),
+                    ]);
+                  }
+                  if (canExport && canImport) {
+                    items.add(const PopupMenuDivider());
+                  }
+                  if (canImport) {
+                    items.add(
+                      const PopupMenuItem(
+                        value: 'import_excel',
+                        child: Text(
+                          'Importer depuis Excel',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                      ),
+                    );
+                  }
+                  return items;
+                },
+                onSelected: (val) async {
+                  final state = context.read<CustomersBloc>().state;
+                  final customers = state is CustomersLoaded ? state.customers : <Customer>[];
+
+                  if (val == 'export_excel') {
+                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                    await ContactImportExportService.instance.exportContactsToExcel(
+                      context: context,
+                      type: ContactType.customer,
+                      contacts: customers,
+                    );
+                  } else if (val == 'export_csv') {
+                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                    await ContactImportExportService.instance.exportContactsToCsv(
+                      context: context,
+                      type: ContactType.customer,
+                      contacts: customers,
+                    );
+                  } else if (val == 'export_json') {
+                    if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+                    await ContactImportExportService.instance.exportContactsToJson(
+                      context: context,
+                      type: ContactType.customer,
+                      contacts: customers,
+                    );
+                  } else if (val == 'import_excel') {
+                    if (!PermissionService.instance.canUpdate(UserPermissionResources.importExport)) return;
+                    ContactImportDialog.show(
+                      context,
+                      type: ContactType.customer,
+                      onImportSuccess: () {
+                        context.read<CustomersBloc>().add(LoadCustomers());
+                      },
+                    );
+                  }
+                },
               ),
               if (PermissionService.instance.canCreate(UserPermissionResources.customers)) ...[
                 const SizedBox(width: 10),
@@ -276,29 +382,84 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   elevation: 4,
                                   onSelected: (val) {
-                                    if (val == 'edit') _showDialog(context, c);
+                                    if (val == 'view' || val == 'edit') _showDialog(context, c);
                                     if (val == 'delete') context.read<CustomersBloc>().add(DeleteCustomer(c.id));
                                   },
-                                  itemBuilder: (context) => [
-                                    if (!isDefault) ...[
-                                      if (PermissionService.instance.canUpdate(UserPermissionResources.customers))
-                                        PopupMenuItem(value: 'edit', height: 36, child: Row(children: [Icon(Icons.edit_outlined, size: 16, color: AppColors.primary), const SizedBox(width: 8), const Text('Modifier', style: TextStyle(fontSize: 13))])),
-                                      if (PermissionService.instance.canDelete(UserPermissionResources.customers))
-                                        PopupMenuItem(value: 'delete', height: 36, child: Row(children: [Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.error), const SizedBox(width: 8), Text('Supprimer', style: TextStyle(color: AppColors.error, fontSize: 13))])),
-                                    ] else ...[
-                                      PopupMenuItem(
-                                        enabled: false,
-                                        height: 36,
-                                        child: Row(
-                                          children: [
-                                            Icon(Icons.lock_rounded, size: 14, color: AppColors.textTertiary),
-                                            const SizedBox(width: 8),
-                                            Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
-                                          ],
+                                  itemBuilder: (context) {
+                                    final canRead = PermissionService.instance.canRead(UserPermissionResources.customers);
+                                    final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.customers);
+                                    final canDelete = PermissionService.instance.canDelete(UserPermissionResources.customers);
+
+                                    final entries = <PopupMenuEntry<String>>[];
+
+                                    if (canRead) {
+                                      entries.add(
+                                        PopupMenuItem(
+                                          value: 'view',
+                                          height: 36,
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.visibility_outlined, size: 16, color: AppColors.info),
+                                              const SizedBox(width: 8),
+                                              const Text('Voir', style: TextStyle(fontSize: 13)),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ],
+                                      );
+                                    }
+
+                                    if (!isDefault) {
+                                      if (canUpdate) {
+                                        if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                                        entries.add(
+                                          PopupMenuItem(
+                                            value: 'edit',
+                                            height: 36,
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
+                                                const SizedBox(width: 8),
+                                                const Text('Modifier', style: TextStyle(fontSize: 13)),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      if (canDelete) {
+                                        if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                                        entries.add(
+                                          PopupMenuItem(
+                                            value: 'delete',
+                                            height: 36,
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.error),
+                                                const SizedBox(width: 8),
+                                                Text('Supprimer', style: TextStyle(color: AppColors.error, fontSize: 13)),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } else {
+                                      if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                                      entries.add(
+                                        PopupMenuItem(
+                                          enabled: false,
+                                          height: 36,
+                                          child: Row(
+                                            children: [
+                                              Icon(Icons.lock_rounded, size: 14, color: AppColors.textTertiary),
+                                              const SizedBox(width: 8),
+                                              Text('Élément protégé', style: TextStyle(color: AppColors.textTertiary, fontSize: 12)),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    return entries;
+                                  },
                                 ),
                               ],
                             ),

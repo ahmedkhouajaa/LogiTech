@@ -6,6 +6,7 @@ import '../blocs/user_management/user_management_bloc.dart';
 import '../blocs/user_management/user_management_event.dart';
 import '../blocs/user_management/user_management_state.dart';
 import '../services/enterprise_service.dart';
+import '../services/permission_service.dart';
 import '../widgets/permissions_matrix_widget.dart';
 import '../utils/constants.dart';
 
@@ -63,8 +64,37 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
     }
 
     if (widget.isEditing) {
-      _currentStep = 2;
       final user = widget.userToEdit!;
+
+      // Protection: Owner cannot be edited by ANY user
+      if (user.isOwner) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Le propriétaire de l\'entreprise ne peut pas être modifié.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          Navigator.of(context).pop();
+        });
+        return;
+      }
+
+      // Protection: Admin cannot be edited by another Admin (only Owner can)
+      if (user.isAdmin && !PermissionService.instance.isOwner) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Seul le propriétaire de l\'entreprise peut gérer un administrateur.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          Navigator.of(context).pop();
+        });
+        return;
+      }
+
+      _currentStep = 2;
       _verifiedUid = user.uid;
       _verifiedEmail = user.email;
 
@@ -121,6 +151,16 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
   }
 
   void _onRoleChanged(String newRole) {
+    if (newRole == 'admin' && !PermissionService.instance.isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Seul le propriétaire de l\'entreprise peut attribuer le rôle Administrateur.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _selectedRole = newRole;
       if (newRole == 'admin') {
@@ -161,6 +201,39 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Veuillez sélectionner au moins une entreprise.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    // Security check: Owner cannot be edited by ANY user
+    if (widget.isEditing && widget.userToEdit!.isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Le propriétaire de l\'entreprise ne peut pas être modifié.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    // Security check: Only Owner can manage an Admin
+    if (widget.isEditing && widget.userToEdit!.isAdmin && !PermissionService.instance.isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Seul le propriétaire de l\'entreprise peut gérer un administrateur.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    // Security check: Only Owner can assign Admin role
+    if (_selectedRole == 'admin' && !PermissionService.instance.isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Seul le propriétaire de l\'entreprise peut attribuer le rôle Administrateur.'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -664,14 +737,19 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final isNarrow = constraints.maxWidth < 500;
+                    final isOwner = PermissionService.instance.isOwner;
+                    final adminLocked = !isOwner;
+
                     if (isNarrow) {
                       return Column(
                         children: [
                           _buildRoleCard(
                             roleKey: 'admin',
                             title: 'Admin',
-                            subtitle: 'Accès complet',
+                            subtitle: adminLocked ? 'Réservé au propriétaire' : 'Accès complet',
                             isSelected: _selectedRole == 'admin',
+                            isLocked: adminLocked,
+                            lockTooltip: 'Seul le propriétaire de l\'entreprise peut attribuer le rôle Administrateur.',
                           ),
                           const SizedBox(height: 12),
                           _buildRoleCard(
@@ -689,8 +767,10 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                           child: _buildRoleCard(
                             roleKey: 'admin',
                             title: 'Admin',
-                            subtitle: 'Accès complet',
+                            subtitle: adminLocked ? 'Réservé au propriétaire' : 'Accès complet',
                             isSelected: _selectedRole == 'admin',
+                            isLocked: adminLocked,
+                            lockTooltip: 'Seul le propriétaire de l\'entreprise peut attribuer le rôle Administrateur.',
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -921,15 +1001,28 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
     required String title,
     required String subtitle,
     required bool isSelected,
+    bool isLocked = false,
+    String? lockTooltip,
   }) {
     return InkWell(
-      onTap: () => _onRoleChanged(roleKey),
+      onTap: isLocked
+          ? () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(lockTooltip ?? 'Action non autorisée.'),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+          : () => _onRoleChanged(roleKey),
       borderRadius: BorderRadius.circular(10),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFEFF6FF) : (AppColors.isDarkMode ? AppColors.surfaceAlt : const Color(0xFFF8FAFC)),
+          color: isLocked
+              ? (AppColors.isDarkMode ? AppColors.surfaceAlt.withValues(alpha: 0.5) : const Color(0xFFF1F5F9))
+              : (isSelected ? const Color(0xFFEFF6FF) : (AppColors.isDarkMode ? AppColors.surfaceAlt : const Color(0xFFF8FAFC))),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isSelected ? const Color(0xFF2563EB) : AppColors.border,
@@ -942,26 +1035,40 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? const Color(0xFF1E40AF) : AppColors.textPrimary,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: isLocked
+                              ? AppColors.textTertiary
+                              : (isSelected ? const Color(0xFF1E40AF) : AppColors.textPrimary),
+                        ),
+                      ),
+                      if (isLocked) ...[
+                        const SizedBox(width: 6),
+                        Icon(Icons.lock_outline_rounded, size: 14, color: AppColors.textTertiary),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    subtitle,
+                    isLocked ? (lockTooltip ?? subtitle) : subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isSelected ? const Color(0xFF3B82F6) : AppColors.textSecondary,
+                      color: isLocked
+                          ? AppColors.textTertiary
+                          : (isSelected ? const Color(0xFF3B82F6) : AppColors.textSecondary),
                     ),
                   ),
                 ],
               ),
             ),
-            if (isSelected)
+            if (isLocked)
+              Icon(Icons.lock_rounded, color: AppColors.textTertiary, size: 20)
+            else if (isSelected)
               const Icon(Icons.check_circle_rounded, color: Color(0xFF2563EB), size: 22)
             else
               Icon(Icons.radio_button_unchecked_rounded, color: AppColors.textTertiary, size: 22),

@@ -9,6 +9,7 @@ import 'security_config.dart';
 import 'secure_storage_service.dart';
 import 'license_model.dart';
 import '../enterprise_service.dart';
+import '../../utils/firestore_safe_helper.dart';
 
 /// Service responsible for Firebase license verification, subscription caching,
 /// and offline grace-period enforcement.
@@ -58,21 +59,45 @@ class LicenseService {
       );
     }
 
-    // 2. Check network connectivity
+    // 2. First verify from local encrypted DPAPI cache (instant startup)
+    final cachedResult = await _verifyFromSecureCache(targetId);
+    if (cachedResult.isAllowed && !forceOnline) {
+      _currentLicense = cachedResult.license;
+      _statusController.add(cachedResult.status);
+      SecurityLogger.audit(
+        action: 'Cached License Verification',
+        success: cachedResult.isAllowed,
+        details: 'Status: ${cachedResult.status.name}',
+      );
+
+      // If online and 24 hours elapsed, trigger background online verification
+      unawaited(() async {
+        try {
+          final isOnline = await _isNetworkAvailable();
+          final lastVerifiedStr = await SecureStorageService.instance.read(
+            SecureStorageService.keyLastVerifiedTime,
+          );
+          final lastVerifiedTime = lastVerifiedStr != null
+              ? DateTime.tryParse(lastVerifiedStr) ?? DateTime.fromMillisecondsSinceEpoch(0)
+              : DateTime.fromMillisecondsSinceEpoch(0);
+          final hoursSinceLastCheck = DateTime.now().difference(lastVerifiedTime).inHours;
+
+          if (isOnline && hoursSinceLastCheck >= 24) {
+            final onlineRes = await _verifyWithFirestore(targetId);
+            _currentLicense = onlineRes.license;
+            _statusController.add(onlineRes.status);
+          }
+        } catch (_) {}
+      }());
+
+      return cachedResult;
+    }
+
+    // 3. Online Check if no valid cache or forceOnline
     final isOnline = await _isNetworkAvailable();
-    final lastVerifiedStr = await SecureStorageService.instance.read(
-      SecureStorageService.keyLastVerifiedTime,
-    );
-    final lastVerifiedTime = lastVerifiedStr != null
-        ? DateTime.tryParse(lastVerifiedStr) ?? DateTime.fromMillisecondsSinceEpoch(0)
-        : DateTime.fromMillisecondsSinceEpoch(0);
-
-    final hoursSinceLastCheck = DateTime.now().difference(lastVerifiedTime).inHours;
-
-    // 3. Online Check (if online and (forced OR 24 hours elapsed OR no cache))
-    if (isOnline && (forceOnline || hoursSinceLastCheck >= 24 || _currentLicense == null)) {
+    if (isOnline) {
       try {
-        final onlineResult = await _verifyWithFirestore(targetId);
+        final onlineResult = await _verifyWithFirestore(targetId).timeout(const Duration(seconds: 4));
         _currentLicense = onlineResult.license;
         _statusController.add(onlineResult.status);
         SecurityLogger.audit(
@@ -87,8 +112,7 @@ class LicenseService {
       }
     }
 
-    // 4. Offline / Cached verification
-    final cachedResult = await _verifyFromSecureCache(targetId);
+    // 4. Return cached result fallback
     _currentLicense = cachedResult.license;
     _statusController.add(cachedResult.status);
     SecurityLogger.audit(
@@ -101,11 +125,13 @@ class LicenseService {
 
   /// Verifies directly from Firestore `/licenses/{enterpriseId}`.
   Future<LicenseVerificationResult> _verifyWithFirestore(String enterpriseId) async {
-    final docRef = FirebaseFirestore.instance.collection('licenses').doc(enterpriseId);
-    final snapshot = await docRef.get();
+    final docData = await FirestoreSafeHelper.getDocData(
+      FirebaseFirestore.instance.collection('licenses'),
+      enterpriseId,
+    ).timeout(const Duration(seconds: 4));
 
     LicenseInfo license;
-    if (!snapshot.exists || snapshot.data() == null) {
+    if (docData == null || docData.isEmpty) {
       // Auto-provision a default 30-day trial or active standard license for existing valid enterprises
       license = LicenseInfo(
         id: enterpriseId,
@@ -118,13 +144,16 @@ class LicenseService {
       );
 
       try {
-        await docRef.set(license.toMap(), SetOptions(merge: true));
+        await FirebaseFirestore.instance
+            .collection('licenses')
+            .doc(enterpriseId)
+            .set(license.toMap(), SetOptions(merge: true));
         SecurityLogger.info('Auto-provisioned initial license for enterprise: $enterpriseId');
       } catch (e) {
         SecurityLogger.warn('Could not write initial license to Firestore: $e');
       }
     } else {
-      license = LicenseInfo.fromMap(snapshot.data()!);
+      license = LicenseInfo.fromMap(docData);
     }
 
     // Check if deactivated by admin

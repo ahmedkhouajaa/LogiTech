@@ -1061,40 +1061,59 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                   if (val == 'edit') _navigate(context, entry);
                   if (val == 'delete') _confirmDelete(entry);
                 },
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'voir',
-                    child: Row(
-                      children: [
-                        Icon(Icons.visibility_outlined, size: 16, color: AppColors.textSecondary),
-                        const SizedBox(width: 8),
-                        const Text('Voir', style: TextStyle(fontSize: 13)),
-                      ],
-                    ),
-                  ),
-                  if (PermissionService.instance.canUpdate(UserPermissionResources.stockInventorySheets))
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
-                          const SizedBox(width: 8),
-                          Text('Modifier', style: TextStyle(fontSize: 13, color: AppColors.primary)),
-                        ],
+                itemBuilder: (_) {
+                  final canRead = PermissionService.instance.canRead(UserPermissionResources.stockInventorySheets);
+                  final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.stockInventorySheets);
+                  final canDelete = PermissionService.instance.canDelete(UserPermissionResources.stockInventorySheets);
+
+                  final entries = <PopupMenuEntry<String>>[];
+
+                  if (canRead) {
+                    entries.add(
+                      PopupMenuItem(
+                        value: 'voir',
+                        child: Row(
+                          children: [
+                            Icon(Icons.visibility_outlined, size: 16, color: AppColors.textSecondary),
+                            const SizedBox(width: 8),
+                            const Text('Voir', style: TextStyle(fontSize: 13)),
+                          ],
+                        ),
                       ),
-                    ),
-                  if (PermissionService.instance.canDelete(UserPermissionResources.stockInventorySheets))
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
-                          const SizedBox(width: 8),
-                          Text('Supprimer', style: TextStyle(fontSize: 13, color: AppColors.error)),
-                        ],
+                    );
+                  }
+                  if (canUpdate) {
+                    if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                    entries.add(
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            Text('Modifier', style: TextStyle(fontSize: 13, color: AppColors.primary)),
+                          ],
+                        ),
                       ),
-                    ),
-                ],
+                    );
+                  }
+                  if (canDelete) {
+                    if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
+                    entries.add(
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_rounded, size: 16, color: AppColors.error),
+                            const SizedBox(width: 8),
+                            Text('Supprimer', style: TextStyle(fontSize: 13, color: AppColors.error)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return entries;
+                },
               ),
             ),
           ),

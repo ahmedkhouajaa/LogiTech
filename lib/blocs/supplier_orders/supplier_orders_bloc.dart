@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../models/supplier_order.dart';
-import '../../database/database_helper.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
@@ -141,7 +142,6 @@ class SupplierOrdersError extends SupplierOrdersState {
 // ─── BLoC ──────────────────────────────────────────────────────────
 class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> {
   static const int pageSize = 10;
-  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
   SupplierOrdersBloc() : super(SupplierOrdersInitial()) {
     on<LoadSupplierOrders>(_onLoadSupplierOrders);
@@ -236,6 +236,10 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
   }
 
   Future<void> _onAddSupplierOrder(AddSupplierOrder event, Emitter<SupplierOrdersState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierOrders)) {
+      emit(SupplierOrdersError('Permission refusée : Vous n\'avez pas le droit de créer une commande fournisseur.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveSupplierOrder(event.order);
       add(LoadFirstSupplierOrders());
@@ -245,6 +249,10 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
   }
 
   Future<void> _onUpdateSupplierOrder(UpdateSupplierOrder event, Emitter<SupplierOrdersState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierOrders)) {
+      emit(SupplierOrdersError('Permission refusée : Vous n\'avez pas le droit de modifier une commande fournisseur.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveSupplierOrder(event.order);
       add(LoadFirstSupplierOrders());
@@ -254,6 +262,10 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
   }
 
   Future<void> _onDeleteSupplierOrder(DeleteSupplierOrder event, Emitter<SupplierOrdersState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierOrders)) {
+      emit(SupplierOrdersError('Permission refusée : Vous n\'avez pas le droit de supprimer une commande fournisseur.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('supplier_orders', event.orderId);
       add(LoadFirstSupplierOrders());

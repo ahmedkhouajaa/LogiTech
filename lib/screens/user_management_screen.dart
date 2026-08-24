@@ -78,6 +78,26 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   void _navigateToEditUser(EnterpriseUserModel user) {
+    if (user.isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Le propriétaire de l\'entreprise ne peut pas être modifié.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (user.isAdmin && !PermissionService.instance.isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Seul le propriétaire de l\'entreprise peut gérer un administrateur.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => AddEditUserScreen(userToEdit: user)))
         .then((_) => _loadUsers());
@@ -91,6 +111,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Impossible de supprimer le propriétaire de l\'entreprise.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (user.isAdmin && !PermissionService.instance.isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Seul le propriétaire de l\'entreprise peut retirer un administrateur.'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -529,44 +559,93 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                                   width: 60,
                                                   child: Align(
                                                     alignment: Alignment.centerRight,
-                                                    child: PopupMenuButton<String>(
-                                                      icon: Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textSecondary),
-                                                      padding: EdgeInsets.zero,
-                                                      constraints: const BoxConstraints(),
-                                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                                      color: AppColors.surface,
-                                                      onSelected: (val) {
-                                                        if (val == 'edit') {
-                                                          _navigateToEditUser(user);
-                                                        } else if (val == 'delete') {
-                                                          _confirmDeleteUser(user);
-                                                        }
-                                                      },
-                                                      itemBuilder: (ctx) => [
-                                                        const PopupMenuItem(
-                                                          value: 'edit',
-                                                          height: 34,
-                                                          child: Row(
-                                                            children: [
-                                                              Icon(Icons.edit_outlined, size: 15, color: Color(0xFF2563EB)),
-                                                              SizedBox(width: 8),
-                                                              Text('Modifier les accès', style: TextStyle(fontSize: 12)),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                        if (!user.isOwner && isCurrentUserAdmin)
-                                                          PopupMenuItem(
-                                                            value: 'delete',
-                                                            height: 34,
-                                                            child: Row(
-                                                              children: [
-                                                                Icon(Icons.delete_outline, size: 15, color: AppColors.error),
-                                                                const SizedBox(width: 8),
-                                                                Text('Retirer de l\'entreprise', style: TextStyle(color: AppColors.error, fontSize: 12)),
-                                                              ],
+                                                    child: Builder(
+                                                      builder: (context) {
+                                                        final isCurrentUserOwner = PermissionService.instance.isOwner;
+
+                                                        // Rule 1: Propriétaire cannot be edited or deleted by ANY user
+                                                        if (user.isOwner) {
+                                                          return Tooltip(
+                                                            message: 'Propriétaire de l\'entreprise (Profil protégé)',
+                                                            child: Container(
+                                                              width: 28,
+                                                              height: 28,
+                                                              decoration: BoxDecoration(
+                                                                color: const Color(0xFFFEF3C7),
+                                                                shape: BoxShape.circle,
+                                                                border: Border.all(color: const Color(0xFFFDE68A)),
+                                                              ),
+                                                              child: const Icon(
+                                                                Icons.lock_rounded,
+                                                                size: 14,
+                                                                color: Color(0xFFD97706),
+                                                              ),
                                                             ),
-                                                          ),
-                                                      ],
+                                                          );
+                                                        }
+
+                                                        // Rule 2: Regular Admin cannot edit or delete another Admin (only Propriétaire can)
+                                                        if (user.isAdmin && !isCurrentUserOwner) {
+                                                          return Tooltip(
+                                                            message: 'Seul le propriétaire peut gérer un administrateur',
+                                                            child: Container(
+                                                              width: 28,
+                                                              height: 28,
+                                                              decoration: BoxDecoration(
+                                                                color: AppColors.isDarkMode ? AppColors.surfaceAlt : const Color(0xFFF1F5F9),
+                                                                shape: BoxShape.circle,
+                                                                border: Border.all(color: AppColors.border),
+                                                              ),
+                                                              child: Icon(
+                                                                Icons.lock_outline_rounded,
+                                                                size: 14,
+                                                                color: AppColors.textTertiary,
+                                                              ),
+                                                            ),
+                                                          );
+                                                        }
+
+                                                        // Otherwise, owner managing admin/collab OR admin managing collab:
+                                                        return PopupMenuButton<String>(
+                                                          icon: Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textSecondary),
+                                                          padding: EdgeInsets.zero,
+                                                          constraints: const BoxConstraints(),
+                                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                          color: AppColors.surface,
+                                                          onSelected: (val) {
+                                                            if (val == 'edit') {
+                                                              _navigateToEditUser(user);
+                                                            } else if (val == 'delete') {
+                                                              _confirmDeleteUser(user);
+                                                            }
+                                                          },
+                                                          itemBuilder: (ctx) => [
+                                                            const PopupMenuItem(
+                                                              value: 'edit',
+                                                              height: 34,
+                                                              child: Row(
+                                                                children: [
+                                                                  Icon(Icons.edit_outlined, size: 15, color: Color(0xFF2563EB)),
+                                                                  SizedBox(width: 8),
+                                                                  Text('Modifier les accès', style: TextStyle(fontSize: 12)),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                            const PopupMenuDivider(height: 1),
+                                                            PopupMenuItem(
+                                                              value: 'delete',
+                                                              height: 34,
+                                                              child: Row(
+                                                                children: [
+                                                                  Icon(Icons.delete_outline, size: 15, color: AppColors.error),
+                                                                  SizedBox(width: 8),
+                                                                  Text('Retirer de l\'entreprise', style: TextStyle(color: AppColors.error, fontSize: 12)),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        );
+                                                      },
                                                     ),
                                                   ),
                                                 ),
@@ -575,7 +654,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                           );
                                         },
                                       ),
-                              ),
+                               ),
 
                               // Sticky Pagination Footer
                               Divider(height: 1, color: AppColors.border),

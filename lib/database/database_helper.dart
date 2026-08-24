@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/enterprise_service.dart';
+import '../utils/firestore_safe_helper.dart';
 import '../models/customer.dart';
 import '../models/supplier.dart';
 import '../models/product.dart';
@@ -131,10 +132,12 @@ class DatabaseHelper {
   Future<int> getCreditNotesCount({String? searchQuery, String? customerId, DateTime? dateFrom, DateTime? dateTo, String? status, String? numberPrefix}) async => 0;
   Future<CreditNote?> getCreditNote(String id) async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('credit_notes').doc(id).get();
-      if (doc.exists && doc.data() != null) {
-        final data = Map<String, dynamic>.from(doc.data()!);
-        data['id'] = doc.id;
+      final data = await FirestoreSafeHelper.getDocData(
+        FirebaseFirestore.instance.collection('credit_notes'),
+        id,
+      );
+      if (data != null) {
+        data['id'] = id;
         return CreditNote.fromMap(data);
       }
     } catch (_) {}
@@ -148,10 +151,12 @@ class DatabaseHelper {
   Future<int> getSupplierCreditNotesCount({String? searchQuery, String? supplierId, DateTime? dateFrom, DateTime? dateTo, String? status, String? numberPrefix}) async => 0;
   Future<SupplierCreditNote?> getSupplierCreditNoteById(String id) async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('supplier_credit_notes').doc(id).get();
-      if (doc.exists && doc.data() != null) {
-        final data = Map<String, dynamic>.from(doc.data()!);
-        data['id'] = doc.id;
+      final data = await FirestoreSafeHelper.getDocData(
+        FirebaseFirestore.instance.collection('supplier_credit_notes'),
+        id,
+      );
+      if (data != null) {
+        data['id'] = id;
         return SupplierCreditNote.fromMap(data);
       }
     } catch (_) {}
@@ -512,10 +517,12 @@ class DatabaseHelper {
   Future<Product?> getProduct(String id) async {
     if (id.isEmpty) return null;
     try {
-      final doc = await _firestore.collection('articles').doc(id).get();
-      if (doc.exists && doc.data() != null) {
-        final data = Map<String, dynamic>.from(doc.data()!);
-        data['id'] = doc.id;
+      final data = await FirestoreSafeHelper.getDocData(
+        _firestore.collection('articles'),
+        id,
+      );
+      if (data != null) {
+        data['id'] = id;
         return Product.fromMap(data);
       }
     } catch (_) {}

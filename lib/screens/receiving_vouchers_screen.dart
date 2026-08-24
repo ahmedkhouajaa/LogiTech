@@ -1346,37 +1346,59 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
   }
 
   List<PopupMenuEntry<String>> _buildActionMenu(BuildContext context, ReceivingVoucher voucher) {
+    final canRead = PermissionService.instance.hasPermission('receiving_vouchers', action: 'read');
+    final canUpdate = PermissionService.instance.hasPermission('receiving_vouchers', action: 'update');
+    final canDelete = PermissionService.instance.hasPermission('receiving_vouchers', action: 'delete');
+    final hasAnyAccess = PermissionService.instance.hasAnyPermission('receiving_vouchers');
+    final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create');
+    final canCreateInvoice = canUpdate && PermissionService.instance.hasPermission('purchase_invoices', action: 'create');
+    final canCreateReturn = canUpdate && PermissionService.instance.hasPermission('supplier_returns', action: 'create');
+
+    debugPrint('[ReceivingVouchers.3dot] Voucher #${voucher.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, canCreatePayment=$canCreatePayment, canCreateInvoice=$canCreateInvoice, canCreateReturn=$canCreateReturn, isAdmin=${PermissionService.instance.isAdmin}');
+
     final List<PopupMenuEntry<String>> items = [];
 
-    items.add(_buildMenuItem('view', Icons.visibility_outlined, 'Voir', const Color(0xFF6366F1)));
-    if (PermissionService.instance.canUpdate(UserPermissionResources.purchasesReceivingVouchers)) {
+    if (canRead) {
+      items.add(_buildMenuItem('view', Icons.visibility_outlined, 'Voir', const Color(0xFF6366F1)));
+    }
+    if (canUpdate) {
       items.add(_buildMenuItem('edit', Icons.edit_outlined, 'Modifier', const Color(0xFF2563EB)));
     }
-    if (PermissionService.instance.canDelete(UserPermissionResources.purchasesReceivingVouchers)) {
+    if (canDelete) {
       items.add(_buildMenuItem('delete', Icons.delete_outline, 'Supprimer', const Color(0xFFEF4444)));
     }
-    items.add(_buildMenuItem('print', Icons.print_outlined, 'Imprimer', const Color(0xFF475569)));
     
-    if (!voucher.isPaid) {
+    if (!voucher.isPaid && canCreatePayment) {
       items.add(_buildMenuItem('payment', Icons.credit_card_outlined, 'Ajouter un paiement', const Color(0xFF10B981)));
     }
     
     // Mutually exclusive conversion logic
     if (voucher.isConvertedToPurchaseInvoice) {
-      items.add(_buildMenuItem('view_invoice_created', Icons.visibility_outlined, 'Voir la facture créée', const Color(0xFF6366F1)));
+      if (canRead) {
+        items.add(_buildMenuItem('view_invoice_created', Icons.visibility_outlined, 'Voir la facture créée', const Color(0xFF6366F1)));
+      }
     } else if (voucher.isConvertedToSupplierReturn) {
-      items.add(_buildMenuItem('view_return_created', Icons.visibility_outlined, 'Voir le bon de retour créé', const Color(0xFF6366F1)));
+      if (canRead) {
+        items.add(_buildMenuItem('view_return_created', Icons.visibility_outlined, 'Voir le bon de retour créé', const Color(0xFF6366F1)));
+      }
     } else {
-      items.add(_buildMenuItem('convert_invoice', Icons.receipt_long_outlined, 'Transformer en facture d\'achat', const Color(0xFF475569)));
-      items.add(_buildMenuItem('convert_return', Icons.assignment_return_outlined, 'Transformer en Bon de retour', const Color(0xFF475569)));
+      if (canCreateInvoice) {
+        items.add(_buildMenuItem('to_invoice', Icons.receipt_long_outlined, 'Transformer en facture d\'achat', const Color(0xFF475569)));
+      }
+      if (canCreateReturn) {
+        items.add(_buildMenuItem('to_return', Icons.assignment_return_outlined, 'Transformer en Bon de retour', const Color(0xFF475569)));
+      }
     }
 
-    items.add(_buildMenuItem('pdf', Icons.picture_as_pdf_outlined, 'Telecharger PDF', const Color(0xFFEF4444)));
-    items.add(_buildMenuItem('email', Icons.email_outlined, 'Envoyer par email', const Color(0xFF2563EB)));
-    items.add(_buildMenuItem('whatsapp', Icons.chat_bubble_outline, 'Envoyer par WhatsApp', const Color(0xFF10B981)));
-    items.add(_buildMenuItem('status', Icons.swap_horiz_outlined, 'Changer le statut', const Color(0xFFF59E0B)));
-//     items.add(_buildMenuItem('duplicate', Icons.content_copy_outlined, 'Dupliquer', const Color(0xFF475569)));
-//     items.add(_buildMenuItem('attachments', Icons.attach_file_outlined, 'Gerer les pieces jointes', const Color(0xFF475569), showBorder: false));
+    if (hasAnyAccess) {
+      items.add(_buildMenuItem('print', Icons.print_outlined, 'Imprimer', const Color(0xFF475569)));
+      items.add(_buildMenuItem('pdf', Icons.picture_as_pdf_outlined, 'Télécharger PDF', const Color(0xFFEF4444)));
+      items.add(_buildMenuItem('email', Icons.email_outlined, 'Envoyer par email', const Color(0xFF2563EB)));
+      items.add(_buildMenuItem('whatsapp', Icons.chat_bubble_outline, 'Envoyer par WhatsApp', const Color(0xFF10B981)));
+    }
+    if (PermissionService.instance.isAdmin) {
+      items.add(_buildMenuItem('status', Icons.swap_horiz_outlined, 'Changer le statut', const Color(0xFFF59E0B)));
+    }
 
     return items;
   }

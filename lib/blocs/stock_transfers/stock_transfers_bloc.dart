@@ -3,6 +3,8 @@ import 'package:uuid/uuid.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/stock_transfer.dart';
 import '../../models/stock_movement.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/helpers.dart';
 import '../../database/database_helper.dart';
@@ -122,7 +124,6 @@ class StockTransfersError extends StockTransfersState {
 // ─── BLoC ────────────────────────────────────────────────────────
 class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> {
   static const int pageSize = 10;
-  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
   StockTransfersBloc() : super(StockTransfersInitial()) {
     on<LoadStockTransfers>(_onLoad);
@@ -216,6 +217,10 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
   }
 
   Future<void> _onAdd(AddStockTransfer event, Emitter<StockTransfersState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.stockTransferVouchers)) {
+      emit(StockTransfersError('Permission refusée : Vous n\'avez pas le droit de créer un bon de transfert.'));
+      return;
+    }
     try {
       String number = event.transfer.number;
       if (number.isEmpty) {
@@ -238,23 +243,19 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
 
           String? srcWhName;
           try {
-            if (event.transfer.sourceWarehouseId.isNotEmpty) {
-              final whRef = FirebaseFirestore.instance.collection('warehouses').doc(event.transfer.sourceWarehouseId);
-              final doc = await whRef.get();
-              if (doc.exists && doc.data() != null) {
-                srcWhName = doc.data()!['name']?.toString();
-              }
+            final whRef = FirebaseFirestore.instance.collection('warehouses').doc(event.transfer.sourceWarehouseId);
+            final doc = await whRef.get();
+            if (doc.exists && doc.data() != null) {
+              srcWhName = doc.data()!['name']?.toString();
             }
           } catch (_) {}
 
           String? destWhName;
           try {
-            if (event.transfer.destinationWarehouseId.isNotEmpty) {
-              final whRef = FirebaseFirestore.instance.collection('warehouses').doc(event.transfer.destinationWarehouseId);
-              final doc = await whRef.get();
-              if (doc.exists && doc.data() != null) {
-                destWhName = doc.data()!['name']?.toString();
-              }
+            final whRef = FirebaseFirestore.instance.collection('warehouses').doc(event.transfer.destinationWarehouseId);
+            final doc = await whRef.get();
+            if (doc.exists && doc.data() != null) {
+              destWhName = doc.data()!['name']?.toString();
             }
           } catch (_) {}
 
@@ -303,6 +304,10 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
   }
 
   Future<void> _onUpdate(UpdateStockTransfer event, Emitter<StockTransfersState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.stockTransferVouchers)) {
+      emit(StockTransfersError('Permission refusée : Vous n\'avez pas le droit de modifier un bon de transfert.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveStockTransfer(event.transfer);
       add(LoadFirstStockTransfers());
@@ -312,6 +317,10 @@ class StockTransfersBloc extends Bloc<StockTransfersEvent, StockTransfersState> 
   }
 
   Future<void> _onDelete(DeleteStockTransfer event, Emitter<StockTransfersState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.stockTransferVouchers)) {
+      emit(StockTransfersError('Permission refusée : Vous n\'avez pas le droit de supprimer un bon de transfert.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('stock_transfers', event.transferId);
       add(LoadFirstStockTransfers());

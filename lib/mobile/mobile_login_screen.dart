@@ -389,6 +389,8 @@ class _MobileLoginScreenState extends State<MobileLoginScreen>
                                               Image.network(
                                                 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png',
                                                 height: 18,
+                                                cacheWidth: 48,
+                                                cacheHeight: 48,
                                               ),
                                               const SizedBox(width: 10),
                                               const Text(

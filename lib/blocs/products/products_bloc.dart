@@ -1,6 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import '../../database/database_helper.dart';
 import '../../models/product.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';

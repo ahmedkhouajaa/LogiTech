@@ -11,8 +11,6 @@ import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../widgets/sidebar_menu.dart';
 import '../widgets/sync_indicator.dart';
-import '../widgets/enterprise_switcher.dart';
-import '../services/enterprise_service.dart';
 import '../utils/constants.dart';
 import 'mobile_drawer.dart';
 import 'mobile_dashboard_screen.dart';
@@ -23,7 +21,6 @@ import 'screens/mobile_delivery_notes_screen.dart';
 import 'screens/mobile_invoices_screen.dart';
 import 'screens/mobile_stock_withdrawals_screen.dart';
 import 'screens/mobile_stock_transfers_screen.dart';
-import 'screens/mobile_inventory_sheets_screen.dart';
 import 'screens/mobile_credit_notes_screen.dart';
 import 'screens/mobile_return_notes_screen.dart';
 import 'screens/mobile_supplier_orders_screen.dart';
@@ -54,9 +51,9 @@ import '../screens/document_templates_screen.dart';
 import '../screens/product_settings_screen.dart';
 import '../screens/stock_entries_screen.dart';
 import '../screens/stock_withdrawals_screen.dart';
-import '../screens/stock_transfers_screen.dart';
 import '../screens/inventory_sheets_screen.dart';
 import 'screens/mobile_user_management_screen.dart';
+import '../screens/import_export_screen.dart';
 import '../services/permission_service.dart';
 
 class MobileShellScreen extends StatefulWidget {
@@ -81,7 +78,40 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
   @override
   void initState() {
     super.initState();
+    _checkInitialModule();
+    PermissionService.instance.permissionsNotifier.addListener(_onPermissionsChanged);
     context.read<DashboardBloc>().add(DashboardRefreshRequested());
+  }
+
+  @override
+  void dispose() {
+    PermissionService.instance.permissionsNotifier.removeListener(_onPermissionsChanged);
+    super.dispose();
+  }
+
+  void _onPermissionsChanged() {
+    if (!mounted) return;
+    if (!PermissionService.instance.canAccessModule(_activeModule)) {
+      final firstPermitted = PermissionService.instance.getFirstAccessibleModule();
+      if (firstPermitted != null && firstPermitted != _activeModule) {
+        _onModuleSelected(firstPermitted);
+      } else {
+        setState(() {});
+      }
+    } else {
+      setState(() {});
+    }
+  }
+
+  void _checkInitialModule() {
+    if (PermissionService.instance.isLoaded && !PermissionService.instance.canAccessModule(_activeModule)) {
+      final firstPermitted = PermissionService.instance.getFirstAccessibleModule();
+      if (firstPermitted != null) {
+        _activeModule = firstPermitted;
+        final navIndex = _bottomNavModules.indexOf(firstPermitted);
+        _bottomNavIndex = navIndex >= 0 ? navIndex : -1;
+      }
+    }
   }
 
   void _onModuleSelected(AppModule module) {
@@ -103,24 +133,42 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       Scaffold.of(context).openDrawer();
       return;
     }
+    final targetMod = _bottomNavModules[index];
+    if (!PermissionService.instance.canAccessModule(targetMod)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Accès non autorisé à cette rubrique.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
     setState(() {
       _bottomNavIndex = index;
-      _activeModule = _bottomNavModules[index];
+      _activeModule = targetMod;
     });
   }
 
   Widget _buildContent() {
-    if (!PermissionService.instance.canAccessModule(_activeModule)) {
-      return const UnauthorizedView();
-    }
-    switch (_activeModule) {
-      case AppModule.dashboard:
-        return const MobileDashboardScreen();
-      case AppModule.customers:
-        return const MobileCustomersScreen();
-      case AppModule.suppliers:
-        return const MobileSuppliersScreen();
-      case AppModule.products:
+    return ValueListenableBuilder<bool>(
+      valueListenable: PermissionService.instance.permissionsNotifier,
+      builder: (context, _, __) {
+        if (!PermissionService.instance.isLoaded) {
+          return Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
+        }
+        if (!PermissionService.instance.canAccessModule(_activeModule)) {
+          return const UnauthorizedView();
+        }
+        switch (_activeModule) {
+          case AppModule.dashboard:
+            return const MobileDashboardScreen();
+          case AppModule.customers:
+            return const MobileCustomersScreen();
+          case AppModule.suppliers:
+            return const MobileSuppliersScreen();
+          case AppModule.products:
         return const MobileProductsScreen();
       case AppModule.productSettings:
         return const ProductSettingsScreen();
@@ -185,9 +233,13 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         return const StockEntriesScreen();
       case AppModule.userManagement:
         return const MobileUserManagementScreen();
+      case AppModule.importExport:
+        return const ImportExportScreen();
       default:
         return _ComingSoonMobile(module: _activeModule);
     }
+  },
+);
   }
 
   String _getModuleTitle() {
@@ -226,6 +278,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.companyInfo: return 'Ma Societe';
       case AppModule.documentTemplates: return 'Modeles';
       case AppModule.userManagement: return 'Gestion des utilisateurs';
+      case AppModule.importExport: return 'Import / Export';
       default: return 'LogiTech Pro';
     }
   }

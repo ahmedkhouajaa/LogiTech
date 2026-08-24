@@ -8,6 +8,7 @@ import 'sync_service.dart';
 import 'enterprise_service.dart';
 import '../models/user_management_model.dart';
 import '../utils/platform_utils.dart';
+import '../utils/firestore_safe_helper.dart';
 import 'auth/desktop_google_auth_helper.dart';
 
 class AuthService {
@@ -86,48 +87,54 @@ class AuthService {
 
   /// Initialize and verify session validity on app startup.
   Future<void> initialize() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      // Validate session token on startup
-      try {
-        await user.reload();
-        final token = await user.getIdToken(false);
-        if (token != null && token.isNotEmpty) {
-          _currentUserUid = user.uid;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Validate session token on startup
+        try {
+          await user.reload().timeout(const Duration(seconds: 3));
+          final token = await user.getIdToken(false).timeout(const Duration(seconds: 3));
+          if (token != null && token.isNotEmpty) {
+            _currentUserUid = user.uid;
 
-          // Check if active in Firestore
-          try {
-            final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-            if (userDoc.exists) {
-              final data = userDoc.data();
-              final isActive = data?['isActive'] != false &&
-                  data?['status'] != 'disabled' &&
-                  data?['status'] != 'blocked';
-              if (!isActive) {
-                await triggerDeactivation("Votre compte a été désactivé. Contactez l'administrateur.");
-                return;
+            // Check if active in Firestore
+            try {
+              final data = await FirestoreSafeHelper.getDocData(
+                FirebaseFirestore.instance.collection('users'),
+                user.uid,
+              ).timeout(const Duration(seconds: 3));
+              if (data != null) {
+                final isActive = data['isActive'] != false &&
+                    data['status'] != 'disabled' &&
+                    data['status'] != 'blocked';
+                if (!isActive) {
+                  await triggerDeactivation("Votre compte a été désactivé. Contactez l'administrateur.");
+                  return;
+                }
               }
-            }
-          } catch (_) {}
+            } catch (_) {}
 
-          _startUserStatusListener(user.uid);
-        } else {
-          _currentUserUid = null;
-          await FirebaseAuth.instance.signOut();
+            _startUserStatusListener(user.uid);
+          } else {
+            _currentUserUid = null;
+            await FirebaseAuth.instance.signOut();
+          }
+        } catch (e) {
+          // If token refresh fails due to revocation / expiration / disabled
+          if (e is FirebaseAuthException &&
+              (e.code == 'user-disabled' ||
+                  e.code == 'user-token-expired' ||
+                  e.code == 'user-not-found')) {
+            await triggerDeactivation("Votre compte a été désactivé.");
+          } else {
+            // Offline or timeout fallback - allow local cached session
+            _currentUserUid = user.uid;
+          }
         }
-      } catch (e) {
-        // If token refresh fails due to revocation / expiration / disabled
-        if (e is FirebaseAuthException &&
-            (e.code == 'user-disabled' ||
-                e.code == 'user-token-expired' ||
-                e.code == 'user-not-found')) {
-          await triggerDeactivation("Votre compte a été désactivé.");
-        } else {
-          // Might be offline - allow local session
-          _currentUserUid = user.uid;
-        }
+      } else {
+        _currentUserUid = null;
       }
-    } else {
+    } catch (_) {
       _currentUserUid = null;
     }
   }
@@ -163,40 +170,42 @@ class AuthService {
       final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
-      );
+      ).timeout(const Duration(seconds: 8));
       if (userCredential.user != null) {
         _currentUserUid = userCredential.user!.uid;
         _offlineMode = false;
 
-        // Verify account is active
-        final userDoc = await FirebaseFirestore.instance.collection('users').doc(_currentUserUid).get();
-        if (userDoc.exists) {
-          final data = userDoc.data();
-          if (data != null && data['isActive'] == false) {
-            await logout();
-            throw FirebaseAuthException(
-              code: 'user-disabled',
-              message: 'Ce compte utilisateur a été désactivé.',
-            );
-          }
-          final Map<String, dynamic> updates = {
-            'lastLoginAt': FieldValue.serverTimestamp(),
-          };
-          // Auto-upgrade if permissions/role are missing and not an explicitly restricted collaborator
-          if (data?['role'] == null || (data?['role'] == 'admin' && data?['permissions'] == null)) {
-            final adminPerms = UserPermissionResources.getAdminDefaultPermissions()
-                .map((k, v) => MapEntry(k, v.toMap()));
-            updates['role'] = 'admin';
-            updates['isOwner'] = true;
-            updates['permissions'] = adminPerms;
-          }
-          await FirebaseFirestore.instance.collection('users').doc(_currentUserUid).set(
-            updates,
-            SetOptions(merge: true),
-          );
-        } else if (userCredential.user != null) {
-          await _createUserProfile(userCredential.user!);
-        }
+        // Verify account is active in background or with short timeout
+        unawaited(() async {
+          try {
+            final data = await FirestoreSafeHelper.getDocData(
+              FirebaseFirestore.instance.collection('users'),
+              _currentUserUid!,
+            ).timeout(const Duration(seconds: 3));
+            if (data != null) {
+              if (data['isActive'] == false) {
+                await logout();
+                return;
+              }
+              final Map<String, dynamic> updates = {
+                'lastLoginAt': FieldValue.serverTimestamp(),
+              };
+              if (data['role'] == null || (data['role'] == 'admin' && data['permissions'] == null)) {
+                final adminPerms = UserPermissionResources.getAdminDefaultPermissions()
+                    .map((k, v) => MapEntry(k, v.toMap()));
+                updates['role'] = 'admin';
+                updates['isOwner'] = true;
+                updates['permissions'] = adminPerms;
+              }
+              await FirebaseFirestore.instance.collection('users').doc(_currentUserUid).set(
+                updates,
+                SetOptions(merge: true),
+              ).timeout(const Duration(seconds: 3));
+            } else if (userCredential.user != null) {
+              await _createUserProfile(userCredential.user!);
+            }
+          } catch (_) {}
+        }());
 
         _startUserStatusListener(_currentUserUid!);
 
@@ -344,9 +353,12 @@ class AuthService {
 
       // Check if user profile already exists in Firestore (Scenario 1 & 2)
       debugPrint('[GoogleAuth] Step 7: Checking Firestore user profile for $_currentUserUid...');
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(_currentUserUid).get();
+      final userData = await FirestoreSafeHelper.getDocData(
+        FirebaseFirestore.instance.collection('users'),
+        _currentUserUid!,
+      );
 
-      if (!userDoc.exists) {
+      if (userData == null) {
         debugPrint('[GoogleAuth] Step 8: Creating new user profile in Firestore...');
         try {
           await _createUserProfile(userCredential.user!);
@@ -361,8 +373,7 @@ class AuthService {
         }
       } else {
         debugPrint('[GoogleAuth] Step 8: Existing user profile found, updating lastLoginAt...');
-        final data = userDoc.data();
-        if (data != null && data['isActive'] == false) {
+        if (userData['isActive'] == false) {
           await logout();
           throw FirebaseAuthException(
             code: 'user-disabled',
@@ -373,7 +384,7 @@ class AuthService {
         final Map<String, dynamic> updates = {
           'lastLoginAt': FieldValue.serverTimestamp(),
         };
-        if (data?['role'] == null || (data?['role'] == 'admin' && data?['permissions'] == null)) {
+        if (userData['role'] == null || (userData['role'] == 'admin' && userData['permissions'] == null)) {
           final adminPerms = UserPermissionResources.getAdminDefaultPermissions()
               .map((k, v) => MapEntry(k, v.toMap()));
           updates['role'] = 'admin';

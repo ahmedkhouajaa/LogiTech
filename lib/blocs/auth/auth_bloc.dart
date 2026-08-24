@@ -124,14 +124,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // Listen to token changes for revocation / expiration (Scenarios 15, 18)
     _tokenSub = _authService.idTokenChanges.listen((user) {
-      if (user == null && state is AuthAuthenticated && !_authService.isOfflineMode) {
-        add(const AuthSessionExpiredEvent(reason: 'Votre session a été fermée ou révoquée.'));
-      }
+      scheduleMicrotask(() {
+        if (user == null && state is AuthAuthenticated && !_authService.isOfflineMode) {
+          add(const AuthSessionExpiredEvent(reason: 'Votre session a été fermée ou révoquée.'));
+        }
+      });
     });
 
     // Listen to real-time deactivation triggers
     _deactivationSub = _authService.onAccountDeactivated.listen((reason) {
-      add(AuthAccountDeactivatedEvent(reason: reason));
+      scheduleMicrotask(() {
+        add(AuthAccountDeactivatedEvent(reason: reason));
+      });
     });
   }
 
@@ -147,13 +151,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onAuthCheckRequested(AuthCheckRequested event, Emitter<AuthState> emit) async {
-    await _authService.initialize();
-    if (_authService.isAuthenticated) {
-      await EnterpriseService.instance.loadEnterprisesFromFirestore();
-      await PermissionService.instance.loadPermissions();
-      emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
-    } else {
-      emit(AuthUnauthenticated());
+    try {
+      await _authService.initialize().timeout(const Duration(seconds: 4));
+      if (_authService.isAuthenticated) {
+        try {
+          await EnterpriseService.instance.loadEnterprisesFromFirestore(maxRetries: 2);
+        } catch (_) {}
+        try {
+          await PermissionService.instance.loadPermissions();
+        } catch (_) {}
+        emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
+      } else {
+        emit(AuthUnauthenticated());
+      }
+    } catch (_) {
+      if (_authService.isAuthenticated) {
+        emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
+      } else {
+        emit(AuthUnauthenticated());
+      }
     }
   }
 
@@ -165,8 +181,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final success = await _authService.login(event.email, event.password);
       if (success) {
-        await EnterpriseService.instance.loadEnterprisesFromFirestore();
-        await PermissionService.instance.loadPermissions();
+        try {
+          await EnterpriseService.instance.loadEnterprisesFromFirestore(maxRetries: 2);
+        } catch (_) {}
+        try {
+          await PermissionService.instance.loadPermissions();
+        } catch (_) {}
         emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
       } else {
         emit(const AuthError('Identifiants incorrects'));
@@ -200,8 +220,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final success = await _authService.signInWithGoogle();
       if (success) {
-        await EnterpriseService.instance.loadEnterprisesFromFirestore();
-        await PermissionService.instance.loadPermissions();
+        try {
+          await EnterpriseService.instance.loadEnterprisesFromFirestore(maxRetries: 2);
+        } catch (_) {}
+        try {
+          await PermissionService.instance.loadPermissions();
+        } catch (_) {}
         emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
       } else {
         emit(const AuthError('Erreur lors de la connexion Google'));
@@ -216,6 +240,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onAuthLogoutRequested(AuthLogoutRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
+    PermissionService.instance.reset();
     await _authService.logout();
     emit(AuthUnauthenticated());
   }

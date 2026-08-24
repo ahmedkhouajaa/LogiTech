@@ -1,7 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:uuid/uuid.dart';
 import '../../models/treasury_account.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
@@ -273,6 +274,10 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
   }
 
   Future<void> _onCreateAccount(CreateTreasuryAccount event, Emitter<TreasuryAccountsState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.treasuryAccounts)) {
+      emit(const TreasuryAccountsError('Permission refusée : Vous n\'avez pas le droit de créer un compte de trésorerie.'));
+      return;
+    }
     final currentEntId = EnterpriseService.instance.currentEnterpriseId;
     final account = (event.account.enterpriseId == null || event.account.enterpriseId!.isEmpty)
         ? event.account.copyWith(enterpriseId: currentEntId)
@@ -293,6 +298,10 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
   }
 
   Future<void> _onUpdateAccount(UpdateTreasuryAccount event, Emitter<TreasuryAccountsState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.treasuryAccounts)) {
+      emit(const TreasuryAccountsError('Permission refusée : Vous n\'avez pas le droit de modifier un compte de trésorerie.'));
+      return;
+    }
     if (event.account.isDefault || event.account.name.trim().toLowerCase() == 'compte principal') {
       emit(const TreasuryAccountsError('Cet élément est un élément par défaut et ne peut pas être modifié.'));
       return;
@@ -317,6 +326,10 @@ class TreasuryAccountsBloc extends Bloc<TreasuryAccountsEvent, TreasuryAccountsS
   }
 
   Future<void> _onDeleteAccount(DeleteTreasuryAccount event, Emitter<TreasuryAccountsState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.treasuryAccounts)) {
+      emit(const TreasuryAccountsError('Permission refusée : Vous n\'avez pas le droit de supprimer un compte de trésorerie.'));
+      return;
+    }
     final currentState = state;
     if (currentState is TreasuryAccountsLoaded) {
       final target = currentState.accounts.where((a) => a.id == event.id).firstOrNull;

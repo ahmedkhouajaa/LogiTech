@@ -2,6 +2,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../database/database_helper.dart';
 import '../../models/payment_model.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
@@ -243,6 +245,10 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
   }
 
   Future<void> _onAdd(AddPayment event, Emitter<PaymentsState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.payments)) {
+      emit(const PaymentsError('Permission refusée : Vous n\'avez pas le droit d\'enregistrer un paiement.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.savePayment(event.payment);
       add(LoadFirstPayments(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
@@ -252,6 +258,10 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
   }
 
   Future<void> _onUpdate(UpdatePayment event, Emitter<PaymentsState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.payments)) {
+      emit(const PaymentsError('Permission refusée : Vous n\'avez pas le droit de modifier un paiement.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.savePayment(event.payment);
       add(LoadFirstPayments(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));
@@ -261,6 +271,10 @@ class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
   }
 
   Future<void> _onDelete(DeletePayment event, Emitter<PaymentsState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.payments)) {
+      emit(const PaymentsError('Permission refusée : Vous n\'avez pas le droit de supprimer un paiement.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('paiements', event.id);
       add(LoadFirstPayments(statusFilter: state is PaymentsLoaded ? (state as PaymentsLoaded).activeStatusFilter : 'Tous'));

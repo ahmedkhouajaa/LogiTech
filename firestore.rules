@@ -4,91 +4,156 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && request.auth.uid != null;
     }
 
-    function isUserActive() {
-      return isAuthenticated() && 
-        (!exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isActive', true) == true);
-    }
-
-    function isUserAdmin(enterpriseId) {
+    function isEnterpriseOwner(enterpriseDoc) {
       return isAuthenticated() && (
-        get(/databases/$(database)/documents/enterprises/$(enterpriseId)).data.get('owner_id', '') == request.auth.uid ||
-        get(/databases/$(database)/documents/enterprises/$(enterpriseId)).data.get('userId', '') == request.auth.uid
-      );
-    }
-
-    function isNotDefaultRecord() {
-      return resource == null || (
-        resource.data.get('isDefault', false) != true &&
-        resource.data.get('is_default', 0) != 1 &&
-        resource.data.get('is_default', false) != true
+        enterpriseDoc.owner_id == request.auth.uid ||
+        enterpriseDoc.userId == request.auth.uid ||
+        enterpriseDoc.ownerId == request.auth.uid ||
+        enterpriseDoc.createdBy == request.auth.uid
       );
     }
 
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && isUserActive();
-      allow delete: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAuthenticated();
     }
     
     match /enterprises/{enterpriseId} {
-      allow read: if isUserActive();
-      allow create: if isAuthenticated();
-      allow update, delete: if isUserActive();
+      allow read, create: if isAuthenticated();
+      // Allow updates while preventing removal/override of the enterprise owner
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && isEnterpriseOwner(resource.data);
       
       match /{allChildren=**} {
-        allow read, write: if isUserActive();
+        allow read, write: if isAuthenticated();
       }
     }
 
     match /clients/{docId} {
-      allow read: if isUserActive();
-      allow create: if isUserActive();
-      allow update, delete: if isUserActive() && isNotDefaultRecord();
+      allow read, write: if isAuthenticated();
     }
 
     match /fournisseurs/{docId} {
-      allow read: if isUserActive();
-      allow create: if isUserActive();
-      allow update, delete: if isUserActive() && isNotDefaultRecord();
+      allow read, write: if isAuthenticated();
+    }
+
+    match /articles/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /products/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /invoices/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /quotes/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /delivery_notes/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /customer_orders/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /supplier_orders/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /purchase_invoices/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /receiving_vouchers/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /credit_notes/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /supplier_credit_notes/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /return_notes/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /supplier_returns/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /stock_entries/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /stock_movements/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /stock_withdrawals/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /stock_transfers/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /inventory_sheets/{docId} {
+      allow read, write: if isAuthenticated();
     }
 
     match /treasury_accounts/{docId} {
-      allow read: if isUserActive();
-      allow create: if isUserActive();
-      allow update, delete: if isUserActive() && isNotDefaultRecord();
+      allow read, write: if isAuthenticated();
     }
 
-    match /comptes_tresorerie/{docId} {
-      allow read: if isUserActive();
-      allow create: if isUserActive();
-      allow update, delete: if isUserActive() && isNotDefaultRecord();
+    match /treasury_transactions/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /paiements/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /payments/{docId} {
+      allow read, write: if isAuthenticated();
     }
 
     match /projects/{docId} {
-      allow read: if isUserActive();
-      allow create: if isUserActive();
-      allow update, delete: if isUserActive() && isNotDefaultRecord();
+      allow read, write: if isAuthenticated();
     }
 
     match /warehouses/{docId} {
-      allow read: if isUserActive();
-      allow create: if isUserActive();
-      allow update, delete: if isUserActive() && isNotDefaultRecord();
+      allow read, write: if isAuthenticated();
     }
 
-    match /entrepots/{docId} {
-      allow read: if isUserActive();
-      allow create: if isUserActive();
-      allow update, delete: if isUserActive() && isNotDefaultRecord();
+    match /document_templates/{docId} {
+      allow read, write: if isAuthenticated();
     }
 
-    match /{collectionName}/{docId} {
-      allow read, write: if isUserActive();
+    match /company_settings/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /product_families/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /checks_traites/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
     }
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/stock_entry.dart';
+import '../../models/user_management_model.dart';
+import '../../services/permission_service.dart';
 import '../../services/firestore_pagination_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/stock_movement.dart';
@@ -114,6 +116,10 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
   }
 
   Future<void> _onAddStockEntry(AddStockEntry event, Emitter<StockEntriesState> emit) async {
+    if (!PermissionService.instance.canCreate(UserPermissionResources.stockEntryVouchers)) {
+      emit(StockEntriesError('Permission refusée : Vous n\'avez pas le droit de créer un bon d\'entrée.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveStockEntry(event.entry);
 
@@ -145,7 +151,7 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
             whName = 'Entrepôt principal';
           }
 
-          final movId = const Uuid().v4();
+          final movId = _uuid.v4();
           final mov = StockMovement(
             id: movId,
             productId: item.productId,
@@ -171,12 +177,16 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
   }
 
   Future<void> _onUpdateStockEntry(UpdateStockEntry event, Emitter<StockEntriesState> emit) async {
+    if (!PermissionService.instance.canUpdate(UserPermissionResources.stockEntryVouchers)) {
+      emit(StockEntriesError('Permission refusée : Vous n\'avez pas le droit de modifier un bon d\'entrée.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.saveStockEntry(event.entry);
 
       for (var item in event.entry.items) {
         if (item.productId.isNotEmpty && item.quantity > 0) {
-          final movId = const Uuid().v4();
+          final movId = _uuid.v4();
           final mov = StockMovement(
             id: movId,
             productId: item.productId,
@@ -200,6 +210,10 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
   }
 
   Future<void> _onDeleteStockEntry(DeleteStockEntry event, Emitter<StockEntriesState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.stockEntryVouchers)) {
+      emit(StockEntriesError('Permission refusée : Vous n\'avez pas le droit de supprimer un bon d\'entrée.'));
+      return;
+    }
     try {
       await FirestoreRepository.instance.softDeleteDocument('stock_entries', event.entryId);
       add(const LoadFirstStockEntries());
