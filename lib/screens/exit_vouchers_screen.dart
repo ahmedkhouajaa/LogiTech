@@ -1188,6 +1188,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                   final canUpdate = PermissionService.instance.hasPermission('exit_vouchers', action: 'update');
                   final canDelete = PermissionService.instance.hasPermission('exit_vouchers', action: 'delete');
                   final hasAnyAccess = PermissionService.instance.hasAnyPermission('exit_vouchers');
+                  final hasAllAccess = PermissionService.instance.hasPermission('exit_vouchers', action: 'all');
 
                   final entries = <PopupMenuEntry<String>>[];
 
@@ -1222,7 +1223,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                     addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                     addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
                   }
-                  if (PermissionService.instance.isAdmin) {
+                  if (hasAllAccess) {
                     addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
                   }
 
@@ -1342,6 +1343,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                         final canUpdate = PermissionService.instance.hasPermission('exit_vouchers', action: 'update');
                         final canDelete = PermissionService.instance.hasPermission('exit_vouchers', action: 'delete');
                         final hasAnyAccess = PermissionService.instance.hasAnyPermission('exit_vouchers');
+                        final hasAllAccess = PermissionService.instance.hasPermission('exit_vouchers', action: 'all');
 
                         final entries = <PopupMenuEntry<String>>[];
 
@@ -1376,7 +1378,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                           addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                           addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
                         }
-                        if (PermissionService.instance.isAdmin) {
+                        if (hasAllAccess) {
                           addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
                         }
                         return entries;

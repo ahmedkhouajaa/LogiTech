@@ -202,9 +202,10 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                 final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.salesDeliveryNotes);
                 final canDelete = PermissionService.instance.canDelete(UserPermissionResources.salesDeliveryNotes);
                 final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.salesDeliveryNotes);
-                final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
-                final canCreateInvoice = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.salesInvoices);
-                final canCreateReturn = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.salesReturnVouchers);
+                final hasAllAccess = PermissionService.instance.hasPermission(UserPermissionResources.salesDeliveryNotes, action: 'all');
+                final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments) || hasAllAccess;
+                final canCreateInvoice = hasAllAccess;
+                final canCreateReturn = hasAllAccess;
 
                 final entries = <PopupMenuEntry<String>>[];
                 void addItem(String val, IconData icon, Color col, String label) {
@@ -245,7 +246,7 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
                   addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                   addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
                 }
-                if (PermissionService.instance.isAdmin) {
+                if (hasAllAccess) {
                   addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
                 }
 

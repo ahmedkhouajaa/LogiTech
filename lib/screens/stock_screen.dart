@@ -16,6 +16,8 @@ import '../services/stock_export_service.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 
 class StockScreen extends StatefulWidget {
   const StockScreen({super.key});
@@ -67,17 +69,18 @@ class _StockScreenState extends State<StockScreen> {
                         Text('Gerer votre stock', style: TextStyle(color: AppColors.textSecondary)),
                       ],
                     ),
-                    ElevatedButton.icon(
-                      onPressed: () => showDialog(context: context, builder: (_) => _StockAdjustmentDialog()),
-                      icon: Icon(Icons.add_box_rounded, size: 18),
-                      label: Text('Nouvel ajustement de stock'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                    if (PermissionService.instance.canCreate(UserPermissionResources.stockOverview) || PermissionService.instance.canCreate(UserPermissionResources.stockMovements))
+                      ElevatedButton.icon(
+                        onPressed: () => showDialog(context: context, builder: (_) => _StockAdjustmentDialog()),
+                        icon: const Icon(Icons.add_box_rounded, size: 18),
+                        label: const Text('Nouvel ajustement de stock'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.lg),

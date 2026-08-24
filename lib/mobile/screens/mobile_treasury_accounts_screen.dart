@@ -173,30 +173,39 @@ class _MobileTreasuryAccountsScreenState extends State<MobileTreasuryAccountsScr
           isEmpty: isEmpty,
           emptyMessage: 'Aucun compte trouvé.',
           itemCount: totalMatchingCount,
-          customFab: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              FloatingActionButton.extended(
-                heroTag: 'add_expense',
-                onPressed: () {
-                  widget.showExpenseDialog(context);
-                },
-                icon: const Icon(Icons.attach_money, color: Colors.white),
-                label: const Text('Ajouter Dépense', style: TextStyle(color: Colors.white)),
-                backgroundColor: AppColors.warning,
-              ),
-              const SizedBox(height: 12),
-              FloatingActionButton.extended(
-                heroTag: 'add_account',
-                onPressed: () {
-                  widget.showAccountDialog(context);
-                },
-                icon: const Icon(Icons.add, color: Colors.white),
-                label: const Text('Ajouter Compte', style: TextStyle(color: Colors.white)),
-                backgroundColor: AppColors.primary,
-              ),
-            ],
-          ),
+          customFab: () {
+            final canCreateAccount = PermissionService.instance.canCreate(UserPermissionResources.treasuryAccounts);
+            final canCreateTransaction = PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions);
+            final fabs = <Widget>[];
+            if (canCreateTransaction) {
+              fabs.add(
+                FloatingActionButton.extended(
+                  heroTag: 'add_expense',
+                  onPressed: () => widget.showExpenseDialog(context),
+                  icon: const Icon(Icons.attach_money, color: Colors.white),
+                  label: const Text('Ajouter Dépense', style: TextStyle(color: Colors.white)),
+                  backgroundColor: AppColors.warning,
+                ),
+              );
+            }
+            if (canCreateAccount) {
+              if (fabs.isNotEmpty) fabs.add(const SizedBox(height: 12));
+              fabs.add(
+                FloatingActionButton.extended(
+                  heroTag: 'add_account',
+                  onPressed: () => widget.showAccountDialog(context),
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  label: const Text('Ajouter Compte', style: TextStyle(color: Colors.white)),
+                  backgroundColor: AppColors.primary,
+                ),
+              );
+            }
+            if (fabs.isEmpty) return null;
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: fabs,
+            );
+          }(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

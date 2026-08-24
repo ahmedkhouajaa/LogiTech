@@ -1077,10 +1077,11 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     final canUpdate = PermissionService.instance.hasPermission('supplier_orders', action: 'update');
     final canDelete = PermissionService.instance.hasPermission('supplier_orders', action: 'delete');
     final hasAnyAccess = PermissionService.instance.hasAnyPermission('supplier_orders');
-    final canCreateInvoice = canUpdate && PermissionService.instance.hasPermission('purchase_invoices', action: 'create');
-    final canCreateReceipt = canUpdate && PermissionService.instance.hasPermission('receiving_vouchers', action: 'create');
+    final hasAllAccess = PermissionService.instance.hasPermission('supplier_orders', action: 'all');
+    final canCreateInvoice = hasAllAccess;
+    final canCreateReceipt = hasAllAccess;
 
-    debugPrint('[SupplierOrders.3dot] Order #${order.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, canCreateInvoice=$canCreateInvoice, canCreateReceipt=$canCreateReceipt, isAdmin=${PermissionService.instance.isAdmin}');
+    debugPrint('[SupplierOrders.3dot] Order #${order.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreateInvoice=$canCreateInvoice, canCreateReceipt=$canCreateReceipt, isAdmin=${PermissionService.instance.isAdmin}');
 
     final List<PopupMenuEntry<String>> items = [];
 
@@ -1116,7 +1117,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
       items.add(_buildMenuItem('email', Icons.email_outlined, 'Envoyer par email', const Color(0xFF2563EB)));
       items.add(_buildMenuItem('whatsapp', Icons.chat_bubble_outline, 'Envoyer par WhatsApp', const Color(0xFF10B981)));
     }
-    if (PermissionService.instance.isAdmin) {
+    if (hasAllAccess) {
       items.add(_buildMenuItem('status', Icons.swap_horiz_outlined, 'Changer le statut', const Color(0xFFF59E0B)));
     }
 

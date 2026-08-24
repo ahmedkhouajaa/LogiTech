@@ -1038,11 +1038,12 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                   final canUpdate = PermissionService.instance.hasPermission('delivery_notes', action: 'update');
                   final canDelete = PermissionService.instance.hasPermission('delivery_notes', action: 'delete');
                   final hasAnyAccess = PermissionService.instance.hasAnyPermission('delivery_notes');
-                  final canCreateInvoice = canUpdate && PermissionService.instance.hasPermission('invoices', action: 'create');
-                  final canCreateReturn = canUpdate && PermissionService.instance.hasPermission('return_notes', action: 'create');
-                  final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create');
+                  final hasAllAccess = PermissionService.instance.hasPermission('delivery_notes', action: 'all');
+                  final canCreateInvoice = hasAllAccess;
+                  final canCreateReturn = hasAllAccess;
+                  final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create') || hasAllAccess;
 
-                  debugPrint('[DeliveryNotes.3dot] Note #${note.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, canCreateInvoice=$canCreateInvoice, canCreateReturn=$canCreateReturn, canCreatePayment=$canCreatePayment, isAdmin=${PermissionService.instance.isAdmin}');
+                  debugPrint('[DeliveryNotes.3dot] Note #${note.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreateInvoice=$canCreateInvoice, canCreateReturn=$canCreateReturn, canCreatePayment=$canCreatePayment, isAdmin=${PermissionService.instance.isAdmin}');
 
                   final entries = <PopupMenuEntry<String>>[];
 
@@ -1087,7 +1088,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
                     addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                     addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
                   }
-                  if (PermissionService.instance.isAdmin) {
+                  if (hasAllAccess) {
                     addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
                   }
 

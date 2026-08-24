@@ -11,9 +11,11 @@ import 'forms/mobile_stock_adjustment_form.dart';
 import '../../services/sync_service.dart';
 import '../../screens/stock_screen.dart';
 import '../../services/stock_export_service.dart';
-import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_card.dart';
+import '../../widgets/app_error_widget.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 class MobileStockScreen extends StatefulWidget {
   const MobileStockScreen({super.key});
 
@@ -126,22 +128,24 @@ class _MobileStockScreenState extends State<MobileStockScreen> {
           return SizedBox();
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const MobileStockAdjustmentForm()),
-          ).then((_) {
-            if (!mounted) return;
-            if (!context.mounted) return;
-            context.read<StockBloc>().add(LoadStock());
-            context.read<ProductsBloc>().add(LoadProducts());
-          });
-        },
-        icon: Icon(Icons.add, color: Colors.white),
-        label: Text('Nouvel ajustement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-        backgroundColor: AppColors.primary,
-      ),
+      floatingActionButton: (PermissionService.instance.canCreate(UserPermissionResources.stockOverview) || PermissionService.instance.canCreate(UserPermissionResources.stockMovements))
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MobileStockAdjustmentForm()),
+                ).then((_) {
+                  if (!mounted) return;
+                  if (!context.mounted) return;
+                  context.read<StockBloc>().add(LoadStock());
+                  context.read<ProductsBloc>().add(LoadProducts());
+                });
+              },
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const Text('Nouvel ajustement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              backgroundColor: AppColors.primary,
+            )
+          : null,
     );
   }
 

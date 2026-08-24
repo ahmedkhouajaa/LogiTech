@@ -794,10 +794,11 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               final canUpdate = PermissionService.instance.hasPermission('purchase_invoices', action: 'update');
               final canDelete = PermissionService.instance.hasPermission('purchase_invoices', action: 'delete');
               final hasAnyAccess = PermissionService.instance.hasAnyPermission('purchase_invoices');
-              final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create');
-              final canCreateCreditNote = canUpdate && PermissionService.instance.hasPermission('supplier_credit_notes', action: 'create');
+              final hasAllAccess = PermissionService.instance.hasPermission('purchase_invoices', action: 'all');
+              final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create') || hasAllAccess;
+              final canCreateCreditNote = hasAllAccess;
 
-              debugPrint('[PurchaseInvoices.3dot] Invoice #${inv.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, canCreatePayment=$canCreatePayment, canCreateCreditNote=$canCreateCreditNote, isAdmin=${PermissionService.instance.isAdmin}');
+              debugPrint('[PurchaseInvoices.3dot] Invoice #${inv.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreatePayment=$canCreatePayment, canCreateCreditNote=$canCreateCreditNote, isAdmin=${PermissionService.instance.isAdmin}');
 
               final entries = <PopupMenuEntry<String>>[];
 
@@ -834,7 +835,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                 addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                 addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
               }
-              if (PermissionService.instance.isAdmin) {
+              if (hasAllAccess) {
                 addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
               }
 

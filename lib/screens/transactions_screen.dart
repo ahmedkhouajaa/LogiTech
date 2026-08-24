@@ -38,17 +38,18 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 child: AppSearchBar(onChanged: (v) {}),
               ),
               const Spacer(),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: const Text('Nouvelle transaction', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              if (PermissionService.instance.canCreate(UserPermissionResources.treasuryTransactions))
+                ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Nouvelle transaction', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  ),
                 ),
-              ),
             ],
           ),
         ),

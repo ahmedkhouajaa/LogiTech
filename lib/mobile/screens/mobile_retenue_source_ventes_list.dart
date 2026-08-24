@@ -8,6 +8,8 @@ import '../../blocs/retenue_source_vente/retenue_source_vente_bloc.dart';
 import '../../database/database_helper.dart';
 import '../../utils/constants.dart';
 import '../../widgets/sidebar_menu.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileRetenueSourceVentesList extends StatefulWidget {
   final MobileModuleConfig config;
@@ -152,21 +154,23 @@ class _MobileRetenueSourceVentesListState extends State<MobileRetenueSourceVente
           emptyMessage: 'Aucune retenue à la source trouvée.',
           itemCount: count,
           scrollController: _scrollController,
-          customFab: FloatingActionButton.extended(
-            onPressed: () async {
-              final payments = await DatabaseHelper.instance.getPayments();
-              if (context.mounted) {
-                MobileTejExportDialog.show(
-                  context,
-                  payments: payments,
-                  isSales: widget.isSales,
-                );
-              }
-            },
-            icon: const Icon(Icons.file_download_outlined, color: Colors.white),
-            label: const Text('Exporter TEJ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            backgroundColor: AppColors.primary,
-          ),
+          customFab: PermissionService.instance.canCreate(UserPermissionResources.importExport)
+              ? FloatingActionButton.extended(
+                  onPressed: () async {
+                    final payments = await DatabaseHelper.instance.getPayments();
+                    if (context.mounted) {
+                      MobileTejExportDialog.show(
+                        context,
+                        payments: payments,
+                        isSales: widget.isSales,
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.file_download_outlined, color: Colors.white),
+                  label: const Text('Exporter TEJ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  backgroundColor: AppColors.primary,
+                )
+              : null,
           child: Column(
             children: cards,
           ),

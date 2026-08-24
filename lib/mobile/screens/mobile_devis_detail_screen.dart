@@ -179,9 +179,10 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                 final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.salesQuotes);
                 final canDelete = PermissionService.instance.canDelete(UserPermissionResources.salesQuotes);
                 final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.salesQuotes);
-                final canCreateInvoice = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.salesInvoices);
-                final canCreateOrder = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.salesOrders);
-                final canCreateDelivery = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.salesDeliveryNotes);
+                final hasAllAccess = PermissionService.instance.hasPermission(UserPermissionResources.salesQuotes, action: 'all');
+                final canCreateInvoice = hasAllAccess;
+                final canCreateOrder = hasAllAccess;
+                final canCreateDelivery = hasAllAccess;
 
                 final entries = <PopupMenuEntry<String>>[];
                 void addItem(String val, IconData icon, Color col, String label) {
@@ -225,7 +226,7 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
                   addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                   addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
                 }
-                if (PermissionService.instance.isAdmin) {
+                if (hasAllAccess) {
                   addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
                 }
 

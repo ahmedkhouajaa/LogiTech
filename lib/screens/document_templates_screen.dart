@@ -9,6 +9,8 @@ import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
 import 'document_template_editor_screen.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 
 class DocumentTemplatesScreen extends StatefulWidget {
   const DocumentTemplatesScreen({super.key});
@@ -71,12 +73,12 @@ class _DocumentTemplatesBody extends StatelessWidget {
                 '${templates.length} modèle${templates.length > 1 ? 's' : ''}',
                 style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
               ),
-              const Spacer(),
-              AppButton(
-                label: 'Nouveau modèle',
-                icon: Icons.add_rounded,
-                onPressed: () => _createTemplate(context),
-              ),
+              if (PermissionService.instance.canCreate(UserPermissionResources.settingsDocTemplates))
+                AppButton(
+                  label: 'Nouveau modèle',
+                  icon: Icons.add_rounded,
+                  onPressed: () => _createTemplate(context),
+                ),
             ],
           ),
         ),
@@ -87,11 +89,13 @@ class _DocumentTemplatesBody extends StatelessWidget {
                   icon: Icons.description_outlined,
                   title: 'Aucun modèle de document',
                   subtitle: 'Créez votre premier modèle pour personnaliser vos factures',
-                  action: AppButton(
-                    label: 'Créer un modèle',
-                    icon: Icons.add_rounded,
-                    onPressed: () => _createTemplate(context),
-                  ),
+                  action: PermissionService.instance.canCreate(UserPermissionResources.settingsDocTemplates)
+                      ? AppButton(
+                          label: 'Créer un modèle',
+                          icon: Icons.add_rounded,
+                          onPressed: () => _createTemplate(context),
+                        )
+                      : null,
                 )
               : Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),

@@ -177,6 +177,7 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
                 final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.salesCreditNotes);
                 final canDelete = PermissionService.instance.canDelete(UserPermissionResources.salesCreditNotes);
                 final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.salesCreditNotes);
+                final hasAllAccess = PermissionService.instance.hasPermission(UserPermissionResources.salesCreditNotes, action: 'all');
 
                 final entries = <PopupMenuEntry<String>>[];
                 void addItem(String val, IconData icon, Color col, String label) {
@@ -199,7 +200,7 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
                   addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                   addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
                 }
-                if (PermissionService.instance.isAdmin) {
+                if (hasAllAccess) {
                   addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
                 }
 

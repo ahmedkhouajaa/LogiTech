@@ -242,9 +242,10 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
     final canRead = PermissionService.instance.canRead(UserPermissionResources.purchasesReceivingVouchers);
     final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.purchasesReceivingVouchers);
     final canDelete = PermissionService.instance.canDelete(UserPermissionResources.purchasesReceivingVouchers);
-    final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
-    final canCreateInvoice = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.purchasesPurchaseInvoices);
-    final canCreateReturn = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierReturns);
+    final hasAllAccess = PermissionService.instance.hasPermission(UserPermissionResources.purchasesReceivingVouchers, action: 'all');
+    final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments) || hasAllAccess;
+    final canCreateInvoice = hasAllAccess;
+    final canCreateReturn = hasAllAccess;
 
     final List<PopupMenuEntry<String>> items = [];
     void addItem(String val, IconData icon, Color col, String label) {
@@ -291,7 +292,7 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
       addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
       addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
     }
-    if (PermissionService.instance.isAdmin) {
+    if (hasAllAccess) {
       addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
     }
 

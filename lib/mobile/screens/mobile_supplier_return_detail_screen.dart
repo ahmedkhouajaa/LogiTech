@@ -174,7 +174,8 @@ class _MobileSupplierReturnDetailScreenState extends State<MobileSupplierReturnD
     final canRead = PermissionService.instance.canRead(UserPermissionResources.purchasesSupplierReturns);
     final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierReturns);
     final canDelete = PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierReturns);
-    final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
+    final hasAllAccess = PermissionService.instance.hasPermission(UserPermissionResources.purchasesSupplierReturns, action: 'all');
+    final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments) || hasAllAccess;
 
     final List<PopupMenuEntry<String>> items = [];
     void addItem(String val, IconData icon, Color col, String label) {
@@ -202,7 +203,7 @@ class _MobileSupplierReturnDetailScreenState extends State<MobileSupplierReturnD
       addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
       addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
     }
-    if (PermissionService.instance.isAdmin) {
+    if (hasAllAccess) {
       addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
     }
 

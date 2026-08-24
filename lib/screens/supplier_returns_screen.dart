@@ -1034,9 +1034,10 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
                   final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierReturns);
                   final canDelete = PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierReturns);
                   final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.purchasesSupplierReturns);
-                  final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
+                  final hasAllAccess = PermissionService.instance.hasPermission(UserPermissionResources.purchasesSupplierReturns, action: 'all');
+                  final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments) || hasAllAccess;
 
-                  debugPrint('[SupplierReturns.3dot] Return #${note.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, canCreatePayment=$canCreatePayment, isAdmin=${PermissionService.instance.isAdmin}');
+                  debugPrint('[SupplierReturns.3dot] Return #${note.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreatePayment=$canCreatePayment, isAdmin=${PermissionService.instance.isAdmin}');
 
                   final entries = <PopupMenuEntry<String>>[];
 
@@ -1065,7 +1066,7 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
                     addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                     addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
                   }
-                  if (PermissionService.instance.isAdmin) {
+                  if (hasAllAccess) {
                     addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
                   }
 

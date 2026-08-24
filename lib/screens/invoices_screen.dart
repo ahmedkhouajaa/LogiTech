@@ -808,10 +808,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               final canUpdate = PermissionService.instance.hasPermission('invoices', action: 'update');
               final canDelete = PermissionService.instance.hasPermission('invoices', action: 'delete');
               final hasAnyAccess = PermissionService.instance.hasAnyPermission('invoices');
-              final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create');
-              final canCreateCreditNote = canUpdate && PermissionService.instance.hasPermission('credit_notes', action: 'create');
+              final hasAllAccess = PermissionService.instance.hasPermission('invoices', action: 'all');
+              final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create') || hasAllAccess;
+              final canCreateCreditNote = hasAllAccess;
 
-              debugPrint('[Invoices.3dot] Invoice #${inv.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, canCreatePayment=$canCreatePayment, canCreateCreditNote=$canCreateCreditNote, isAdmin=${PermissionService.instance.isAdmin}');
+              debugPrint('[Invoices.3dot] Invoice #${inv.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreatePayment=$canCreatePayment, canCreateCreditNote=$canCreateCreditNote, isAdmin=${PermissionService.instance.isAdmin}');
 
               final entries = <PopupMenuEntry<String>>[];
 
@@ -848,7 +849,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                 addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
               }
-              if (PermissionService.instance.isAdmin) {
+              if (hasAllAccess) {
                 addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
               }
 

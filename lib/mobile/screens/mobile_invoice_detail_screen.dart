@@ -199,8 +199,9 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                 final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.salesInvoices);
                 final canDelete = PermissionService.instance.canDelete(UserPermissionResources.salesInvoices);
                 final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.salesInvoices);
-                final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
-                final canCreateCreditNote = canUpdate && PermissionService.instance.canCreate(UserPermissionResources.salesCreditNotes);
+                final hasAllAccess = PermissionService.instance.hasPermission(UserPermissionResources.salesInvoices, action: 'all');
+                final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments) || hasAllAccess;
+                final canCreateCreditNote = hasAllAccess;
 
                 final entries = <PopupMenuEntry<String>>[];
                 void addItem(String val, IconData icon, Color col, String label) {
@@ -235,7 +236,7 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
                   addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                   addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
                 }
-                if (PermissionService.instance.isAdmin) {
+                if (hasAllAccess) {
                   addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
                 }
 

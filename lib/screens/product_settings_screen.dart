@@ -7,6 +7,8 @@ import '../blocs/product_settings/product_settings_event.dart';
 import '../blocs/product_settings/product_settings_state.dart';
 import '../models/product_family.dart';
 import '../services/sync_service.dart';
+import '../services/permission_service.dart';
+import '../models/user_management_model.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_app_bar.dart';
 
@@ -78,63 +80,35 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Add new family section
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 24),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                      border: Border.all(color: AppColors.border),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Ajouter une nouvelle famille',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                        ),
-                        const SizedBox(height: 12),
-                        isMobile
-                            ? Column(
-                                children: [
-                                  TextField(
-                                    controller: _familyCtrl,
-                                    decoration: InputDecoration(
-                                      hintText: 'Nom de la famille (ex: Informatique, Mobilier...)',
-                                      filled: true,
-                                      fillColor: AppColors.surfaceAlt,
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: _handleAddFamily,
-                                      icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                                      label: const Text('Ajouter une famille', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.primary,
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Row(
-                                children: [
-                                  Expanded(
-                                    child: TextField(
+                  if (PermissionService.instance.canCreate(UserPermissionResources.productsSettings))
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 24),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Ajouter une nouvelle famille',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          ),
+                          const SizedBox(height: 12),
+                          isMobile
+                              ? Column(
+                                  children: [
+                                    TextField(
                                       controller: _familyCtrl,
                                       decoration: InputDecoration(
                                         hintText: 'Nom de la famille (ex: Informatique, Mobilier...)',
@@ -144,25 +118,55 @@ class _ProductSettingsScreenState extends State<ProductSettingsScreen> {
                                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                       ),
-                                      onSubmitted: (_) => _handleAddFamily(),
                                     ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  ElevatedButton.icon(
-                                    onPressed: _handleAddFamily,
-                                    icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                                    label: const Text('Ajouter une famille', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primary,
-                                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton.icon(
+                                        onPressed: _handleAddFamily,
+                                        icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                                        label: const Text('Ajouter une famille', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppColors.primary,
+                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                      ],
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _familyCtrl,
+                                        decoration: InputDecoration(
+                                          hintText: 'Nom de la famille (ex: Informatique, Mobilier...)',
+                                          filled: true,
+                                          fillColor: AppColors.surfaceAlt,
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                        ),
+                                        onSubmitted: (_) => _handleAddFamily(),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    ElevatedButton.icon(
+                                      onPressed: _handleAddFamily,
+                                      icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                                      label: const Text('Ajouter une famille', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary,
+                                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ],
+                      ),
                     ),
-                  ),
 
                   BlocBuilder<ProductSettingsBloc, ProductSettingsState>(
                     builder: (context, state) {

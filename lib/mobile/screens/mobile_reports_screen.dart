@@ -5,6 +5,8 @@ import '../../utils/constants.dart';
 import '../../blocs/reports/reports_bloc.dart';
 import '../../models/report_data.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
 
 class MobileReportsScreen extends StatefulWidget {
   const MobileReportsScreen({super.key});
@@ -54,18 +56,20 @@ class _MobileReportsScreenState extends State<MobileReportsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            builder: (ctx) => _buildExportBottomSheet(),
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl))),
-          );
-        },
-        icon: Icon(Icons.download_rounded, color: Colors.white),
-        label: Text('Exporter', style: TextStyle(color: Colors.white)),
-        backgroundColor: AppColors.primary,
-      ),
+      floatingActionButton: PermissionService.instance.canCreate(UserPermissionResources.importExport)
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  builder: (ctx) => _buildExportBottomSheet(),
+                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl))),
+                );
+              },
+              icon: const Icon(Icons.download_rounded, color: Colors.white),
+              label: const Text('Exporter', style: TextStyle(color: Colors.white)),
+              backgroundColor: AppColors.primary,
+            )
+          : null,
       body: BlocBuilder<ReportsBloc, ReportsState>(
         builder: (context, state) {
           if (state is ReportsLoading) {

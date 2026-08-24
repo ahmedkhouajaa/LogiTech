@@ -1350,11 +1350,12 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     final canUpdate = PermissionService.instance.hasPermission('receiving_vouchers', action: 'update');
     final canDelete = PermissionService.instance.hasPermission('receiving_vouchers', action: 'delete');
     final hasAnyAccess = PermissionService.instance.hasAnyPermission('receiving_vouchers');
-    final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create');
-    final canCreateInvoice = canUpdate && PermissionService.instance.hasPermission('purchase_invoices', action: 'create');
-    final canCreateReturn = canUpdate && PermissionService.instance.hasPermission('supplier_returns', action: 'create');
+    final hasAllAccess = PermissionService.instance.hasPermission('receiving_vouchers', action: 'all');
+    final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create') || hasAllAccess;
+    final canCreateInvoice = hasAllAccess;
+    final canCreateReturn = hasAllAccess;
 
-    debugPrint('[ReceivingVouchers.3dot] Voucher #${voucher.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, canCreatePayment=$canCreatePayment, canCreateInvoice=$canCreateInvoice, canCreateReturn=$canCreateReturn, isAdmin=${PermissionService.instance.isAdmin}');
+    debugPrint('[ReceivingVouchers.3dot] Voucher #${voucher.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreatePayment=$canCreatePayment, canCreateInvoice=$canCreateInvoice, canCreateReturn=$canCreateReturn, isAdmin=${PermissionService.instance.isAdmin}');
 
     final List<PopupMenuEntry<String>> items = [];
 
@@ -1396,7 +1397,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
       items.add(_buildMenuItem('email', Icons.email_outlined, 'Envoyer par email', const Color(0xFF2563EB)));
       items.add(_buildMenuItem('whatsapp', Icons.chat_bubble_outline, 'Envoyer par WhatsApp', const Color(0xFF10B981)));
     }
-    if (PermissionService.instance.isAdmin) {
+    if (hasAllAccess) {
       items.add(_buildMenuItem('status', Icons.swap_horiz_outlined, 'Changer le statut', const Color(0xFFF59E0B)));
     }
 

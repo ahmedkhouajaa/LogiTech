@@ -996,9 +996,10 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                   final canUpdate = PermissionService.instance.hasPermission('return_notes', action: 'update');
                   final canDelete = PermissionService.instance.hasPermission('return_notes', action: 'delete');
                   final hasAnyAccess = PermissionService.instance.hasAnyPermission('return_notes');
-                  final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create');
+                  final hasAllAccess = PermissionService.instance.hasPermission('return_notes', action: 'all');
+                  final canCreatePayment = PermissionService.instance.hasPermission('payments', action: 'create') || hasAllAccess;
 
-                  debugPrint('[ReturnNotes.3dot] ReturnNote #${note.returnNumber} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, canCreatePayment=$canCreatePayment, isAdmin=${PermissionService.instance.isAdmin}');
+                  debugPrint('[ReturnNotes.3dot] ReturnNote #${note.returnNumber} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreatePayment=$canCreatePayment, isAdmin=${PermissionService.instance.isAdmin}');
 
                   final entries = <PopupMenuEntry<String>>[];
 
@@ -1027,7 +1028,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
                     addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                     addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
                   }
-                  if (PermissionService.instance.isAdmin) {
+                  if (hasAllAccess) {
                     addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
                   }
 

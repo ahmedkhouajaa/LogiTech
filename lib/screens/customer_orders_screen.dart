@@ -841,10 +841,11 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                                    final canUpdate = PermissionService.instance.hasPermission('customer_orders', action: 'update');
                                                    final canDelete = PermissionService.instance.hasPermission('customer_orders', action: 'delete');
                                                    final hasAnyAccess = PermissionService.instance.hasAnyPermission('customer_orders');
-                                                   final canCreateInvoice = canUpdate && PermissionService.instance.hasPermission('invoices', action: 'create');
-                                                   final canCreateDelivery = canUpdate && PermissionService.instance.hasPermission('delivery_notes', action: 'create');
+                                                   final hasAllAccess = PermissionService.instance.hasPermission('customer_orders', action: 'all');
+                                                   final canCreateInvoice = hasAllAccess;
+                                                   final canCreateDelivery = hasAllAccess;
 
-                                                   debugPrint('[CustomerOrders.3dot] Order #${order.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, canCreateInvoice=$canCreateInvoice, canCreateDelivery=$canCreateDelivery, isAdmin=${PermissionService.instance.isAdmin}');
+                                                   debugPrint('[CustomerOrders.3dot] Order #${order.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreateInvoice=$canCreateInvoice, canCreateDelivery=$canCreateDelivery, isAdmin=${PermissionService.instance.isAdmin}');
 
                                                    final entries = <PopupMenuEntry<String>>[];
 
@@ -885,7 +886,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                                                      addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                                                      addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
                                                    }
-                                                   if (PermissionService.instance.isAdmin) {
+                                                   if (hasAllAccess) {
                                                      addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
                                                    }
 

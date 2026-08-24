@@ -169,6 +169,7 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                 final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.salesReturnVouchers);
                 final canDelete = PermissionService.instance.canDelete(UserPermissionResources.salesReturnVouchers);
                 final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.salesReturnVouchers);
+                final hasAllAccess = PermissionService.instance.hasPermission(UserPermissionResources.salesReturnVouchers, action: 'all');
 
                 final entries = <PopupMenuEntry<String>>[];
                 void addItem(String val, IconData icon, Color col, String label) {
@@ -191,7 +192,7 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
                   addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                   addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
                 }
-                if (PermissionService.instance.isAdmin) {
+                if (hasAllAccess) {
                   addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
                 }
 

@@ -1011,9 +1011,10 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                   final canUpdate = PermissionService.instance.canUpdate(UserPermissionResources.purchasesSupplierCreditNotes);
                   final canDelete = PermissionService.instance.canDelete(UserPermissionResources.purchasesSupplierCreditNotes);
                   final hasAnyAccess = PermissionService.instance.hasAnyPermission(UserPermissionResources.purchasesSupplierCreditNotes);
-                  final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments);
+                  final hasAllAccess = PermissionService.instance.hasPermission(UserPermissionResources.purchasesSupplierCreditNotes, action: 'all');
+                  final canCreatePayment = PermissionService.instance.canCreate(UserPermissionResources.payments) || hasAllAccess;
 
-                  debugPrint('[SupplierCreditNotes.3dot] Note #${note.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, canCreatePayment=$canCreatePayment, isAdmin=${PermissionService.instance.isAdmin}');
+                  debugPrint('[SupplierCreditNotes.3dot] Note #${note.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreatePayment=$canCreatePayment, isAdmin=${PermissionService.instance.isAdmin}');
 
                   final entries = <PopupMenuEntry<String>>[];
 
@@ -1042,7 +1043,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                     addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                     addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
                   }
-                  if (PermissionService.instance.isAdmin) {
+                  if (hasAllAccess) {
                     addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
                   }
 

@@ -90,7 +90,8 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                   ),
                   const Spacer(),
                   // Export Button
-                  ElevatedButton.icon(
+                  if (PermissionService.instance.canCreate(UserPermissionResources.importExport))
+                    ElevatedButton.icon(
                     onPressed: () {
                       showDialog(
                         context: context,

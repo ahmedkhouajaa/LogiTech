@@ -861,11 +861,12 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                                    final canUpdate = PermissionService.instance.hasPermission('devis', action: 'update');
                                                    final canDelete = PermissionService.instance.hasPermission('devis', action: 'delete');
                                                    final hasAnyAccess = PermissionService.instance.hasAnyPermission('devis');
-                                                   final canCreateInvoice = canUpdate && PermissionService.instance.hasPermission('invoices', action: 'create');
-                                                   final canCreateOrder = canUpdate && PermissionService.instance.hasPermission('customer_orders', action: 'create');
-                                                   final canCreateDelivery = canUpdate && PermissionService.instance.hasPermission('delivery_notes', action: 'create');
+                                                   final hasAllAccess = PermissionService.instance.hasPermission('devis', action: 'all');
+                                                   final canCreateInvoice = hasAllAccess;
+                                                   final canCreateOrder = hasAllAccess;
+                                                   final canCreateDelivery = hasAllAccess;
 
-                                                   debugPrint('[QuotesScreen.3dot] Quote #${quote.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, canCreateInvoice=$canCreateInvoice, canCreateOrder=$canCreateOrder, canCreateDelivery=$canCreateDelivery, isAdmin=${PermissionService.instance.isAdmin}');
+                                                   debugPrint('[QuotesScreen.3dot] Quote #${quote.number} building menu: canRead=$canRead, canUpdate=$canUpdate, canDelete=$canDelete, hasAnyAccess=$hasAnyAccess, hasAllAccess=$hasAllAccess, canCreateInvoice=$canCreateInvoice, canCreateOrder=$canCreateOrder, canCreateDelivery=$canCreateDelivery, isAdmin=${PermissionService.instance.isAdmin}');
 
                                                    final entries = <PopupMenuEntry<String>>[];
 
@@ -912,9 +913,9 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                                      addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
                                                      addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
                                                    }
-                                                    if (PermissionService.instance.isAdmin) {
-                                                      addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
-                                                    }
+                                                   if (hasAllAccess) {
+                                                     addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+                                                   }
 
                                                    return entries;
                                                  },
