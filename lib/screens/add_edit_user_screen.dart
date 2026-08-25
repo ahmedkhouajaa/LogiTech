@@ -508,7 +508,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                   onPressed: () => Navigator.of(context).pop(),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    side: BorderSide(color: AppColors.border),
+                    side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
@@ -929,7 +929,7 @@ class _AddEditUserScreenState extends State<AddEditUserScreen> {
                     label: const Text('Retour', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
-                      side: BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),

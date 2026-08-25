@@ -219,7 +219,7 @@ class _ArticleImportDialogState extends State<ArticleImportDialog>
         onPressed: _isDownloadingTemplate ? null : _handleDownloadExcelTemplate,
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.textPrimary,
-          side: BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
         ),
@@ -420,7 +420,7 @@ class _ArticleImportDialogState extends State<ArticleImportDialog>
             onPressed: _isImporting ? null : () => Navigator.of(context).pop(),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textPrimary,
-              side: BorderSide(color: AppColors.border),
+              side: BorderSide(color: AppColors.textPrimary, width: 1.5),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
             child: const Text('Annuler'),

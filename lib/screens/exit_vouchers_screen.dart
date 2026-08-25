@@ -613,7 +613,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                 tooltip: 'Filtrer par statut',
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
-                  side: BorderSide(color: AppColors.border),
+                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                 ),
                 color: AppColors.surface,
                 elevation: 4,
@@ -1055,7 +1055,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
               value: false,
               onChanged: (_) {},
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              side: BorderSide(color: AppColors.border),
+              side: BorderSide(color: AppColors.textPrimary, width: 1.5),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
             ),
           ),

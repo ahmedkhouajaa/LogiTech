@@ -415,7 +415,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                         return Card(
                           elevation: 0,
                           margin: EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.border)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppColors.textPrimary, width: 1.5)),
                           color: AppColors.surface,
                           child: Padding(
                             padding: EdgeInsets.all(12),
@@ -541,7 +541,7 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                           label: Text('Ajouter une ligne'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
-                            side: BorderSide(color: AppColors.border),
+                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
                             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           ),

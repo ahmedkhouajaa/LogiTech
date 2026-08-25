@@ -296,8 +296,9 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                                   : null);
                           return SmartSearchableSelector(
                             label: 'Client',
-                            hint: 'Rechercher des clients...',
+                            hint: 'Rechercher un client...',
                             selectedText: displayName,
+                            isHighlighted: true,
                             onTap: () async {
                               final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);
                               if (res != null && mounted) {
@@ -388,6 +389,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                       label: 'Projet',
                       hint: 'Sélectionner un projet',
                       selectedText: displayName,
+                      isHighlighted: true,
                       onTap: () async {
                         final res = await showProjectSelectDialog(
                           context,
@@ -423,6 +425,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
                       label: 'Entrepôt',
                       hint: 'Sélectionner un entrepôt',
                       selectedText: warehouseName,
+                      isHighlighted: true,
                       onTap: () async {
                         final res = await showWarehouseSelectDialog(context, warehouses, selectedWarehouseId: _selectedWarehouseId ?? defaultWh?.id);
                         if (res != null && mounted) {

@@ -288,7 +288,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
               onPressed: () => Navigator.pop(context),
               style: OutlinedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 14),
-                side: BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
               child: Text('Annuler', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
@@ -336,7 +336,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Row(
@@ -409,7 +409,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
     return Card(
       elevation: 0,
       color: AppColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: AppColors.border)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: AppColors.textPrimary, width: 1.5)),
       child: Padding(
         padding: EdgeInsets.all(_isMobile ? 16.0 : 24.0),
         child: Column(
@@ -469,7 +469,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
             return Card(
               elevation: 0,
               color: AppColors.surface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: AppColors.border)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: AppColors.textPrimary, width: 1.5)),
               child: Padding(
                 padding: EdgeInsets.all(24.0),
                 child: Column(
@@ -513,7 +513,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                           label: Text('Ajouter une ligne'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
-                            side: BorderSide(color: AppColors.border),
+                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                           ),
                         ),
                         SizedBox(width: 8),
@@ -613,7 +613,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -651,7 +651,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.surface,
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: AppColors.border),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -698,7 +698,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(currentStock.toStringAsFixed(0), style: TextStyle(fontSize: 13, color: Colors.green, fontWeight: FontWeight.bold)),
@@ -751,7 +751,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: Colors.blue.withValues(alpha: 0.05),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(finalStock.toStringAsFixed(0), style: TextStyle(fontSize: 13, color: Colors.green, fontWeight: FontWeight.bold)),
@@ -847,7 +847,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                       padding: EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
                         color: AppColors.background,
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(currentStock.toStringAsFixed(0), style: TextStyle(fontSize: 13, color: Colors.green, fontWeight: FontWeight.bold)),
@@ -888,7 +888,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                       padding: EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
                         color: Colors.blue.withValues(alpha: 0.05),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(finalStock.toStringAsFixed(0), style: TextStyle(fontSize: 13, color: Colors.green, fontWeight: FontWeight.bold)),

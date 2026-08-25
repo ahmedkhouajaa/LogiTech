@@ -172,7 +172,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                               offset: Offset(0, 44),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                                side: BorderSide(color: AppColors.border),
+                                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                               ),
                               color: AppColors.surface,
                               onSelected: (month) {
@@ -252,7 +252,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                               offset: Offset(0, 44),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                                side: BorderSide(color: AppColors.border),
+                                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                               ),
                               color: AppColors.surface,
                               onSelected: (year) {
@@ -534,7 +534,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                       style: OutlinedButton.styleFrom(
                         padding: EdgeInsets.symmetric(
                             horizontal: 20, vertical: 12),
-                        side: BorderSide(color: AppColors.border),
+                        side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppRadius.md)),
                       ),
@@ -572,7 +572,7 @@ class _TejExportDialogState extends State<TejExportDialog> {
                                         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(AppRadius.lg),
-                                          side: BorderSide(color: AppColors.border),
+                                          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                                         ),
                                         backgroundColor: const Color(0xFF1E293B),
                                         elevation: 8,

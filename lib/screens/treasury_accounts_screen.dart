@@ -108,7 +108,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                             label: const Text('Ajouter Compte', style: TextStyle(fontSize: 12)),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.textPrimary,
-                              side: BorderSide(color: AppColors.border),
+                              side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                               padding: const EdgeInsets.symmetric(vertical: 10),
                             ),
@@ -159,7 +159,7 @@ class _TreasuryAccountsScreenState extends State<TreasuryAccountsScreen> {
                       label: const Text('Ajouter un Compte', style: TextStyle(fontSize: 13)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textPrimary,
-                        side: BorderSide(color: AppColors.border),
+                        side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       ),
@@ -1414,7 +1414,7 @@ class _CreateDepositDialogState extends State<_CreateDepositDialog> {
           onPressed: () => Navigator.pop(context),
           style: TextButton.styleFrom(
             foregroundColor: AppColors.textSecondary,
-            side: BorderSide(color: AppColors.border),
+            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
           child: Text('Fermer'),
@@ -1687,7 +1687,7 @@ class _CreateTransferDialogState extends State<_CreateTransferDialog> {
           onPressed: () => Navigator.pop(context),
           style: TextButton.styleFrom(
             foregroundColor: AppColors.textSecondary,
-            side: BorderSide(color: AppColors.border),
+            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),

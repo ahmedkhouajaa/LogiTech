@@ -374,7 +374,7 @@ class _MobileStockMovementsScreenState extends State<MobileStockMovementsScreen>
                                         style: OutlinedButton.styleFrom(
                                           padding: EdgeInsets.symmetric(horizontal: 8),
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                          side: BorderSide(color: AppColors.border),
+                                          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                                           backgroundColor: Color(0xFFFAFAFB),
                                           alignment: Alignment.centerLeft,
                                         ),
@@ -542,7 +542,7 @@ class _MobileStockMovementCard extends StatelessWidget {
       margin: EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.textPrimary, width: 1.5),
       ),
       color: isCancelled ? AppColors.surfaceAlt.withValues(alpha: 0.5) : AppColors.surface,
       child: Padding(

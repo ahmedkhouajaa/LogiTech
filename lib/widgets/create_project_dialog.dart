@@ -275,7 +275,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
                       padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                      side: BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     ),
                   ),

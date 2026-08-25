@@ -1013,7 +1013,7 @@ class _CreatePaymentDialogState extends State<_CreatePaymentDialog> {
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.w600)),
             style: OutlinedButton.styleFrom(
-              side: BorderSide(color: AppColors.border),
+              side: BorderSide(color: AppColors.textPrimary, width: 1.5),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md)),
               padding:

@@ -188,7 +188,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> with SingleTickerPr
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                side: BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -615,7 +615,7 @@ class _CreateWarehouseDialogState extends State<CreateWarehouseDialog> {
                   OutlinedButton(
                     onPressed: () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                       padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     ),

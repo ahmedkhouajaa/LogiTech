@@ -215,7 +215,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                     label: Text(_showMobileFilters ? 'Masquer filtres' : 'Filtres'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
-                      side: BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
@@ -309,7 +309,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                           alignment: Alignment.centerLeft,
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           backgroundColor: AppColors.surface,
-                          side: BorderSide(color: AppColors.border),
+                          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         child: Row(
@@ -780,7 +780,7 @@ class _InventorySheetsScreenState extends State<InventorySheetsScreen> {
                             alignment: Alignment.centerLeft,
                             padding: const EdgeInsets.symmetric(horizontal: 10),
                             backgroundColor: AppColors.surface,
-                            side: BorderSide(color: AppColors.border),
+                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                           ),
                           child: Row(

@@ -838,7 +838,7 @@ class _StockLevelCard extends StatelessWidget {
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.textPrimary, width: 1.5),
       ),
       color: AppColors.surface,
       child: Padding(

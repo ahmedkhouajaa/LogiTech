@@ -661,7 +661,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                       icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
                       label: Text('Retour', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.border),
+                        side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
@@ -1107,7 +1107,7 @@ class SupplierDialogState extends State<SupplierDialog> with SingleTickerProvide
                               icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
                               label: Text('Précédent', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                               style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: AppColors.border),
+                                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                               ),

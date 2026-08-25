@@ -908,7 +908,7 @@ class _CreateEnterpriseWizardState extends State<CreateEnterpriseWizard> {
                   horizontal: isMobile ? 14 : 20,
                   vertical: 12,
                 ),
-                side: BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -924,7 +924,7 @@ class _CreateEnterpriseWizardState extends State<CreateEnterpriseWizard> {
                   horizontal: isMobile ? 14 : 20,
                   vertical: 12,
                 ),
-                side: BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),

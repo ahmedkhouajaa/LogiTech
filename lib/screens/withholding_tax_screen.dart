@@ -106,7 +106,7 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.surfaceAlt,
                       elevation: 0,
-                      side: BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                     ),

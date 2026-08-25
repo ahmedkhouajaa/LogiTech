@@ -200,6 +200,7 @@ class SmartSearchableSelector extends StatelessWidget {
   final VoidCallback onTap;
   final bool hasError;
   final String? errorText;
+  final bool isHighlighted;
 
   const SmartSearchableSelector({
     super.key,
@@ -209,38 +210,67 @@ class SmartSearchableSelector extends StatelessWidget {
     required this.onTap,
     this.hasError = false,
     this.errorText,
+    this.isHighlighted = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final bool hasSelection = selectedText != null && selectedText!.isNotEmpty;
+    final Color bgColor = isHighlighted
+        ? (AppColors.isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF))
+        : AppColors.surfaceAlt;
+    final Color borderColor = hasError
+        ? AppColors.error
+        : (isHighlighted ? AppColors.primary.withValues(alpha: 0.6) : AppColors.border);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        SizedBox(height: 8),
-        InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          child: AbsorbPointer(
-            child: TextFormField(
-              controller: TextEditingController(text: selectedText ?? hint),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: AppColors.surfaceAlt,
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                suffixIcon: Icon(Icons.arrow_drop_down_rounded, size: 24, color: AppColors.primary),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  borderSide: BorderSide(color: hasError ? AppColors.error : AppColors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  borderSide: BorderSide(color: hasError ? AppColors.error : AppColors.border),
-                ),
-              ),
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textPrimary,
+        if (label.isNotEmpty) ...[
+          Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+          const SizedBox(height: 8),
+        ],
+        Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: borderColor, width: isHighlighted ? 1.5 : 1.0),
+            boxShadow: isHighlighted
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      blurRadius: 10,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      hasSelection ? selectedText! : hint,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_drop_down_rounded,
+                    size: 24,
+                    color: AppColors.primary,
+                  ),
+                ],
               ),
             ),
           ),

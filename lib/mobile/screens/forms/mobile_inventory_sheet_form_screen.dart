@@ -403,7 +403,7 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
                         label: Text('Ajouter une ligne'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.textPrimary,
-                          side: BorderSide(color: AppColors.border),
+                          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                         ),
                       ),
                       SizedBox(width: 8),

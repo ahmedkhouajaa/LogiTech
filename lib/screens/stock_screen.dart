@@ -453,7 +453,7 @@ class _StockMovementsScreenState extends State<StockMovementsScreen> {
                                 style: OutlinedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(horizontal: 10),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                  side: BorderSide(color: AppColors.border),
+                                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                                   backgroundColor: AppColors.surface,
                                   alignment: Alignment.centerLeft,
                                 ),
@@ -1169,7 +1169,7 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                             PopupMenuButton<String>(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(AppRadius.md),
-                                side: BorderSide(color: AppColors.border),
+                                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                               ),
                               color: AppColors.surface,
                               elevation: 6,
@@ -1365,7 +1365,7 @@ class _StockLevelsTableState extends State<_StockLevelsTable> {
                             PopupMenuButton<String>(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(AppRadius.md),
-                                side: BorderSide(color: AppColors.border),
+                                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                               ),
                               color: AppColors.surface,
                               elevation: 6,

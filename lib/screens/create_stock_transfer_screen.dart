@@ -300,7 +300,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
               onPressed: () => Navigator.pop(context),
               style: OutlinedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 14),
-                side: BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
               child: Text('Annuler', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
@@ -390,13 +390,13 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 decoration: BoxDecoration(
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(formatDateTimeLong(_selectedDate), style: TextStyle(fontSize: 14)),
+                    Text(formatDateTimeLong(_selectedDate), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                     Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.textSecondary),
                   ],
                 ),
@@ -492,7 +492,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg),
-            side: BorderSide(color: AppColors.border),
+            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
           ),
           child: Padding(
             padding: EdgeInsets.all(_isMobile ? 16.0 : AppSpacing.lg),
@@ -553,7 +553,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                side: BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
               ),
               child: Padding(
                 padding: EdgeInsets.all(_isMobile ? 16.0 : AppSpacing.lg),
@@ -691,7 +691,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                           decoration: BoxDecoration(
                             color: AppColors.surfaceAlt.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(AppRadius.md),
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1015,7 +1015,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                           label: Text('Ajouter une ligne'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
-                            side: BorderSide(color: AppColors.border),
+                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                           ),
                         ),
                         SizedBox(width: 8),

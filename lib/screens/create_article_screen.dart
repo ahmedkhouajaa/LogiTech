@@ -379,7 +379,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
         ),
         child: Row(
           children: [
@@ -439,7 +439,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                   icon: Icon(Icons.arrow_back_rounded, size: 16, color: AppColors.textSecondary),
                   label: Text('Retour', style: TextStyle(color: AppColors.textSecondary)),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.border),
+                    side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
                 ),
@@ -540,7 +540,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
               label: const Text('Précédent', style: TextStyle(fontWeight: FontWeight.w600)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.textPrimary,
-                side: BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
@@ -551,7 +551,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
               icon: Icon(Icons.close_rounded, size: 16, color: AppColors.textSecondary),
               label: Text('Annuler', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
@@ -655,7 +655,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -725,7 +725,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                 label: Text('Ajouter TVA'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.textPrimary,
-                  side: BorderSide(color: AppColors.border),
+                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
@@ -742,7 +742,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -757,7 +757,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
                 label: Text('Ajouter Taxe', style: TextStyle(fontSize: 12)),
                 style: OutlinedButton.styleFrom(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  side: BorderSide(color: AppColors.border),
+                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                 ),
               ),
             ],
@@ -813,7 +813,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1037,7 +1037,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1075,14 +1075,14 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           Container(
             padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Row(
               children: [
                 Icon(Icons.warehouse_outlined, size: 18, color: AppColors.textSecondary),
                 SizedBox(width: 8),
-                Text('Entrepot par defaut', style: TextStyle(fontSize: 14)),
+                Text('Entrepot par defaut', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 Spacer(),
                 Switch(
                   value: _lowStockAlert,
@@ -1101,14 +1101,14 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           Container(
             padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Row(
               children: [
                 Icon(Icons.warehouse_outlined, size: 18, color: AppColors.textSecondary),
                 SizedBox(width: 8),
-                Text('Entrepot par defaut', style: TextStyle(fontSize: 14)),
+                Text('Entrepot par defaut', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 Spacer(),
                 Switch(
                   value: _highStockAlert,
@@ -1123,12 +1123,12 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           Container(
             padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Row(
               children: [
-                Text('% Remise Habituelle', style: TextStyle(fontSize: 14)),
+                Text('% Remise Habituelle', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const Spacer(),
                 Switch(value: false, onChanged: (v) {}),
               ],

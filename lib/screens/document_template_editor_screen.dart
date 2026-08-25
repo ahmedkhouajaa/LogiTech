@@ -1371,7 +1371,7 @@ class _DocumentTemplateEditorScreenState
                 label: const Text('Réinitialiser', style: TextStyle(fontSize: 11)),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.textSecondary,
-                  side: BorderSide(color: AppColors.border),
+                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
@@ -1385,7 +1385,7 @@ class _DocumentTemplateEditorScreenState
                   onPressed: () => Navigator.pop(context),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textSecondary,
-                    side: BorderSide(color: AppColors.border),
+                    side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
@@ -1440,7 +1440,7 @@ class _DocumentTemplateEditorScreenState
             label: const Text('Réinitialiser aux valeurs par défaut'),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textSecondary,
-              side: BorderSide(color: AppColors.border),
+              side: BorderSide(color: AppColors.textPrimary, width: 1.5),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),

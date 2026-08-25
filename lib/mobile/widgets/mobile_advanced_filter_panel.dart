@@ -568,7 +568,7 @@ class _MobileAdvancedFilterPanelState extends State<MobileAdvancedFilterPanel> {
                     tooltip: 'Filtrer par statut',
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                     ),
                     color: AppColors.surface,
                     elevation: 6,

@@ -520,7 +520,7 @@ class _ImportConfirmationDialogState extends State<ImportConfirmationDialog> {
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               foregroundColor: AppColors.textSecondary,
-              side: BorderSide(color: AppColors.border),
+              side: BorderSide(color: AppColors.textPrimary, width: 1.5),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),

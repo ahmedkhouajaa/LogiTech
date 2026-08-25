@@ -1198,7 +1198,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          side: BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
         ),
         title: Row(
           children: [
@@ -1256,7 +1256,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          side: BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
         ),
         title: Row(
           children: [

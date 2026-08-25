@@ -154,7 +154,7 @@ class _CustomDateRangePickerState extends State<CustomDateRangePicker> {
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      side: BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                     ),
                     child: Text('Toutes les dates', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
                   ),

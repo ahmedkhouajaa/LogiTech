@@ -342,7 +342,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
       label: Text(label,
           style: TextStyle(color: color ?? AppColors.textSecondary)),
       style: OutlinedButton.styleFrom(
-        side: BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.textPrimary, width: 1.5),
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md)),
@@ -357,7 +357,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
         boxShadow: AppShadows.sm,
       ),
       child: Column(
@@ -387,7 +387,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
                 ),
-                style: TextStyle(fontSize: 14),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
             ),
           ),
@@ -625,7 +625,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -680,7 +680,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
               child: Text('Aucun article',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontSize: 13, color: AppColors.textTertiary)),
+                      fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             )
           else
             ..._items.asMap().entries.map((e) => _buildArticleRow(e.value, e.key)),
@@ -754,7 +754,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
                             borderRadius: BorderRadius.circular(4)),
                         child: Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
                       ),
@@ -783,7 +783,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
                             borderRadius: BorderRadius.circular(4)),
                         child: Icon(Icons.add, size: 14, color: AppColors.textSecondary),
                       ),
@@ -900,13 +900,16 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
 
   Widget _buildArticleActions() {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Expanded(
+        SizedBox(
+          width: 380,
           child: BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
               final products = state is ProductsLoaded ? state.products : <Product>[];
               return SearchableSelectorField(
                 hint: 'Sélectionner un article...',
+                isHighlighted: true,
                 selectedText: null,
                 onTap: () async {
                   final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
@@ -951,19 +954,23 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
           splashRadius: 24,
         ),
         SizedBox(width: 12),
-        OutlinedButton.icon(
-          onPressed: () {
-            setState(() {
-              _items.add(SupplierOrderItem(
-                  orderId: widget.existing?.id ?? '', productId: ''));
-            });
-          },
-          icon: Icon(Icons.add_rounded, size: 16),
-          label: Text('Ajouter une ligne vide', style: TextStyle(fontWeight: FontWeight.w600)),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.primary,
-            side: BorderSide(color: AppColors.primary),
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        SizedBox(
+          height: 48,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              setState(() {
+                _items.add(SupplierOrderItem(
+                    orderId: widget.existing?.id ?? '', productId: ''));
+              });
+            },
+            icon: Icon(Icons.add_rounded, size: 16, color: AppColors.textPrimary),
+            label: Text('Ajouter une ligne vide', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.textPrimary,
+              side: BorderSide(color: AppColors.primary, width: 1.5),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+            ),
           ),
         ),
       ],
@@ -977,7 +984,6 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
@@ -991,12 +997,12 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                     value: _withGlobalDiscount,
                     onChanged: (v) { if (!widget.isReadOnly) setState(() => _withGlobalDiscount = v ?? false); },
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    side: BorderSide(color: AppColors.border),
+                    side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                     activeColor: AppColors.primary,
                   ),
                 ),
                 SizedBox(width: 8),
-                Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),
           ),
@@ -1069,7 +1075,7 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
                             value: _withTimbreFiscal,
                             onChanged: (v) { if (!widget.isReadOnly) setState(() => _withTimbreFiscal = v ?? false); },
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            side: BorderSide(color: AppColors.border),
+                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                             activeColor: AppColors.primary,
                           ),
                         ),

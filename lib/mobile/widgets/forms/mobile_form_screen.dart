@@ -92,7 +92,7 @@ class MobileFormScreen extends StatelessWidget {
                       onPressed: isLoading ? null : onCancel,
                       style: OutlinedButton.styleFrom(
                         padding: EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(color: AppColors.border),
+                        side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppRadius.md),
                         ),

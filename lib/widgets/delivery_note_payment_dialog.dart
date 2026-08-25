@@ -923,7 +923,7 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
               onPressed: () => Navigator.pop(context),
               style: OutlinedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 14),
-                side: BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
               child: Text('Annuler', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),

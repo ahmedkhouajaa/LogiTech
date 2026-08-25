@@ -22,6 +22,7 @@ class SearchableSelectorField extends StatelessWidget {
   final String? selectedText;
   final VoidCallback onTap;
   final bool hasError;
+  final bool isHighlighted;
 
   const SearchableSelectorField({
     super.key,
@@ -29,32 +30,49 @@ class SearchableSelectorField extends StatelessWidget {
     required this.selectedText,
     required this.onTap,
     this.hasError = false,
+    this.isHighlighted = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final displayText = (selectedText != null && selectedText!.isNotEmpty) ? selectedText! : hint;
+
+    BorderSide borderSide;
+    if (hasError) {
+      borderSide = BorderSide(color: AppColors.error);
+    } else if (isHighlighted) {
+      borderSide = BorderSide(color: AppColors.primary, width: 1.5);
+    } else {
+      borderSide = BorderSide(color: AppColors.border);
+    }
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: AbsorbPointer(
         child: TextFormField(
-          controller: TextEditingController(text: selectedText ?? hint),
+          controller: TextEditingController(text: displayText),
           decoration: InputDecoration(
             filled: true,
-            fillColor: AppColors.surfaceAlt,
+            fillColor: isHighlighted ? AppColors.primary.withValues(alpha: 0.03) : AppColors.surfaceAlt,
             contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             suffixIcon: Icon(Icons.arrow_drop_down_rounded, size: 24, color: AppColors.primary),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: BorderSide(color: hasError ? AppColors.error : AppColors.border),
+              borderSide: borderSide,
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: BorderSide(color: hasError ? AppColors.error : AppColors.border),
+              borderSide: borderSide,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
             ),
           ),
           style: TextStyle(
             fontSize: 13,
+            fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
           ),
         ),

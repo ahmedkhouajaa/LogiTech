@@ -239,7 +239,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
         label: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.textPrimary,
-          side: BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
           padding: EdgeInsets.symmetric(horizontal: 12),
         ),
@@ -254,7 +254,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
         boxShadow: AppShadows.sm,
       ),
       child: Column(
@@ -283,7 +283,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
                 ),
-                style: TextStyle(fontSize: 14),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
             ),
           ),
@@ -527,7 +527,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
         boxShadow: AppShadows.md,
       ),
       child: Column(
@@ -564,7 +564,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
             Container(
               padding: EdgeInsets.symmetric(vertical: 32),
               width: double.infinity,
-              child: Text('Aucun article', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+              child: Text('Aucun article', textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             )
           else
             ..._items.asMap().entries.map((e) => _buildItemRow(e.key, e.value)),
@@ -671,7 +671,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                       borderRadius: BorderRadius.circular(4),
                       child: Container(
                         width: 28, height: 28,
-                        decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
+                        decoration: BoxDecoration(border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5), borderRadius: BorderRadius.circular(4)),
                         child: Icon(Icons.remove, size: 14, color: AppColors.textSecondary),
                       ),
                     ),
@@ -701,7 +701,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                       borderRadius: BorderRadius.circular(4),
                       child: Container(
                         width: 28, height: 28,
-                        decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(4)),
+                        decoration: BoxDecoration(border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5), borderRadius: BorderRadius.circular(4)),
                         child: Icon(Icons.add, size: 14, color: AppColors.textSecondary),
                       ),
                     ),
@@ -793,7 +793,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                         value: item.showDescription,
                         onChanged: (v) => setState(() => _items[index] = item.copyWith(showDescription: v)),
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        side: BorderSide(color: AppColors.border),
+                        side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                       ),
                     ),
                     SizedBox(width: 6),
@@ -814,7 +814,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                         value: item.showDiscount,
                         onChanged: (v) => setState(() => _items[index] = item.copyWith(showDiscount: v)),
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        side: BorderSide(color: AppColors.border),
+                        side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                       ),
                     ),
                     SizedBox(width: 6),
@@ -901,13 +901,16 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
   // ─── Article Action Buttons ──────────────────────────────────────
     Widget _buildArticleActions() {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Expanded(
+        SizedBox(
+          width: 380,
           child: BlocBuilder<ProductsBloc, ProductsState>(
             builder: (context, state) {
               final products = state is ProductsLoaded ? state.products : <Product>[];
               return SearchableSelectorField(
                 hint: 'Sélectionner un article...',
+                isHighlighted: true,
                 selectedText: null,
                 onTap: () async {
                   final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
@@ -934,16 +937,17 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
         ),
         SizedBox(width: 12),
         SizedBox(
-          height: 44,
-          child: OutlinedButton(
+          height: 48,
+          child: OutlinedButton.icon(
             onPressed: _addEmptyItem,
+            icon: Icon(Icons.add_rounded, size: 16, color: AppColors.textPrimary),
+            label: Text('Ajouter une Ligne Vide', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textPrimary,
-              side: BorderSide(color: AppColors.border),
+              side: BorderSide(color: AppColors.primary, width: 1.5),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-              padding: EdgeInsets.symmetric(horizontal: 20),
             ),
-            child: Text('Ajouter une Ligne Vide', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
           ),
         ),
       ],
@@ -957,7 +961,6 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
@@ -971,12 +974,12 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                     value: _withGlobalDiscount,
                     onChanged: (v) => setState(() => _withGlobalDiscount = v ?? false),
                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            side: BorderSide(color: AppColors.border),
+                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                             activeColor: AppColors.primary,
                   ),
                 ),
                 SizedBox(width: 8),
-                Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
+                Text('Ajouter une remise globale', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),
           ),
@@ -1037,7 +1040,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                             value: _withTimbreFiscal,
                             onChanged: (v) => setState(() => _withTimbreFiscal = v ?? false),
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            side: BorderSide(color: AppColors.border),
+                            side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                             activeColor: AppColors.primary,
                           ),
                         ),
@@ -1230,4 +1233,3 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
     );
   }
 }
-

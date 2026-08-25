@@ -100,7 +100,7 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
               ),
               PopupMenuButton<String>(
                 offset: const Offset(0, 38),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md), side: BorderSide(color: AppColors.border)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md), side: BorderSide(color: AppColors.textPrimary, width: 1.5)),
                 tooltip: 'Options d\'exportation',
                 child: Container(
                   height: 36,

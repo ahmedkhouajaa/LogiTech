@@ -94,7 +94,7 @@ class EnterpriseSwitcherWidget extends StatelessWidget {
       color: AppColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadius.md),
-        side: BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.textPrimary, width: 1.5),
       ),
       onSelected: (value) {
         if (value == '__create_new__') {

@@ -205,6 +205,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                               label: '',
                               hint: 'Rechercher un article...',
                               selectedText: displayName,
+                              isHighlighted: true,
                               onTap: () async {
                                 final res = await showProductSelectDialog(context, products, selectedProductId: _productId, warehouseId: widget.warehouseId);
                                 if (res != null && mounted) {

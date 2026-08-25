@@ -241,7 +241,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                         onPressed: () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
                           padding: EdgeInsets.symmetric(vertical: 14),
-                          side: BorderSide(color: AppColors.border),
+                          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                         ),
                         child: Text('Annuler', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
@@ -624,7 +624,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                             decoration: BoxDecoration(
                               color: AppColors.surfaceAlt.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(AppRadius.md),
-                              border: Border.all(color: AppColors.border),
+                              border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -948,7 +948,7 @@ class _CreateInventorySheetScreenState extends State<CreateInventorySheetScreen>
                     label: Text('Ajouter une ligne'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textPrimary,
-                      side: BorderSide(color: AppColors.border),
+                      side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                     ),
                   ),
                   SizedBox(width: 8),

@@ -1536,7 +1536,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
               child: OutlinedButton(
                 onPressed: _isLoading ? null : () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: AppColors.border),
+                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   backgroundColor: AppColors.surface,
                 ),

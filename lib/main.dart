@@ -261,7 +261,7 @@ class BusinessManagerApp extends StatelessWidget {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          side: BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
         ),
       ),
       dialogTheme: DialogThemeData(
@@ -274,7 +274,7 @@ class BusinessManagerApp extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.xl),
-          side: BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
         ),
         headerBackgroundColor: AppColors.primary,
         headerForegroundColor: Colors.white,
@@ -350,7 +350,7 @@ class BusinessManagerApp extends StatelessWidget {
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.xl),
-          side: BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
         ),
         dayPeriodColor: AppColors.primary.withValues(alpha: 0.15),
         dayPeriodTextColor: AppColors.primary,
@@ -384,9 +384,23 @@ class BusinessManagerApp extends StatelessWidget {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surfaceAlt,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 2)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE2E4E9), width: 1.0),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE2E4E9), width: 1.0),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF378ADD), width: 1.5),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.surface,
@@ -422,7 +436,7 @@ class BusinessManagerApp extends StatelessWidget {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          side: BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
         ),
       ),
       dialogTheme: DialogThemeData(
@@ -435,7 +449,7 @@ class BusinessManagerApp extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.xl),
-          side: BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
         ),
         headerBackgroundColor: AppColors.primary,
         headerForegroundColor: Colors.white,
@@ -511,7 +525,7 @@ class BusinessManagerApp extends StatelessWidget {
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.xl),
-          side: BorderSide(color: AppColors.border),
+          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
         ),
         dayPeriodColor: AppColors.primary.withValues(alpha: 0.2),
         dayPeriodTextColor: AppColors.primaryLight,
@@ -545,9 +559,23 @@ class BusinessManagerApp extends StatelessWidget {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surfaceAlt,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 2)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF334155), width: 1.0),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF334155), width: 1.0),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF378ADD), width: 1.5),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.surface,
