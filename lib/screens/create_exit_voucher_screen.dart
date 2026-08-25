@@ -20,6 +20,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'customers_screen.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
 import 'create_article_screen.dart';
 
@@ -142,7 +143,15 @@ class _CreateExitVoucherScreenState extends State<CreateExitVoucherScreen> {
 
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextStockWithdrawalSequence();
+      final seq = await DocumentNumberingService.ensureNumberSequence(
+        context: context,
+        docCollection: 'bons_sortie',
+        docTypeName: 'Bon de Sortie',
+        prefix: 'BS',
+      );
+      if (seq == null) {
+        return;
+      }
       number = generateDocNumber('BS', seq);
     }
 

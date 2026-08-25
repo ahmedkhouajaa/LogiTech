@@ -262,6 +262,52 @@ class DatabaseHelper {
     }
   }
 
+  Future<bool> isFirstDocumentOfType(String docCollection, [String? entIdParam]) async {
+    String entId = entIdParam ?? currentEnterpriseId ?? 'default';
+    if (entId.isEmpty) entId = 'default';
+    final counterRef = _firestore.collection('enterprises').doc(entId).collection('counters').doc(docCollection);
+
+    try {
+      final snapshot = await counterRef.get().timeout(const Duration(seconds: 4));
+      if (snapshot.exists && snapshot.data() != null) {
+        final data = snapshot.data()!;
+        if (data['configured'] == true || (data['count'] != null && (data['count'] as num) > 0)) {
+          return false;
+        }
+      }
+
+      final querySnap = await _firestore
+          .collection(docCollection)
+          .where('enterprise_id', isEqualTo: entId)
+          .limit(1)
+          .get()
+          .timeout(const Duration(seconds: 4));
+
+      if (querySnap.docs.isNotEmpty) {
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      print('⚠️ [DEBUG] isFirstDocumentOfType check failed for $docCollection: $e');
+      return false;
+    }
+  }
+
+  Future<int> setInitialDocSequenceAtomic(String? currentEntId, String docCollection, int initialSeq) async {
+    String entId = currentEntId ?? currentEnterpriseId ?? 'default';
+    if (entId.isEmpty) entId = 'default';
+    final counterRef = _firestore.collection('enterprises').doc(entId).collection('counters').doc(docCollection);
+
+    try {
+      await counterRef.set({'count': initialSeq, 'configured': true}, SetOptions(merge: true));
+      return initialSeq;
+    } catch (e) {
+      print('❌ [DEBUG] setInitialDocSequenceAtomic failed for $docCollection: $e');
+      return initialSeq;
+    }
+  }
+
   Future<int> generateNextDocSequenceAtomic(String? currentEntId, String docCollection) async {
     String entId = currentEntId ?? currentEnterpriseId ?? 'default';
     if (entId.isEmpty) entId = 'default';

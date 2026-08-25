@@ -17,6 +17,7 @@ import '../models/invoice.dart';
 import '../models/delivery_note.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 import 'create_delivery_note_screen.dart';
 import 'create_invoice_screen.dart';
 import '../services/pdf_service.dart';
@@ -1227,7 +1228,13 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
   Future<void> _convertOrderToInvoice(BuildContext context, CustomerOrder order) async {
     final invoiceId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
+    final seq = await DocumentNumberingService.ensureNumberSequence(
+      context: context,
+      docCollection: 'invoices',
+      docTypeName: 'Facture',
+      prefix: 'FA',
+    );
+    if (seq == null) return;
     final invoiceNumber = generateDocNumber('FA', seq);
     
     final invoiceItems = order.items.map((qi) => InvoiceItem(
@@ -1355,7 +1362,13 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 
   Future<void> _convertOrderToDelivery(BuildContext context, CustomerOrder order) async {
     final deliveryId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextDeliveryNoteSequence();
+    final seq = await DocumentNumberingService.ensureNumberSequence(
+      context: context,
+      docCollection: 'delivery_notes',
+      docTypeName: 'Bon de Livraison',
+      prefix: DocPrefix.deliveryNote,
+    );
+    if (seq == null) return;
     final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq);
     
     final deliveryItems = order.items.map((qi) => DeliveryNoteItem(

@@ -16,6 +16,7 @@ import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../database/database_helper.dart';
+import '../../../../services/document_numbering_service.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
@@ -143,7 +144,16 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
       
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
-        final seq = await DatabaseHelper.instance.getNextSupplierOrderSequence();
+        final seq = await DocumentNumberingService.ensureNumberSequence(
+          context: context,
+          docCollection: 'supplier_orders',
+          docTypeName: 'Commande Fournisseur',
+          prefix: DocPrefix.supplierOrder,
+        );
+        if (seq == null) {
+          setState(() => _isLoading = false);
+          return;
+        }
         number = generateDocNumber(DocPrefix.supplierOrder, seq);
       }
 

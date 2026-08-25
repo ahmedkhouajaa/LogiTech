@@ -23,6 +23,7 @@ import '../blocs/supplier_returns/supplier_returns_bloc.dart';
 import '../blocs/supplier_returns/supplier_returns_event.dart';
 import '../models/supplier_return.dart';
 import 'document_preview_screen.dart';
+import '../services/document_numbering_service.dart';
 import 'document_detail_screen.dart';
 import '../services/document_share_service.dart';
 import '../models/document_wrapper.dart';
@@ -1116,7 +1117,13 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
 
   Future<void> _executeConversion(ReceivingVoucher voucher) async {
     final newInvoiceId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextPurchaseInvoiceSequence();
+    final seq = await DocumentNumberingService.ensureNumberSequence(
+      context: context,
+      docCollection: 'purchase_invoices',
+      docTypeName: 'Facture d\'Achat',
+      prefix: DocPrefix.purchaseInvoice,
+    );
+    if (seq == null) return;
     final invoiceNumber = generateDocNumber(DocPrefix.purchaseInvoice, seq);
 
     List<PurchaseInvoiceItem> newItems = [];
@@ -1265,8 +1272,14 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
 
   Future<void> _executeConvertToReturn(ReceivingVoucher voucher) async {
     final newReturnId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextSupplierReturnSequence();
-    final returnNumber = generateDocNumber('BRF', seq);
+    final seq = await DocumentNumberingService.ensureNumberSequence(
+      context: context,
+      docCollection: 'supplier_returns',
+      docTypeName: 'Retour Fournisseur',
+      prefix: DocPrefix.supplierReturn,
+    );
+    if (seq == null) return;
+    final returnNumber = generateDocNumber(DocPrefix.supplierReturn, seq);
 
     List<SupplierReturnItem> newItems = [];
 

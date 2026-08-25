@@ -19,6 +19,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'customers_screen.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
 import 'create_article_screen.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
@@ -154,7 +155,16 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
 
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
-        final seq = await DatabaseHelper.instance.getNextQuoteSequence();
+        final seq = await DocumentNumberingService.ensureNumberSequence(
+          context: context,
+          docCollection: 'quotes',
+          docTypeName: 'Devis',
+          prefix: 'DV',
+        );
+        if (seq == null) {
+          setState(() => _isSaving = false);
+          return;
+        }
         number = generateDocNumber('DV', seq);
       }
 

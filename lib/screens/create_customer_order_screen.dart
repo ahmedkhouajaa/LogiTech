@@ -19,6 +19,7 @@ import '../utils/helpers.dart';
 import 'customers_screen.dart';
 import 'create_article_screen.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 import '../services/enterprise_service.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/searchable_dropdown_field.dart';
@@ -149,7 +150,15 @@ class _CreateCustomerOrderScreenState extends State<CreateCustomerOrderScreen> {
 
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextCustomerOrderSequence();
+      final seq = await DocumentNumberingService.ensureNumberSequence(
+        context: context,
+        docCollection: 'customer_orders',
+        docTypeName: 'Commande Client',
+        prefix: 'CC',
+      );
+      if (seq == null) {
+        return;
+      }
       number = generateDocNumber('CC', seq);
     }
 

@@ -18,6 +18,7 @@ import '../blocs/payments/payments_bloc.dart';
 import '../models/payment_model.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 import '../blocs/invoices/invoices_bloc.dart';
 import '../blocs/return_notes/return_notes_bloc.dart';
 import '../blocs/return_notes/return_notes_event.dart';
@@ -611,11 +612,9 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label,
-            style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-        SizedBox(height: 8),
-        SizedBox(height: 40, child: child),
+        Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        const SizedBox(height: 4),
+        child,
       ],
     );
   }
@@ -627,20 +626,20 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
     required ValueChanged<T?> onChanged,
   }) {
     return Container(
-      height: 40,
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(6),
         border: Border.all(color: AppColors.border),
       ),
-      padding: EdgeInsets.symmetric(horizontal: 12),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
           value: value,
-          hint: Text(hint, style: TextStyle(color: AppColors.textTertiary, fontSize: 13)),
+          hint: Text(hint, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
           isExpanded: true,
-          icon: Icon(Icons.arrow_drop_down_rounded, size: 20, color: AppColors.textSecondary),
-          style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          icon: Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
           items: items,
           onChanged: onChanged,
         ),
@@ -665,23 +664,22 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
         if (picked != null) onPicked(picked);
       },
       child: Container(
-        height: 40,
-        padding: EdgeInsets.symmetric(horizontal: 12),
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.border),
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: BorderRadius.circular(6),
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_outlined,
-                size: 16, color: AppColors.textSecondary),
-            SizedBox(width: 8),
+            Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+            const SizedBox(width: 6),
             Expanded(
               child: Text(
                 value != null ? formatDateLong(value) : hint,
                 style: TextStyle(
-                  fontSize: 13,
-                  color: value != null ? AppColors.textPrimary : AppColors.textTertiary,
+                  fontSize: 12,
+                  color: value != null ? AppColors.textPrimary : AppColors.textSecondary,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1480,7 +1478,13 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
 
   Future<void> _convertDeliveryToInvoice(BuildContext context, DeliveryNote note) async {
     final now = DateTime.now();
-    final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
+    final seq = await DocumentNumberingService.ensureNumberSequence(
+      context: context,
+      docCollection: 'invoices',
+      docTypeName: 'Facture',
+      prefix: 'FA',
+    );
+    if (seq == null) return;
     final invoiceNumber = generateDocNumber('FA', seq);
 
     final invoiceItems = note.items.map((i) => InvoiceItem(

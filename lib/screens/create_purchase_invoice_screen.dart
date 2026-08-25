@@ -21,6 +21,7 @@ import 'suppliers_screen.dart';
 import 'create_article_screen.dart';
 import '../services/enterprise_service.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 
 
 
@@ -36,6 +37,7 @@ class CreatePurchaseInvoiceScreen extends StatefulWidget {
 class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScreen> {
   final _formKey = GlobalKey<FormState>();
   final _uuid = const Uuid();
+  bool _isSaving = false;
 
   Supplier? _selectedSupplier;
   String? _selectedProjectId;
@@ -1067,17 +1069,28 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
 
   // ─── Save ────────────────────────────────────────────────────────
   Future<void> _save() async {
-    if (widget.isReadOnly) return;
+    if (widget.isReadOnly || _isSaving) return;
+    setState(() => _isSaving = true);
     if (_selectedSupplier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez selectionner un fournisseur'), backgroundColor: AppColors.error),
       );
+      setState(() => _isSaving = false);
       return;
     }
 
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextPurchaseInvoiceSequence();
+      final seq = await DocumentNumberingService.ensureNumberSequence(
+        context: context,
+        docCollection: 'purchase_invoices',
+        docTypeName: 'Facture d\'Achat',
+        prefix: DocPrefix.purchaseInvoice,
+      );
+      if (seq == null) {
+        setState(() => _isSaving = false);
+        return;
+      }
       number = generateDocNumber(DocPrefix.purchaseInvoice, seq);
     }
 

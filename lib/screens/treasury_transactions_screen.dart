@@ -251,28 +251,34 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                         children: [
                           Text('Date de début', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                           const SizedBox(height: 4),
-                          SizedBox(
-                            height: 32,
-                            child: TextFormField(
-                              readOnly: true,
-                              controller: TextEditingController(text: DateFormat('dd MMM yyyy', 'fr_FR').format(_startDate)),
-                              style: const TextStyle(fontSize: 12),
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.calendar_today_rounded, size: 14),
-                                prefixIconConstraints: const BoxConstraints(minWidth: 32),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
-                                filled: true,
-                                fillColor: AppColors.surfaceAlt,
+                          InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(context: context, initialDate: _startDate, firstDate: DateTime(2000), lastDate: DateTime(2100), locale: const Locale('fr', 'FR'));
+                              if (picked != null) {
+                                setState(() => _startDate = picked);
+                                _loadData();
+                              }
+                            },
+                            child: Container(
+                              height: 32,
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppColors.border),
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                              onTap: () async {
-                                final picked = await showDatePicker(context: context, initialDate: _startDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
-                                if (picked != null) {
-                                  setState(() => _startDate = picked);
-                                  _loadData();
-                                }
-                              },
+                              child: Row(
+                                children: [
+                                  Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      DateFormat('dd MMM yyyy', 'fr_FR').format(_startDate),
+                                      style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -287,28 +293,34 @@ class _TreasuryTransactionsScreenState extends State<TreasuryTransactionsScreen>
                         children: [
                           Text('Date de fin', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                           const SizedBox(height: 4),
-                          SizedBox(
-                            height: 32,
-                            child: TextFormField(
-                              readOnly: true,
-                              controller: TextEditingController(text: DateFormat('dd MMM yyyy', 'fr_FR').format(_endDate)),
-                              style: const TextStyle(fontSize: 12),
-                              decoration: InputDecoration(
-                                prefixIcon: const Icon(Icons.calendar_today_rounded, size: 14),
-                                prefixIconConstraints: const BoxConstraints(minWidth: 32),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: AppColors.border)),
-                                filled: true,
-                                fillColor: AppColors.surfaceAlt,
+                          InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(context: context, initialDate: _endDate, firstDate: DateTime(2000), lastDate: DateTime(2100), locale: const Locale('fr', 'FR'));
+                              if (picked != null) {
+                                setState(() => _endDate = picked);
+                                _loadData();
+                              }
+                            },
+                            child: Container(
+                              height: 32,
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppColors.border),
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                              onTap: () async {
-                                final picked = await showDatePicker(context: context, initialDate: _endDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
-                                if (picked != null) {
-                                  setState(() => _endDate = picked);
-                                  _loadData();
-                                }
-                              },
+                              child: Row(
+                                children: [
+                                  Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      DateFormat('dd MMM yyyy', 'fr_FR').format(_endDate),
+                                      style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],

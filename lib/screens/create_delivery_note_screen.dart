@@ -18,6 +18,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
 import 'customers_screen.dart';
 import 'create_article_screen.dart';
@@ -156,7 +157,13 @@ class _CreateDeliveryNoteScreenState
 
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextDeliveryNoteSequence();
+      final seq = await DocumentNumberingService.ensureNumberSequence(
+        context: context,
+        docCollection: 'delivery_notes',
+        docTypeName: 'Bon de Livraison',
+        prefix: 'BL',
+      );
+      if (seq == null) return;
       number = generateDocNumber('BL', seq);
     }
 

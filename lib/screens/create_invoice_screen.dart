@@ -17,6 +17,7 @@ import '../models/stock_movement.dart' show Warehouse;
 import '../models/document_template.dart';
 import 'create_article_screen.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/dashboard_card.dart';
@@ -1079,7 +1080,16 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     try {
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
-        final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
+        final seq = await DocumentNumberingService.ensureNumberSequence(
+          context: context,
+          docCollection: 'invoices',
+          docTypeName: 'Facture',
+          prefix: 'FA',
+        );
+        if (seq == null) {
+          setState(() => _isSaving = false);
+          return;
+        }
         number = generateDocNumber('FA', seq);
       }
 

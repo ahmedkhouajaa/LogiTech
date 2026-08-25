@@ -16,6 +16,7 @@ import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../database/database_helper.dart';
+import '../../../../services/document_numbering_service.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
@@ -145,7 +146,16 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
       
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
-        final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
+        final seq = await DocumentNumberingService.ensureNumberSequence(
+          context: context,
+          docCollection: 'invoices',
+          docTypeName: 'Facture',
+          prefix: 'FA',
+        );
+        if (seq == null) {
+          setState(() => _isLoading = false);
+          return;
+        }
         number = generateDocNumber('FA', seq);
       }
 

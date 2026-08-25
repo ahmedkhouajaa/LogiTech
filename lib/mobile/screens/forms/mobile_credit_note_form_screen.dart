@@ -16,6 +16,7 @@ import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../database/database_helper.dart';
+import '../../../../services/document_numbering_service.dart';
 import '../../../../screens/customers_screen.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
@@ -109,7 +110,16 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
       
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
-        final seq = await DatabaseHelper.instance.getNextCreditNoteSequence();
+        final seq = await DocumentNumberingService.ensureNumberSequence(
+          context: context,
+          docCollection: 'credit_notes',
+          docTypeName: 'Avoir Client',
+          prefix: 'AV',
+        );
+        if (seq == null) {
+          setState(() => _isLoading = false);
+          return;
+        }
         number = generateDocNumber('AV', seq);
       }
 

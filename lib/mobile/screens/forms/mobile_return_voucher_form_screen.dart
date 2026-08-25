@@ -17,6 +17,7 @@ import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../database/database_helper.dart';
+import '../../../../services/document_numbering_service.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
 import '../../widgets/forms/mobile_smart_fields.dart';
@@ -134,7 +135,16 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
       
       String number = widget.existing?.returnNumber ?? '';
       if (number.isEmpty) {
-        final seq = await DatabaseHelper.instance.getNextReturnNoteSequence();
+        final seq = await DocumentNumberingService.ensureNumberSequence(
+          context: context,
+          docCollection: 'return_notes',
+          docTypeName: 'Bon de Retour',
+          prefix: 'BR',
+        );
+        if (seq == null) {
+          setState(() => _isLoading = false);
+          return;
+        }
         number = generateDocNumber('BR', seq);
       }
 

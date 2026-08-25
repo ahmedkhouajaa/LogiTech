@@ -23,6 +23,7 @@ import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import '../services/auth_service.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 import '../blocs/projects/projects_bloc.dart';
 import '../blocs/stock/stock_bloc.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
@@ -1248,9 +1249,15 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
   Future<void> _convertQuoteToInvoice(BuildContext context, Quote quote) async {
     final invoiceId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextInvoiceSequence();
+    final seq = await DocumentNumberingService.ensureNumberSequence(
+      context: context,
+      docCollection: 'invoices',
+      docTypeName: 'Facture',
+      prefix: 'FA',
+    );
+    if (seq == null) return;
     final invoiceNumber = generateDocNumber('FA', seq);
-    
+
     // Map Quote Items to Invoice Items
     final invoiceItems = quote.items.map((qi) => InvoiceItem(
       id: const Uuid().v4(),
@@ -1398,9 +1405,15 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
   Future<void> _convertQuoteToOrder(BuildContext context, Quote quote) async {
     final orderId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextCustomerOrderSequence();
+    final seq = await DocumentNumberingService.ensureNumberSequence(
+      context: context,
+      docCollection: 'customer_orders',
+      docTypeName: 'Commande Client',
+      prefix: DocPrefix.customerOrder,
+    );
+    if (seq == null) return;
     final orderNumber = generateDocNumber(DocPrefix.customerOrder, seq);
-    
+
     // Map Quote Items to CustomerOrder Items
     final orderItems = quote.items.map((qi) => CustomerOrderItem(
       id: const Uuid().v4(),
@@ -1529,7 +1542,13 @@ class _QuotesScreenState extends State<QuotesScreen> {
 
   Future<void> _convertQuoteToDelivery(BuildContext context, Quote quote) async {
     final deliveryId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextDeliveryNoteSequence();
+    final seq = await DocumentNumberingService.ensureNumberSequence(
+      context: context,
+      docCollection: 'delivery_notes',
+      docTypeName: 'Bon de Livraison',
+      prefix: DocPrefix.deliveryNote,
+    );
+    if (seq == null) return;
     final deliveryNumber = generateDocNumber(DocPrefix.deliveryNote, seq);
     
     // Map Quote Items to DeliveryNote Items

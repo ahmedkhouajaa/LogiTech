@@ -20,6 +20,7 @@ import '../screens/customers_screen.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
 
 class CreateReturnNoteScreen extends StatefulWidget {
@@ -35,6 +36,7 @@ class _CreateReturnNoteScreenState
     extends State<CreateReturnNoteScreen> {
   final _formKey = GlobalKey<FormState>();
   final _uuid = const Uuid();
+  bool _isSaving = false;
 
   String? _selectedCustomerId;
   String? _selectedProjectId;
@@ -130,12 +132,16 @@ class _CreateReturnNoteScreenState
 
   // a”€a”€ Save a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€a”€
   Future<void> _save() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text('Veuillez selectionner un client'),
             backgroundColor: AppColors.error),
       );
+      setState(() => _isSaving = false);
       return;
     }
 
@@ -145,7 +151,16 @@ class _CreateReturnNoteScreenState
 
     String number = widget.existing?.returnNumber ?? '';
     if (number.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextReturnNoteSequence();
+      final seq = await DocumentNumberingService.ensureNumberSequence(
+        context: context,
+        docCollection: 'return_notes',
+        docTypeName: 'Bon de Retour',
+        prefix: 'BR',
+      );
+      if (seq == null) {
+        setState(() => _isSaving = false);
+        return;
+      }
       number = generateDocNumber('BR', seq);
     }
 

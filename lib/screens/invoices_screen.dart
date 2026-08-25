@@ -24,6 +24,7 @@ import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import '../services/document_share_service.dart';
+import '../services/document_numbering_service.dart';
 import 'document_detail_screen.dart';
 import '../database/database_helper.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
@@ -157,13 +158,12 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         (_dateTo != null ? 1 : 0) +
         (_statusFilter != null ? 1 : 0);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border),
-        boxShadow: AppShadows.sm,
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -264,8 +264,8 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           ),
           const SizedBox(width: 10),
           // Status filter
-          SizedBox(
-            width: 130,
+          Expanded(
+            flex: 2,
             child: _buildFilterField(
               label: 'Statut',
               child: PopupMenuButton<InvoiceStatus?>(
@@ -580,9 +580,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   Widget _buildFilterField({required String label, required Widget child}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-        SizedBox(height: 6),
+        Text(label, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+        const SizedBox(height: 4),
         child,
       ],
     );
@@ -593,31 +594,36 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     required String hint,
     required ValueChanged<DateTime?> onChanged,
   }) {
-    return GestureDetector(
+    return InkWell(
       onTap: () async {
         final picked = await showDatePicker(
           context: context,
           initialDate: value ?? DateTime.now(),
-          firstDate: DateTime(2020),
-          lastDate: DateTime(2030),
+          firstDate: DateTime(2000),
+          lastDate: DateTime(2100),
           locale: const Locale('fr', 'FR'),
         );
-        onChanged(picked);
+        if (picked != null) onChanged(picked);
       },
-      child: AbsorbPointer(
-        child: TextFormField(
-          controller: TextEditingController(text: value != null ? formatDateLong(value) : ''),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
-            prefixIcon: Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
-            filled: true,
-            fillColor: AppColors.surfaceAlt,
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
-          ),
-          style: TextStyle(fontSize: 13),
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                value != null ? formatDateLong(value) : hint,
+                style: TextStyle(fontSize: 12, color: value != null ? AppColors.textPrimary : AppColors.textSecondary),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -998,7 +1004,13 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
 
               final now = DateTime.now();
               final String cnId = const Uuid().v4();
-              final seq = await DatabaseHelper.instance.getNextCreditNoteSequence();
+              final seq = await DocumentNumberingService.ensureNumberSequence(
+                context: context,
+                docCollection: 'credit_notes',
+                docTypeName: 'Avoir',
+                prefix: DocPrefix.creditNote,
+              );
+              if (seq == null) return;
               final String cnNumber = generateDocNumber(DocPrefix.creditNote, seq);
               
               final creditNote = CreditNote(

@@ -17,6 +17,7 @@ import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
 import 'suppliers_screen.dart';
 import 'create_article_screen.dart';
@@ -35,6 +36,7 @@ class CreateSupplierOrderScreen extends StatefulWidget {
 class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
   final _formKey = GlobalKey<FormState>();
   final _uuid = const Uuid();
+  bool _isSaving = false;
 
   String? _selectedSupplierId;
   String? _selectedProjectId;
@@ -131,13 +133,16 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
 
   // ── Save ──────────────────────────────────────────────────────────
   Future<void> _save() async {
-    if (widget.isReadOnly) return;
+    if (widget.isReadOnly || _isSaving) return;
+    setState(() => _isSaving = true);
+
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text('Veuillez selectionner un fournisseur'),
             backgroundColor: AppColors.error),
       );
+      setState(() => _isSaving = false);
       return;
     }
 
@@ -147,7 +152,16 @@ class _CreateSupplierOrderScreenState extends State<CreateSupplierOrderScreen> {
 
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextSupplierOrderSequence();
+      final seq = await DocumentNumberingService.ensureNumberSequence(
+        context: context,
+        docCollection: 'supplier_orders',
+        docTypeName: 'Commande Fournisseur',
+        prefix: DocPrefix.supplierOrder,
+      );
+      if (seq == null) {
+        setState(() => _isSaving = false);
+        return;
+      }
       number = generateDocNumber(DocPrefix.supplierOrder, seq);
     }
 

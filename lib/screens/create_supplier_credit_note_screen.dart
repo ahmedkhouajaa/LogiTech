@@ -19,6 +19,7 @@ import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
 
 enum SupplierCreditNoteStatus {
@@ -51,6 +52,7 @@ class _CreateSupplierCreditNoteScreenState
     extends State<CreateSupplierCreditNoteScreen> {
   final _formKey = GlobalKey<FormState>();
   final _uuid = const Uuid();
+  bool _isSaving = false;
 
   String? _selectedsupplierId;
   String? _selectedProjectId;
@@ -146,12 +148,16 @@ class _CreateSupplierCreditNoteScreenState
 
   // aâ€â‚¬aâ€â‚¬ Save aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
   Future<void> _save() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+
     if (_selectedsupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text('Veuillez selectionner un Fournisseur'),
             backgroundColor: AppColors.error),
       );
+      setState(() => _isSaving = false);
       return;
     }
 
@@ -161,7 +167,16 @@ class _CreateSupplierCreditNoteScreenState
 
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextSupplierCreditNoteSequence();
+      final seq = await DocumentNumberingService.ensureNumberSequence(
+        context: context,
+        docCollection: 'supplier_credit_notes',
+        docTypeName: 'Avoir Fournisseur',
+        prefix: DocPrefix.supplierCreditNote,
+      );
+      if (seq == null) {
+        setState(() => _isSaving = false);
+        return;
+      }
       number = generateDocNumber(DocPrefix.supplierCreditNote, seq);
     }
 

@@ -95,6 +95,7 @@ class ReturnNoteItem extends Equatable {
 class ReturnNote extends Equatable {
   final String id;
   final String returnNumber;
+  String get number => returnNumber;
   final String customerId;
   final String? customerName;
   final String? customerCompany;

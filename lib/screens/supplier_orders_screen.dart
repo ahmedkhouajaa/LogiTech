@@ -23,6 +23,7 @@ import '../database/database_helper.dart';
 import 'create_purchase_invoice_screen.dart';
 import '../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import 'create_receiving_voucher_screen.dart';
+import '../services/document_numbering_service.dart';
 import '../services/pdf_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
@@ -1153,7 +1154,13 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
 
   Future<void> _convertToInvoice(BuildContext context, SupplierOrder order) async {
     final invoiceId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextPurchaseInvoiceSequence();
+    final seq = await DocumentNumberingService.ensureNumberSequence(
+      context: context,
+      docCollection: 'purchase_invoices',
+      docTypeName: 'Facture d\'Achat',
+      prefix: DocPrefix.purchaseInvoice,
+    );
+    if (seq == null) return;
     final newInvoice = PurchaseInvoice(
       id: invoiceId,
       number: generateDocNumber(DocPrefix.purchaseInvoice, seq),
@@ -1194,7 +1201,13 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
 
   Future<void> _convertToReceipt(BuildContext context, SupplierOrder order) async {
     final receiptId = const Uuid().v4();
-    final seq = await DatabaseHelper.instance.getNextReceivingVoucherSequence();
+    final seq = await DocumentNumberingService.ensureNumberSequence(
+      context: context,
+      docCollection: 'receiving_vouchers',
+      docTypeName: 'Bon de Réception',
+      prefix: DocPrefix.receivingVoucher,
+    );
+    if (seq == null) return;
     final newReceipt = ReceivingVoucher(
       id: receiptId,
       number: generateDocNumber(DocPrefix.receivingVoucher, seq),

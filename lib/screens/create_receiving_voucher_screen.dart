@@ -20,6 +20,7 @@ import '../models/receiving_voucher.dart';
 import 'customers_screen.dart';
 import 'create_article_screen.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
 import 'suppliers_screen.dart';
 
@@ -58,6 +59,7 @@ class CreateReceivingVoucherScreen extends StatefulWidget {
 class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScreen> {
   final _formKey = GlobalKey<FormState>();
   final _uuid = const Uuid();
+  bool _isSaving = false;
 
   String? _selectedSupplierId;
   String? _selectedProjectId;
@@ -151,13 +153,16 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
 
   // ── Save ──────────────────────────────────────────────────────────
   Future<void> _save() async {
-    if (widget.isReadOnly) return;
+    if (widget.isReadOnly || _isSaving) return;
+    setState(() => _isSaving = true);
+
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text('Veuillez selectionner un fournisseur'),
             backgroundColor: AppColors.error),
       );
+      setState(() => _isSaving = false);
       return;
     }
 
@@ -167,7 +172,16 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
 
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextReceivingVoucherSequence();
+      final seq = await DocumentNumberingService.ensureNumberSequence(
+        context: context,
+        docCollection: 'receiving_vouchers',
+        docTypeName: 'Bon de Réception',
+        prefix: DocPrefix.receivingVoucher,
+      );
+      if (seq == null) {
+        setState(() => _isSaving = false);
+        return;
+      }
       number = generateDocNumber(DocPrefix.receivingVoucher, seq);
     }
 

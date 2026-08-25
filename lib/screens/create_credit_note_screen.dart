@@ -16,6 +16,7 @@ import '../models/stock_movement.dart' show Warehouse;
 import '../models/document_template.dart';
 import 'create_article_screen.dart';
 import '../database/database_helper.dart';
+import '../services/document_numbering_service.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/dashboard_card.dart';
@@ -1176,7 +1177,15 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
     final creditNoteId = _isEditing ? widget.existing!.id : const Uuid().v4();
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextCreditNoteSequence();
+      final seq = await DocumentNumberingService.ensureNumberSequence(
+        context: context,
+        docCollection: 'credit_notes',
+        docTypeName: 'Avoir Client',
+        prefix: 'AV',
+      );
+      if (seq == null) {
+        return;
+      }
       number = generateDocNumber('AV', seq);
     }
 

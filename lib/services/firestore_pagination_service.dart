@@ -100,7 +100,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        final orderedQuery = baseQuery.orderBy('created_at', descending: true).limit(pageSize);
+        final orderedQuery = baseQuery.orderBy('number', descending: true).limit(pageSize);
         snapshot = await orderedQuery.get().timeout(_queryTimeout);
       } catch (_) {
         try {
@@ -120,7 +120,11 @@ class FirestorePaginationService {
         return Quote.fromMap(data);
       }).toList();
 
-      quotes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      quotes.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return quotes.take(pageSize).toList();
     } catch (e) {
       try {
@@ -168,7 +172,7 @@ class FirestorePaginationService {
       }
 
       query = query
-          .orderBy('created_at', descending: true)
+          .orderBy('number', descending: true)
           .startAfterDocument(_lastDevisSnapshot!)
           .limit(pageSize);
 
@@ -261,7 +265,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        final orderedQuery = baseQuery.orderBy('created_at', descending: true).limit(pageSize);
+        final orderedQuery = baseQuery.orderBy('number', descending: true).limit(pageSize);
         snapshot = await orderedQuery.get().timeout(_queryTimeout);
       } catch (_) {
         try {
@@ -281,7 +285,11 @@ class FirestorePaginationService {
         return Invoice.fromMap(data);
       }).toList();
 
-      invoices.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      invoices.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return invoices.take(pageSize).toList();
     } catch (_) {
       try {
@@ -334,7 +342,7 @@ class FirestorePaginationService {
         if (_lastInvoiceSnapshot != null) {
           query = query.startAfterDocument(_lastInvoiceSnapshot!);
         }
-        query = query.orderBy('created_at', descending: true).limit(pageSize);
+        query = query.orderBy('number', descending: true).limit(pageSize);
         snapshot = await query.get().timeout(_queryTimeout);
       } catch (_) {
         snapshot = await baseQuery.limit(pageSize * 10).get();
@@ -350,7 +358,11 @@ class FirestorePaginationService {
         return Invoice.fromMap(data);
       }).toList();
 
-      invoices.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      invoices.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return invoices.skip(currentOffset).take(pageSize).toList();
     } catch (_) {
       try {
@@ -444,7 +456,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
           snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
@@ -463,7 +475,11 @@ class FirestorePaginationService {
         return PurchaseInvoice.fromMap(data);
       }).where((inv) => !inv.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       if (items.length > pageSize) {
         items = items.sublist(0, pageSize);
       }
@@ -509,7 +525,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get();
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get();
       } catch (_) {
         snapshot = await query.limit(pageSize * 5).get();
       }
@@ -524,7 +540,11 @@ class FirestorePaginationService {
         return PurchaseInvoice.fromMap(data);
       }).where((inv) => !inv.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items;
     } catch (e) {
       return [];
@@ -1043,7 +1063,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        final orderedQuery = baseQuery.orderBy('created_at', descending: true).limit(pageSize);
+        final orderedQuery = baseQuery.orderBy('number', descending: true).limit(pageSize);
         snapshot = await orderedQuery.get().timeout(_queryTimeout);
       } catch (e) {
         try {
@@ -1063,7 +1083,11 @@ class FirestorePaginationService {
         return CustomerOrder.fromMap(data);
       }).toList();
 
-      orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      orders.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return orders.take(pageSize).toList();
     } catch (_) {
       // ── Fallback to local SQLite ──
@@ -1118,7 +1142,7 @@ class FirestorePaginationService {
         if (_lastCustomerOrderSnapshot != null) {
           query = query.startAfterDocument(_lastCustomerOrderSnapshot!);
         }
-        query = query.orderBy('created_at', descending: true).limit(pageSize);
+        query = query.orderBy('number', descending: true).limit(pageSize);
         snapshot = await query.get().timeout(_queryTimeout);
       } catch (_) {
         snapshot = await baseQuery.limit(pageSize * 10).get();
@@ -1134,7 +1158,11 @@ class FirestorePaginationService {
         return CustomerOrder.fromMap(data);
       }).toList();
 
-      orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      orders.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
 
       if (orders.isNotEmpty) {
         return orders.skip(currentOffset).take(pageSize).toList();
@@ -1248,7 +1276,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
           snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
@@ -1267,7 +1295,11 @@ class FirestorePaginationService {
         return StockEntry.fromMap(data);
       }).where((e) => !e.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       if (items.length > pageSize) {
         items = items.sublist(0, pageSize);
       }
@@ -1313,7 +1345,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get();
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get();
       } catch (_) {
         snapshot = await query.limit(pageSize * 5).get();
       }
@@ -1328,7 +1360,11 @@ class FirestorePaginationService {
         return StockEntry.fromMap(data);
       }).where((e) => !e.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items;
     } catch (e) {
       return [];
@@ -1413,7 +1449,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        final orderedQuery = baseQuery.orderBy('created_at', descending: true).limit(pageSize);
+        final orderedQuery = baseQuery.orderBy('number', descending: true).limit(pageSize);
         snapshot = await orderedQuery.get().timeout(_queryTimeout);
       } catch (_) {
         try {
@@ -1433,7 +1469,11 @@ class FirestorePaginationService {
         return DeliveryNote.fromMap(data);
       }).toList();
 
-      notes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      notes.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return notes.take(pageSize).toList();
     } catch (_) {
       try {
@@ -1487,7 +1527,7 @@ class FirestorePaginationService {
         if (_lastDeliveryNoteSnapshot != null) {
           query = query.startAfterDocument(_lastDeliveryNoteSnapshot!);
         }
-        query = query.orderBy('created_at', descending: true).limit(pageSize);
+        query = query.orderBy('number', descending: true).limit(pageSize);
         snapshot = await query.get().timeout(_queryTimeout);
       } catch (_) {
         snapshot = await baseQuery.limit(pageSize * 10).get();
@@ -1503,7 +1543,11 @@ class FirestorePaginationService {
         return DeliveryNote.fromMap(data);
       }).toList();
 
-      notes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      notes.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return notes.skip(currentOffset).take(pageSize).toList();
     } catch (_) {
       try {
@@ -1600,7 +1644,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
           snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
@@ -1619,7 +1663,11 @@ class FirestorePaginationService {
         return SupplierOrder.fromMap(data);
       }).where((o) => !o.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       if (items.length > pageSize) {
         items = items.sublist(0, pageSize);
       }
@@ -1665,7 +1713,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get();
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get();
       } catch (_) {
         snapshot = await query.limit(pageSize * 5).get();
       }
@@ -1680,7 +1728,11 @@ class FirestorePaginationService {
         return SupplierOrder.fromMap(data);
       }).where((o) => !o.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items;
     } catch (e) {
       return [];
@@ -1765,7 +1817,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
           snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
@@ -1784,7 +1836,11 @@ class FirestorePaginationService {
         return ReceivingVoucher.fromMap(data);
       }).where((v) => !v.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       if (items.length > pageSize) {
         items = items.sublist(0, pageSize);
       }
@@ -1830,7 +1886,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get();
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get();
       } catch (_) {
         snapshot = await query.limit(pageSize * 5).get();
       }
@@ -1845,7 +1901,11 @@ class FirestorePaginationService {
         return ReceivingVoucher.fromMap(data);
       }).where((v) => !v.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items;
     } catch (e) {
       return [];
@@ -1931,7 +1991,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        final orderedQuery = baseQuery.orderBy('created_at', descending: true).limit(pageSize);
+        final orderedQuery = baseQuery.orderBy('number', descending: true).limit(pageSize);
         snapshot = await orderedQuery.get().timeout(_queryTimeout);
       } catch (_) {
         try {
@@ -1952,7 +2012,11 @@ class FirestorePaginationService {
         return StockWithdrawal.fromMap(data);
       }).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items.take(pageSize).toList();
     } catch (_) {
       try {
@@ -2007,7 +2071,7 @@ class FirestorePaginationService {
         if (_lastExitVoucherSnapshot != null) {
           query = query.startAfterDocument(_lastExitVoucherSnapshot!);
         }
-        query = query.orderBy('created_at', descending: true).limit(pageSize);
+        query = query.orderBy('number', descending: true).limit(pageSize);
         snapshot = await query.get().timeout(_queryTimeout);
       } catch (_) {
         snapshot = await baseQuery.limit(pageSize * 10).get();
@@ -2023,7 +2087,11 @@ class FirestorePaginationService {
         return StockWithdrawal.fromMap(data);
       }).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items.skip(currentOffset).take(pageSize).toList();
     } catch (_) {
       try {
@@ -2116,7 +2184,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        final ordered = query.orderBy('created_at', descending: true).limit(pageSize);
+        final ordered = query.orderBy('number', descending: true).limit(pageSize);
         snapshot = await ordered.get().timeout(_queryTimeout);
       } catch (_) {
         try {
@@ -2140,7 +2208,11 @@ class FirestorePaginationService {
           .where((w) => !w.isDeleted)
           .toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items.take(pageSize).toList();
     } catch (e) {
       return [];
@@ -2179,11 +2251,11 @@ class FirestorePaginationService {
 
       if (_lastStockWithdrawalSnapshot != null) {
         query = query
-            .orderBy('created_at', descending: true)
+            .orderBy('number', descending: true)
             .startAfterDocument(_lastStockWithdrawalSnapshot!)
             .limit(pageSize);
       } else {
-        query = query.orderBy('created_at', descending: true).limit(pageSize);
+        query = query.orderBy('number', descending: true).limit(pageSize);
       }
 
       final snapshot = await query.get();
@@ -2200,7 +2272,11 @@ class FirestorePaginationService {
           .where((w) => !w.isDeleted)
           .toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items;
     } catch (e) {
       return [];
@@ -2283,7 +2359,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize).get().timeout(_queryTimeout);
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize).get().timeout(_queryTimeout);
       } catch (_) {
         try {
           snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
@@ -2302,7 +2378,11 @@ class FirestorePaginationService {
         return CreditNote.fromMap(data);
       }).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       if (items.length > pageSize) {
         items = items.sublist(0, pageSize);
       }
@@ -2348,7 +2428,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize).get();
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize).get();
       } catch (_) {
         snapshot = await query.limit(pageSize).get();
       }
@@ -2363,7 +2443,11 @@ class FirestorePaginationService {
         return CreditNote.fromMap(data);
       }).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items;
     } catch (e) {
       return [];
@@ -2448,7 +2532,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
           snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
@@ -2467,7 +2551,11 @@ class FirestorePaginationService {
         return SupplierCreditNote.fromMap(data);
       }).where((n) => !n.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       if (items.length > pageSize) {
         items = items.sublist(0, pageSize);
       }
@@ -2513,7 +2601,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get();
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get();
       } catch (_) {
         snapshot = await query.limit(pageSize * 5).get();
       }
@@ -2528,7 +2616,11 @@ class FirestorePaginationService {
         return SupplierCreditNote.fromMap(data);
       }).where((n) => !n.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items;
     } catch (e) {
       return [];
@@ -2613,7 +2705,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
+        snapshot = await query.orderBy('return_number', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
           snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
@@ -2632,7 +2724,11 @@ class FirestorePaginationService {
         return ReturnNote.fromMap(data);
       }).where((note) => !note.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       if (items.length > pageSize) {
         items = items.sublist(0, pageSize);
       }
@@ -2678,7 +2774,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get();
+        snapshot = await query.orderBy('return_number', descending: true).limit(pageSize * 5).get();
       } catch (_) {
         snapshot = await query.limit(pageSize * 5).get();
       }
@@ -2693,7 +2789,11 @@ class FirestorePaginationService {
         return ReturnNote.fromMap(data);
       }).where((note) => !note.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items;
     } catch (e) {
       return [];
@@ -2778,7 +2878,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
           snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
@@ -2797,7 +2897,11 @@ class FirestorePaginationService {
         return SupplierReturn.fromMap(data);
       }).where((r) => !r.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       if (items.length > pageSize) {
         items = items.sublist(0, pageSize);
       }
@@ -2843,7 +2947,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get();
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get();
       } catch (_) {
         snapshot = await query.limit(pageSize * 5).get();
       }
@@ -2858,7 +2962,11 @@ class FirestorePaginationService {
         return SupplierReturn.fromMap(data);
       }).where((r) => !r.isDeleted).toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items;
     } catch (e) {
       return [];
@@ -2943,7 +3051,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
           snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
@@ -2965,7 +3073,11 @@ class FirestorePaginationService {
           .where((s) => !s.isDeleted)
           .toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       if (items.length > pageSize) {
         items = items.sublist(0, pageSize);
       }
@@ -3011,7 +3123,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get();
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get();
       } catch (_) {
         snapshot = await query.limit(pageSize * 5).get();
       }
@@ -3029,7 +3141,11 @@ class FirestorePaginationService {
           .where((s) => !s.isDeleted)
           .toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items;
     } catch (e) {
       return [];
@@ -3112,7 +3228,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get().timeout(_queryTimeout);
       } catch (_) {
         try {
           snapshot = await query.limit(pageSize * 10).get().timeout(_queryTimeout);
@@ -3134,7 +3250,11 @@ class FirestorePaginationService {
           .where((t) => !t.isDeleted)
           .toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       if (items.length > pageSize) {
         items = items.sublist(0, pageSize);
       }
@@ -3183,7 +3303,7 @@ class FirestorePaginationService {
 
       QuerySnapshot snapshot;
       try {
-        snapshot = await query.orderBy('created_at', descending: true).limit(pageSize * 5).get();
+        snapshot = await query.orderBy('number', descending: true).limit(pageSize * 5).get();
       } catch (_) {
         snapshot = await query.limit(pageSize * 5).get();
       }
@@ -3201,7 +3321,11 @@ class FirestorePaginationService {
           .where((t) => !t.isDeleted)
           .toList();
 
-      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      items.sort((a, b) {
+        final cmp = b.number.compareTo(a.number);
+        if (cmp != 0) return cmp;
+        return b.createdAt.compareTo(a.createdAt);
+      });
       return items;
     } catch (e) {
       return [];
