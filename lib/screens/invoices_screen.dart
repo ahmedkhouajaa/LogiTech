@@ -1,5 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:printing/printing.dart';
+import 'package:excel/excel.dart' hide Border;
+import '../utils/file_download_helper.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/invoices/invoices_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
@@ -40,6 +44,9 @@ class InvoicesScreen extends StatefulWidget {
 }
 
 class _InvoicesScreenState extends State<InvoicesScreen> {
+  // Selection state for bulk actions
+  final Set<String> _selectedInvoiceIds = {};
+
   // Filter state
   String? _selectedClientId;
   DateTime? _dateFrom;
@@ -58,12 +65,190 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   void _applyFilters() {
+    _selectedInvoiceIds.clear();
     context.read<InvoicesBloc>().add(FilterInvoices(
       clientId: _selectedClientId,
       dateFrom: _dateFrom,
       dateTo: _dateTo,
       status: _statusFilter,
     ));
+  }
+
+  Widget _buildBulkActionsDropdown() {
+    final count = _selectedInvoiceIds.length;
+    return PopupMenuButton<String>(
+      onSelected: (action) => _handleBulkAction(action),
+      offset: const Offset(0, 44),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(color: AppColors.border),
+      ),
+      color: AppColors.surface,
+      itemBuilder: (ctx) => [
+        PopupMenuItem(
+          value: 'pdf',
+          child: Text(
+            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'excel',
+          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+      ],
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Plus d\'actions',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleBulkAction(String action) {
+    final state = context.read<InvoicesBloc>().state;
+    if (state is! InvoicesLoaded) return;
+
+    final selectedInvoices = state.filteredInvoices.where((inv) => _selectedInvoiceIds.contains(inv.id)).toList();
+    if (selectedInvoices.isEmpty) return;
+
+    switch (action) {
+      case 'pdf':
+        _bulkDownloadPdf(selectedInvoices);
+        break;
+      case 'excel':
+        _bulkExportExcel(selectedInvoices);
+        break;
+      case 'delete':
+        _bulkDeleteSelected(selectedInvoices);
+        break;
+    }
+  }
+
+  Future<void> _bulkDownloadPdf(List<Invoice> selectedInvoices) async {
+    for (final inv in selectedInvoices) {
+      final docWrapper = DocumentWrapper.fromInvoice(inv);
+      final pdfBytes = await PdfService.instance.generateDocumentBytes(docWrapper);
+      await Printing.sharePdf(bytes: pdfBytes, filename: '${inv.number}.pdf');
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('${selectedInvoices.length} document(s) exporté(s) en PDF'),
+        backgroundColor: AppColors.success,
+      ));
+    }
+  }
+
+  Future<void> _bulkExportExcel(List<Invoice> selectedInvoices) async {
+    try {
+      final excel = Excel.createExcel();
+      final sheet = excel['Factures'];
+      excel.setDefaultSheet('Factures');
+
+      final headers = ['Reference', 'Date', 'Client', 'Statut', 'Montant HT', 'Montant TVA', 'Montant TTC'];
+      for (var i = 0; i < headers.length; i++) {
+        var cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0));
+        cell.value = TextCellValue(headers[i]);
+        cell.cellStyle = CellStyle(bold: true, fontFamily: getFontFamily(FontFamily.Arial));
+      }
+
+      for (var i = 0; i < selectedInvoices.length; i++) {
+        final inv = selectedInvoices[i];
+        final rowIndex = i + 1;
+
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex)).value = TextCellValue(inv.number);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex)).value = TextCellValue(formatDate(inv.createdAt));
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex)).value = TextCellValue(inv.customerName ?? '—');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value = TextCellValue(inv.status.label);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex)).value = DoubleCellValue(inv.totalHT);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex)).value = DoubleCellValue(inv.totalTva);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex)).value = DoubleCellValue(inv.totalTTC);
+      }
+
+      final fileBytes = excel.encode();
+      if (fileBytes != null && mounted) {
+        final fileName = 'Factures_Selectionnees_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+        await FileDownloadHelper.saveAndOpenFile(
+          Uint8List.fromList(fileBytes),
+          fileName,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          context: context,
+        );
+        setState(() => _selectedInvoiceIds.clear());
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'export Excel: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _bulkDeleteSelected(List<Invoice> selectedInvoices) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.error),
+            const SizedBox(width: 8),
+            const Text('Suppression groupée'),
+          ],
+        ),
+        content: Text('Voulez-vous vraiment supprimer ${selectedInvoices.length} facture(s) sélectionnée(s) ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              for (final inv in selectedInvoices) {
+                context.read<InvoicesBloc>().add(DeleteInvoice(inv.id));
+              }
+              setState(() => _selectedInvoiceIds.clear());
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('${selectedInvoices.length} facture(s) supprimée(s)'),
+                backgroundColor: AppColors.success,
+              ));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -88,6 +273,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 ],
               ),
               const Spacer(),
+              if (_selectedInvoiceIds.isNotEmpty) ...[
+                _buildBulkActionsDropdown(),
+                const SizedBox(width: 10),
+              ],
               if (PermissionService.instance.canCreate(UserPermissionResources.salesInvoices))
                 AppButton(
                   label: 'Nouvelle facture',
@@ -643,7 +832,18 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   Widget _buildTableShimmer() {
     return ShimmerTable(
       headerColumns: [
-        const SizedBox(width: 28),
+        SizedBox(
+          width: 28,
+          height: 28,
+          child: Checkbox(
+            value: false,
+            onChanged: null,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            side: BorderSide(color: AppColors.border, width: 1.5),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+          ),
+        ),
+        const SizedBox(width: 8),
         Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
         Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
         Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
@@ -693,6 +893,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                           child: SizedBox(
                             width: double.infinity,
                             child: DataTable(
+                              showCheckboxColumn: false,
                               headingRowColor: WidgetStateProperty.resolveWith((_) => AppColors.background),
                               headingTextStyle: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary),
                               dataTextStyle: TextStyle(fontSize: 12.5, color: AppColors.textPrimary),
@@ -707,7 +908,27 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                                   label: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const SizedBox(width: 24), // Spacer for Checkbox
+                                      SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: Checkbox(
+                                          value: pageInvoices.isNotEmpty && pageInvoices.every((inv) => _selectedInvoiceIds.contains(inv.id)),
+                                          onChanged: (val) {
+                                            setState(() {
+                                              if (val == true) {
+                                                _selectedInvoiceIds.addAll(pageInvoices.map((inv) => inv.id));
+                                              } else {
+                                                for (final inv in pageInvoices) {
+                                                  _selectedInvoiceIds.remove(inv.id);
+                                                }
+                                              }
+                                            });
+                                          },
+                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                                        ),
+                                      ),
                                       const SizedBox(width: 10),
                                       const Text('Reference'),
                                     ],
@@ -735,7 +956,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   DataRow _buildInvoiceRow(Invoice inv) {
+    final isSelected = _selectedInvoiceIds.contains(inv.id);
     return DataRow(
+      color: WidgetStateProperty.resolveWith((_) => isSelected ? AppColors.primary.withValues(alpha: 0.06) : null),
       cells: [
         // Checkbox & Reference (number + date)
         DataCell(
@@ -746,8 +969,16 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                 width: 24,
                 height: 24,
                 child: Checkbox(
-                  value: false,
-                  onChanged: (_) {},
+                  value: isSelected,
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        _selectedInvoiceIds.add(inv.id);
+                      } else {
+                        _selectedInvoiceIds.remove(inv.id);
+                      }
+                    });
+                  },
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
@@ -780,7 +1011,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(inv.customerName ?? '—', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12.5), overflow: TextOverflow.ellipsis),
+                    Text(inv.customerName ?? '—', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),

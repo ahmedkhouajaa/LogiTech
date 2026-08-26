@@ -370,9 +370,9 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
             flex: 3,
             child: Row(
               children: [
-                Icon(Icons.description_outlined, size: 16, color: AppColors.primary),
+                Icon(Icons.description_outlined, size: 16, color: AppColors.textSecondary),
                 const SizedBox(width: 6),
-                Text(p.reference ?? p.paymentNumber, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                Text(p.reference ?? p.paymentNumber, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               ],
             ),
           ),
@@ -386,7 +386,7 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(p.contactName ?? '—', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+                      Text(p.contactName ?? '—', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
                       Text(widget.isSales ? 'Client' : 'Fournisseur', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                     ],
                   ),
@@ -396,7 +396,7 @@ class _WithholdingTaxScreenState extends State<WithholdingTaxScreen> {
           ),
           Expanded(
             flex: 2,
-            child: Text(formatDate(p.paymentDate), style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            child: Text(formatDate(p.paymentDate), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
           ),
           Expanded(
             flex: 2,

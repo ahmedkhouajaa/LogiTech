@@ -1,6 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:excel/excel.dart' hide Border;
+import '../utils/file_download_helper.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database_helper.dart';
 import '../blocs/payments/payments_bloc.dart';
@@ -30,6 +33,7 @@ class PaymentsScreen extends StatefulWidget {
 }
 
 class _PaymentsScreenState extends State<PaymentsScreen> {
+  final Set<String> _selectedPaymentIds = {};
   String _searchQuery = '';
   String _contactSearch = '';
   String _methodFilter = 'tous';
@@ -77,6 +81,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         final end = (start + _rowsPerPage).clamp(0, filtered.length);
         final pageRows = start < filtered.length ? filtered.sublist(start, end) : <Payment>[];
 
+        final isAllSelected = filtered.isNotEmpty && filtered.every((p) => _selectedPaymentIds.contains(p.id));
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -97,6 +103,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     ],
                   ),
                   const Spacer(),
+                  if (_selectedPaymentIds.isNotEmpty) ...[
+                    _buildBulkActionsDropdown(),
+                    const SizedBox(width: 10),
+                  ],
                   // Actions button
                   PopupMenuButton<String>(
                     offset: const Offset(0, 38),
@@ -336,6 +346,18 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   child: state is PaymentsLoading || state is PaymentsInitial
                       ? ShimmerTable(
                           headerColumns: [
+                            SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: Checkbox(
+                                value: false,
+                                onChanged: null,
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                side: BorderSide(color: AppColors.border, width: 1.5),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
                             Expanded(flex: 3, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                             Expanded(flex: 3, child: Text('Contact', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                             Expanded(flex: 2, child: Text('Montant', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
@@ -348,7 +370,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                           ? _buildEmpty()
                           : Column(
                               children: [
-                                _buildTableHeader(),
+                                _buildTableHeader(isAllSelected, filtered),
                                 Expanded(
                                   child: ListView.separated(
                                     itemCount: pageRows.length,
@@ -403,7 +425,7 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     );
   }
 
-  Widget _buildTableHeader() {
+  Widget _buildTableHeader(bool isAllSelected, List<Payment> filtered) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -412,6 +434,26 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
       ),
       child: Row(
         children: [
+          SizedBox(
+            width: 28,
+            height: 28,
+            child: Checkbox(
+              value: isAllSelected,
+              onChanged: (val) {
+                setState(() {
+                  if (val == true) {
+                    _selectedPaymentIds.addAll(filtered.map((p) => p.id));
+                  } else {
+                    _selectedPaymentIds.clear();
+                  }
+                });
+              },
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+            ),
+          ),
+          const SizedBox(width: 8),
           Expanded(
               flex: 3,
               child: Text('Référence',
@@ -502,11 +544,33 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         methodLabel = p.method;
     }
 
+    final isSelected = _selectedPaymentIds.contains(p.id);
+
     return Container(
-      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
+      color: isSelected ? AppColors.primary.withValues(alpha: 0.06) : (index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3)),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         children: [
+          SizedBox(
+            width: 28,
+            height: 28,
+            child: Checkbox(
+              value: isSelected,
+              onChanged: (val) {
+                setState(() {
+                  if (val == true) {
+                    _selectedPaymentIds.add(p.id);
+                  } else {
+                    _selectedPaymentIds.remove(p.id);
+                  }
+                });
+              },
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+            ),
+          ),
+          const SizedBox(width: 8),
           // Reference + date
           Expanded(
             flex: 3,
@@ -516,8 +580,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 Text(p.paymentNumber,
                     style: TextStyle(
                         fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary)),
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary)),
                 const SizedBox(height: 2),
                 Text(
                   formatDateTime(p.paymentDate),
@@ -546,8 +610,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(p.contactName ?? '—',
-                      style: const TextStyle(
-                          fontSize: 12.5, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary),
                       overflow: TextOverflow.ellipsis),
                 ),
               ],
@@ -694,6 +760,180 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             icon: Icons.chevron_right_rounded,
             enabled: _page < totalPages - 1,
             onTap: () => setState(() => _page++),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Bulk Actions ──────────────────────────────────────────────────
+  Widget _buildBulkActionsDropdown() {
+    final count = _selectedPaymentIds.length;
+    final pdfLabel = count > 1
+        ? 'Télécharger $count documents ( pdf )'
+        : 'Télécharger PDF';
+
+    return PopupMenuButton<String>(
+      onSelected: (action) => _handleBulkAction(action),
+      offset: const Offset(0, 44),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(color: AppColors.border),
+      ),
+      color: AppColors.surface,
+      itemBuilder: (ctx) => [
+        PopupMenuItem(
+          value: 'pdf',
+          child: Text(pdfLabel, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+        PopupMenuItem(
+          value: 'excel',
+          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+      ],
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Plus d\'actions',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleBulkAction(String action) {
+    final state = context.read<PaymentsBloc>().state;
+    if (state is! PaymentsLoaded) return;
+
+    final selectedPayments = state.payments.where((p) => _selectedPaymentIds.contains(p.id)).toList();
+    if (selectedPayments.isEmpty) return;
+
+    switch (action) {
+      case 'pdf':
+        _bulkDownloadPdf(selectedPayments);
+        break;
+      case 'excel':
+        _bulkExportExcel(selectedPayments);
+        break;
+      case 'delete':
+        _bulkDeleteSelected(selectedPayments);
+        break;
+    }
+  }
+
+  Future<void> _bulkDownloadPdf(List<Payment> selectedPayments) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Téléchargement de ${selectedPayments.length} document(s) PDF...'),
+        backgroundColor: AppColors.info,
+      ),
+    );
+  }
+
+  Future<void> _bulkExportExcel(List<Payment> selectedPayments) async {
+    try {
+      final excel = Excel.createExcel();
+      final sheet = excel['Paiements'];
+      excel.setDefaultSheet('Paiements');
+
+      final headers = ['Référence', 'Date', 'Contact', 'Sens', 'Montant', 'Méthode', 'Statut'];
+      for (var i = 0; i < headers.length; i++) {
+        var cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0));
+        cell.value = TextCellValue(headers[i]);
+        cell.cellStyle = CellStyle(bold: true, fontFamily: getFontFamily(FontFamily.Arial));
+      }
+
+      for (var i = 0; i < selectedPayments.length; i++) {
+        final p = selectedPayments[i];
+        final rowIndex = i + 1;
+
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex)).value = TextCellValue(p.paymentNumber);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex)).value = TextCellValue(formatDateTime(p.paymentDate));
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex)).value = TextCellValue(p.contactName ?? '—');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value = TextCellValue(p.direction == 'encaissement' ? 'Encaissement' : 'Décaissement');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex)).value = DoubleCellValue(p.amount);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex)).value = TextCellValue(p.method);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex)).value = TextCellValue(p.status);
+      }
+
+      final fileBytes = excel.encode();
+      if (fileBytes != null && mounted) {
+        final fileName = 'Paiements_Selectionnes_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+        await FileDownloadHelper.saveAndOpenFile(
+          Uint8List.fromList(fileBytes),
+          fileName,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          context: context,
+        );
+        setState(() => _selectedPaymentIds.clear());
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'export Excel: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _bulkDeleteSelected(List<Payment> selectedPayments) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.error),
+            const SizedBox(width: 8),
+            const Text('Suppression groupée'),
+          ],
+        ),
+        content: Text('Voulez-vous vraiment supprimer ${selectedPayments.length} paiement(s) sélectionné(s) ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              for (final p in selectedPayments) {
+                context.read<PaymentsBloc>().add(DeletePayment(p.id));
+              }
+              setState(() => _selectedPaymentIds.clear());
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('${selectedPayments.length} paiement(s) supprimé(s)'),
+                backgroundColor: AppColors.success,
+              ));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
           ),
         ],
       ),

@@ -947,7 +947,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
                 Flexible(
                   child: Text(fournisseurLabel,
                       style: TextStyle(
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.bold,
                           fontSize: 12.5,
                           color: AppColors.textPrimary),
                       overflow: TextOverflow.ellipsis),

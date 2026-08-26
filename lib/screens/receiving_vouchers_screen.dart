@@ -1,5 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:printing/printing.dart';
+import 'package:excel/excel.dart' hide Border;
+import '../utils/file_download_helper.dart';
 import '../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
@@ -11,13 +15,8 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import 'create_receiving_voucher_screen.dart';
-import 'create_supplier_order_screen.dart';
-import '../models/supplier_order.dart';
-import '../blocs/supplier_orders/supplier_orders_bloc.dart';
 import '../blocs/purchase_invoices/purchase_invoices_bloc.dart';
 import '../models/purchase_invoice.dart';
-import '../blocs/products/products_bloc.dart';
-import '../models/product.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/supplier_returns/supplier_returns_bloc.dart';
 import '../blocs/supplier_returns/supplier_returns_event.dart';
@@ -29,7 +28,6 @@ import '../services/document_share_service.dart';
 import '../models/document_wrapper.dart';
 import 'app_shell_screen.dart';
 import '../widgets/sidebar_menu.dart';
-import '../database/database_helper.dart';
 import '../services/pdf_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
@@ -38,7 +36,6 @@ import '../blocs/payments/payments_bloc.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
-import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
 enum ReceivingVoucherStatus {
   draft('Brouillon'),
@@ -69,6 +66,8 @@ class ReceivingVouchersScreen extends StatefulWidget {
 }
 
 class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
+  final Set<String> _selectedVoucherIds = {};
+
   String? _selectedSupplierId;
   DateTime? _dateFrom;
   DateTime? _dateTo;
@@ -85,6 +84,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
   }
 
   void _applyFilters() {
+    _selectedVoucherIds.clear();
     context.read<ReceivingVouchersBloc>().add(LoadFirstReceivingVouchers(
       supplierId: _selectedSupplierId,
       dateFrom: _dateFrom,
@@ -118,6 +118,10 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                 ],
               ),
               const Spacer(),
+              if (_selectedVoucherIds.isNotEmpty) ...[
+                _buildBulkActionsDropdown(),
+                const SizedBox(width: 10),
+              ],
               if (PermissionService.instance.canCreate(UserPermissionResources.purchasesReceivingVouchers))
                 AppButton(
                   label: 'Nouveau bon',
@@ -694,7 +698,18 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
   Widget _buildTableShimmer() {
     return ShimmerTable(
       headerColumns: [
-        const SizedBox(width: 28),
+        SizedBox(
+          width: 28,
+          height: 28,
+          child: Checkbox(
+            value: false,
+            onChanged: null,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            side: BorderSide(color: AppColors.border, width: 1.5),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+          ),
+        ),
+        const SizedBox(width: 8),
         Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
         Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
         Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
@@ -757,7 +772,27 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                           ),
                           child: Row(
                             children: [
-                              const SizedBox(width: 28), // Checkbox space
+                              SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: Checkbox(
+                                  value: paginatedVouchers.isNotEmpty && paginatedVouchers.every((v) => _selectedVoucherIds.contains(v.id)),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (val == true) {
+                                        _selectedVoucherIds.addAll(paginatedVouchers.map((v) => v.id));
+                                      } else {
+                                        for (final v in paginatedVouchers) {
+                                          _selectedVoucherIds.remove(v.id);
+                                        }
+                                      }
+                                    });
+                                  },
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                                ),
+                              ),
                               Expanded(flex: 2, child: Text('Référence', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                               Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                               Expanded(flex: 2, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
@@ -788,18 +823,29 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                       (e) => e.name == voucher.status,
                                       orElse: () => ReceivingVoucherStatus.draft,
                                     );
+                                    final isSelected = _selectedVoucherIds.contains(voucher.id);
 
                                     return Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
+                                      color: isSelected 
+                                          ? AppColors.primary.withValues(alpha: 0.06) 
+                                          : (index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3)),
                                       child: Row(
                                         children: [
                                           SizedBox(
                                             width: 28,
                                             height: 28,
                                             child: Checkbox(
-                                              value: false,
-                                              onChanged: (_) {},
+                                              value: isSelected,
+                                              onChanged: (val) {
+                                                setState(() {
+                                                  if (val == true) {
+                                                    _selectedVoucherIds.add(voucher.id);
+                                                  } else {
+                                                    _selectedVoucherIds.remove(voucher.id);
+                                                  }
+                                                });
+                                              },
                                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                               side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
@@ -826,7 +872,7 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                 Flexible(
                                                   child: Text(
                                                     voucher.supplierName ?? 'Fournisseur Inconnu',
-                                                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12.5, color: AppColors.textPrimary),
+                                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppColors.textPrimary),
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
@@ -1415,5 +1461,159 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
     }
 
     return items;
+  }
+
+  Widget _buildBulkActionsDropdown() {
+    final count = _selectedVoucherIds.length;
+    return PopupMenuButton<String>(
+      onSelected: (val) {
+        if (val == 'pdf') {
+          _bulkDownloadPdf();
+        } else if (val == 'excel') {
+          _exportBulkExcel();
+        } else if (val == 'delete') {
+          _bulkDelete();
+        }
+      },
+      offset: const Offset(0, 44),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(color: AppColors.border),
+      ),
+      color: AppColors.surface,
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'pdf',
+          child: Text(
+            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'excel',
+          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+      ],
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Plus d\'actions',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _bulkDownloadPdf() async {
+    final state = context.read<ReceivingVouchersBloc>().state;
+    if (state is! ReceivingVouchersLoaded) return;
+
+    final selectedVouchers = state.vouchers.where((v) => _selectedVoucherIds.contains(v.id)).toList();
+    if (selectedVouchers.isEmpty) return;
+
+    for (final v in selectedVouchers) {
+      final docWrapper = DocumentWrapper.fromReceivingVoucher(v);
+      final pdfBytes = await PdfService.instance.generateDocumentBytes(docWrapper);
+      await Printing.sharePdf(bytes: pdfBytes, filename: '${v.number}.pdf');
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('${selectedVouchers.length} document(s) exporté(s) en PDF'),
+        backgroundColor: AppColors.success,
+      ));
+    }
+  }
+
+  Future<void> _exportBulkExcel() async {
+    final state = context.read<ReceivingVouchersBloc>().state;
+    if (state is! ReceivingVouchersLoaded) return;
+
+    final selectedVouchers = state.vouchers.where((v) => _selectedVoucherIds.contains(v.id)).toList();
+    if (selectedVouchers.isEmpty) return;
+
+    var excel = Excel.createExcel();
+    Sheet sheetObject = excel['Bons de reception'];
+    excel.delete('Sheet1');
+
+    sheetObject.appendRow([
+      TextCellValue('Référence'),
+      TextCellValue('Date'),
+      TextCellValue('Fournisseur'),
+      TextCellValue('Statut'),
+      TextCellValue('Montant TTC'),
+    ]);
+
+    for (var v in selectedVouchers) {
+      sheetObject.appendRow([
+        TextCellValue(v.number),
+        TextCellValue(v.date.toIso8601String().split('T').first),
+        TextCellValue(v.supplierName ?? ''),
+        TextCellValue(v.status),
+        DoubleCellValue(v.computedTotalTTC),
+      ]);
+    }
+
+    final bytes = excel.encode();
+    if (bytes != null) {
+      await FileDownloadHelper.saveAndOpenFile(
+        Uint8List.fromList(bytes),
+        'Bons_de_reception_export.xlsx',
+      );
+    }
+  }
+
+  void _bulkDelete() {
+    final count = _selectedVoucherIds.length;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmation de suppression'),
+        content: Text('Voulez-vous vraiment supprimer les $count bon(s) de réception sélectionné(s) ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () {
+              Navigator.pop(ctx);
+              for (final id in _selectedVoucherIds) {
+                context.read<ReceivingVouchersBloc>().add(DeleteReceivingVoucher(id));
+              }
+              setState(() {
+                _selectedVoucherIds.clear();
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('$count bon(s) de réception supprimé(s)')),
+              );
+            },
+            child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 }

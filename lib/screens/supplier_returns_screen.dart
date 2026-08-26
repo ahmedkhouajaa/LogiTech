@@ -970,7 +970,7 @@ class _SupplierReturnsScreenState extends State<SupplierReturnsScreen> {
                 Flexible(
                   child: Text(FournisseurLabel,
                       style: TextStyle(
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.bold,
                           fontSize: 12.5,
                           color: AppColors.textPrimary),
                       overflow: TextOverflow.ellipsis),

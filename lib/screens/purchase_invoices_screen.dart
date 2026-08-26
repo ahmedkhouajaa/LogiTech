@@ -1,5 +1,10 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:printing/printing.dart';
+import 'package:excel/excel.dart' hide Border;
+import '../utils/file_download_helper.dart';
+import '../models/document_wrapper.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/purchase_invoices/purchase_invoices_bloc.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
@@ -24,7 +29,6 @@ import 'create_purchase_invoice_screen.dart';
 import '../services/pdf_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
-import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
 import '../services/document_share_service.dart';
@@ -41,6 +45,8 @@ class PurchaseInvoicesScreen extends StatefulWidget {
 }
 
 class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
+  final Set<String> _selectedPurchaseInvoiceIds = {};
+
   // Filter state
   String? _selectedClientId;
   DateTime? _dateFrom;
@@ -59,6 +65,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
   }
 
   void _applyFilters() {
+    _selectedPurchaseInvoiceIds.clear();
     context.read<PurchaseInvoicesBloc>().add(LoadFirstPurchaseInvoices(
       supplierId: _selectedClientId,
       dateFrom: _dateFrom,
@@ -79,6 +86,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
         Padding(
           padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,27 +99,34 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                   Text('Gérer vos factures d\'achat', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
-              const Spacer(),
-              if (PermissionService.instance.canCreate(UserPermissionResources.purchasesPurchaseInvoices))
-                AppButton(
-                  label: 'Nouvelle facture',
-                  icon: Icons.add_rounded,
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MultiBlocProvider(
-                        providers: [
-                          BlocProvider.value(value: context.read<PurchaseInvoicesBloc>()),
-                          BlocProvider.value(value: context.read<SuppliersBloc>()),
-                          BlocProvider.value(value: context.read<ProductsBloc>()),
-                          BlocProvider.value(value: context.read<ProjectsBloc>()),
-                          BlocProvider.value(value: context.read<WarehousesBloc>()),
-                        ],
-                        child: const CreatePurchaseInvoiceScreen(),
+              Row(
+                children: [
+                  if (_selectedPurchaseInvoiceIds.isNotEmpty) ...[
+                    _buildBulkActionsDropdown(),
+                    const SizedBox(width: 10),
+                  ],
+                  if (PermissionService.instance.canCreate(UserPermissionResources.purchasesPurchaseInvoices))
+                    AppButton(
+                      label: 'Nouvelle facture',
+                      icon: Icons.add_rounded,
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MultiBlocProvider(
+                            providers: [
+                              BlocProvider.value(value: context.read<PurchaseInvoicesBloc>()),
+                              BlocProvider.value(value: context.read<SuppliersBloc>()),
+                              BlocProvider.value(value: context.read<ProductsBloc>()),
+                              BlocProvider.value(value: context.read<ProjectsBloc>()),
+                              BlocProvider.value(value: context.read<WarehousesBloc>()),
+                            ],
+                            child: const CreatePurchaseInvoiceScreen(),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                ],
+              ),
             ],
           ),
         ),
@@ -635,7 +650,18 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
   Widget _buildTableShimmer() {
     return ShimmerTable(
       headerColumns: [
-        const SizedBox(width: 28),
+        SizedBox(
+          width: 28,
+          height: 28,
+          child: Checkbox(
+            value: false,
+            onChanged: null,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            side: BorderSide(color: AppColors.border, width: 1.5),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+          ),
+        ),
+        const SizedBox(width: 8),
         Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
         Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
         Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
@@ -685,6 +711,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                           child: SizedBox(
                             width: double.infinity,
                             child: DataTable(
+                              showCheckboxColumn: false,
                               headingRowHeight: 38,
                               dataRowMinHeight: 42,
                               dataRowMaxHeight: 46,
@@ -698,10 +725,30 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                                 DataColumn(
                                   label: Row(
                                     mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      SizedBox(width: 28), // Spacer for Checkbox
-                                      SizedBox(width: 8),
-                                      Text('Reference'),
+                                    children: [
+                                      SizedBox(
+                                        width: 28,
+                                        height: 28,
+                                        child: Checkbox(
+                                          value: pagePurchaseInvoices.isNotEmpty && pagePurchaseInvoices.every((inv) => _selectedPurchaseInvoiceIds.contains(inv.id)),
+                                          onChanged: (val) {
+                                            setState(() {
+                                              if (val == true) {
+                                                _selectedPurchaseInvoiceIds.addAll(pagePurchaseInvoices.map((inv) => inv.id));
+                                              } else {
+                                                for (final inv in pagePurchaseInvoices) {
+                                                  _selectedPurchaseInvoiceIds.remove(inv.id);
+                                                }
+                                              }
+                                            });
+                                          },
+                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Text('Reference'),
                                     ],
                                   ),
                                 ),
@@ -727,7 +774,18 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
   }
 
   DataRow _buildPurchaseInvoiceRow(PurchaseInvoice inv) {
+    final isSelected = _selectedPurchaseInvoiceIds.contains(inv.id);
     return DataRow(
+      selected: isSelected,
+      onSelectChanged: (_) {
+        setState(() {
+          if (isSelected) {
+            _selectedPurchaseInvoiceIds.remove(inv.id);
+          } else {
+            _selectedPurchaseInvoiceIds.add(inv.id);
+          }
+        });
+      },
       cells: [
         // Checkbox & Reference (number + date)
         DataCell(
@@ -738,8 +796,16 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
                 width: 28,
                 height: 28,
                 child: Checkbox(
-                  value: false,
-                  onChanged: (_) {},
+                  value: isSelected,
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        _selectedPurchaseInvoiceIds.add(inv.id);
+                      } else {
+                        _selectedPurchaseInvoiceIds.remove(inv.id);
+                      }
+                    });
+                  },
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
@@ -768,7 +834,7 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
               Icon(Icons.person_outline_rounded, size: 14, color: AppColors.textTertiary),
               const SizedBox(width: 6),
               Flexible(
-                child: Text(inv.supplierName ?? '—', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12.5), overflow: TextOverflow.ellipsis),
+                child: Text(inv.supplierName ?? '—', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppColors.textPrimary), overflow: TextOverflow.ellipsis),
               ),
             ],
           ),
@@ -1239,6 +1305,184 @@ class _PurchaseInvoicesScreenState extends State<PurchaseInvoicesScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  // ── Bulk Actions ──────────────────────────────────────────────────
+  Widget _buildBulkActionsDropdown() {
+    final count = _selectedPurchaseInvoiceIds.length;
+    return PopupMenuButton<String>(
+      onSelected: (action) => _handleBulkAction(action),
+      offset: const Offset(0, 44),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(color: AppColors.border),
+      ),
+      color: AppColors.surface,
+      itemBuilder: (ctx) => [
+        PopupMenuItem(
+          value: 'pdf',
+          child: Text(
+            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'excel',
+          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+      ],
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Plus d\'actions',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleBulkAction(String action) {
+    final state = context.read<PurchaseInvoicesBloc>().state;
+    if (state is! PurchaseInvoicesLoaded) return;
+
+    final selectedInvoices = state.purchaseInvoices.where((inv) => _selectedPurchaseInvoiceIds.contains(inv.id)).toList();
+    if (selectedInvoices.isEmpty) return;
+
+    switch (action) {
+      case 'pdf':
+        _bulkDownloadPdf(selectedInvoices);
+        break;
+      case 'excel':
+        _bulkExportExcel(selectedInvoices);
+        break;
+      case 'delete':
+        _bulkDeleteSelected(selectedInvoices);
+        break;
+    }
+  }
+
+  Future<void> _bulkDownloadPdf(List<PurchaseInvoice> selectedInvoices) async {
+    for (final inv in selectedInvoices) {
+      final docWrapper = DocumentWrapper.fromPurchaseInvoice(inv);
+      final pdfBytes = await PdfService.instance.generateDocumentBytes(docWrapper);
+      await Printing.sharePdf(bytes: pdfBytes, filename: '${inv.number}.pdf');
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('${selectedInvoices.length} document(s) exporté(s) en PDF'),
+        backgroundColor: AppColors.success,
+      ));
+    }
+  }
+
+  Future<void> _bulkExportExcel(List<PurchaseInvoice> selectedInvoices) async {
+    try {
+      final excel = Excel.createExcel();
+      final sheet = excel['FacturesDAchat'];
+      excel.setDefaultSheet('FacturesDAchat');
+
+      final headers = ['Reference', 'Date', 'Fournisseur', 'Statut', 'Montant HT', 'Montant TVA', 'Montant TTC'];
+      for (var i = 0; i < headers.length; i++) {
+        var cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0));
+        cell.value = TextCellValue(headers[i]);
+        cell.cellStyle = CellStyle(bold: true, fontFamily: getFontFamily(FontFamily.Arial));
+      }
+
+      for (var i = 0; i < selectedInvoices.length; i++) {
+        final inv = selectedInvoices[i];
+        final rowIndex = i + 1;
+
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex)).value = TextCellValue(inv.number);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex)).value = TextCellValue(formatDate(inv.createdAt));
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex)).value = TextCellValue(inv.supplierName ?? '—');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value = TextCellValue(inv.status.label);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex)).value = DoubleCellValue(inv.totalHT);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex)).value = DoubleCellValue(inv.totalTva);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex)).value = DoubleCellValue(inv.totalTTC);
+      }
+
+      final fileBytes = excel.encode();
+      if (fileBytes != null && mounted) {
+        final fileName = 'Factures_Achat_Selectionnees_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+        await FileDownloadHelper.saveAndOpenFile(
+          Uint8List.fromList(fileBytes),
+          fileName,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          context: context,
+        );
+        setState(() => _selectedPurchaseInvoiceIds.clear());
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'export Excel: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _bulkDeleteSelected(List<PurchaseInvoice> selectedInvoices) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.error),
+            const SizedBox(width: 8),
+            const Text('Suppression groupée'),
+          ],
+        ),
+        content: Text('Voulez-vous vraiment supprimer ${selectedInvoices.length} facture(s) d\'achat sélectionnée(s) ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              for (final inv in selectedInvoices) {
+                context.read<PurchaseInvoicesBloc>().add(DeletePurchaseInvoice(inv.id));
+              }
+              setState(() => _selectedPurchaseInvoiceIds.clear());
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('${selectedInvoices.length} facture(s) d\'achat supprimée(s)'),
+                backgroundColor: AppColors.success,
+              ));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
       ),
     );
   }

@@ -1,4 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
+import 'package:excel/excel.dart' hide Border;
+import '../utils/file_download_helper.dart';
+import '../models/document_wrapper.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import '../widgets/supplier_order_payment_dialog.dart';
@@ -27,7 +32,6 @@ import '../services/document_numbering_service.dart';
 import '../services/pdf_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
-import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
 import '../services/document_share_service.dart';
@@ -42,6 +46,8 @@ class SupplierOrdersScreen extends StatefulWidget {
 }
 
 class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
+  final Set<String> _selectedSupplierOrderIds = {};
+
   // Filter state
   String? _selectedSupplierId;
   DateTime? _dateFrom;
@@ -60,6 +66,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
   }
 
   void _applyFilters() {
+    _selectedSupplierOrderIds.clear();
     context.read<SupplierOrdersBloc>().add(LoadFirstSupplierOrders(
       supplierId: _selectedSupplierId,
       dateFrom: _dateFrom,
@@ -93,26 +100,34 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                   Text('Gérer vos commandes fournisseur', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
-              if (PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierOrders))
-                AppButton(
-                  label: 'Créer une Commande',
-                  icon: Icons.add_rounded,
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MultiBlocProvider(
-                        providers: [
-                          BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
-                          BlocProvider.value(value: context.read<SuppliersBloc>()),
-                          BlocProvider.value(value: context.read<ProductsBloc>()),
-                          BlocProvider.value(value: context.read<ProjectsBloc>()),
-                          BlocProvider.value(value: context.read<WarehousesBloc>()),
-                        ],
-                        child: const CreateSupplierOrderScreen(),
+              Row(
+                children: [
+                  if (_selectedSupplierOrderIds.isNotEmpty) ...[
+                    _buildBulkActionsDropdown(),
+                    const SizedBox(width: 10),
+                  ],
+                  if (PermissionService.instance.canCreate(UserPermissionResources.purchasesSupplierOrders))
+                    AppButton(
+                      label: 'Créer une Commande',
+                      icon: Icons.add_rounded,
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MultiBlocProvider(
+                            providers: [
+                              BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
+                              BlocProvider.value(value: context.read<SuppliersBloc>()),
+                              BlocProvider.value(value: context.read<ProductsBloc>()),
+                              BlocProvider.value(value: context.read<ProjectsBloc>()),
+                              BlocProvider.value(value: context.read<WarehousesBloc>()),
+                            ],
+                            child: const CreateSupplierOrderScreen(),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                ],
+              ),
             ],
           ),
         ),
@@ -669,7 +684,18 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
   Widget _buildTableShimmer() {
     return ShimmerTable(
       headerColumns: [
-        const SizedBox(width: 28),
+        SizedBox(
+          width: 28,
+          height: 28,
+          child: Checkbox(
+            value: false,
+            onChanged: null,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            side: BorderSide(color: AppColors.border, width: 1.5),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+          ),
+        ),
+        const SizedBox(width: 8),
         Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
         Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
         Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
@@ -725,7 +751,27 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                           ),
                           child: Row(
                             children: [
-                              const SizedBox(width: 28), // Checkbox space
+                              SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: Checkbox(
+                                  value: paginatedOrders.isNotEmpty && paginatedOrders.every((o) => _selectedSupplierOrderIds.contains(o.id)),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (val == true) {
+                                        _selectedSupplierOrderIds.addAll(paginatedOrders.map((o) => o.id));
+                                      } else {
+                                        for (final o in paginatedOrders) {
+                                          _selectedSupplierOrderIds.remove(o.id);
+                                        }
+                                      }
+                                    });
+                                  },
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                                ),
+                              ),
                               Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                               Expanded(flex: 3, child: Text('Fournisseur', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                               Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
@@ -757,17 +803,29 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                       orElse: () => SupplierOrderStatus.draft,
                                     );
 
+                                    final isSelected = _selectedSupplierOrderIds.contains(order.id);
+
                                     return Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
+                                      color: isSelected
+                                          ? AppColors.primary.withValues(alpha: 0.06)
+                                          : (index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3)),
                                       child: Row(
                                         children: [
                                           SizedBox(
                                             width: 28,
                                             height: 28,
                                             child: Checkbox(
-                                              value: false,
-                                              onChanged: (_) {},
+                                              value: isSelected,
+                                              onChanged: (val) {
+                                                setState(() {
+                                                  if (val == true) {
+                                                    _selectedSupplierOrderIds.add(order.id);
+                                                  } else {
+                                                    _selectedSupplierOrderIds.remove(order.id);
+                                                  }
+                                                });
+                                              },
                                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                               side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
@@ -794,7 +852,7 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                                 Flexible(
                                                   child: Text(
                                                     order.supplierName ?? 'Fournisseur Inconnu',
-                                                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12.5, color: AppColors.textPrimary),
+                                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppColors.textPrimary),
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
@@ -1290,5 +1348,183 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Bon de réception introuvable', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
     }
+  }
+
+  // ── Bulk Actions ──────────────────────────────────────────────────
+  Widget _buildBulkActionsDropdown() {
+    final count = _selectedSupplierOrderIds.length;
+    return PopupMenuButton<String>(
+      onSelected: (action) => _handleBulkAction(action),
+      offset: const Offset(0, 44),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(color: AppColors.border),
+      ),
+      color: AppColors.surface,
+      itemBuilder: (ctx) => [
+        PopupMenuItem(
+          value: 'pdf',
+          child: Text(
+            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'excel',
+          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+      ],
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Plus d\'actions',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleBulkAction(String action) {
+    final state = context.read<SupplierOrdersBloc>().state;
+    if (state is! SupplierOrdersLoaded) return;
+
+    final selectedOrders = state.orders.where((o) => _selectedSupplierOrderIds.contains(o.id)).toList();
+    if (selectedOrders.isEmpty) return;
+
+    switch (action) {
+      case 'pdf':
+        _bulkDownloadPdf(selectedOrders);
+        break;
+      case 'excel':
+        _bulkExportExcel(selectedOrders);
+        break;
+      case 'delete':
+        _bulkDeleteSelected(selectedOrders);
+        break;
+    }
+  }
+
+  Future<void> _bulkDownloadPdf(List<SupplierOrder> selectedOrders) async {
+    for (final o in selectedOrders) {
+      final docWrapper = DocumentWrapper.fromSupplierOrder(o);
+      final pdfBytes = await PdfService.instance.generateDocumentBytes(docWrapper);
+      await Printing.sharePdf(bytes: pdfBytes, filename: '${o.number}.pdf');
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('${selectedOrders.length} document(s) exporté(s) en PDF'),
+        backgroundColor: AppColors.success,
+      ));
+    }
+  }
+
+  Future<void> _bulkExportExcel(List<SupplierOrder> selectedOrders) async {
+    try {
+      final excel = Excel.createExcel();
+      final sheet = excel['CommandesFournisseur'];
+      excel.setDefaultSheet('CommandesFournisseur');
+
+      final headers = ['Reference', 'Date', 'Fournisseur', 'Statut', 'Montant HT', 'Montant TVA', 'Montant TTC'];
+      for (var i = 0; i < headers.length; i++) {
+        var cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0));
+        cell.value = TextCellValue(headers[i]);
+        cell.cellStyle = CellStyle(bold: true, fontFamily: getFontFamily(FontFamily.Arial));
+      }
+
+      for (var i = 0; i < selectedOrders.length; i++) {
+        final o = selectedOrders[i];
+        final rowIndex = i + 1;
+
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex)).value = TextCellValue(o.number);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex)).value = TextCellValue(formatDate(o.date));
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex)).value = TextCellValue(o.supplierCompany ?? o.supplierName ?? '—');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value = TextCellValue(o.status);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex)).value = DoubleCellValue(o.totalHTAfterDiscount);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex)).value = DoubleCellValue(o.totalTVA);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex)).value = DoubleCellValue(o.totalTTC);
+      }
+
+      final fileBytes = excel.encode();
+      if (fileBytes != null && mounted) {
+        final fileName = 'Commandes_Fournisseur_Selectionnees_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+        await FileDownloadHelper.saveAndOpenFile(
+          Uint8List.fromList(fileBytes),
+          fileName,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          context: context,
+        );
+        setState(() => _selectedSupplierOrderIds.clear());
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'export Excel: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _bulkDeleteSelected(List<SupplierOrder> selectedOrders) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.error),
+            const SizedBox(width: 8),
+            const Text('Suppression groupée'),
+          ],
+        ),
+        content: Text('Voulez-vous vraiment supprimer ${selectedOrders.length} commande(s) fournisseur sélectionnée(s) ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              for (final o in selectedOrders) {
+                context.read<SupplierOrdersBloc>().add(DeleteSupplierOrder(o.id));
+              }
+              setState(() => _selectedSupplierOrderIds.clear());
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('${selectedOrders.length} commande(s) fournisseur supprimée(s)'),
+                backgroundColor: AppColors.success,
+              ));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -1,5 +1,8 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:excel/excel.dart' hide Border;
+import '../utils/file_download_helper.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
 import '../models/supplier.dart';
@@ -23,6 +26,7 @@ class SuppliersScreen extends StatefulWidget {
 }
 
 class _SuppliersScreenState extends State<SuppliersScreen> {
+  final Set<String> _selectedSupplierIds = {};
   String _search = '';
 
   @override
@@ -50,6 +54,10 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                 ],
               ),
               const Spacer(),
+              if (_selectedSupplierIds.isNotEmpty) ...[
+                _buildBulkActionsDropdown(),
+                const SizedBox(width: 10),
+              ],
               SizedBox(
                 width: 250,
                 height: 32,
@@ -185,18 +193,29 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                 return AppShimmer(
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, 10),
-                    itemCount: 8,
+                    itemCount: 10,
                     separatorBuilder: (_, __) => const SizedBox(height: 6),
                     itemBuilder: (_, index) => Container(
-                      height: 52,
                       decoration: BoxDecoration(
                         color: AppColors.surface,
                         borderRadius: BorderRadius.circular(AppRadius.md),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       child: Row(
                         children: [
+                          SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: Checkbox(
+                              value: false,
+                              onChanged: null,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              side: BorderSide(color: AppColors.border, width: 1.5),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           ShimmerBox(width: 36, height: 36, borderRadius: 10),
                           const SizedBox(width: 12),
                           Expanded(
@@ -274,6 +293,26 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             child: Row(
                               children: [
+                                SizedBox(
+                                  width: 28,
+                                  height: 28,
+                                  child: Checkbox(
+                                    value: _selectedSupplierIds.contains(s.id),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        if (val == true) {
+                                          _selectedSupplierIds.add(s.id);
+                                        } else {
+                                          _selectedSupplierIds.remove(s.id);
+                                        }
+                                      });
+                                    },
+                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
                                 // Avatar
                                 Container(
                                   width: 36,
@@ -478,6 +517,159 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
       value: context.read<SuppliersBloc>(),
       child: SupplierDialog(existing: existing),
     ));
+  }
+
+  // ── Bulk Actions ──────────────────────────────────────────────────
+  Widget _buildBulkActionsDropdown() {
+    return PopupMenuButton<String>(
+      onSelected: (action) => _handleBulkAction(action),
+      offset: const Offset(0, 44),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(color: AppColors.border),
+      ),
+      color: AppColors.surface,
+      itemBuilder: (ctx) => [
+        PopupMenuItem(
+          value: 'excel',
+          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+      ],
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Plus d\'actions',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleBulkAction(String action) {
+    final state = context.read<SuppliersBloc>().state;
+    if (state is! SuppliersLoaded) return;
+
+    final selectedSuppliers = state.suppliers.where((s) => _selectedSupplierIds.contains(s.id)).toList();
+    if (selectedSuppliers.isEmpty) return;
+
+    switch (action) {
+      case 'excel':
+        _bulkExportExcel(selectedSuppliers);
+        break;
+      case 'delete':
+        _bulkDeleteSelected(selectedSuppliers);
+        break;
+    }
+  }
+
+  Future<void> _bulkExportExcel(List<Supplier> selectedSuppliers) async {
+    try {
+      final excel = Excel.createExcel();
+      final sheet = excel['Fournisseurs'];
+      excel.setDefaultSheet('Fournisseurs');
+
+      final headers = ['Code', 'Nom / Raison Sociale', 'Type', 'Téléphone', 'Email', 'Matricule Fiscal / CIN', 'Ville'];
+      for (var i = 0; i < headers.length; i++) {
+        var cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0));
+        cell.value = TextCellValue(headers[i]);
+        cell.cellStyle = CellStyle(bold: true, fontFamily: getFontFamily(FontFamily.Arial));
+      }
+
+      for (var i = 0; i < selectedSuppliers.length; i++) {
+        final s = selectedSuppliers[i];
+        final rowIndex = i + 1;
+
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex)).value = TextCellValue(s.code);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex)).value = TextCellValue(s.companyName ?? s.name);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex)).value = TextCellValue(s.supplierType ?? 'particulier');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value = TextCellValue(s.phone ?? '—');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex)).value = TextCellValue(s.email ?? '—');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex)).value = TextCellValue(s.taxId ?? s.cinNumber ?? '—');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex)).value = TextCellValue(s.city ?? '—');
+      }
+
+      final fileBytes = excel.encode();
+      if (fileBytes != null && mounted) {
+        final fileName = 'Fournisseurs_Selectionnes_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+        await FileDownloadHelper.saveAndOpenFile(
+          Uint8List.fromList(fileBytes),
+          fileName,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          context: context,
+        );
+        setState(() => _selectedSupplierIds.clear());
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'export Excel: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _bulkDeleteSelected(List<Supplier> selectedSuppliers) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.error),
+            const SizedBox(width: 8),
+            const Text('Suppression groupée'),
+          ],
+        ),
+        content: Text('Voulez-vous vraiment supprimer ${selectedSuppliers.length} fournisseur(s) sélectionné(s) ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              for (final s in selectedSuppliers) {
+                context.read<SuppliersBloc>().add(DeleteSupplier(s.id));
+              }
+              setState(() => _selectedSupplierIds.clear());
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('${selectedSuppliers.length} fournisseur(s) supprimé(s)'),
+                backgroundColor: AppColors.success,
+              ));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -53,20 +53,25 @@ class ShimmerTableRow extends StatelessWidget {
       color: bgColor,
       child: Row(
         children: [
-          // ── Checkbox space ──────────────────────────────────────
-          const SizedBox(
+          SizedBox(
             width: 28,
-            child: Center(
-              child: ShimmerBox(width: 16, height: 16, borderRadius: 3),
+            height: 28,
+            child: Checkbox(
+              value: false,
+              onChanged: null,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              side: BorderSide(color: AppColors.border, width: 1.5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
             ),
           ),
+          const SizedBox(width: 8),
 
           // ── Reference + Date ────────────────────────────────────
           Expanded(
             flex: 2,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ShimmerBox(width: refWidth, height: 12, borderRadius: 3),
                 const SizedBox(height: 3),
@@ -82,7 +87,9 @@ class ShimmerTableRow extends StatelessWidget {
               children: [
                 const ShimmerBox(width: 14, height: 14, borderRadius: 3),
                 const SizedBox(width: 6),
-                ShimmerBox(width: clientWidth, height: 12, borderRadius: 3),
+                Expanded(
+                  child: ShimmerBox(width: clientWidth, height: 12, borderRadius: 3),
+                ),
               ],
             ),
           ),
@@ -90,7 +97,7 @@ class ShimmerTableRow extends StatelessWidget {
           // ── Statut badge ────────────────────────────────────────
           Expanded(
             flex: 2,
-            child: Align(
+            child: Container(
               alignment: Alignment.centerLeft,
               child: ShimmerBox(
                   width: statusWidth, height: 20, borderRadius: 4),
@@ -103,7 +110,7 @@ class ShimmerTableRow extends StatelessWidget {
             child: ShimmerBox(width: amountWidth, height: 12, borderRadius: 3),
           ),
 
-          // ── Actions icon ─────────────────────────────────────────
+          // ── Actions icon (exact width: 60) ───────────────────────
           const SizedBox(
             width: 60,
             child: Align(

@@ -1,5 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:printing/printing.dart';
+import 'package:excel/excel.dart' hide Border;
+import '../utils/file_download_helper.dart';
 import '../blocs/credit_notes/credit_notes_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
@@ -30,6 +34,8 @@ class CreditNotesScreen extends StatefulWidget {
 }
 
 class _CreditNotesScreenState extends State<CreditNotesScreen> {
+  final Set<String> _selectedCreditNoteIds = {};
+
   // Filter state
   String? _selectedClientId;
   DateTime? _dateFrom;
@@ -48,6 +54,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
   }
 
   void _applyFilters() {
+    _selectedCreditNoteIds.clear();
     context.read<CreditNotesBloc>().add(LoadFirstCreditNotes(
       customerId: _selectedClientId,
       dateFrom: _dateFrom,
@@ -99,12 +106,20 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                   Text('Gérer vos avoirs', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                 ],
               ),
-              if (PermissionService.instance.canCreate(UserPermissionResources.salesCreditNotes))
-                AppButton(
-                  label: 'Nouvel Avoir',
-                  icon: Icons.add_rounded,
-                  onPressed: () => _navigate(context),
-                ),
+              Row(
+                children: [
+                  if (_selectedCreditNoteIds.isNotEmpty) ...[
+                    _buildBulkActionsDropdown(),
+                    const SizedBox(width: 10),
+                  ],
+                  if (PermissionService.instance.canCreate(UserPermissionResources.salesCreditNotes))
+                    AppButton(
+                      label: 'Nouvel Avoir',
+                      icon: Icons.add_rounded,
+                      onPressed: () => _navigate(context),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -660,7 +675,18 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
   Widget _buildTableShimmer() {
     return ShimmerTable(
       headerColumns: [
-        const SizedBox(width: 28),
+        SizedBox(
+          width: 28,
+          height: 28,
+          child: Checkbox(
+            value: false,
+            onChanged: null,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            side: BorderSide(color: AppColors.border, width: 1.5),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+          ),
+        ),
+        const SizedBox(width: 8),
         Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
         Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
         Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
@@ -731,7 +757,27 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                           ),
                           child: Row(
                             children: [
-                              const SizedBox(width: 28), // Checkbox space
+                              SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: Checkbox(
+                                  value: paginatedNotes.isNotEmpty && paginatedNotes.every((n) => _selectedCreditNoteIds.contains(n.id)),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (val == true) {
+                                        _selectedCreditNoteIds.addAll(paginatedNotes.map((n) => n.id));
+                                      } else {
+                                        for (final n in paginatedNotes) {
+                                          _selectedCreditNoteIds.remove(n.id);
+                                        }
+                                      }
+                                    });
+                                  },
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                                ),
+                              ),
                               Expanded(flex: 2, child: Text('Reference', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                               Expanded(flex: 3, child: Text('Client', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary))),
                               Expanded(flex: 2, child: Container(alignment: Alignment.centerLeft, child: Text('Statut', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: AppColors.textSecondary)))),
@@ -776,17 +822,29 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                                         break;
                                     }
 
+                                    final isSelected = _selectedCreditNoteIds.contains(note.id);
+
                                     return Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                      color: index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3),
+                                      color: isSelected
+                                          ? AppColors.primary.withValues(alpha: 0.06)
+                                          : (index % 2 == 0 ? AppColors.surface : AppColors.background.withValues(alpha: 0.3)),
                                       child: Row(
                                         children: [
                                           SizedBox(
                                             width: 28,
                                             height: 28,
                                             child: Checkbox(
-                                              value: false,
-                                              onChanged: (_) {},
+                                              value: isSelected,
+                                              onChanged: (val) {
+                                                setState(() {
+                                                  if (val == true) {
+                                                    _selectedCreditNoteIds.add(note.id);
+                                                  } else {
+                                                    _selectedCreditNoteIds.remove(note.id);
+                                                  }
+                                                });
+                                              },
                                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                               side: BorderSide(color: AppColors.textPrimary, width: 1.5),
                                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
@@ -813,7 +871,7 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                                                 Flexible(
                                                   child: Text(
                                                     note.customerName ?? 'Client Inconnu',
-                                                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12.5, color: AppColors.textPrimary),
+                                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: AppColors.textPrimary),
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
@@ -1047,6 +1105,184 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
             child: Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Bulk Actions ──────────────────────────────────────────────────
+  Widget _buildBulkActionsDropdown() {
+    final count = _selectedCreditNoteIds.length;
+    return PopupMenuButton<String>(
+      onSelected: (action) => _handleBulkAction(action),
+      offset: const Offset(0, 44),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(color: AppColors.border),
+      ),
+      color: AppColors.surface,
+      itemBuilder: (ctx) => [
+        PopupMenuItem(
+          value: 'pdf',
+          child: Text(
+            count > 1 ? 'Télécharger $count documents ( pdf )' : 'Télécharger PDF',
+            style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'excel',
+          child: Text('Exporter Excel', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+        PopupMenuItem(
+          value: 'delete',
+          child: Text('Supprimer la sélection', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+        ),
+      ],
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Plus d\'actions',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleBulkAction(String action) {
+    final state = context.read<CreditNotesBloc>().state;
+    if (state is! CreditNotesLoaded) return;
+
+    final selectedNotes = state.creditNotes.where((n) => _selectedCreditNoteIds.contains(n.id)).toList();
+    if (selectedNotes.isEmpty) return;
+
+    switch (action) {
+      case 'pdf':
+        _bulkDownloadPdf(selectedNotes);
+        break;
+      case 'excel':
+        _bulkExportExcel(selectedNotes);
+        break;
+      case 'delete':
+        _bulkDeleteSelected(selectedNotes);
+        break;
+    }
+  }
+
+  Future<void> _bulkDownloadPdf(List<CreditNote> selectedNotes) async {
+    for (final n in selectedNotes) {
+      final docWrapper = DocumentWrapper.fromCreditNote(n);
+      final pdfBytes = await PdfService.instance.generateDocumentBytes(docWrapper);
+      await Printing.sharePdf(bytes: pdfBytes, filename: '${n.number}.pdf');
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('${selectedNotes.length} document(s) exporté(s) en PDF'),
+        backgroundColor: AppColors.success,
+      ));
+    }
+  }
+
+  Future<void> _bulkExportExcel(List<CreditNote> selectedNotes) async {
+    try {
+      final excel = Excel.createExcel();
+      final sheet = excel['Avoirs'];
+      excel.setDefaultSheet('Avoirs');
+
+      final headers = ['Reference', 'Date', 'Client', 'Statut', 'Montant HT', 'Montant TVA', 'Montant TTC'];
+      for (var i = 0; i < headers.length; i++) {
+        var cell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0));
+        cell.value = TextCellValue(headers[i]);
+        cell.cellStyle = CellStyle(bold: true, fontFamily: getFontFamily(FontFamily.Arial));
+      }
+
+      for (var i = 0; i < selectedNotes.length; i++) {
+        final n = selectedNotes[i];
+        final rowIndex = i + 1;
+
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex)).value = TextCellValue(n.number);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex)).value = TextCellValue(formatDate(n.date));
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex)).value = TextCellValue(n.customerName ?? '—');
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value = TextCellValue(n.status.label);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex)).value = DoubleCellValue(n.totalHT);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex)).value = DoubleCellValue(n.totalTva);
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex)).value = DoubleCellValue(n.totalTTC);
+      }
+
+      final fileBytes = excel.encode();
+      if (fileBytes != null && mounted) {
+        final fileName = 'Avoirs_Selectionnes_${DateTime.now().millisecondsSinceEpoch}.xlsx';
+        await FileDownloadHelper.saveAndOpenFile(
+          Uint8List.fromList(fileBytes),
+          fileName,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          context: context,
+        );
+        setState(() => _selectedCreditNoteIds.clear());
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'export Excel: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _bulkDeleteSelected(List<CreditNote> selectedNotes) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.error),
+            const SizedBox(width: 8),
+            const Text('Suppression groupée'),
+          ],
+        ),
+        content: Text('Voulez-vous vraiment supprimer ${selectedNotes.length} avoir(s) sélectionné(s) ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              for (final n in selectedNotes) {
+                context.read<CreditNotesBloc>().add(DeleteCreditNote(n.id));
+              }
+              setState(() => _selectedCreditNoteIds.clear());
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('${selectedNotes.length} avoir(s) supprimé(s)'),
+                backgroundColor: AppColors.success,
+              ));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
           ),
         ],
       ),
