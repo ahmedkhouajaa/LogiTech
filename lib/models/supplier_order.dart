@@ -19,6 +19,7 @@ class SupplierOrder {
   final String? conditionsGenerales;
   final String? firebaseUid;
   final bool isDeleted;
+  final bool isSynced;
   final bool isConvertedToReceipt;
   final String? convertedToReceiptId;
   final bool isConvertedToInvoice;
@@ -46,6 +47,7 @@ class SupplierOrder {
     this.conditionsGenerales,
     this.firebaseUid,
     this.isDeleted = false,
+    this.isSynced = true,
     this.isConvertedToReceipt = false,
     this.convertedToReceiptId,
     this.isConvertedToInvoice = false,
@@ -191,6 +193,7 @@ class SupplierOrder {
       'total_ttc': totalTTC,
       'firebase_uid': firebaseUid,
       'is_deleted': isDeleted ? 1 : 0,
+      'is_synced': isSynced ? 1 : 0,
       'is_converted_to_receipt': isConvertedToReceipt ? 1 : 0,
       'converted_to_receipt_id': convertedToReceiptId,
       'is_converted_to_invoice': isConvertedToInvoice ? 1 : 0,
@@ -226,6 +229,7 @@ class SupplierOrder {
       conditionsGenerales: map['conditions']?.toString(),
       firebaseUid: map['firebase_uid']?.toString(),
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
+      isSynced: map['is_synced'] == null ? true : (map['is_synced'] == 1 || map['is_synced'] == '1' || map['is_synced'] == true),
       isConvertedToReceipt: map['is_converted_to_receipt'] == 1 || map['is_converted_to_receipt'] == '1' || map['is_converted_to_receipt'] == true,
       convertedToReceiptId: map['converted_to_receipt_id']?.toString(),
       isConvertedToInvoice: map['is_converted_to_invoice'] == 1 || map['is_converted_to_invoice'] == '1' || map['is_converted_to_invoice'] == true,

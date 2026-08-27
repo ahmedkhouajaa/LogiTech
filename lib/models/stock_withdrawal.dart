@@ -24,6 +24,7 @@ class StockWithdrawal {
   final String? userId;
   final String? enterpriseId;
   final bool isDeleted;
+  final bool isSynced;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<StockWithdrawalItem> items;
@@ -52,6 +53,7 @@ class StockWithdrawal {
     this.userId,
     this.enterpriseId,
     this.isDeleted = false,
+    this.isSynced = true,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.items = const [],
@@ -198,6 +200,7 @@ class StockWithdrawal {
         'userId': userId,
         'enterprise_id': enterpriseId,
         'is_deleted': isDeleted ? 1 : 0,
+        'is_synced': isSynced ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
         'items': items.map((i) => i.toMap()).toList(),
@@ -233,6 +236,7 @@ class StockWithdrawal {
       userId: map['userId']?.toString() ?? map['user_id']?.toString(),
       enterpriseId: map['enterprise_id']?.toString() ?? map['enterpriseId']?.toString(),
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
+      isSynced: map['is_synced'] == null ? true : (map['is_synced'] == 1 || map['is_synced'] == '1' || map['is_synced'] == true),
       createdAt: map['created_at'] != null ? (map['created_at'] is DateTime ? map['created_at'] as DateTime : DateTime.parse(map['created_at'].toString())) : DateTime.now(),
       updatedAt: map['updated_at'] != null ? (map['updated_at'] is DateTime ? map['updated_at'] as DateTime : DateTime.parse(map['updated_at'].toString())) : DateTime.now(),
       items: parsedItems,

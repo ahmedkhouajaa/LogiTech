@@ -17,6 +17,7 @@ import '../../services/pdf_service.dart';
 import '../../services/document_share_service.dart';
 import '../../models/user_management_model.dart';
 import '../../models/document_wrapper.dart';
+import '../../utils/offline_action_helper.dart';
 
 class MobileStockTransferDetailScreen extends StatefulWidget {
   final StockTransfer transfer;
@@ -226,6 +227,15 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
   }
 
   void _handleAction(BuildContext context, String action, StockTransfer transfer) {
+    if (OfflineActionHelper.writeActions.contains(action)) {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, transfer),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
       case 'print':
@@ -244,6 +254,13 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
         final docWa = DocumentWrapper.fromStockTransfer(transfer);
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, StockTransfer transfer) {
+    switch (action) {
       case 'edit':
         Navigator.push(
           context,
@@ -258,27 +275,11 @@ class _MobileStockTransferDetailScreenState extends State<MobileStockTransferDet
         );
         break;
       case 'delete':
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: const Text('Confirmer la suppression'),
-            content: const Text('Voulez-vous vraiment supprimer ce bon de transfert ?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  context.read<StockTransfersBloc>().add(DeleteStockTransfer(transfer.id));
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
+        context.read<StockTransfersBloc>().add(DeleteStockTransfer(transfer.id));
+        if (mounted) {
+          Navigator.pop(context);
+        }
         break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
     }
   }
 }

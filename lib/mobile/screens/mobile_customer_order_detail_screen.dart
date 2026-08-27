@@ -27,6 +27,7 @@ import 'forms/mobile_invoice_form_screen.dart';
 import 'forms/mobile_delivery_note_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../utils/offline_action_helper.dart';
 
 class MobileCustomerOrderDetailScreen extends StatefulWidget {
   final CustomerOrder order;
@@ -291,57 +292,22 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
   }
 
   void _handleAction(BuildContext context, String action, CustomerOrder order) {
+    if (OfflineActionHelper.writeActions.contains(action)) {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, order),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
         final viewDoc = DocumentWrapper.fromCustomerOrder(order);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
         break;
-      case 'edit':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MultiBlocProvider(
-              providers: [
-                BlocProvider.value(value: context.read<CustomerOrdersBloc>()),
-                BlocProvider.value(value: context.read<CustomersBloc>()),
-                BlocProvider.value(value: context.read<ProductsBloc>()),
-              ],
-              child: MobileCustomerOrderFormScreen(existing: order),
-            ),
-          ),
-        );
-        break;
-      case 'delete':
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer ce commande ?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  context.read<CustomerOrdersBloc>().add(DeleteCustomerOrder(order.id));
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
-        break;
-      case 'status':
-        _showChangeStatusDialog(context, order);
-        break;
-      case 'to_invoice':
-        _showConversionDialog(context, order);
-        break;
       case 'view_invoice':
         _openConvertedInvoice(context, order.convertedToInvoiceId);
-        break;
-      case 'to_delivery':
-        _showDeliveryConversionDialog(context, order);
         break;
       case 'view_delivery':
         _openConvertedDelivery(context, order.convertedToDeliveryId);
@@ -370,6 +336,38 @@ class _MobileCustomerOrderDetailScreenState extends State<MobileCustomerOrderDet
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, CustomerOrder order) {
+    switch (action) {
+      case 'edit':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: context.read<CustomerOrdersBloc>()),
+                BlocProvider.value(value: context.read<CustomersBloc>()),
+                BlocProvider.value(value: context.read<ProductsBloc>()),
+              ],
+              child: MobileCustomerOrderFormScreen(existing: order),
+            ),
+          ),
+        );
+        break;
+      case 'delete':
+        context.read<CustomerOrdersBloc>().add(DeleteCustomerOrder(order.id));
+        break;
+      case 'status':
+        _showChangeStatusDialog(context, order);
+        break;
+      case 'to_invoice':
+        _showConversionDialog(context, order);
+        break;
+      case 'to_delivery':
+        _showDeliveryConversionDialog(context, order);
+        break;
     }
   }
 

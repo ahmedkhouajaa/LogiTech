@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../utils/mobile_module_config.dart';
@@ -9,8 +10,11 @@ import '../../widgets/sidebar_menu.dart';
 import '../../blocs/quotes/quotes_bloc.dart';
 import '../../blocs/customers/customers_bloc.dart';
 import '../../models/customer.dart';
+import '../../services/sync_service.dart';
+import '../../utils/constants.dart';
 import 'forms/mobile_quote_form_screen.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../utils/offline_action_helper.dart';
 
 import '../widgets/shimmer_card.dart';
 import '../../widgets/shimmer_effect.dart';
@@ -30,6 +34,7 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
   DateTime? _dateTo;
   String? _selectedStatus;
   late MobileModuleConfig _config;
+  StreamSubscription<int>? _syncSubscription;
 
   @override
   void initState() {
@@ -39,10 +44,30 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
     _fetchFilteredDevis();
     context.read<CustomersBloc>().add(LoadCustomers());
     _scrollController.addListener(_onScroll);
+
+    _syncSubscription = SyncService.instance.onQuoteSyncCompleted.listen((count) {
+      if (mounted && count > 0) {
+        _fetchFilteredDevis();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$count devis ${count > 1 ? "ont été synchronisés" : "a été synchronisé"} avec succès !'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
+    _syncSubscription?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -227,12 +252,18 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
           itemCount: totalMatchingCount,
           fabText: _config.fabText,
           onFabPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MobileQuoteFormScreen()),
-            ).then((_) {
-              _fetchFilteredDevis();
-            });
+            OfflineActionHelper.executeAction(
+              context: context,
+              action: 'edit', // 'edit' is a write action that triggers the confirm + online check
+              onConfirmed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MobileQuoteFormScreen()),
+                ).then((_) {
+                  _fetchFilteredDevis();
+                });
+              },
+            );
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

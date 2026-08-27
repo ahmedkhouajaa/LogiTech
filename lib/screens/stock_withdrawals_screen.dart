@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
 import '../models/product.dart';
+import '../services/sync_service.dart';
+import '../widgets/pending_sync_badge.dart';
 
 
 import '../database/database_helper.dart';
@@ -19,6 +22,7 @@ import 'document_detail_screen.dart';
 import '../mobile/screens/mobile_stock_withdrawal_detail_screen.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
+import '../utils/offline_action_helper.dart';
 import '../blocs/warehouses/warehouses_state.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
@@ -62,11 +66,38 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
   List<Warehouse> _warehouses = [];
   bool _showMobileFilters = false;
 
+  StreamSubscription<int>? _syncSub;
+
   @override
   void initState() {
     super.initState();
     context.read<StockWithdrawalsBloc>().add(LoadStockWithdrawals());
     _loadWarehouses();
+
+    _syncSub = SyncService.instance.onDocumentSyncCompleted.listen((count) {
+      if (mounted && count > 0) {
+        context.read<StockWithdrawalsBloc>().add(LoadStockWithdrawals());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$count document(s) synchronisé(s) avec succès !'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadWarehouses() async {
@@ -1012,7 +1043,15 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
         children: [
           Expanded(
             flex: 2,
-            child: Text(entry.number, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            child: Row(
+              children: [
+                Text(entry.number, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                if (!entry.isSynced || entry.number.startsWith('BROUILLON-')) ...[
+                  const SizedBox(width: 6),
+                  const PendingSyncBadge(),
+                ],
+              ],
+            ),
           ),
           Expanded(
             flex: 2,
@@ -1041,9 +1080,15 @@ class _StockWithdrawalsScreenState extends State<StockWithdrawalsScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 color: AppColors.surface,
                 onSelected: (val) {
-                  if (val == 'voir') _previewDocument(entry);
-                  if (val == 'edit') _navigate(context, entry);
-                  if (val == 'delete') _confirmDelete(entry);
+                  OfflineActionHelper.executeAction(
+                    context: context,
+                    action: val,
+                    onConfirmed: () {
+                      if (val == 'voir') _previewDocument(entry);
+                      if (val == 'edit') _navigate(context, entry);
+                      if (val == 'delete') context.read<StockWithdrawalsBloc>().add(DeleteStockWithdrawal(entry.id));
+                    },
+                  );
                 },
                 itemBuilder: (_) {
                   final canRead = PermissionService.instance.canRead(UserPermissionResources.stockWithdrawalVouchers);

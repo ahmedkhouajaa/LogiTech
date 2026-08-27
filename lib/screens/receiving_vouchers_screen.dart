@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,6 +7,8 @@ import 'package:excel/excel.dart' hide Border;
 import '../utils/file_download_helper.dart';
 import '../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
+import '../services/sync_service.dart';
+import '../widgets/pending_sync_badge.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
@@ -24,6 +27,7 @@ import '../models/supplier_return.dart';
 import 'document_preview_screen.dart';
 import '../services/document_numbering_service.dart';
 import 'document_detail_screen.dart';
+import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
 import '../models/document_wrapper.dart';
 import 'app_shell_screen.dart';
@@ -39,6 +43,7 @@ import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_table_row.dart';
 enum ReceivingVoucherStatus {
   draft('Brouillon'),
+  created('Créé'),
   validated('Validé'),
   received('Reçu'),
   cancelled('Annulé'),
@@ -50,6 +55,7 @@ enum ReceivingVoucherStatus {
   Color get color {
     switch (this) {
       case draft: return AppColors.warning;
+      case created: return AppColors.primary;
       case validated: return AppColors.primary;
       case received: return AppColors.info;
       case cancelled: return AppColors.error;
@@ -76,11 +82,38 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
   int _rowsPerPage = 20;
   int _currentPage = 0;
 
+  StreamSubscription<int>? _syncSub;
+
   @override
   void initState() {
     super.initState();
     context.read<ReceivingVouchersBloc>().add(LoadFirstReceivingVouchers());
     context.read<SuppliersBloc>().add(LoadSuppliers());
+
+    _syncSub = SyncService.instance.onDocumentSyncCompleted.listen((count) {
+      if (mounted && count > 0) {
+        context.read<ReceivingVouchersBloc>().add(LoadFirstReceivingVouchers());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$count document(s) synchronisé(s) avec succès !'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncSub?.cancel();
+    super.dispose();
   }
 
   void _applyFilters() {
@@ -883,17 +916,19 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                             flex: 2,
                                             child: Container(
                                               alignment: Alignment.centerLeft,
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: statusEnum.color.withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
-                                                child: Text(
-                                                  statusEnum.label,
-                                                  style: TextStyle(color: statusEnum.color, fontSize: 11.5, fontWeight: FontWeight.w500),
-                                                ),
-                                              ),
+                                              child: (!voucher.isSynced || voucher.number.startsWith('BROUILLON-'))
+                                                  ? const PendingSyncBadge()
+                                                  : Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: statusEnum.color.withValues(alpha: 0.1),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: Text(
+                                                        statusEnum.label,
+                                                        style: TextStyle(color: statusEnum.color, fontSize: 11.5, fontWeight: FontWeight.w500),
+                                                      ),
+                                                    ),
                                             ),
                                           ),
                                           Expanded(
@@ -913,95 +948,101 @@ class _ReceivingVouchersScreenState extends State<ReceivingVouchersScreen> {
                                                 elevation: 4,
                                                 itemBuilder: (ctx) => _buildActionMenu(context, voucher),
                                                 onSelected: (val) {
-                                                  if (val == 'view') {
-                                                    final statusEnum = ReceivingVoucherStatus.values.firstWhere(
-                                                      (e) => e.name == voucher.status,
-                                                      orElse: () => ReceivingVoucherStatus.draft,
-                                                    );
-                                                    final doc = DocumentWrapper.fromReceivingVoucher(voucher);
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) => DocumentDetailScreen(
-                                                          document: doc,
-                                                          status: statusEnum.label,
-                                                          statusColor: statusEnum.color,
-                                                        ),
-                                                      ),
-                                                    );
-                                                  } else if (val == 'edit') {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) => MultiBlocProvider(
-                                                          providers: [
-                                                            BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
-                                                            BlocProvider.value(value: context.read<SuppliersBloc>()),
-                                                            BlocProvider.value(value: context.read<ProductsBloc>()),
-                                                            BlocProvider.value(value: context.read<ProjectsBloc>()),
-                                                            BlocProvider.value(value: context.read<WarehousesBloc>()),
-                                                          ],
-                                                          child: CreateReceivingVoucherScreen(existing: voucher),
-                                                        ),
-                                                      ),
-                                                    );
-                                                  } else if (val == 'delete') {
-                                                    _confirmDelete(voucher);
-                                                  } else if (val == 'to_invoice') {
-                                                    _showConvertToInvoiceDialog(voucher);
-                                                  } else if (val == 'to_return') {
-                                                    _showConvertToReturnDialog(voucher);
-                                                  } else if (val == 'view_invoice_created') {
-                                                    final shellState = context.findAncestorStateOfType<AppShellScreenState>();
-                                                    if (shellState != null) {
-                                                      shellState.setActiveModule(AppModule.purchaseInvoices);
-                                                    }
-                                                  } else if (val == 'view_return_created') {
-                                                    final shellState = context.findAncestorStateOfType<AppShellScreenState>();
-                                                    if (shellState != null) {
-                                                      shellState.setActiveModule(AppModule.supplierReturns);
-                                                    }
-                                                  } else if (val == 'pdf') {
-                                                    final doc = DocumentWrapper.fromReceivingVoucher(voucher);
-                                                    PdfService.instance.downloadDocument(context, doc);
-                                                  } else if (val == 'payment') {
-                                                    showDialog(
-                                                      context: context,
-                                                      builder: (_) => MultiBlocProvider(
-                                                        providers: [
-                                                          BlocProvider.value(value: context.read<PaymentsBloc>()),
-                                                          BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
-                                                          BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
-                                                          BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
-                                                          BlocProvider.value(value: context.read<ProductsBloc>()),
-                                                        ],
-                                                        child: ReceivingVoucherPaymentDialog(receivingVoucher: voucher),
-                                                      ),
-                                                    ).then((created) {
-                                                      if (created == true && context.mounted) {
-                                                        context.read<ReceivingVouchersBloc>().add(LoadReceivingVouchers());
+                                                  OfflineActionHelper.executeAction(
+                                                    context: context,
+                                                    action: val,
+                                                    onConfirmed: () {
+                                                      if (val == 'view') {
+                                                        final statusEnum = ReceivingVoucherStatus.values.firstWhere(
+                                                          (e) => e.name == voucher.status,
+                                                          orElse: () => ReceivingVoucherStatus.draft,
+                                                        );
+                                                        final doc = DocumentWrapper.fromReceivingVoucher(voucher);
+                                                        Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder: (_) => DocumentDetailScreen(
+                                                              document: doc,
+                                                              status: statusEnum.label,
+                                                              statusColor: statusEnum.color,
+                                                            ),
+                                                          ),
+                                                        );
+                                                      } else if (val == 'edit') {
+                                                        Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder: (_) => MultiBlocProvider(
+                                                              providers: [
+                                                                BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
+                                                                BlocProvider.value(value: context.read<SuppliersBloc>()),
+                                                                BlocProvider.value(value: context.read<ProductsBloc>()),
+                                                                BlocProvider.value(value: context.read<ProjectsBloc>()),
+                                                                BlocProvider.value(value: context.read<WarehousesBloc>()),
+                                                              ],
+                                                              child: CreateReceivingVoucherScreen(existing: voucher),
+                                                            ),
+                                                          ),
+                                                        );
+                                                      } else if (val == 'delete') {
+                                                        _confirmDelete(voucher);
+                                                      } else if (val == 'to_invoice') {
+                                                        _showConvertToInvoiceDialog(voucher);
+                                                      } else if (val == 'to_return') {
+                                                        _showConvertToReturnDialog(voucher);
+                                                      } else if (val == 'view_invoice_created') {
+                                                        final shellState = context.findAncestorStateOfType<AppShellScreenState>();
+                                                        if (shellState != null) {
+                                                          shellState.setActiveModule(AppModule.purchaseInvoices);
+                                                        }
+                                                      } else if (val == 'view_return_created') {
+                                                        final shellState = context.findAncestorStateOfType<AppShellScreenState>();
+                                                        if (shellState != null) {
+                                                          shellState.setActiveModule(AppModule.supplierReturns);
+                                                        }
+                                                      } else if (val == 'pdf') {
+                                                        final doc = DocumentWrapper.fromReceivingVoucher(voucher);
+                                                        PdfService.instance.downloadDocument(context, doc);
+                                                      } else if (val == 'payment') {
+                                                        showDialog(
+                                                          context: context,
+                                                          builder: (_) => MultiBlocProvider(
+                                                            providers: [
+                                                              BlocProvider.value(value: context.read<PaymentsBloc>()),
+                                                              BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+                                                              BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+                                                              BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
+                                                              BlocProvider.value(value: context.read<ProductsBloc>()),
+                                                            ],
+                                                            child: ReceivingVoucherPaymentDialog(receivingVoucher: voucher),
+                                                          ),
+                                                        ).then((created) {
+                                                          if (created == true && context.mounted) {
+                                                            context.read<ReceivingVouchersBloc>().add(LoadReceivingVouchers());
+                                                          }
+                                                        });
+                                                      } else if (val == 'email') {
+                                                        final doc = DocumentWrapper.fromReceivingVoucher(voucher);
+                                                        DocumentShareService.shareDocument(doc, isEmail: true);
+                                                      } else if (val == 'whatsapp') {
+                                                        final doc = DocumentWrapper.fromReceivingVoucher(voucher);
+                                                        DocumentShareService.shareDocument(doc, isEmail: false);
+                                                      } else if (val == 'print') {
+                                                        final doc = DocumentWrapper.fromReceivingVoucher(voucher);
+                                                        Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder: (_) => DocumentPreviewScreen(document: doc),
+                                                          ),
+                                                        );
+                                                      } else {
+                                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                                          content: Text('Cette fonctionnalité sera disponible prochainement'),
+                                                          backgroundColor: AppColors.info,
+                                                        ));
                                                       }
-                                                    });
-                                                  } else if (val == 'email') {
-                                                    final doc = DocumentWrapper.fromReceivingVoucher(voucher);
-                                                    DocumentShareService.shareDocument(doc, isEmail: true);
-                                                  } else if (val == 'whatsapp') {
-                                                    final doc = DocumentWrapper.fromReceivingVoucher(voucher);
-                                                    DocumentShareService.shareDocument(doc, isEmail: false);
-                                                  } else if (val == 'print') {
-                                                    final doc = DocumentWrapper.fromReceivingVoucher(voucher);
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) => DocumentPreviewScreen(document: doc),
-                                                      ),
-                                                    );
-                                                  } else {
-                                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                                      content: Text('Cette fonctionnalité sera disponible prochainement'),
-                                                      backgroundColor: AppColors.info,
-                                                    ));
-                                                  }
+                                                    },
+                                                  );
                                                 },
                                               ),
                                             ),

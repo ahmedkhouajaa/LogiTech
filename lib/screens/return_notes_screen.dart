@@ -28,8 +28,10 @@ import 'create_return_note_screen.dart';
 import '../services/pdf_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
+import '../services/pdf_service.dart';
 import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
+import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
 import '../blocs/payments/payments_bloc.dart';
 import '../models/payment_model.dart';
@@ -1166,6 +1168,15 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
   }
 
   void _handleAction(BuildContext context, String action, ReturnNote note) {
+    if (OfflineActionHelper.writeActions.contains(action) || action == 'add_payment') {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, note),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
         final statusEnum = ReturnNoteStatus.values.firstWhere(
@@ -1184,10 +1195,7 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
           ),
         );
         break;
-      case 'edit':
-        _navigate(context, note);
-        break;
-            case 'print':
+      case 'print':
         final doc = DocumentWrapper.fromReturnNote(note);
         Navigator.push(
           context,
@@ -1195,6 +1203,28 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
             builder: (_) => DocumentPreviewScreen(document: doc),
           ),
         );
+        break;
+      case 'pdf':
+        final doc = DocumentWrapper.fromReturnNote(note);
+        PdfService.instance.downloadDocument(context, doc);
+        break;
+      case 'email':
+        final docEmail = DocumentWrapper.fromReturnNote(note);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = DocumentWrapper.fromReturnNote(note);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, ReturnNote note) {
+    switch (action) {
+      case 'edit':
+        _navigate(context, note);
         break;
       case 'add_payment':
         showDialog(
@@ -1215,25 +1245,11 @@ class _ReturnNotesScreenState extends State<ReturnNotesScreen> {
         });
         break;
       case 'delete':
-        _confirmDelete(note);
+        context.read<ReturnNotesBloc>().add(DeleteReturnNote(note.id));
         break;
       case 'status':
         _showChangeStatusDialog(context, note);
         break;
-      case 'pdf':
-        final doc = DocumentWrapper.fromReturnNote(note);
-        PdfService.instance.downloadDocument(context, doc);
-        break;
-      case 'email':
-        final docEmail = DocumentWrapper.fromReturnNote(note);
-        DocumentShareService.shareDocument(docEmail, isEmail: true);
-        break;
-      case 'whatsapp':
-        final docWa = DocumentWrapper.fromReturnNote(note);
-        DocumentShareService.shareDocument(docWa, isEmail: false);
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));
     }
   }
 

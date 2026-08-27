@@ -27,6 +27,7 @@ class DeliveryNote {
   final String? convertedToReturnId;
   final String? firebaseUid;
   final bool isDeleted;
+  final bool isSynced;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<DeliveryNoteItem> items;
@@ -58,6 +59,7 @@ class DeliveryNote {
     this.convertedToReturnId,
     this.firebaseUid,
     this.isDeleted = false,
+    this.isSynced = true,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.items = const [],
@@ -214,6 +216,7 @@ class DeliveryNote {
         'converted_to_return_id': convertedToReturnId,
         'firebase_uid': firebaseUid,
         'is_deleted': isDeleted ? 1 : 0,
+        'is_synced': isSynced ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
         'items': items.map((i) => i.toMap()).toList(),
@@ -252,6 +255,7 @@ class DeliveryNote {
       convertedToReturnId: map['converted_to_return_id']?.toString(),
       firebaseUid: map['firebase_uid']?.toString(),
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
+      isSynced: map['is_synced'] == null ? true : (map['is_synced'] == 1 || map['is_synced'] == '1' || map['is_synced'] == true),
       createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
       updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
       items: parsedItems,

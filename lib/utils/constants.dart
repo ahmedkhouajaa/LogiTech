@@ -298,6 +298,7 @@ enum CustomerOrderStatus {
 
 enum DeliveryNoteStatus {
   draft,
+  created,
   delivered,
   invoiced,
   returned,
@@ -308,6 +309,8 @@ enum DeliveryNoteStatus {
     switch (this) {
       case draft:
         return 'Brouillon';
+      case created:
+        return 'Créé';
       case delivered:
         return 'Livre';
       case invoiced:
@@ -325,6 +328,8 @@ enum DeliveryNoteStatus {
     switch (this) {
       case draft:
         return AppColors.warning;
+      case created:
+        return AppColors.primary;
       case delivered:
         return AppColors.success;
       case invoiced:
@@ -528,6 +533,7 @@ enum TransactionType {
 }
 enum SupplierOrderStatus {
   draft,
+  created,
   sent,
   validated,
   partiallyReceived,
@@ -539,6 +545,8 @@ enum SupplierOrderStatus {
     switch (this) {
       case draft:
         return 'Brouillon';
+      case created:
+        return 'Créé';
       case sent:
         return 'Envoye';
       case validated:
@@ -558,6 +566,8 @@ enum SupplierOrderStatus {
     switch (this) {
       case draft:
         return AppColors.warning;
+      case created:
+        return AppColors.primary;
       case sent:
         return AppColors.info;
       case validated:

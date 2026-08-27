@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/purchase_invoices/purchase_invoices_bloc.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_document_service.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
 import '../models/purchase_invoice.dart';
@@ -1083,19 +1085,25 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       return;
     }
 
+    final isOnline = ConnectivityService.instance.isOnline;
+
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = await DocumentNumberingService.ensureNumberSequence(
-        context: context,
-        docCollection: 'purchase_invoices',
-        docTypeName: 'Facture d\'Achat',
-        prefix: DocPrefix.purchaseInvoice,
-      );
-      if (seq == null) {
-        setState(() => _isSaving = false);
-        return;
+      if (isOnline) {
+        final seq = await DocumentNumberingService.ensureNumberSequence(
+          context: context,
+          docCollection: 'purchase_invoices',
+          docTypeName: 'Facture d\'Achat',
+          prefix: DocPrefix.purchaseInvoice,
+        );
+        if (seq == null) {
+          setState(() => _isSaving = false);
+          return;
+        }
+        number = generateDocNumber(DocPrefix.purchaseInvoice, seq);
+      } else {
+        number = OfflineDocumentService.generateDraftNumber();
       }
-      number = generateDocNumber(DocPrefix.purchaseInvoice, seq);
     }
 
     final projState = context.read<ProjectsBloc>().state;
@@ -1143,7 +1151,24 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       conditionsGenerales: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
       items: _items.map((item) => item.copyWith(purchaseInvoiceId: purchaseInvoiceId)).toList(),
       createdAt: _isEditing ? widget.existing!.createdAt : null,
+      isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
     );
+
+    if (!isOnline && !_isEditing) {
+      await OfflineDocumentService.instance.savePendingDocument('purchase_invoices', purchaseInvoice.toMap());
+      context.read<PurchaseInvoicesBloc>().add(const LoadFirstPurchaseInvoices());
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Facture d\'Achat ${purchaseInvoice.number} enregistrée hors-ligne (en attente de sync)'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
 
     if (_isEditing) {
       context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(purchaseInvoice));

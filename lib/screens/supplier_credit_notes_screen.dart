@@ -25,6 +25,7 @@ import '../models/user_management_model.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
+import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
 
 enum SupplierCreditNoteStatus {
@@ -1126,6 +1127,15 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
   }
 
   void _handleAction(BuildContext context, String action, SupplierCreditNote note) {
+    if (OfflineActionHelper.writeActions.contains(action) || action == 'add_payment') {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, note),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
         final statusEnum = SupplierCreditNoteStatus.values.firstWhere(
@@ -1144,10 +1154,7 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
           ),
         );
         break;
-      case 'edit':
-        _navigate(context, note);
-        break;
-            case 'print':
+      case 'print':
         final doc = DocumentWrapper.fromSupplierCreditNote(note);
         Navigator.push(
           context,
@@ -1155,15 +1162,6 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
             builder: (_) => DocumentPreviewScreen(document: doc),
           ),
         );
-        break;
-      case 'add_payment':
-        _showAddPaymentDialog(context, note);
-        break;
-      case 'delete':
-        _confirmDelete(note);
-        break;
-      case 'status':
-        _showChangeStatusDialog(context, note);
         break;
       case 'pdf':
         final doc = DocumentWrapper.fromSupplierCreditNote(note);
@@ -1179,6 +1177,23 @@ class _SupplierCreditNotesScreenState extends State<SupplierCreditNotesScreen> {
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, SupplierCreditNote note) {
+    switch (action) {
+      case 'edit':
+        _navigate(context, note);
+        break;
+      case 'add_payment':
+        _showAddPaymentDialog(context, note);
+        break;
+      case 'delete':
+        context.read<SupplierCreditNotesBloc>().add(DeleteSupplierCreditNote(note.id));
+        break;
+      case 'status':
+        _showChangeStatusDialog(context, note);
+        break;
     }
   }
 

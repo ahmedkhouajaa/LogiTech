@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
 import '../../../../blocs/suppliers/suppliers_bloc.dart';
+import '../../../../services/connectivity_service.dart';
+import '../../../../services/offline_document_service.dart';
 import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../models/receiving_voucher.dart';
 import '../../../../models/supplier.dart';
@@ -136,20 +138,25 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
 
     try {
       final bloc = context.read<ReceivingVouchersBloc>();
+      final isOnline = ConnectivityService.instance.isOnline;
       
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
-        final seq = await DocumentNumberingService.ensureNumberSequence(
-          context: context,
-          docCollection: 'receiving_vouchers',
-          docTypeName: 'Bon de Réception',
-          prefix: DocPrefix.receivingVoucher,
-        );
-        if (seq == null) {
-          setState(() => _isLoading = false);
-          return;
+        if (isOnline) {
+          final seq = await DocumentNumberingService.ensureNumberSequence(
+            context: context,
+            docCollection: 'receiving_vouchers',
+            docTypeName: 'Bon de Réception',
+            prefix: DocPrefix.receivingVoucher,
+          );
+          if (seq == null) {
+            setState(() => _isLoading = false);
+            return;
+          }
+          number = generateDocNumber(DocPrefix.receivingVoucher, seq);
+        } else {
+          number = OfflineDocumentService.generateDraftNumber();
         }
-        number = generateDocNumber(DocPrefix.receivingVoucher, seq);
       }
 
       final suppState = context.read<SuppliersBloc>().state;
@@ -190,7 +197,22 @@ class _MobileReceivingVoucherFormScreenState extends State<MobileReceivingVouche
           tvaRate: item.tvaRate,
           discountPercent: item.discountPercent,
         )).toList(),
+        isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
       );
+
+      if (!isOnline && !_isEditing) {
+        await OfflineDocumentService.instance.savePendingDocument('receiving_vouchers', order.toMap());
+        bloc.add(LoadFirstReceivingVouchers());
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Bon de Réception ${order.number} enregistré hors-ligne (en attente de sync)'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ));
+        }
+        return;
+      }
 
       if (_isEditing) {
         bloc.add(UpdateReceivingVoucher(order));

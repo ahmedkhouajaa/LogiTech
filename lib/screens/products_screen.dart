@@ -14,6 +14,7 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/data_table_widget.dart';
 import '../widgets/dashboard_card.dart';
 import 'create_article_screen.dart';
+import '../utils/offline_action_helper.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
@@ -449,8 +450,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   elevation: 4,
                                   onSelected: (val) {
-                                    if (val == 'view' || val == 'edit') _navigateToCreate(context, p);
-                                    if (val == 'delete') context.read<ProductsBloc>().add(DeleteProduct(p.id));
+                                    OfflineActionHelper.executeAction(
+                                      context: context,
+                                      action: val,
+                                      onConfirmed: () {
+                                        if (val == 'view' || val == 'edit') _navigateToCreate(context, p);
+                                        if (val == 'delete') context.read<ProductsBloc>().add(DeleteProduct(p.id));
+                                      },
+                                    );
                                   },
                                   itemBuilder: (context) {
                                     final canRead = PermissionService.instance.canRead(UserPermissionResources.productsList);

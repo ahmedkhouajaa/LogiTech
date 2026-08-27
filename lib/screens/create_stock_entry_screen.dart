@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/stock_entries/stock_entries_bloc.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_document_service.dart';
 import '../blocs/stock_entries/stock_entries_event.dart';
 import '../blocs/stock_entries/stock_entries_state.dart';
 import '../blocs/products/products_bloc.dart';
@@ -103,10 +105,16 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
       seenProducts.add(item.productId);
     }
 
+    final isOnline = ConnectivityService.instance.isOnline;
+
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = await DatabaseHelper.instance.getNextStockEntrySequence();
-      number = generateDocNumber(DocPrefix.stockEntry, seq);
+      if (isOnline) {
+        final seq = await DatabaseHelper.instance.getNextStockEntrySequence();
+        number = generateDocNumber(DocPrefix.stockEntry, seq);
+      } else {
+        number = OfflineDocumentService.generateDraftNumber();
+      }
     }
 
     final entry = StockEntry(
@@ -118,7 +126,24 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
       notes: _notesController.text,
       status: 'validated',
       items: validItems,
+      isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
     );
+
+    if (!isOnline && widget.existing == null) {
+      await OfflineDocumentService.instance.savePendingDocument('stock_entries', entry.toMap());
+      context.read<StockEntriesBloc>().add(LoadFirstStockEntries());
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Bon d\'Entrée ${entry.number} enregistré hors-ligne (en attente de sync)'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
 
     final entryBloc = context.read<StockEntriesBloc>();
     final productsBloc = context.read<ProductsBloc>();

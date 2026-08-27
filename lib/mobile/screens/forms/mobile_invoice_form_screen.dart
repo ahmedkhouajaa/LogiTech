@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../blocs/invoices/invoices_bloc.dart';
 import '../../../../blocs/customers/customers_bloc.dart';
+import '../../../../services/connectivity_service.dart';
+import '../../../../services/offline_document_service.dart';
 import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../blocs/products/products_bloc.dart';
 import '../../../../models/invoice.dart';
@@ -140,23 +142,27 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
     }
 
     setState(() => _isLoading = true);
-
     try {
       final bloc = context.read<InvoicesBloc>();
+      final isOnline = ConnectivityService.instance.isOnline;
       
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
-        final seq = await DocumentNumberingService.ensureNumberSequence(
-          context: context,
-          docCollection: 'invoices',
-          docTypeName: 'Facture',
-          prefix: 'FA',
-        );
-        if (seq == null) {
-          setState(() => _isLoading = false);
-          return;
+        if (isOnline) {
+          final seq = await DocumentNumberingService.ensureNumberSequence(
+            context: context,
+            docCollection: 'invoices',
+            docTypeName: 'Facture',
+            prefix: 'FA',
+          );
+          if (seq == null) {
+            setState(() => _isLoading = false);
+            return;
+          }
+          number = generateDocNumber('FA', seq);
+        } else {
+          number = OfflineDocumentService.generateDraftNumber();
         }
-        number = generateDocNumber('FA', seq);
       }
 
       final custState = context.read<CustomersBloc>().state;
@@ -215,12 +221,27 @@ class _MobileInvoiceFormScreenState extends State<MobileInvoiceFormScreen> {
           customFields: item.customFields,
         )).toList(),
         isDeleted: widget.existing?.isDeleted ?? false,
+        isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
       );
 
+      if (!isOnline && !_isEditing) {
+        await OfflineDocumentService.instance.savePendingDocument('invoices', invoice.toMap());
+        bloc.add(const LoadFirstInvoices());
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Facture ${invoice.number} enregistrée hors-ligne (en attente de sync)'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ));
+        }
+        return;
+      }
+
       if (_isEditing) {
-        context.read<InvoicesBloc>().add(UpdateInvoice(invoice));
+        bloc.add(UpdateInvoice(invoice));
       } else {
-        context.read<InvoicesBloc>().add(AddInvoice(invoice));
+        bloc.add(AddInvoice(invoice));
       }
 
       if (mounted) {

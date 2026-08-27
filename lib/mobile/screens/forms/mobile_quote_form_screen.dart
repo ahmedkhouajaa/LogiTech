@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../blocs/quotes/quotes_bloc.dart';
 import '../../../../blocs/customers/customers_bloc.dart';
+import '../../../../services/connectivity_service.dart';
+import '../../../../services/offline_quote_service.dart';
 import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../blocs/products/products_bloc.dart';
 import '../../../../models/quote.dart';
@@ -123,20 +125,26 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
 
     try {
       final bloc = context.read<QuotesBloc>();
+      final isOnline = ConnectivityService.instance.isOnline;
       
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
-        final seq = await DocumentNumberingService.ensureNumberSequence(
-          context: context,
-          docCollection: 'quotes',
-          docTypeName: 'Devis',
-          prefix: 'DV',
-        );
-        if (seq == null) {
-          setState(() => _isLoading = false);
-          return;
+        if (isOnline) {
+          final seq = await DocumentNumberingService.ensureNumberSequence(
+            context: context,
+            docCollection: 'quotes',
+            docTypeName: 'Devis',
+            prefix: 'DV',
+          );
+          if (seq == null) {
+            setState(() => _isLoading = false);
+            return;
+          }
+          number = generateDocNumber('DV', seq);
+        } else {
+          final rand6 = 100000 + (DateTime.now().microsecondsSinceEpoch % 900000);
+          number = 'BROUILLON-$rand6';
         }
-        number = generateDocNumber('DV', seq);
       }
 
       final custState = context.read<CustomersBloc>().state;
@@ -182,7 +190,22 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
         isConverted: widget.existing?.isConverted ?? false,
         convertedTo: widget.existing?.convertedTo,
         convertedToId: widget.existing?.convertedToId,
+        isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
       );
+
+      if (!isOnline && !_isEditing) {
+        await OfflineQuoteService.instance.savePendingQuote(quote);
+        bloc.add(const LoadFirstDevis());
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Devis ${quote.number} enregistré hors-ligne (en attente de sync)'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ));
+        }
+        return;
+      }
 
       if (_isEditing) {
         bloc.add(UpdateQuote(quote));

@@ -4,6 +4,7 @@ import '../../models/user_management_model.dart';
 import '../../services/permission_service.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/offline_document_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ────────────────────────────────────────────────────────
@@ -161,31 +162,53 @@ class SupplierOrdersBloc extends Bloc<SupplierOrdersEvent, SupplierOrdersState> 
   Future<void> _onLoadFirstSupplierOrders(LoadFirstSupplierOrders event, Emitter<SupplierOrdersState> emit) async {
     emit(SupplierOrdersLoading());
     try {
-      FirestorePaginationService.instance.resetSupplierOrdersPagination();
-      final ordersFuture = FirestorePaginationService.instance.getFirstSupplierOrders(
-        pageSize: pageSize,
-        searchQuery: event.searchQuery,
-        supplierId: event.supplierId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
-      final countFuture = FirestorePaginationService.instance.getSupplierOrdersCount(
-        searchQuery: event.searchQuery,
-        supplierId: event.supplierId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
+      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('supplier_orders');
+      final pendingOrders = pendingMaps.map((m) => SupplierOrder.fromMap(m)).toList();
 
-      final results = await Future.wait([ordersFuture, countFuture]);
-      final orders = results[0] as List<SupplierOrder>;
-      final totalCount = results[1] as int;
+      List<SupplierOrder> remoteOrders = [];
+      int totalCount = 0;
+
+      try {
+        FirestorePaginationService.instance.resetSupplierOrdersPagination();
+        final ordersFuture = FirestorePaginationService.instance.getFirstSupplierOrders(
+          pageSize: pageSize,
+          searchQuery: event.searchQuery,
+          supplierId: event.supplierId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+        final countFuture = FirestorePaginationService.instance.getSupplierOrdersCount(
+          searchQuery: event.searchQuery,
+          supplierId: event.supplierId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+
+        final results = await Future.wait([ordersFuture, countFuture]);
+        remoteOrders = results[0] as List<SupplierOrder>;
+        totalCount = results[1] as int;
+      } catch (e) {
+        print('[SUPPLIER ORDERS BLOC] Remote fetch error or offline: $e');
+      }
+
+      final combined = <SupplierOrder>[];
+      final pendingIds = pendingOrders.map((o) => o.id).toSet();
+      combined.addAll(pendingOrders);
+
+      for (var order in remoteOrders) {
+        if (!pendingIds.contains(order.id)) {
+          combined.add(order);
+        }
+      }
+
+      final finalTotal = totalCount + pendingOrders.length;
 
       emit(SupplierOrdersLoaded(
-        orders,
-        totalCount: totalCount > orders.length ? totalCount : orders.length,
-        hasMore: orders.length >= pageSize,
+        combined,
+        totalCount: finalTotal > combined.length ? finalTotal : combined.length,
+        hasMore: remoteOrders.length >= pageSize,
       ));
     } catch (e) {
       emit(SupplierOrdersError(ErrorHandler.parseError(e)));

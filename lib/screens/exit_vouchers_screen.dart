@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,6 +7,8 @@ import 'package:excel/excel.dart' hide Border;
 import '../utils/file_download_helper.dart';
 import '../blocs/exit_vouchers/exit_vouchers_bloc.dart';
 import '../models/product.dart';
+import '../services/sync_service.dart';
+import '../widgets/pending_sync_badge.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
@@ -18,6 +21,7 @@ import 'create_exit_voucher_screen.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
+import '../utils/offline_action_helper.dart';
 import '../services/pdf_service.dart';
 import '../services/document_share_service.dart';
 import '../services/permission_service.dart';
@@ -28,6 +32,7 @@ import '../widgets/shimmer_table_row.dart';
 
 enum ExitVoucherStatus {
   draft('Brouillon'),
+  created('Créé'),
   validated('Validé'),
   cancelled('Annulé');
 
@@ -37,7 +42,8 @@ enum ExitVoucherStatus {
   Color get color {
     switch (this) {
       case draft: return AppColors.warning;
-      case validated: return AppColors.primary;
+      case created: return AppColors.primary;
+      case validated: return AppColors.success;
       case cancelled: return AppColors.error;
     }
   }
@@ -61,11 +67,38 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
   int _rowsPerPage = 20;
   int _currentPage = 0;
 
+  StreamSubscription<int>? _syncSub;
+
   @override
   void initState() {
     super.initState();
     context.read<ExitVouchersBloc>().add(LoadFirstExitVouchers());
     context.read<CustomersBloc>().add(LoadCustomers());
+
+    _syncSub = SyncService.instance.onDocumentSyncCompleted.listen((count) {
+      if (mounted && count > 0) {
+        context.read<ExitVouchersBloc>().add(LoadFirstExitVouchers());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$count document(s) synchronisé(s) avec succès !'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncSub?.cancel();
+    super.dispose();
   }
 
   Product? _getProduct(String id) {
@@ -1081,7 +1114,7 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
   Widget _buildRow(BuildContext context, StockWithdrawal note, int index) {
     final statusEnum = ExitVoucherStatus.values.firstWhere(
       (e) => e.name == note.status,
-      orElse: () => ExitVoucherStatus.draft,
+      orElse: () => ExitVoucherStatus.created,
     );
     final clientLabel =
         note.customerCompany ?? note.customerName ?? 'Client inconnu';
@@ -1158,21 +1191,23 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
             flex: 2,
             child: Container(
               alignment: Alignment.centerLeft,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusEnum.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  statusEnum.label,
-                  style: TextStyle(
-                      color: statusEnum.color,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500),
-                ),
-              ),
+              child: (!note.isSynced || note.number.startsWith('BROUILLON-'))
+                  ? const PendingSyncBadge()
+                  : Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusEnum.color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        statusEnum.label,
+                        style: TextStyle(
+                            color: statusEnum.color,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ),
             ),
           ),
           // Montant
@@ -1201,43 +1236,49 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                     borderRadius: BorderRadius.circular(8)),
                 color: AppColors.surface,
                 onSelected: (val) {
-                  if (val == 'view') {
-                    final statusEnum = ExitVoucherStatus.values.firstWhere(
-                      (e) => e.name == note.status,
-                      orElse: () => ExitVoucherStatus.draft,
-                    );
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => DocumentDetailScreen(
-                          document: _createDocumentWrapper(note),
-                          status: statusEnum.label,
-                          statusColor: statusEnum.color,
-                        ),
-                      ),
-                    );
-                  } else if (val == 'print') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => DocumentPreviewScreen(
-                          document: _createDocumentWrapper(note),
-                        ),
-                      ),
-                    );
-                  }
-                  if (val == 'edit') _navigate(context, note);
-                  if (val == 'delete') _confirmDelete(note);
-                  if (val == 'pdf') {
-                    final doc = _createDocumentWrapper(note);
-                    PdfService.instance.downloadDocument(context, doc);
-                  }
-                  if (val == 'email' || val == 'whatsapp') {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fonctionnalité en cours de développement')));
-                  }
-                  if (val == 'status') {
-                    _showChangeStatusDialog(context, note);
-                  }
+                  OfflineActionHelper.executeAction(
+                    context: context,
+                    action: val,
+                    onConfirmed: () {
+                      if (val == 'view') {
+                        final statusEnum = ExitVoucherStatus.values.firstWhere(
+                          (e) => e.name == note.status,
+                          orElse: () => ExitVoucherStatus.draft,
+                        );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DocumentDetailScreen(
+                              document: _createDocumentWrapper(note),
+                              status: statusEnum.label,
+                              statusColor: statusEnum.color,
+                            ),
+                          ),
+                        );
+                      } else if (val == 'print') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DocumentPreviewScreen(
+                              document: _createDocumentWrapper(note),
+                            ),
+                          ),
+                        );
+                      }
+                      if (val == 'edit') _navigate(context, note);
+                      if (val == 'delete') context.read<ExitVouchersBloc>().add(DeleteExitVoucher(note.id));
+                      if (val == 'pdf') {
+                        final doc = _createDocumentWrapper(note);
+                        PdfService.instance.downloadDocument(context, doc);
+                      }
+                      if (val == 'email' || val == 'whatsapp') {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fonctionnalité en cours de développement')));
+                      }
+                      if (val == 'status') {
+                        _showChangeStatusDialog(context, note);
+                      }
+                    },
+                  );
                 },
                 itemBuilder: (_) {
                   final canRead = PermissionService.instance.hasPermission('exit_vouchers', action: 'read');
@@ -1248,16 +1289,17 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
 
                   final entries = <PopupMenuEntry<String>>[];
 
-                  void addItem(String val, IconData icon, Color col, String label) {
+                  void addItem(String val, IconData icon, String label) {
                     if (entries.isNotEmpty) entries.add(const PopupMenuDivider(height: 1));
                     entries.add(
                       PopupMenuItem(
                         value: val,
+                        height: 40,
                         child: Row(
                           children: [
-                            Icon(icon, size: 16, color: col),
-                            const SizedBox(width: 8),
-                            Text(label),
+                            Icon(icon, size: 18, color: const Color(0xFF64748B)),
+                            const SizedBox(width: 12),
+                            Text(label, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
                           ],
                         ),
                       ),
@@ -1265,22 +1307,22 @@ class _ExitVouchersScreenState extends State<ExitVouchersScreen> {
                   }
 
                   if (canRead) {
-                    addItem('view', Icons.visibility_outlined, AppColors.info, 'Voir');
+                    addItem('view', Icons.remove_red_eye_outlined, 'Voir');
                   }
                   if (canUpdate) {
-                    addItem('edit', Icons.edit_rounded, AppColors.primary, 'Modifier');
+                    addItem('edit', Icons.edit_outlined, 'Modifier');
                   }
                   if (canDelete) {
-                    addItem('delete', Icons.delete_rounded, AppColors.error, 'Supprimer');
+                    addItem('delete', Icons.delete_outline_rounded, 'Supprimer');
                   }
                   if (hasAnyAccess) {
-                    addItem('print', Icons.print_rounded, AppColors.textSecondary, 'Imprimer');
-                    addItem('pdf', Icons.picture_as_pdf_outlined, AppColors.error, 'Télécharger PDF');
-                    addItem('email', Icons.email_outlined, AppColors.primary, 'Envoyer par email');
-                    addItem('whatsapp', Icons.chat_outlined, AppColors.success, 'Envoyer par WhatsApp');
+                    addItem('print', Icons.print_outlined, 'Imprimer');
+                    addItem('pdf', Icons.picture_as_pdf_outlined, 'Télécharger PDF');
+                    addItem('email', Icons.email_outlined, 'Envoyer par email');
+                    addItem('whatsapp', Icons.chat_outlined, 'Envoyer par WhatsApp');
                   }
                   if (hasAllAccess) {
-                    addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
+                    addItem('status', Icons.swap_horiz_outlined, 'Changer le statut');
                   }
 
                   return entries;

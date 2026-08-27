@@ -6,6 +6,7 @@ import '../../services/permission_service.dart';
 import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/offline_document_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class PurchaseInvoicesEvent extends Equatable {
@@ -210,32 +211,54 @@ class PurchaseInvoicesBloc extends Bloc<PurchaseInvoicesEvent, PurchaseInvoicesS
   Future<void> _onLoadFirst(LoadFirstPurchaseInvoices event, Emitter<PurchaseInvoicesState> emit) async {
     emit(PurchaseInvoicesLoading());
     try {
-      FirestorePaginationService.instance.resetPurchaseInvoicesPagination();
-      final invoicesFuture = FirestorePaginationService.instance.getFirstPurchaseInvoices(
-        pageSize: pageSize,
-        searchQuery: event.searchQuery,
-        supplierId: event.supplierId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
-      final countFuture = FirestorePaginationService.instance.getPurchaseInvoicesCount(
-        searchQuery: event.searchQuery,
-        supplierId: event.supplierId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
+      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('purchase_invoices');
+      final pendingInvoices = pendingMaps.map((m) => PurchaseInvoice.fromMap(m)).toList();
 
-      final results = await Future.wait([invoicesFuture, countFuture]);
-      final invoices = results[0] as List<PurchaseInvoice>;
-      final totalCount = results[1] as int;
+      List<PurchaseInvoice> remoteInvoices = [];
+      int totalCount = 0;
+
+      try {
+        FirestorePaginationService.instance.resetPurchaseInvoicesPagination();
+        final invoicesFuture = FirestorePaginationService.instance.getFirstPurchaseInvoices(
+          pageSize: pageSize,
+          searchQuery: event.searchQuery,
+          supplierId: event.supplierId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+        final countFuture = FirestorePaginationService.instance.getPurchaseInvoicesCount(
+          searchQuery: event.searchQuery,
+          supplierId: event.supplierId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+
+        final results = await Future.wait([invoicesFuture, countFuture]);
+        remoteInvoices = results[0] as List<PurchaseInvoice>;
+        totalCount = results[1] as int;
+      } catch (e) {
+        print('[PURCHASE INVOICES BLOC] Remote fetch error or offline: $e');
+      }
+
+      final combined = <PurchaseInvoice>[];
+      final pendingIds = pendingInvoices.map((i) => i.id).toSet();
+      combined.addAll(pendingInvoices);
+
+      for (var inv in remoteInvoices) {
+        if (!pendingIds.contains(inv.id)) {
+          combined.add(inv);
+        }
+      }
+
+      final finalTotal = totalCount + pendingInvoices.length;
 
       emit(PurchaseInvoicesLoaded(
-        invoices,
-        invoices,
-        totalCount: totalCount > invoices.length ? totalCount : invoices.length,
-        hasMore: invoices.length >= pageSize,
+        combined,
+        combined,
+        totalCount: finalTotal > combined.length ? finalTotal : combined.length,
+        hasMore: remoteInvoices.length >= pageSize,
       ));
     } catch (e) {
       emit(PurchaseInvoicesError(ErrorHandler.parseError(e)));

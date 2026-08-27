@@ -6,6 +6,7 @@ import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import '../../services/permission_service.dart';
+import '../../services/offline_document_service.dart';
 import '../../models/user_management_model.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
@@ -219,32 +220,54 @@ class InvoicesBloc extends Bloc<InvoicesEvent, InvoicesState> {
   Future<void> _onLoadFirstInvoices(LoadFirstInvoices event, Emitter<InvoicesState> emit) async {
     emit(InvoicesLoading());
     try {
-      FirestorePaginationService.instance.resetInvoicesPagination();
-      final invoicesFuture = FirestorePaginationService.instance.getFirstInvoices(
-        pageSize: pageSize,
-        searchQuery: event.searchQuery,
-        customerId: event.customerId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
-      final countFuture = FirestorePaginationService.instance.getInvoicesCount(
-        searchQuery: event.searchQuery,
-        customerId: event.customerId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
+      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('invoices');
+      final pendingInvoices = pendingMaps.map((m) => Invoice.fromMap(m)).toList();
 
-      final results = await Future.wait([invoicesFuture, countFuture]);
-      final invoices = results[0] as List<Invoice>;
-      final totalCount = results[1] as int;
+      List<Invoice> remoteInvoices = [];
+      int totalCount = 0;
+
+      try {
+        FirestorePaginationService.instance.resetInvoicesPagination();
+        final invoicesFuture = FirestorePaginationService.instance.getFirstInvoices(
+          pageSize: pageSize,
+          searchQuery: event.searchQuery,
+          customerId: event.customerId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+        final countFuture = FirestorePaginationService.instance.getInvoicesCount(
+          searchQuery: event.searchQuery,
+          customerId: event.customerId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+
+        final results = await Future.wait([invoicesFuture, countFuture]);
+        remoteInvoices = results[0] as List<Invoice>;
+        totalCount = results[1] as int;
+      } catch (e) {
+        print('[INVOICES BLOC] Remote fetch error or offline: $e');
+      }
+
+      final combined = <Invoice>[];
+      final pendingIds = pendingInvoices.map((i) => i.id).toSet();
+      combined.addAll(pendingInvoices);
+
+      for (var inv in remoteInvoices) {
+        if (!pendingIds.contains(inv.id)) {
+          combined.add(inv);
+        }
+      }
+
+      final finalTotal = totalCount + pendingInvoices.length;
 
       emit(InvoicesLoaded(
-        invoices,
-        invoices,
-        totalCount: totalCount > invoices.length ? totalCount : invoices.length,
-        hasMore: invoices.length >= pageSize,
+        combined,
+        combined,
+        totalCount: finalTotal > combined.length ? finalTotal : combined.length,
+        hasMore: remoteInvoices.length >= pageSize,
       ));
     } catch (e) {
       emit(InvoicesError(ErrorHandler.parseError(e)));

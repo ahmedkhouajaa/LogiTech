@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../utils/constants.dart';
@@ -15,7 +16,9 @@ import '../../blocs/warehouses/warehouses_bloc.dart';
 import '../../models/customer.dart';
 import 'forms/mobile_customer_order_form_screen.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../utils/offline_action_helper.dart';
 import '../../services/permission_service.dart';
+import '../../services/sync_service.dart';
 import '../../models/user_management_model.dart';
 
 class MobileCustomerOrdersScreen extends StatefulWidget {
@@ -33,6 +36,7 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
   DateTime? _dateTo;
   String? _selectedStatus;
   late MobileModuleConfig _config;
+  StreamSubscription<int>? _syncSub;
 
   @override
   void initState() {
@@ -42,10 +46,30 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
     _fetchFilteredOrders();
     context.read<CustomersBloc>().add(LoadCustomers());
     _scrollController.addListener(_onScroll);
+
+    _syncSub = SyncService.instance.onDocumentSyncCompleted.listen((count) {
+      if (mounted && count > 0) {
+        _fetchFilteredOrders();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$count document(s) synchronisé(s) avec succès !'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
+    _syncSub?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -267,23 +291,29 @@ class _MobileCustomerOrdersScreenState extends State<MobileCustomerOrdersScreen>
           itemCount: totalMatchingCount,
           fabText: _config.fabText,
           onFabPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => MultiBlocProvider(
-                  providers: [
-                    BlocProvider.value(value: context.read<CustomerOrdersBloc>()),
-                    BlocProvider.value(value: context.read<CustomersBloc>()),
-                    BlocProvider.value(value: context.read<ProductsBloc>()),
-                    BlocProvider.value(value: context.read<ProjectsBloc>()),
-                    BlocProvider.value(value: context.read<WarehousesBloc>()),
-                  ],
-                  child: const MobileCustomerOrderFormScreen(),
-                ),
-              ),
-            ).then((_) {
-              _fetchFilteredOrders();
-            });
+            OfflineActionHelper.executeAction(
+              context: context,
+              action: 'create',
+              onConfirmed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider.value(value: context.read<CustomerOrdersBloc>()),
+                        BlocProvider.value(value: context.read<CustomersBloc>()),
+                        BlocProvider.value(value: context.read<ProductsBloc>()),
+                        BlocProvider.value(value: context.read<ProjectsBloc>()),
+                        BlocProvider.value(value: context.read<WarehousesBloc>()),
+                      ],
+                      child: const MobileCustomerOrderFormScreen(),
+                    ),
+                  ),
+                ).then((_) {
+                  _fetchFilteredOrders();
+                });
+              },
+            );
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

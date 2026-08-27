@@ -20,6 +20,7 @@ import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
 import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
+import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
 import 'create_credit_note_screen.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
@@ -917,30 +918,36 @@ class _CreditNotesScreenState extends State<CreditNotesScreen> {
                                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                                 color: AppColors.surface,
                                                 onSelected: (val) {
-                                                  if (val == 'delete') {
-                                                    _confirmDelete(note);
-                                                  } else if (val == 'pdf') {
-                                                    final doc = DocumentWrapper.fromCreditNote(note);
-                                                    PdfService.instance.downloadDocument(context, doc);
-                                                  } else if (val == 'view') {
-                                                     final doc = DocumentWrapper.fromCreditNote(note);
-                                                     Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentDetailScreen(
-                                                       document: doc,
-                                                       status: note.status.label,
-                                                       statusColor: note.status.color,
-                                                     )));
-                                                  } else if (val == 'print') {
-                                                    final doc = DocumentWrapper.fromCreditNote(note);
-                                                    Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
-                                                  } else if (val == 'edit') {
-                                                    _navigate(context, note);
-                                                  } else if (val == 'email') {
-                                                    final doc = DocumentWrapper.fromCreditNote(note);
-                                                    DocumentShareService.shareDocument(doc, isEmail: true);
-                                                  } else if (val == 'whatsapp') {
-                                                    final doc = DocumentWrapper.fromCreditNote(note);
-                                                    DocumentShareService.shareDocument(doc, isEmail: false);
-                                                  }
+                                                  OfflineActionHelper.executeAction(
+                                                    context: context,
+                                                    action: val,
+                                                    onConfirmed: () {
+                                                      if (val == 'delete') {
+                                                        context.read<CreditNotesBloc>().add(DeleteCreditNote(note.id));
+                                                      } else if (val == 'pdf') {
+                                                        final doc = DocumentWrapper.fromCreditNote(note);
+                                                        PdfService.instance.downloadDocument(context, doc);
+                                                      } else if (val == 'view') {
+                                                        final doc = DocumentWrapper.fromCreditNote(note);
+                                                        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentDetailScreen(
+                                                          document: doc,
+                                                          status: note.status.label,
+                                                          statusColor: note.status.color,
+                                                        )));
+                                                      } else if (val == 'print') {
+                                                        final doc = DocumentWrapper.fromCreditNote(note);
+                                                        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
+                                                      } else if (val == 'edit') {
+                                                        _navigate(context, note);
+                                                      } else if (val == 'email') {
+                                                        final doc = DocumentWrapper.fromCreditNote(note);
+                                                        DocumentShareService.shareDocument(doc, isEmail: true);
+                                                      } else if (val == 'whatsapp') {
+                                                        final doc = DocumentWrapper.fromCreditNote(note);
+                                                        DocumentShareService.shareDocument(doc, isEmail: false);
+                                                      }
+                                                    },
+                                                  );
                                                 },
                                                 itemBuilder: (_) {
                                                    final canRead = PermissionService.instance.hasPermission('credit_notes', action: 'read');

@@ -22,6 +22,7 @@ import '../../models/stock_withdrawal.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../utils/offline_action_helper.dart';
 
 class MobileStockWithdrawalsScreen extends StatefulWidget {
   final AppModule activeModule;
@@ -117,29 +118,16 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
   }
 
   void _handleDelete(String id) {
-    showDialog(
+    OfflineActionHelper.executeAction(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: const Text('Voulez-vous vraiment supprimer cet élément ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (_isExitVoucher) {
-                context.read<ExitVouchersBloc>().add(DeleteExitVoucher(id));
-              } else {
-                context.read<StockWithdrawalsBloc>().add(DeleteStockWithdrawal(id));
-              }
-              Navigator.pop(ctx);
-            },
-            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+      action: 'delete',
+      onConfirmed: () {
+        if (_isExitVoucher) {
+          context.read<ExitVouchersBloc>().add(DeleteExitVoucher(id));
+        } else {
+          context.read<StockWithdrawalsBloc>().add(DeleteStockWithdrawal(id));
+        }
+      },
     );
   }
 
@@ -258,25 +246,31 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
           });
         },
         onEdit: PermissionService.instance.canUpdate(resKey) ? () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => MultiBlocProvider(
-              providers: [
-                BlocProvider.value(value: context.read<ExitVouchersBloc>()),
-                BlocProvider.value(value: context.read<StockWithdrawalsBloc>()),
-                BlocProvider.value(value: context.read<CustomersBloc>()),
-                BlocProvider.value(value: context.read<ProductsBloc>()),
-                BlocProvider.value(value: context.read<ProjectsBloc>()),
-                BlocProvider.value(value: context.read<WarehousesBloc>()),
-              ],
-              child: MobileExitVoucherFormScreen(
-                existing: item,
-                isExitVoucher: _isExitVoucher,
-              ),
-            )),
-          ).then((_) {
-            _fetchFilteredWithdrawals();
-          });
+          OfflineActionHelper.executeAction(
+            context: context,
+            action: 'edit',
+            onConfirmed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider.value(value: context.read<ExitVouchersBloc>()),
+                    BlocProvider.value(value: context.read<StockWithdrawalsBloc>()),
+                    BlocProvider.value(value: context.read<CustomersBloc>()),
+                    BlocProvider.value(value: context.read<ProductsBloc>()),
+                    BlocProvider.value(value: context.read<ProjectsBloc>()),
+                    BlocProvider.value(value: context.read<WarehousesBloc>()),
+                  ],
+                  child: MobileExitVoucherFormScreen(
+                    existing: item,
+                    isExitVoucher: _isExitVoucher,
+                  ),
+                )),
+              ).then((_) {
+                _fetchFilteredWithdrawals();
+              });
+            },
+          );
         } : null,
         onDelete: PermissionService.instance.canDelete(resKey) ? () => _handleDelete(item.id) : null,
       );
@@ -355,22 +349,28 @@ class _MobileStockWithdrawalsScreenState extends State<MobileStockWithdrawalsScr
       itemCount: totalMatchingCount > 0 ? totalMatchingCount : cards.length,
       fabText: _config.fabText,
       onFabPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => MultiBlocProvider(
-            providers: [
-              BlocProvider.value(value: context.read<ExitVouchersBloc>()),
-              BlocProvider.value(value: context.read<StockWithdrawalsBloc>()),
-              BlocProvider.value(value: context.read<CustomersBloc>()),
-              BlocProvider.value(value: context.read<ProductsBloc>()),
-              BlocProvider.value(value: context.read<ProjectsBloc>()),
-              BlocProvider.value(value: context.read<WarehousesBloc>()),
-            ],
-            child: MobileExitVoucherFormScreen(isExitVoucher: _isExitVoucher),
-          )),
-        ).then((_) {
-          _fetchFilteredWithdrawals();
-        });
+        OfflineActionHelper.executeAction(
+          context: context,
+          action: 'create',
+          onConfirmed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => MultiBlocProvider(
+                providers: [
+                  BlocProvider.value(value: context.read<ExitVouchersBloc>()),
+                  BlocProvider.value(value: context.read<StockWithdrawalsBloc>()),
+                  BlocProvider.value(value: context.read<CustomersBloc>()),
+                  BlocProvider.value(value: context.read<ProductsBloc>()),
+                  BlocProvider.value(value: context.read<ProjectsBloc>()),
+                  BlocProvider.value(value: context.read<WarehousesBloc>()),
+                ],
+                child: MobileExitVoucherFormScreen(isExitVoucher: _isExitVoucher),
+              )),
+            ).then((_) {
+              _fetchFilteredWithdrawals();
+            });
+          },
+        );
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

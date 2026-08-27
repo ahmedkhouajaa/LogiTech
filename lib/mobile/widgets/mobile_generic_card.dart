@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
 import '../utils/mobile_status_colors.dart';
+import '../../widgets/pending_sync_badge.dart';
 
 class MobileGenericCard extends StatelessWidget {
   final String reference;
@@ -12,6 +13,7 @@ class MobileGenericCard extends StatelessWidget {
   final String? badgeText;
   final DateTime? date;
   final double? amount;
+  final bool isSynced;
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onPdf;
@@ -28,6 +30,7 @@ class MobileGenericCard extends StatelessWidget {
     this.badgeText,
     this.date,
     this.amount,
+    this.isSynced = true,
     required this.onTap,
     this.onEdit,
     this.onPdf,
@@ -118,22 +121,24 @@ class MobileGenericCard extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-                          ),
-                          child: Text(
-                            statusLabel,
-                            style: TextStyle(
-                              color: statusColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
+                        (!isSynced || reference.startsWith('BROUILLON-'))
+                            ? const PendingSyncBadge()
+                            : Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                                ),
+                                child: Text(
+                                  statusLabel,
+                                  style: TextStyle(
+                                    color: statusColor,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                         const SizedBox(width: 4),
                         Icon(Icons.chevron_right, size: 18, color: AppColors.textTertiary),
                       ],

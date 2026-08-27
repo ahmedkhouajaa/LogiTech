@@ -31,6 +31,7 @@ import '../../widgets/premium_detail_shell.dart';
 import '../../screens/document_preview_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../utils/offline_action_helper.dart';
 
 class MobileDevisDetailScreen extends StatefulWidget {
   final Quote quote;
@@ -272,65 +273,27 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
   }
 
   void _handleAction(BuildContext context, String action, Quote quote) {
+    // For write actions, use OfflineActionHelper to show confirm dialog + connectivity check
+    if (OfflineActionHelper.writeActions.contains(action)) {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, quote),
+      );
+      return;
+    }
+
+    // Read actions — execute directly (work offline)
     switch (action) {
       case 'view':
         final viewDoc = DocumentWrapper.fromQuote(quote);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
         break;
-      case 'edit':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MultiBlocProvider(
-              providers: [
-                BlocProvider.value(value: context.read<QuotesBloc>()),
-                BlocProvider.value(value: context.read<CustomersBloc>()),
-                BlocProvider.value(value: context.read<ProductsBloc>()),
-              ],
-              child: MobileQuoteFormScreen(existing: quote),
-            ),
-          ),
-        );
-        break;
-      case 'delete':
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer ce devis ?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx); // close dialog
-                  context.read<QuotesBloc>().add(DeleteQuote(quote.id));
-                  // We do NOT pop the details screen here. 
-                  // The BlocListener will automatically pop it when the quote is no longer found in the loaded state.
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
-        break;
-      case 'status':
-        _showChangeStatusDialog(context, quote);
-        break;
-      case 'to_invoice':
-        _showConversionDialog(context, quote, 'Facture', _convertQuoteToInvoice);
-        break;
       case 'view_invoice':
         _openConvertedInvoice(context, quote.convertedToId);
         break;
-      case 'to_order':
-        _showConversionDialog(context, quote, 'Commande Client', _convertQuoteToOrder);
-        break;
       case 'view_order':
         _openConvertedOrder(context, quote.convertedToOrderId);
-        break;
-      case 'to_delivery':
-        _showConversionDialog(context, quote, 'Bon de Livraison', _convertQuoteToDelivery);
         break;
       case 'view_delivery':
         _openConvertedDelivery(context, quote.convertedToDeliveryId);
@@ -356,6 +319,42 @@ class _MobileDevisDetailScreenState extends State<MobileDevisDetailScreen> {
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  /// Executes write actions after user has confirmed and connectivity is verified.
+  void _executeWriteAction(BuildContext context, String action, Quote quote) {
+    switch (action) {
+      case 'edit':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: context.read<QuotesBloc>()),
+                BlocProvider.value(value: context.read<CustomersBloc>()),
+                BlocProvider.value(value: context.read<ProductsBloc>()),
+              ],
+              child: MobileQuoteFormScreen(existing: quote),
+            ),
+          ),
+        );
+        break;
+      case 'delete':
+        context.read<QuotesBloc>().add(DeleteQuote(quote.id));
+        break;
+      case 'status':
+        _showChangeStatusDialog(context, quote);
+        break;
+      case 'to_invoice':
+        _convertQuoteToInvoice(context, quote);
+        break;
+      case 'to_order':
+        _convertQuoteToOrder(context, quote);
+        break;
+      case 'to_delivery':
+        _convertQuoteToDelivery(context, quote);
+        break;
     }
   }
 

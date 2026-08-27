@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/stock_transfers/stock_transfers_bloc.dart';
 import '../models/stock_transfer.dart';
+import '../services/sync_service.dart';
+import '../widgets/pending_sync_badge.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import 'create_stock_transfer_screen.dart';
@@ -15,6 +18,7 @@ import '../database/database_helper.dart';
 import '../widgets/custom_date_range_picker.dart';
 import '../widgets/searchable_dropdown_field.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
+import '../utils/offline_action_helper.dart';
 import '../blocs/warehouses/warehouses_state.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
@@ -38,12 +42,38 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
   String? _filterWarehouseId;
   DateTimeRange? _filterDateRange;
   bool _showMobileFilters = false;
+  StreamSubscription<int>? _syncSub;
 
   @override
   void initState() {
     super.initState();
     context.read<StockTransfersBloc>().add(LoadStockTransfers());
     _loadWarehouses();
+
+    _syncSub = SyncService.instance.onDocumentSyncCompleted.listen((count) {
+      if (mounted && count > 0) {
+        context.read<StockTransfersBloc>().add(LoadStockTransfers());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$count document(s) synchronisé(s) avec succès !'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadWarehouses() async {
@@ -928,9 +958,15 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 color: AppColors.surface,
                 onSelected: (val) {
-                  if (val == 'voir') _previewDocument(transfer);
-                  if (val == 'edit') _navigate(context, transfer);
-                  if (val == 'delete') _confirmDelete(transfer);
+                  OfflineActionHelper.executeAction(
+                    context: context,
+                    action: val,
+                    onConfirmed: () {
+                      if (val == 'voir') _previewDocument(transfer);
+                      if (val == 'edit') _navigate(context, transfer);
+                      if (val == 'delete') context.read<StockTransfersBloc>().add(DeleteStockTransfer(transfer.id));
+                    },
+                  );
                 },
                 itemBuilder: (_) {
                   final canRead = PermissionService.instance.canRead(UserPermissionResources.stockTransferVouchers);

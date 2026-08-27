@@ -9,6 +9,7 @@ import '../../models/stock_movement.dart';
 import '../../utils/constants.dart';
 import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/offline_document_service.dart';
 import 'stock_entries_event.dart';
 import 'stock_entries_state.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
@@ -31,31 +32,53 @@ class StockEntriesBloc extends Bloc<StockEntriesEvent, StockEntriesState> {
   Future<void> _onLoadFirstStockEntries(LoadFirstStockEntries event, Emitter<StockEntriesState> emit) async {
     emit(StockEntriesLoading());
     try {
-      FirestorePaginationService.instance.resetStockEntriesPagination();
-      final entriesFuture = FirestorePaginationService.instance.getFirstStockEntries(
-        pageSize: pageSize,
-        searchQuery: event.searchQuery,
-        supplierId: event.supplierId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
-      final countFuture = FirestorePaginationService.instance.getStockEntriesCount(
-        searchQuery: event.searchQuery,
-        supplierId: event.supplierId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
+      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('stock_entries');
+      final pendingEntries = pendingMaps.map((m) => StockEntry.fromMap(m)).toList();
 
-      final results = await Future.wait([entriesFuture, countFuture]);
-      final entries = results[0] as List<StockEntry>;
-      final totalCount = results[1] as int;
+      List<StockEntry> remoteEntries = [];
+      int totalCount = 0;
+
+      try {
+        FirestorePaginationService.instance.resetStockEntriesPagination();
+        final entriesFuture = FirestorePaginationService.instance.getFirstStockEntries(
+          pageSize: pageSize,
+          searchQuery: event.searchQuery,
+          supplierId: event.supplierId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+        final countFuture = FirestorePaginationService.instance.getStockEntriesCount(
+          searchQuery: event.searchQuery,
+          supplierId: event.supplierId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+
+        final results = await Future.wait([entriesFuture, countFuture]);
+        remoteEntries = results[0] as List<StockEntry>;
+        totalCount = results[1] as int;
+      } catch (e) {
+        print('[STOCK ENTRIES BLOC] Remote fetch error or offline: $e');
+      }
+
+      final combined = <StockEntry>[];
+      final pendingIds = pendingEntries.map((e) => e.id).toSet();
+      combined.addAll(pendingEntries);
+
+      for (var entry in remoteEntries) {
+        if (!pendingIds.contains(entry.id)) {
+          combined.add(entry);
+        }
+      }
+
+      final finalTotal = totalCount + pendingEntries.length;
 
       emit(StockEntriesLoaded(
-        entries,
-        totalCount: totalCount > entries.length ? totalCount : entries.length,
-        hasMore: entries.length >= pageSize,
+        combined,
+        totalCount: finalTotal > combined.length ? finalTotal : combined.length,
+        hasMore: remoteEntries.length >= pageSize,
       ));
     } catch (e) {
       emit(StockEntriesError(ErrorHandler.parseError(e)));

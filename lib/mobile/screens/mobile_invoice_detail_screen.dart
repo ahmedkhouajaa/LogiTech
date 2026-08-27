@@ -32,6 +32,7 @@ import 'forms/mobile_invoice_form_screen.dart';
 import 'forms/mobile_credit_note_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../utils/offline_action_helper.dart';
 
 class MobileInvoiceDetailScreen extends StatefulWidget {
   final Invoice invoice;
@@ -285,54 +286,19 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
   }
 
   void _handleAction(BuildContext context, String action, Invoice invoice) {
+    if (OfflineActionHelper.writeActions.contains(action) || action == 'add_payment') {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, invoice),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
         final viewDoc = DocumentWrapper.fromInvoice(invoice);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
-        break;
-      case 'edit':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MultiBlocProvider(
-              providers: [
-                BlocProvider.value(value: context.read<InvoicesBloc>()),
-                BlocProvider.value(value: context.read<CustomersBloc>()),
-                BlocProvider.value(value: context.read<ProductsBloc>()),
-              ],
-              child: MobileInvoiceFormScreen(existing: invoice),
-            ),
-          ),
-        );
-        break;
-      case 'delete':
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer ce facture ?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  context.read<InvoicesBloc>().add(DeleteInvoice(invoice.id));
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
-        break;
-      case 'status':
-        _showChangeStatusDialog(context, invoice);
-        break;
-      case 'add_payment':
-        _showAddPaymentDialog(context, invoice);
-        break;
-      case 'to_credit_note':
-        _createCreditNoteFromInvoice(context, invoice);
         break;
       case 'view_credit_note':
         _openConvertedCreditNote(context, invoice.creditNoteId);
@@ -361,6 +327,38 @@ class _MobileInvoiceDetailScreenState extends State<MobileInvoiceDetailScreen> {
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, Invoice invoice) {
+    switch (action) {
+      case 'edit':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: context.read<InvoicesBloc>()),
+                BlocProvider.value(value: context.read<CustomersBloc>()),
+                BlocProvider.value(value: context.read<ProductsBloc>()),
+              ],
+              child: MobileInvoiceFormScreen(existing: invoice),
+            ),
+          ),
+        );
+        break;
+      case 'delete':
+        context.read<InvoicesBloc>().add(DeleteInvoice(invoice.id));
+        break;
+      case 'status':
+        _showChangeStatusDialog(context, invoice);
+        break;
+      case 'add_payment':
+        _showAddPaymentDialog(context, invoice);
+        break;
+      case 'to_credit_note':
+        _createCreditNoteFromInvoice(context, invoice);
+        break;
     }
   }
 

@@ -17,6 +17,7 @@ class ReceivingVoucher {
   final double amountPaid;
   final String? firebaseUid;
   final bool isDeleted;
+  final bool isSynced;
   final bool isConvertedToPurchaseInvoice;
   final String? convertedToPurchaseInvoiceId;
   final bool isConvertedToSupplierReturn;
@@ -43,6 +44,7 @@ class ReceivingVoucher {
     this.amountPaid = 0,
     this.firebaseUid,
     this.isDeleted = false,
+    this.isSynced = true,
     this.isConvertedToPurchaseInvoice = false,
     this.convertedToPurchaseInvoiceId,
     this.isConvertedToSupplierReturn = false,
@@ -139,6 +141,7 @@ class ReceivingVoucher {
       'amount_paid': amountPaid,
       'firebase_uid': firebaseUid,
       'is_deleted': isDeleted ? 1 : 0,
+      'is_synced': isSynced ? 1 : 0,
       'is_converted_to_purchase_invoice': isConvertedToPurchaseInvoice ? 1 : 0,
       'converted_to_purchase_invoice_id': convertedToPurchaseInvoiceId,
       'is_converted_to_supplier_return': isConvertedToSupplierReturn ? 1 : 0,
@@ -172,6 +175,7 @@ class ReceivingVoucher {
       amountPaid: (map['amount_paid'] ?? 0).toDouble(),
       firebaseUid: map['firebase_uid']?.toString(),
       isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
+      isSynced: map['is_synced'] == null ? true : (map['is_synced'] == 1 || map['is_synced'] == '1' || map['is_synced'] == true),
       isConvertedToPurchaseInvoice: map['is_converted_to_purchase_invoice'] == 1,
       convertedToPurchaseInvoiceId: map['converted_to_purchase_invoice_id'],
       isConvertedToSupplierReturn: map['is_converted_to_supplier_return'] == 1,

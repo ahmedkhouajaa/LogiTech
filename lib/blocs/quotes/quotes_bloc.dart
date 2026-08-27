@@ -7,6 +7,7 @@ import '../../utils/constants.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import '../../services/permission_service.dart';
+import '../../services/offline_quote_service.dart';
 import '../../models/user_management_model.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
@@ -148,31 +149,57 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
   Future<void> _onLoadFirstDevis(LoadFirstDevis event, Emitter<QuotesState> emit) async {
     emit(QuotesLoading());
     try {
-      FirestorePaginationService.instance.resetDevisPagination();
-      final quotesFuture = FirestorePaginationService.instance.getFirstDevis(
-        pageSize: pageSize,
-        searchQuery: event.searchQuery,
-        customerId: event.customerId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
-      final countFuture = FirestorePaginationService.instance.getDevisCount(
-        searchQuery: event.searchQuery,
-        customerId: event.customerId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
+      final pendingQuotes = await OfflineQuoteService.instance.getPendingQuotes();
+      
+      List<Quote> remoteQuotes = [];
+      int totalCount = 0;
 
-      final results = await Future.wait([quotesFuture, countFuture]);
-      final quotes = results[0] as List<Quote>;
-      final totalCount = results[1] as int;
+      try {
+        FirestorePaginationService.instance.resetDevisPagination();
+        final quotesFuture = FirestorePaginationService.instance.getFirstDevis(
+          pageSize: pageSize,
+          searchQuery: event.searchQuery,
+          customerId: event.customerId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+        final countFuture = FirestorePaginationService.instance.getDevisCount(
+          searchQuery: event.searchQuery,
+          customerId: event.customerId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+
+        final results = await Future.wait([quotesFuture, countFuture]);
+        remoteQuotes = results[0] as List<Quote>;
+        totalCount = results[1] as int;
+      } catch (e) {
+        // If remote fetch fails due to offline state, log and fallback to local pending items
+        print('[QUOTES BLOC] Remote fetch failed or offline: $e');
+      }
+
+      // Combine local pending quotes (which are not yet synced) with remote quotes
+      final combinedQuotes = <Quote>[];
+      final pendingIds = pendingQuotes.map((q) => q.id).toSet();
+
+      // Add pending quotes first
+      combinedQuotes.addAll(pendingQuotes);
+
+      // Add remote quotes if they are not already in pending
+      for (var rq in remoteQuotes) {
+        if (!pendingIds.contains(rq.id)) {
+          combinedQuotes.add(rq);
+        }
+      }
+
+      final finalTotal = totalCount + pendingQuotes.length;
 
       emit(QuotesLoaded(
-        quotes,
-        totalCount: totalCount > quotes.length ? totalCount : quotes.length,
-        hasMore: quotes.length >= pageSize,
+        combinedQuotes,
+        totalCount: finalTotal > combinedQuotes.length ? finalTotal : combinedQuotes.length,
+        hasMore: remoteQuotes.length >= pageSize,
       ));
     } catch (e) {
       emit(QuotesError(ErrorHandler.parseError(e)));

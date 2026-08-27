@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../utils/mobile_module_config.dart';
@@ -14,7 +15,10 @@ import '../../models/customer.dart';
 import 'forms/mobile_invoice_form_screen.dart';
 import 'mobile_invoice_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
+import '../../utils/offline_action_helper.dart';
 import '../../services/permission_service.dart';
+import '../../services/sync_service.dart';
+import '../../utils/constants.dart';
 import '../../models/user_management_model.dart';
 
 class MobileInvoicesScreen extends StatefulWidget {
@@ -32,6 +36,7 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
   DateTime? _dateTo;
   String? _selectedStatus;
   late MobileModuleConfig _config;
+  StreamSubscription<int>? _syncSub;
 
   @override
   void initState() {
@@ -41,10 +46,30 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
     _fetchFilteredInvoices();
     context.read<CustomersBloc>().add(LoadCustomers());
     _scrollController.addListener(_onScroll);
+
+    _syncSub = SyncService.instance.onDocumentSyncCompleted.listen((count) {
+      if (mounted && count > 0) {
+        _fetchFilteredInvoices();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$count document(s) synchronisé(s) avec succès !'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
+    _syncSub?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -260,23 +285,29 @@ class _MobileInvoicesScreenState extends State<MobileInvoicesScreen> {
           itemCount: totalMatchingCount,
           fabText: _config.fabText,
           onFabPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => MultiBlocProvider(
-                  providers: [
-                    BlocProvider.value(value: context.read<InvoicesBloc>()),
-                    BlocProvider.value(value: context.read<CustomersBloc>()),
-                    BlocProvider.value(value: context.read<ProductsBloc>()),
-                    BlocProvider.value(value: context.read<ProjectsBloc>()),
-                    BlocProvider.value(value: context.read<WarehousesBloc>()),
-                  ],
-                  child: const MobileInvoiceFormScreen(),
-                ),
-              ),
-            ).then((_) {
-              _fetchFilteredInvoices();
-            });
+            OfflineActionHelper.executeAction(
+              context: context,
+              action: 'create',
+              onConfirmed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider.value(value: context.read<InvoicesBloc>()),
+                        BlocProvider.value(value: context.read<CustomersBloc>()),
+                        BlocProvider.value(value: context.read<ProductsBloc>()),
+                        BlocProvider.value(value: context.read<ProjectsBloc>()),
+                        BlocProvider.value(value: context.read<WarehousesBloc>()),
+                      ],
+                      child: const MobileInvoiceFormScreen(),
+                    ),
+                  ),
+                ).then((_) {
+                  _fetchFilteredInvoices();
+                });
+              },
+            );
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

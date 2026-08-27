@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,6 +8,8 @@ import '../utils/file_download_helper.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/invoices/invoices_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
+import '../services/sync_service.dart';
+import '../widgets/pending_sync_badge.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
 import '../blocs/warehouses/warehouses_bloc.dart';
@@ -27,6 +30,8 @@ import 'create_invoice_screen.dart';
 import '../services/pdf_service.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
+import 'document_detail_screen.dart';
+import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
 import '../services/document_numbering_service.dart';
 import 'document_detail_screen.dart';
@@ -57,11 +62,38 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   int _rowsPerPage = 20;
   int _currentPage = 0;
 
+  StreamSubscription<int>? _syncSub;
+
   @override
   void initState() {
     super.initState();
     context.read<InvoicesBloc>().add(const LoadFirstInvoices());
     context.read<CustomersBloc>().add(LoadCustomers());
+
+    _syncSub = SyncService.instance.onDocumentSyncCompleted.listen((count) {
+      if (mounted && count > 0) {
+        context.read<InvoicesBloc>().add(const LoadFirstInvoices());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$count document(s) synchronisé(s) avec succès !'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncSub?.cancel();
+    super.dispose();
   }
 
   void _applyFilters() {
@@ -1019,7 +1051,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           ),
         ),
         // Statut badge
-        DataCell(StatusBadge(label: inv.status.label, color: inv.status.color)),
+        DataCell((!inv.isSynced || inv.number.startsWith('BROUILLON-'))
+            ? const PendingSyncBadge()
+            : StatusBadge(label: inv.status.label, color: inv.status.color)),
         // Montant
         DataCell(
           Text(
@@ -1325,6 +1359,15 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   void _handleAction(BuildContext context, String action, Invoice inv) {
+    if (OfflineActionHelper.writeActions.contains(action) || action == 'add_payment') {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, inv),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
         Navigator.push(
@@ -1338,6 +1381,37 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           ),
         );
         break;
+      case 'print':
+        final doc = DocumentWrapper.fromInvoice(inv);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DocumentPreviewScreen(document: doc),
+          ),
+        );
+        break;
+      case 'view_credit_note':
+        _openConvertedCreditNote(context, inv.creditNoteId);
+        break;
+      case 'pdf':
+        final doc = DocumentWrapper.fromInvoice(inv);
+        PdfService.instance.downloadDocument(context, doc);
+        break;
+      case 'email':
+        final docEmail = DocumentWrapper.fromInvoice(inv);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = DocumentWrapper.fromInvoice(inv);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, Invoice inv) {
+    switch (action) {
       case 'edit':
         Navigator.push(
           context,
@@ -1352,15 +1426,6 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               ],
               child: CreateInvoiceScreen(existing: inv),
             ),
-          ),
-        );
-        break;
-            case 'print':
-        final doc = DocumentWrapper.fromInvoice(inv);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DocumentPreviewScreen(document: doc),
           ),
         );
         break;
@@ -1385,29 +1450,12 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       case 'to_credit_note':
         _createCreditNoteFromInvoice(context, inv);
         break;
-      case 'view_credit_note':
-        _openConvertedCreditNote(context, inv.creditNoteId);
-        break;
       case 'delete':
-        _confirmDelete(inv);
+        context.read<InvoicesBloc>().add(DeleteInvoice(inv.id));
         break;
       case 'status':
         _showChangeStatusDialog(context, inv);
         break;
-      case 'pdf':
-        final doc = DocumentWrapper.fromInvoice(inv);
-        PdfService.instance.downloadDocument(context, doc);
-        break;
-      case 'email':
-        final docEmail = DocumentWrapper.fromInvoice(inv);
-        DocumentShareService.shareDocument(docEmail, isEmail: true);
-        break;
-      case 'whatsapp':
-        final docWa = DocumentWrapper.fromInvoice(inv);
-        DocumentShareService.shareDocument(docWa, isEmail: false);
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));
     }
   }
 

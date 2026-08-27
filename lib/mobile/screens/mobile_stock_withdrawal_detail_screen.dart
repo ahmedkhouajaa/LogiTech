@@ -23,8 +23,10 @@ import '../../screens/document_preview_screen.dart';
 import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_exit_voucher_form_screen.dart';
 import '../../screens/create_stock_withdrawal_screen.dart';
+import '../../screens/exit_vouchers_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../utils/offline_action_helper.dart';
 
 class MobileStockWithdrawalDetailScreen extends StatefulWidget {
   final StockWithdrawal withdrawal;
@@ -284,6 +286,7 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
                 }
                 if (canUpdate) {
                   addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
+                  addItem('status', Icons.swap_horiz_outlined, AppColors.warning, 'Changer le statut');
                 }
                 if (canDelete) {
                   addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
@@ -329,11 +332,43 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
   }
 
   void _handleAction(BuildContext context, String action, StockWithdrawal withdrawal) {
+    if (OfflineActionHelper.writeActions.contains(action)) {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, withdrawal),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
         final viewDoc = _createDocumentWrapper(withdrawal);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
         break;
+      case 'print':
+        final doc = _createDocumentWrapper(withdrawal);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
+        break;
+      case 'pdf':
+        final docPdf = _createDocumentWrapper(withdrawal);
+        PdfService.instance.downloadDocument(context, docPdf);
+        break;
+      case 'email':
+        final docEmail = _createDocumentWrapper(withdrawal);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = _createDocumentWrapper(withdrawal);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, StockWithdrawal withdrawal) {
+    switch (action) {
       case 'edit':
         if (widget.isExitVoucher) {
           Navigator.push(
@@ -365,49 +400,84 @@ class _MobileStockWithdrawalDetailScreenState extends State<MobileStockWithdrawa
         }
         break;
       case 'delete':
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text(widget.isExitVoucher 
-              ? 'Voulez-vous vraiment supprimer ce bon de sortie ?' 
-              : 'Voulez-vous vraiment supprimer ce bon de prélèvement ?'),
+        if (widget.isExitVoucher) {
+          context.read<ExitVouchersBloc>().add(DeleteExitVoucher(withdrawal.id));
+        } else {
+          context.read<StockWithdrawalsBloc>().add(DeleteStockWithdrawal(withdrawal.id));
+        }
+        break;
+      case 'status':
+        _showChangeStatusDialog(context, withdrawal);
+        break;
+    }
+  }
+
+  void _showChangeStatusDialog(BuildContext context, StockWithdrawal withdrawal) {
+    ExitVoucherStatus selectedStatus = ExitVoucherStatus.values.firstWhere(
+      (e) => e.name == withdrawal.status,
+      orElse: () => ExitVoucherStatus.draft,
+    );
+    final notesController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Changer le statut'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Nouveau statut:'),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<ExitVoucherStatus>(
+                    dropdownColor: AppColors.surfaceAlt,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                    value: selectedStatus,
+                    decoration: InputDecoration(border: OutlineInputBorder()),
+                    items: ExitVoucherStatus.values.map((s) => DropdownMenuItem(
+                      value: s,
+                      child: Text(s.label, style: TextStyle(color: s.color, fontWeight: FontWeight.bold)),
+                    )).toList(),
+                    onChanged: (v) {
+                      if (v != null) setDialogState(() => selectedStatus = v);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: notesController,
+                    maxLines: 2,
+                    decoration: InputDecoration(border: OutlineInputBorder(), hintText: 'Notes (optionnel)'),
+                  ),
+                ],
+              ),
+            ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
+              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(dialogCtx);
+                  final updatedNote = withdrawal.copyWith(
+                    status: selectedStatus.name,
+                    notes: notesController.text.isNotEmpty ? '${withdrawal.notes ?? ''}\n${notesController.text}' : withdrawal.notes,
+                  );
                   if (widget.isExitVoucher) {
-                    context.read<ExitVouchersBloc>().add(DeleteExitVoucher(withdrawal.id));
+                    context.read<ExitVouchersBloc>().add(UpdateExitVoucher(updatedNote));
                   } else {
-                    context.read<StockWithdrawalsBloc>().add(DeleteStockWithdrawal(withdrawal.id));
+                    context.read<StockWithdrawalsBloc>().add(UpdateStockWithdrawal(updatedNote));
                   }
+                  Navigator.pop(dialogCtx);
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                child: const Text('Confirmer'),
               ),
             ],
-          ),
-        );
-        break;
-      case 'print':
-        final doc = _createDocumentWrapper(withdrawal);
-        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
-        break;
-      case 'pdf':
-        final docPdf = _createDocumentWrapper(withdrawal);
-        PdfService.instance.downloadDocument(context, docPdf);
-        break;
-      case 'email':
-        final docEmail = _createDocumentWrapper(withdrawal);
-        DocumentShareService.shareDocument(docEmail, isEmail: true);
-        break;
-      case 'whatsapp':
-        final docWa = _createDocumentWrapper(withdrawal);
-        DocumentShareService.shareDocument(docWa, isEmail: false);
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
-    }
+          );
+        },
+      ),
+    );
   }
 }

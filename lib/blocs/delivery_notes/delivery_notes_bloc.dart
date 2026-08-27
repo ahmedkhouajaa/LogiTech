@@ -5,6 +5,7 @@ import '../../services/permission_service.dart';
 import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/offline_document_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
@@ -168,31 +169,53 @@ class DeliveryNotesBloc extends Bloc<DeliveryNotesEvent, DeliveryNotesState> {
   Future<void> _onLoadFirstDeliveryNotes(LoadFirstDeliveryNotes event, Emitter<DeliveryNotesState> emit) async {
     emit(DeliveryNotesLoading());
     try {
-      FirestorePaginationService.instance.resetDeliveryNotesPagination();
-      final notesFuture = FirestorePaginationService.instance.getFirstDeliveryNotes(
-        pageSize: pageSize,
-        searchQuery: event.searchQuery,
-        customerId: event.customerId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
-      final countFuture = FirestorePaginationService.instance.getDeliveryNotesCount(
-        searchQuery: event.searchQuery,
-        customerId: event.customerId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
+      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('delivery_notes');
+      final pendingNotes = pendingMaps.map((m) => DeliveryNote.fromMap(m)).toList();
 
-      final results = await Future.wait([notesFuture, countFuture]);
-      final notes = results[0] as List<DeliveryNote>;
-      final totalCount = results[1] as int;
+      List<DeliveryNote> remoteNotes = [];
+      int totalCount = 0;
+
+      try {
+        FirestorePaginationService.instance.resetDeliveryNotesPagination();
+        final notesFuture = FirestorePaginationService.instance.getFirstDeliveryNotes(
+          pageSize: pageSize,
+          searchQuery: event.searchQuery,
+          customerId: event.customerId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+        final countFuture = FirestorePaginationService.instance.getDeliveryNotesCount(
+          searchQuery: event.searchQuery,
+          customerId: event.customerId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+
+        final results = await Future.wait([notesFuture, countFuture]);
+        remoteNotes = results[0] as List<DeliveryNote>;
+        totalCount = results[1] as int;
+      } catch (e) {
+        print('[DELIVERY NOTES BLOC] Remote fetch error or offline: $e');
+      }
+
+      final combined = <DeliveryNote>[];
+      final pendingIds = pendingNotes.map((n) => n.id).toSet();
+      combined.addAll(pendingNotes);
+
+      for (var note in remoteNotes) {
+        if (!pendingIds.contains(note.id)) {
+          combined.add(note);
+        }
+      }
+
+      final finalTotal = totalCount + pendingNotes.length;
 
       emit(DeliveryNotesLoaded(
-        notes,
-        totalCount: totalCount > notes.length ? totalCount : notes.length,
-        hasMore: notes.length >= pageSize,
+        combined,
+        totalCount: finalTotal > combined.length ? finalTotal : combined.length,
+        hasMore: remoteNotes.length >= pageSize,
       ));
     } catch (e) {
       emit(DeliveryNotesError(ErrorHandler.parseError(e)));

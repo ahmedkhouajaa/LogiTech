@@ -21,6 +21,7 @@ import '../../services/permission_service.dart';
 import '../../services/pdf_service.dart';
 import '../../services/document_share_service.dart';
 import '../../models/user_management_model.dart';
+import '../../utils/offline_action_helper.dart';
 
 class MobileInventorySheetDetailScreen extends StatefulWidget {
   final InventorySheet sheet;
@@ -184,10 +185,10 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
                 if (canRead) {
                   addItem('view', Icons.visibility_outlined, AppColors.primary, 'Voir');
                 }
-                if (currentSheet.status != 'validated' && canUpdate) {
+                if (canUpdate) {
                   addItem('edit', Icons.edit_outlined, AppColors.primary, 'Modifier');
                 }
-                if (currentSheet.status != 'validated' && canDelete) {
+                if (canDelete) {
                   addItem('delete', Icons.delete_outline, AppColors.error, 'Supprimer');
                 }
                 if (canRead) {
@@ -226,6 +227,15 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
   }
 
   void _handleAction(BuildContext context, String action, InventorySheet sheet) {
+    if (OfflineActionHelper.writeActions.contains(action)) {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, sheet),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
       case 'print':
@@ -244,6 +254,13 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
         final docWa = DocumentWrapper.fromInventorySheet(sheet);
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, InventorySheet sheet) {
+    switch (action) {
       case 'edit':
         Navigator.push(
           context,
@@ -262,27 +279,10 @@ class _MobileInventorySheetDetailScreenState extends State<MobileInventorySheetD
         });
         break;
       case 'delete':
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: const Text('Confirmer la suppression'),
-            content: const Text('Voulez-vous vraiment supprimer cette fiche d\'inventaire ?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  context.read<InventorySheetsBloc>().add(InventorySheetDeleted(sheet.id));
-                  if (mounted) {
-                    Navigator.pop(context);
-                  }
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
+        context.read<InventorySheetsBloc>().add(InventorySheetDeleted(sheet.id));
+        if (mounted) {
+          Navigator.pop(context);
+        }
         break;
     }
   }

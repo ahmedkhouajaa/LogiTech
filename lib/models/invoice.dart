@@ -30,6 +30,7 @@ class Invoice {
   final String? warehouseId;
   final String? creditNoteId;
   final bool isDeleted;
+  final bool isSynced;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -65,6 +66,7 @@ class Invoice {
     this.enterpriseId,
     this.creditNoteId,
     this.isDeleted = false,
+    this.isSynced = true,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -92,6 +94,7 @@ class Invoice {
         'enterprise_id': enterpriseId,
         'credit_note_id': creditNoteId,
         'is_deleted': isDeleted ? 1 : 0,
+        'is_synced': isSynced ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
         'items': items.map((i) => i.toMap()).toList(),
@@ -133,6 +136,7 @@ class Invoice {
         enterpriseId: map['enterprise_id']?.toString(),
         creditNoteId: map['credit_note_id']?.toString(),
         isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
+        isSynced: map['is_synced'] == null ? true : (map['is_synced'] == 1 || map['is_synced'] == '1' || map['is_synced'] == true),
         createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
         updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
         items: parsedItems,

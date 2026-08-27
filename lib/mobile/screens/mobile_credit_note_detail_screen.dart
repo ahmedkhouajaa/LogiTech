@@ -22,6 +22,7 @@ import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_credit_note_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../utils/offline_action_helper.dart';
 
 class MobileCreditNoteDetailScreen extends StatefulWidget {
   final CreditNote creditNote;
@@ -258,45 +259,19 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
   }
 
   void _handleAction(BuildContext context, String action, CreditNote creditNote) {
+    if (OfflineActionHelper.writeActions.contains(action)) {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, creditNote),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
         final viewDoc = DocumentWrapper.fromCreditNote(creditNote);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
-        break;
-      case 'edit':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MultiBlocProvider(
-              providers: [
-                BlocProvider.value(value: context.read<CreditNotesBloc>()),
-                BlocProvider.value(value: context.read<CustomersBloc>()),
-                BlocProvider.value(value: context.read<ProductsBloc>()),
-              ],
-              child: MobileCreditNoteFormScreen(existing: creditNote),
-            ),
-          ),
-        );
-        break;
-      case 'delete':
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer cet avoir client ?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  context.read<CreditNotesBloc>().add(DeleteCreditNote(creditNote.id));
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
         break;
       case 'pdf':
         final doc = DocumentWrapper.fromCreditNote(creditNote);
@@ -316,6 +291,29 @@ class _MobileCreditNoteDetailScreenState extends State<MobileCreditNoteDetailScr
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, CreditNote creditNote) {
+    switch (action) {
+      case 'edit':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: context.read<CreditNotesBloc>()),
+                BlocProvider.value(value: context.read<CustomersBloc>()),
+                BlocProvider.value(value: context.read<ProductsBloc>()),
+              ],
+              child: MobileCreditNoteFormScreen(existing: creditNote),
+            ),
+          ),
+        );
+        break;
+      case 'delete':
+        context.read<CreditNotesBloc>().add(DeleteCreditNote(creditNote.id));
+        break;
     }
   }
 }

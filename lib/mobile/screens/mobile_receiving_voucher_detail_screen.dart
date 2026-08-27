@@ -28,6 +28,7 @@ import '../../services/pdf_service.dart';
 import '../../services/document_share_service.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../utils/offline_action_helper.dart';
 import '../../database/database_helper.dart';
 
 import '../../widgets/premium_detail_shell.dart';
@@ -300,45 +301,19 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
   }
 
   void _handleAction(BuildContext context, String action, ReceivingVoucher voucher) {
+    if (OfflineActionHelper.writeActions.contains(action) || action == 'convert_invoice' || action == 'convert_return' || action == 'payment') {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, voucher),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
         final viewDoc = DocumentWrapper.fromReceivingVoucher(voucher);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
-        break;
-      case 'edit':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MultiBlocProvider(
-              providers: [
-                BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
-                BlocProvider.value(value: context.read<SuppliersBloc>()),
-                BlocProvider.value(value: context.read<ProductsBloc>()),
-              ],
-              child: MobileReceivingVoucherFormScreen(existing: voucher),
-            ),
-          ),
-        );
-        break;
-      case 'delete':
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer ce bon ?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  context.read<ReceivingVouchersBloc>().add(DeleteReceivingVoucher(voucher.id));
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
         break;
       case 'pdf':
         final doc = DocumentWrapper.fromReceivingVoucher(voucher);
@@ -347,12 +322,6 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
       case 'print':
         final doc = DocumentWrapper.fromReceivingVoucher(voucher);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
-        break;
-      case 'convert_invoice':
-        _showConvertDialog(context, voucher, true);
-        break;
-      case 'convert_return':
-        _showConvertDialog(context, voucher, false);
         break;
       case 'view_invoice_created':
         Navigator.pushReplacement(
@@ -378,14 +347,40 @@ class _MobileReceivingVoucherDetailScreenState extends State<MobileReceivingVouc
       case 'attachments':
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));
         break;
-      case 'status':
-        _showChangeStatusDialog(context, voucher);
-        break;
-      case 'add_payment':
-        _showAddPaymentDialog(context, voucher);
-        break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, ReceivingVoucher voucher) {
+    switch (action) {
+      case 'edit':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
+                BlocProvider.value(value: context.read<SuppliersBloc>()),
+                BlocProvider.value(value: context.read<ProductsBloc>()),
+              ],
+              child: MobileReceivingVoucherFormScreen(existing: voucher),
+            ),
+          ),
+        );
+        break;
+      case 'delete':
+        context.read<ReceivingVouchersBloc>().add(DeleteReceivingVoucher(voucher.id));
+        break;
+      case 'convert_invoice':
+        _convertToInvoice(context, voucher);
+        break;
+      case 'convert_return':
+        _convertToReturn(context, voucher);
+        break;
+      case 'payment':
+        _showAddPaymentDialog(context, voucher);
+        break;
     }
   }
 

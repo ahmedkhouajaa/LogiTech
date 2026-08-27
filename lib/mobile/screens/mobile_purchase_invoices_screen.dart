@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../utils/mobile_module_config.dart';
@@ -12,6 +13,8 @@ import 'forms/mobile_purchase_invoice_form_screen.dart';
 import 'mobile_purchase_invoice_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/permission_service.dart';
+import '../../services/sync_service.dart';
+import '../../utils/constants.dart';
 import '../../models/user_management_model.dart';
 import '../../blocs/products/products_bloc.dart';
 import '../../blocs/projects/projects_bloc.dart';
@@ -32,6 +35,7 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
   DateTime? _dateTo;
   String? _selectedStatus;
   late MobileModuleConfig _config;
+  StreamSubscription<int>? _syncSub;
 
   @override
   void initState() {
@@ -41,10 +45,30 @@ class _MobilePurchaseInvoicesScreenState extends State<MobilePurchaseInvoicesScr
     _fetchFilteredPurchaseInvoices();
     context.read<SuppliersBloc>().add(LoadSuppliers());
     _scrollController.addListener(_onScroll);
+
+    _syncSub = SyncService.instance.onDocumentSyncCompleted.listen((count) {
+      if (mounted && count > 0) {
+        _fetchFilteredPurchaseInvoices();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$count document(s) synchronisé(s) avec succès !'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
+    _syncSub?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();

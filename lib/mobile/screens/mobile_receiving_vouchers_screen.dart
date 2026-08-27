@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../utils/mobile_module_config.dart';
@@ -6,6 +7,8 @@ import '../widgets/mobile_generic_card.dart';
 import '../widgets/mobile_advanced_filter_panel.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/receiving_vouchers/receiving_vouchers_bloc.dart';
+import '../../blocs/purchase_invoices/purchase_invoices_bloc.dart';
+import '../../blocs/supplier_returns/supplier_returns_bloc.dart';
 import '../../blocs/suppliers/suppliers_bloc.dart';
 import '../../blocs/products/products_bloc.dart';
 import '../../blocs/projects/projects_bloc.dart';
@@ -15,6 +18,8 @@ import 'forms/mobile_receiving_voucher_form_screen.dart';
 import 'mobile_receiving_voucher_detail_screen.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/permission_service.dart';
+import '../../services/sync_service.dart';
+import '../../utils/constants.dart';
 import '../../models/user_management_model.dart';
 
 class MobileReceivingVouchersScreen extends StatefulWidget {
@@ -32,6 +37,7 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
   DateTime? _dateTo;
   String? _selectedStatus;
   late MobileModuleConfig _config;
+  StreamSubscription<int>? _syncSub;
 
   @override
   void initState() {
@@ -41,10 +47,30 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
     _fetchFilteredVouchers();
     context.read<SuppliersBloc>().add(LoadSuppliers());
     _scrollController.addListener(_onScroll);
+
+    _syncSub = SyncService.instance.onDocumentSyncCompleted.listen((count) {
+      if (mounted && count > 0) {
+        _fetchFilteredVouchers();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$count document(s) synchronisé(s) avec succès !'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
+    _syncSub?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -174,7 +200,18 @@ class _MobileReceivingVouchersScreenState extends State<MobileReceivingVouchersS
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => MobileReceivingVoucherDetailScreen(voucher: item)),
+                  MaterialPageRoute(
+                    builder: (_) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider.value(value: context.read<ReceivingVouchersBloc>()),
+                        BlocProvider.value(value: context.read<PurchaseInvoicesBloc>()),
+                        BlocProvider.value(value: context.read<SupplierReturnsBloc>()),
+                        BlocProvider.value(value: context.read<SuppliersBloc>()),
+                        BlocProvider.value(value: context.read<ProductsBloc>()),
+                      ],
+                      child: MobileReceivingVoucherDetailScreen(voucher: item),
+                    ),
+                  ),
                 ).then((_) {
                   _fetchFilteredVouchers();
                 });

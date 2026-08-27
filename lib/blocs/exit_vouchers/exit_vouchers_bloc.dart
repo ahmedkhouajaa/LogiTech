@@ -4,6 +4,7 @@ import '../../models/user_management_model.dart';
 import '../../services/permission_service.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/offline_document_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
@@ -156,31 +157,53 @@ class ExitVouchersBloc extends Bloc<ExitVouchersEvent, ExitVouchersState> {
   Future<void> _onLoadFirstExitVouchers(LoadFirstExitVouchers event, Emitter<ExitVouchersState> emit) async {
     emit(ExitVouchersLoading());
     try {
-      FirestorePaginationService.instance.resetExitVouchersPagination();
-      final itemsFuture = FirestorePaginationService.instance.getFirstExitVouchers(
-        pageSize: pageSize,
-        searchQuery: event.searchQuery,
-        customerId: event.customerId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
-      final countFuture = FirestorePaginationService.instance.getExitVouchersCount(
-        searchQuery: event.searchQuery,
-        customerId: event.customerId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
+      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('exit_vouchers');
+      final pendingVouchers = pendingMaps.map((m) => StockWithdrawal.fromMap(m)).toList();
 
-      final results = await Future.wait([itemsFuture, countFuture]);
-      final items = results[0] as List<StockWithdrawal>;
-      final totalCount = results[1] as int;
+      List<StockWithdrawal> remoteVouchers = [];
+      int totalCount = 0;
+
+      try {
+        FirestorePaginationService.instance.resetExitVouchersPagination();
+        final itemsFuture = FirestorePaginationService.instance.getFirstExitVouchers(
+          pageSize: pageSize,
+          searchQuery: event.searchQuery,
+          customerId: event.customerId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+        final countFuture = FirestorePaginationService.instance.getExitVouchersCount(
+          searchQuery: event.searchQuery,
+          customerId: event.customerId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+
+        final results = await Future.wait([itemsFuture, countFuture]);
+        remoteVouchers = results[0] as List<StockWithdrawal>;
+        totalCount = results[1] as int;
+      } catch (e) {
+        print('[EXIT VOUCHERS BLOC] Remote fetch error or offline: $e');
+      }
+
+      final combined = <StockWithdrawal>[];
+      final pendingIds = pendingVouchers.map((v) => v.id).toSet();
+      combined.addAll(pendingVouchers);
+
+      for (var v in remoteVouchers) {
+        if (!pendingIds.contains(v.id)) {
+          combined.add(v);
+        }
+      }
+
+      final finalTotal = totalCount + pendingVouchers.length;
 
       emit(ExitVouchersLoaded(
-        items,
-        totalCount: totalCount > items.length ? totalCount : items.length,
-        hasMore: items.length >= pageSize,
+        combined,
+        totalCount: finalTotal > combined.length ? finalTotal : combined.length,
+        hasMore: remoteVouchers.length >= pageSize,
         clientFilter: event.customerId,
         dateFromFilter: event.dateFrom,
         dateToFilter: event.dateTo,

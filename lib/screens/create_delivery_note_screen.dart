@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/delivery_notes/delivery_notes_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_document_service.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
 import '../models/delivery_note.dart';
@@ -154,17 +156,22 @@ class _CreateDeliveryNoteScreenState
     final bloc = context.read<DeliveryNotesBloc>();
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final isOnline = ConnectivityService.instance.isOnline;
 
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = await DocumentNumberingService.ensureNumberSequence(
-        context: context,
-        docCollection: 'delivery_notes',
-        docTypeName: 'Bon de Livraison',
-        prefix: 'BL',
-      );
-      if (seq == null) return;
-      number = generateDocNumber('BL', seq);
+      if (isOnline) {
+        final seq = await DocumentNumberingService.ensureNumberSequence(
+          context: context,
+          docCollection: 'delivery_notes',
+          docTypeName: 'Bon de Livraison',
+          prefix: 'BL',
+        );
+        if (seq == null) return;
+        number = generateDocNumber('BL', seq);
+      } else {
+        number = OfflineDocumentService.generateDraftNumber();
+      }
     }
 
     final custState = context.read<CustomersBloc>().state;
@@ -210,7 +217,22 @@ class _CreateDeliveryNoteScreenState
         showDescription: item.showDescription,
         showDiscount: item.showDiscount,
       )).toList(),
+      isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
     );
+
+    if (!isOnline && !_isEditing) {
+      await OfflineDocumentService.instance.savePendingDocument('delivery_notes', note.toMap());
+      bloc.add(const LoadFirstDeliveryNotes());
+      nav.pop();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Bon de Livraison ${note.number} enregistré hors-ligne (en attente de sync)'),
+          backgroundColor: AppColors.warning,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
 
     if (_isEditing) {
       bloc.add(UpdateDeliveryNote(note));

@@ -4,6 +4,7 @@ import '../../models/user_management_model.dart';
 import '../../services/permission_service.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/offline_document_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ────────────────────────────────────────────────────────
@@ -137,31 +138,53 @@ class ReceivingVouchersBloc extends Bloc<ReceivingVouchersEvent, ReceivingVouche
   Future<void> _onLoadFirstReceivingVouchers(LoadFirstReceivingVouchers event, Emitter<ReceivingVouchersState> emit) async {
     emit(ReceivingVouchersLoading());
     try {
-      FirestorePaginationService.instance.resetReceivingVouchersPagination();
-      final vouchersFuture = FirestorePaginationService.instance.getFirstReceivingVouchers(
-        pageSize: pageSize,
-        searchQuery: event.searchQuery,
-        supplierId: event.supplierId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
-      final countFuture = FirestorePaginationService.instance.getReceivingVouchersCount(
-        searchQuery: event.searchQuery,
-        supplierId: event.supplierId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
+      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('receiving_vouchers');
+      final pendingVouchers = pendingMaps.map((m) => ReceivingVoucher.fromMap(m)).toList();
 
-      final results = await Future.wait([vouchersFuture, countFuture]);
-      final vouchers = results[0] as List<ReceivingVoucher>;
-      final totalCount = results[1] as int;
+      List<ReceivingVoucher> remoteVouchers = [];
+      int totalCount = 0;
+
+      try {
+        FirestorePaginationService.instance.resetReceivingVouchersPagination();
+        final vouchersFuture = FirestorePaginationService.instance.getFirstReceivingVouchers(
+          pageSize: pageSize,
+          searchQuery: event.searchQuery,
+          supplierId: event.supplierId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+        final countFuture = FirestorePaginationService.instance.getReceivingVouchersCount(
+          searchQuery: event.searchQuery,
+          supplierId: event.supplierId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+
+        final results = await Future.wait([vouchersFuture, countFuture]);
+        remoteVouchers = results[0] as List<ReceivingVoucher>;
+        totalCount = results[1] as int;
+      } catch (e) {
+        print('[RECEIVING VOUCHERS BLOC] Remote fetch error or offline: $e');
+      }
+
+      final combined = <ReceivingVoucher>[];
+      final pendingIds = pendingVouchers.map((v) => v.id).toSet();
+      combined.addAll(pendingVouchers);
+
+      for (var v in remoteVouchers) {
+        if (!pendingIds.contains(v.id)) {
+          combined.add(v);
+        }
+      }
+
+      final finalTotal = totalCount + pendingVouchers.length;
 
       emit(ReceivingVouchersLoaded(
-        vouchers,
-        totalCount: totalCount > vouchers.length ? totalCount : vouchers.length,
-        hasMore: vouchers.length >= pageSize,
+        combined,
+        totalCount: finalTotal > combined.length ? finalTotal : combined.length,
+        hasMore: remoteVouchers.length >= pageSize,
       ));
     } catch (e) {
       emit(ReceivingVouchersError(ErrorHandler.parseError(e)));

@@ -22,6 +22,7 @@ import '../../services/pdf_service.dart';
 import '../../services/document_share_service.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../utils/offline_action_helper.dart';
 
 class MobileStockEntryDetailScreen extends StatefulWidget {
   final StockEntry entry;
@@ -273,6 +274,39 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
   }
 
   void _handleAction(BuildContext context, String action, StockEntry entry) {
+    if (OfflineActionHelper.writeActions.contains(action)) {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, entry),
+      );
+      return;
+    }
+
+    switch (action) {
+      case 'view':
+      case 'print':
+        final doc = _createDocumentWrapper(entry);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
+        break;
+      case 'pdf':
+        final docPdf = _createDocumentWrapper(entry);
+        PdfService.instance.downloadDocument(context, docPdf);
+        break;
+      case 'email':
+        final docEmail = _createDocumentWrapper(entry);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = _createDocumentWrapper(entry);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, StockEntry entry) {
     switch (action) {
       case 'edit':
         Navigator.push(
@@ -293,46 +327,11 @@ class _MobileStockEntryDetailScreenState extends State<MobileStockEntryDetailScr
         });
         break;
       case 'delete':
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: const Text('Confirmer la suppression'),
-            content: const Text('Voulez-vous vraiment supprimer ce bon d\'entrée ?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  context.read<StockEntriesBloc>().add(DeleteStockEntry(entry.id));
-                  if (mounted) {
-                    Navigator.pop(context);
-                  }
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
+        context.read<StockEntriesBloc>().add(DeleteStockEntry(entry.id));
+        if (mounted) {
+          Navigator.pop(context);
+        }
         break;
-      case 'print':
-        final doc = _createDocumentWrapper(entry);
-        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
-        break;
-      case 'pdf':
-        final docPdf = _createDocumentWrapper(entry);
-        PdfService.instance.downloadDocument(context, docPdf);
-        break;
-      case 'email':
-        final docEmail = _createDocumentWrapper(entry);
-        DocumentShareService.shareDocument(docEmail, isEmail: true);
-        break;
-      case 'whatsapp':
-        final docWa = _createDocumentWrapper(entry);
-        DocumentShareService.shareDocument(docWa, isEmail: false);
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
     }
   }
 }

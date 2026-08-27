@@ -31,6 +31,7 @@ import '../../services/pdf_service.dart';
 import '../../services/document_share_service.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../utils/offline_action_helper.dart';
 import '../../database/database_helper.dart';
 
 import '../../widgets/premium_detail_shell.dart';
@@ -301,11 +302,53 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
   }
 
   void _handleAction(BuildContext context, String action, SupplierOrder order) {
+    if (OfflineActionHelper.writeActions.contains(action) || action == 'payment' || action == 'to_receipt' || action == 'credit_note') {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, order),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
         final viewDoc = DocumentWrapper.fromSupplierOrder(order);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
         break;
+      case 'pdf':
+        final doc = DocumentWrapper.fromSupplierOrder(order);
+        PdfService.instance.downloadDocument(context, doc);
+        break;
+      case 'print':
+        final doc = DocumentWrapper.fromSupplierOrder(order);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
+        break;
+      case 'view_invoice':
+        _openConvertedInvoice(context, order.convertedToInvoiceId, order);
+        break;
+      case 'view_receipt':
+        _openConvertedReceipt(context, order.convertedToReceiptId, order);
+        break;
+      case 'email':
+        final docEmail = DocumentWrapper.fromSupplierOrder(order);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = DocumentWrapper.fromSupplierOrder(order);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
+        break;
+      case 'duplicate':
+      case 'attachments':
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, SupplierOrder order) {
+    switch (action) {
       case 'edit':
         Navigator.push(
           context,
@@ -323,68 +366,20 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
         );
         break;
       case 'delete':
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer cette commande ?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  context.read<SupplierOrdersBloc>().add(DeleteSupplierOrder(order.id));
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
-        break;
-      case 'pdf':
-        final doc = DocumentWrapper.fromSupplierOrder(order);
-        PdfService.instance.downloadDocument(context, doc);
-        break;
-      case 'print':
-        final doc = DocumentWrapper.fromSupplierOrder(order);
-        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
+        context.read<SupplierOrdersBloc>().add(DeleteSupplierOrder(order.id));
         break;
       case 'payment':
         _showAddPaymentDialog(context, order);
         break;
       case 'to_invoice':
-        _showConversionDialog(context, order, true);
+        _convertToInvoice(context, order);
         break;
       case 'to_receipt':
-        _showConversionDialog(context, order, false);
-        break;
-      case 'view_invoice':
-        _openConvertedInvoice(context, order.convertedToInvoiceId, order);
-        break;
-      case 'view_receipt':
-        _openConvertedReceipt(context, order.convertedToReceiptId, order);
+        _convertToReceipt(context, order);
         break;
       case 'credit_note':
         _createCreditNoteFromOrder(context, order);
         break;
-      case 'email':
-        final docEmail = DocumentWrapper.fromSupplierOrder(order);
-        DocumentShareService.shareDocument(docEmail, isEmail: true);
-        break;
-      case 'whatsapp':
-        final docWa = DocumentWrapper.fromSupplierOrder(order);
-        DocumentShareService.shareDocument(docWa, isEmail: false);
-        break;
-      case 'duplicate':
-      case 'attachments':
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));
-        break;
-      case 'status':
-        _showChangeStatusDialog(context, order);
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
     }
   }
 

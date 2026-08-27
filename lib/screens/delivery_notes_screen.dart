@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
@@ -6,6 +7,8 @@ import '../utils/file_download_helper.dart';
 import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import '../widgets/delivery_note_payment_dialog.dart';
+import '../services/sync_service.dart';
+import '../widgets/pending_sync_badge.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/delivery_notes/delivery_notes_bloc.dart';
@@ -36,6 +39,7 @@ import '../models/user_management_model.dart';
 import '../models/document_wrapper.dart';
 import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
+import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
@@ -58,11 +62,38 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
   int _rowsPerPage = 20;
   int _currentPage = 0;
 
+  StreamSubscription<int>? _syncSub;
+
   @override
   void initState() {
     super.initState();
     context.read<DeliveryNotesBloc>().add(LoadFirstDeliveryNotes());
     context.read<CustomersBloc>().add(LoadCustomers());
+
+    _syncSub = SyncService.instance.onDocumentSyncCompleted.listen((count) {
+      if (mounted && count > 0) {
+        context.read<DeliveryNotesBloc>().add(LoadFirstDeliveryNotes());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$count document(s) synchronisé(s) avec succès !'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncSub?.cancel();
+    super.dispose();
   }
 
   void _applyFilters() {
@@ -1039,22 +1070,24 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
             flex: 2,
             child: Container(
               alignment: Alignment.centerLeft,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusEnum.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  statusEnum.label,
-                  style: TextStyle(
-                    color: statusEnum.color,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
+              child: (!note.isSynced || note.number.startsWith('BROUILLON-'))
+                  ? const PendingSyncBadge()
+                  : Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusEnum.color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        statusEnum.label,
+                        style: TextStyle(
+                          color: statusEnum.color,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
             ),
           ),
 
@@ -1225,6 +1258,15 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
   }
 
   void _handleAction(BuildContext context, String action, DeliveryNote note) {
+    if (OfflineActionHelper.writeActions.contains(action) || action == 'add_payment') {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, note),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
         final statusEnum = DeliveryNoteStatus.values.firstWhere(
@@ -1242,12 +1284,6 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
           ),
         );
         break;
-      case 'edit':
-        _navigate(context, note);
-        break;
-      case 'duplicate':
-        // TODO: Duplicate logic
-        break;
       case 'pdf':
         final doc = DocumentWrapper.fromDeliveryNote(note);
         PdfService.instance.downloadDocument(context, doc);
@@ -1260,7 +1296,7 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
         final docWa = DocumentWrapper.fromDeliveryNote(note);
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
-            case 'print':
+      case 'print':
         final doc = DocumentWrapper.fromDeliveryNote(note);
         Navigator.push(
           context,
@@ -1269,17 +1305,30 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
           ),
         );
         break;
-      case 'to_invoice':
-        _showInvoiceConversionDialog(context, note);
-        break;
       case 'view_invoice':
         _openConvertedInvoice(context, note.convertedToInvoiceId);
         break;
-      case 'to_return':
-        _showReturnConversionDialog(context, note);
-        break;
       case 'view_return':
         _openConvertedReturn(context, note.convertedToReturnId);
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, DeliveryNote note) {
+    switch (action) {
+      case 'edit':
+        _navigate(context, note);
+        break;
+      case 'duplicate':
+        // TODO: Duplicate logic
+        break;
+      case 'to_invoice':
+        _showInvoiceConversionDialog(context, note);
+        break;
+      case 'to_return':
+        _showReturnConversionDialog(context, note);
         break;
       case 'add_payment':
         showDialog(
@@ -1300,13 +1349,11 @@ class _DeliveryNotesScreenState extends State<DeliveryNotesScreen> {
         });
         break;
       case 'delete':
-        _confirmDelete(note);
+        context.read<DeliveryNotesBloc>().add(DeleteDeliveryNote(note.id));
         break;
       case 'status':
         _showChangeStatusDialog(context, note);
         break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implementee')));
     }
   }
 

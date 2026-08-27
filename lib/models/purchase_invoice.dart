@@ -30,6 +30,7 @@ class PurchaseInvoice {
   final String? creditNoteId;
   final String? warehouseId;
   final bool isDeleted;
+  final bool isSynced;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -63,6 +64,7 @@ class PurchaseInvoice {
     this.firebaseUid,
     this.creditNoteId,
     this.isDeleted = false,
+    this.isSynced = true,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -90,6 +92,7 @@ class PurchaseInvoice {
         'firebase_uid': firebaseUid,
         'credit_note_id': creditNoteId,
         'is_deleted': isDeleted ? 1 : 0,
+        'is_synced': isSynced ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
         'items': items.map((i) => i.toMap()).toList(),
@@ -148,6 +151,7 @@ class PurchaseInvoice {
         firebaseUid: map['firebase_uid']?.toString(),
         creditNoteId: map['credit_note_id']?.toString(),
         isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
+        isSynced: map['is_synced'] == null ? true : (map['is_synced'] == 1 || map['is_synced'] == '1' || map['is_synced'] == true),
         createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
         updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
         items: parsedItems,

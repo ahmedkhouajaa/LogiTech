@@ -23,6 +23,7 @@ import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_return_voucher_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../utils/offline_action_helper.dart';
 
 class MobileReturnNoteDetailScreen extends StatefulWidget {
   final ReturnNote returnNote;
@@ -240,45 +241,19 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
   }
 
   void _handleAction(BuildContext context, String action, ReturnNote returnNote) {
+    if (OfflineActionHelper.writeActions.contains(action) || action == 'add_payment') {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, returnNote),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
         final viewDoc = DocumentWrapper.fromReturnNote(returnNote);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
-        break;
-      case 'edit':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MultiBlocProvider(
-              providers: [
-                BlocProvider.value(value: context.read<ReturnNotesBloc>()),
-                BlocProvider.value(value: context.read<CustomersBloc>()),
-                BlocProvider.value(value: context.read<ProductsBloc>()),
-              ],
-              child: MobileReturnVoucherFormScreen(existing: returnNote),
-            ),
-          ),
-        );
-        break;
-      case 'delete':
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer ce bon de retour ?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  context.read<ReturnNotesBloc>().add(DeleteReturnNote(returnNote.id));
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
         break;
       case 'pdf':
         final doc = DocumentWrapper.fromReturnNote(returnNote);
@@ -296,16 +271,41 @@ class _MobileReturnNoteDetailScreenState extends State<MobileReturnNoteDetailScr
         final docWa = DocumentWrapper.fromReturnNote(returnNote);
         DocumentShareService.shareDocument(docWa, isEmail: false);
         break;
-      case 'add_payment':
       case 'duplicate':
       case 'attachments':
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));
         break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, ReturnNote returnNote) {
+    switch (action) {
+      case 'edit':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: context.read<ReturnNotesBloc>()),
+                BlocProvider.value(value: context.read<CustomersBloc>()),
+                BlocProvider.value(value: context.read<ProductsBloc>()),
+              ],
+              child: MobileReturnVoucherFormScreen(existing: returnNote),
+            ),
+          ),
+        );
+        break;
+      case 'delete':
+        context.read<ReturnNotesBloc>().add(DeleteReturnNote(returnNote.id));
+        break;
       case 'status':
         _showChangeStatusDialog(context, returnNote);
         break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+      case 'add_payment':
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));
+        break;
     }
   }
 

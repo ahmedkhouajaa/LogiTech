@@ -30,6 +30,7 @@ class Quote {
   final bool isConvertedToDelivery;
   final String? convertedToDeliveryId;
   final String? warehouseId;
+  final bool isSynced;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -43,6 +44,7 @@ class Quote {
     this.isConverted = false, this.convertedTo, this.convertedToId,
     this.isConvertedToOrder = false, this.convertedToOrderId,
     this.isConvertedToDelivery = false, this.convertedToDeliveryId,
+    this.isSynced = true,
     DateTime? createdAt, DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
@@ -64,6 +66,7 @@ class Quote {
         'converted_to_order_id': convertedToOrderId,
         'is_converted_to_delivery': isConvertedToDelivery ? 1 : 0,
         'converted_to_delivery_id': convertedToDeliveryId,
+        'is_synced': isSynced ? 1 : 0,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
         'items': items.map((i) => i.toMap()).toList(),
@@ -101,6 +104,7 @@ class Quote {
         convertedToOrderId: map['converted_to_order_id'] as String?,
         isConvertedToDelivery: map['is_converted_to_delivery'] == 1,
         convertedToDeliveryId: map['converted_to_delivery_id'] as String?,
+        isSynced: map['is_synced'] == null ? true : (map['is_synced'] == 1 || map['is_synced'] == true),
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
       );
@@ -117,6 +121,7 @@ class Quote {
     bool? isConverted, String? convertedTo, String? convertedToId,
     bool? isConvertedToOrder, String? convertedToOrderId,
     bool? isConvertedToDelivery, String? convertedToDeliveryId,
+    bool? isSynced,
     DateTime? createdAt, DateTime? updatedAt,
   }) => Quote(
         id: id ?? this.id, number: number ?? this.number,
@@ -143,6 +148,7 @@ class Quote {
         convertedToOrderId: convertedToOrderId ?? this.convertedToOrderId,
         isConvertedToDelivery: isConvertedToDelivery ?? this.isConvertedToDelivery,
         convertedToDeliveryId: convertedToDeliveryId ?? this.convertedToDeliveryId,
+        isSynced: isSynced ?? this.isSynced,
         createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
       );
 }

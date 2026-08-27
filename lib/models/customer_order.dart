@@ -26,6 +26,7 @@ class CustomerOrder {
   final String? firebaseUid;
   final String? enterpriseId;
   final bool isDeleted;
+  final bool isSynced;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<CustomerOrderItem> items;
@@ -56,6 +57,7 @@ class CustomerOrder {
     this.firebaseUid,
     this.enterpriseId,
     this.isDeleted = false,
+    this.isSynced = true,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.items = const [],
@@ -206,6 +208,7 @@ class CustomerOrder {
       'firebase_uid': firebaseUid,
       'enterprise_id': enterpriseId,
       'is_deleted': isDeleted ? 1 : 0,
+      'is_synced': isSynced ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'items': items.map((i) => i.toMap()).toList(),
@@ -214,33 +217,34 @@ class CustomerOrder {
 
   factory CustomerOrder.fromMap(Map<String, dynamic> map, [List<CustomerOrderItem> items = const []]) {
     return CustomerOrder(
-      id: map['id'],
-      number: map['number'],
-      customerId: map['customer_id'],
-      customerName: map['customer_name'],
-      customerCompany: map['customer_company'],
-      projectId: map['project_id'],
-      projectName: map['project_name'],
+      id: map['id']?.toString() ?? '',
+      number: map['number']?.toString() ?? '',
+      customerId: map['customer_id']?.toString() ?? '',
+      customerName: map['customer_name']?.toString(),
+      customerCompany: map['customer_company']?.toString(),
+      projectId: map['project_id']?.toString(),
+      projectName: map['project_name']?.toString(),
       warehouseId: map['warehouse_id'] as String?,
-      quoteId: map['quote_id'],
-      date: DateTime.parse(map['date']),
-      deliveryDate: map['delivery_date'] != null ? DateTime.parse(map['delivery_date']) : null,
-      status: map['status'] ?? 'draft',
-      pricingMode: map['pricing_mode'] ?? 'ht',
+      quoteId: map['quote_id']?.toString(),
+      date: map['date'] != null ? DateTime.tryParse(map['date'].toString()) ?? DateTime.now() : DateTime.now(),
+      deliveryDate: map['delivery_date'] != null ? DateTime.tryParse(map['delivery_date'].toString()) : null,
+      status: map['status']?.toString() ?? 'draft',
+      pricingMode: map['pricing_mode']?.toString() ?? 'ht',
       globalDiscountPercent: (map['global_discount_percent'] as num?)?.toDouble() ?? 0.0,
       globalDiscountAmount: (map['global_discount_amount'] as num?)?.toDouble() ?? 0.0,
       timbreFiscal: (map['timbre_fiscal'] as num?)?.toDouble() ?? 1.000,
-      notes: map['notes'],
-      conditionsGenerales: map['conditions'],
-      isConvertedToInvoice: map['is_converted_to_invoice'] == 1,
-      convertedToInvoiceId: map['converted_to_invoice_id'],
-      isConvertedToDelivery: map['is_converted_to_delivery'] == 1,
-      convertedToDeliveryId: map['converted_to_delivery_id'],
-      firebaseUid: map['firebase_uid'],
-      enterpriseId: map['enterprise_id'],
-      isDeleted: map['is_deleted'] == 1,
-      createdAt: DateTime.parse(map['created_at']),
-      updatedAt: DateTime.parse(map['updated_at']),
+      notes: map['notes']?.toString(),
+      conditionsGenerales: map['conditions']?.toString(),
+      isConvertedToInvoice: map['is_converted_to_invoice'] == 1 || map['is_converted_to_invoice'] == '1' || map['is_converted_to_invoice'] == true,
+      convertedToInvoiceId: map['converted_to_invoice_id']?.toString(),
+      isConvertedToDelivery: map['is_converted_to_delivery'] == 1 || map['is_converted_to_delivery'] == '1' || map['is_converted_to_delivery'] == true,
+      convertedToDeliveryId: map['converted_to_delivery_id']?.toString(),
+      firebaseUid: map['firebase_uid']?.toString(),
+      enterpriseId: map['enterprise_id']?.toString(),
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == '1' || map['is_deleted'] == true,
+      isSynced: map['is_synced'] == null ? true : (map['is_synced'] == 1 || map['is_synced'] == '1' || map['is_synced'] == true),
+      createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString()) ?? DateTime.now() : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) ?? DateTime.now() : DateTime.now(),
       items: items.isNotEmpty
           ? items
           : ((map['items'] as List<dynamic>?)

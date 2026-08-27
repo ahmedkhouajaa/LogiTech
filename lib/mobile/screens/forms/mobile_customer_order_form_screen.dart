@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../blocs/customer_orders/customer_orders_bloc.dart';
 import '../../../../blocs/customers/customers_bloc.dart';
+import '../../../../services/connectivity_service.dart';
+import '../../../../services/offline_document_service.dart';
 import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../blocs/products/products_bloc.dart';
 import '../../../../models/customer_order.dart';
@@ -140,20 +142,25 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
 
     try {
       final bloc = context.read<CustomerOrdersBloc>();
+      final isOnline = ConnectivityService.instance.isOnline;
       
       String number = widget.existing?.number ?? '';
       if (number.isEmpty) {
-        final seq = await DocumentNumberingService.ensureNumberSequence(
-          context: context,
-          docCollection: 'customer_orders',
-          docTypeName: 'Commande Client',
-          prefix: 'CC',
-        );
-        if (seq == null) {
-          setState(() => _isLoading = false);
-          return;
+        if (isOnline) {
+          final seq = await DocumentNumberingService.ensureNumberSequence(
+            context: context,
+            docCollection: 'customer_orders',
+            docTypeName: 'Commande Client',
+            prefix: 'CC',
+          );
+          if (seq == null) {
+            setState(() => _isLoading = false);
+            return;
+          }
+          number = generateDocNumber('CC', seq);
+        } else {
+          number = OfflineDocumentService.generateDraftNumber();
         }
-        number = generateDocNumber('CC', seq);
       }
 
       final custState = context.read<CustomersBloc>().state;
@@ -196,7 +203,22 @@ class _MobileCustomerOrderFormScreenState extends State<MobileCustomerOrderFormS
           showDescription: item.showDescription,
           showDiscount: item.showDiscount,
         )).toList(),
+        isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
       );
+
+      if (!isOnline && !_isEditing) {
+        await OfflineDocumentService.instance.savePendingDocument('customer_orders', order.toMap());
+        bloc.add(const LoadFirstCustomerOrders());
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Commande ${order.number} enregistrée hors-ligne (en attente de sync)'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ));
+        }
+        return;
+      }
 
       if (_isEditing) {
         bloc.add(UpdateCustomerOrder(order));

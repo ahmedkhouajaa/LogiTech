@@ -10,6 +10,7 @@ import '../../database/database_helper.dart';
 import '../../services/firestore_pagination_service.dart';
 import '../../services/enterprise_service.dart';
 import '../../services/firestore_repository.dart';
+import '../../services/offline_document_service.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ──────────────────────────────────────────────────────
@@ -169,31 +170,53 @@ class StockWithdrawalsBloc extends Bloc<StockWithdrawalsEvent, StockWithdrawalsS
   Future<void> _onLoadFirstStockWithdrawals(LoadFirstStockWithdrawals event, Emitter<StockWithdrawalsState> emit) async {
     emit(StockWithdrawalsLoading());
     try {
-      FirestorePaginationService.instance.resetStockWithdrawalsPagination();
-      final itemsFuture = FirestorePaginationService.instance.getFirstStockWithdrawals(
-        pageSize: pageSize,
-        searchQuery: event.searchQuery,
-        customerId: event.customerId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
-      final countFuture = FirestorePaginationService.instance.getStockWithdrawalsCount(
-        searchQuery: event.searchQuery,
-        customerId: event.customerId,
-        dateFrom: event.dateFrom,
-        dateTo: event.dateTo,
-        status: event.status,
-      );
+      final pendingMaps = await OfflineDocumentService.instance.getPendingDocuments('stock_withdrawals');
+      final pendingWithdrawals = pendingMaps.map((m) => StockWithdrawal.fromMap(m)).toList();
 
-      final results = await Future.wait([itemsFuture, countFuture]);
-      final items = results[0] as List<StockWithdrawal>;
-      final totalCount = results[1] as int;
+      List<StockWithdrawal> remoteWithdrawals = [];
+      int totalCount = 0;
+
+      try {
+        FirestorePaginationService.instance.resetStockWithdrawalsPagination();
+        final itemsFuture = FirestorePaginationService.instance.getFirstStockWithdrawals(
+          pageSize: pageSize,
+          searchQuery: event.searchQuery,
+          customerId: event.customerId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+        final countFuture = FirestorePaginationService.instance.getStockWithdrawalsCount(
+          searchQuery: event.searchQuery,
+          customerId: event.customerId,
+          dateFrom: event.dateFrom,
+          dateTo: event.dateTo,
+          status: event.status,
+        );
+
+        final results = await Future.wait([itemsFuture, countFuture]);
+        remoteWithdrawals = results[0] as List<StockWithdrawal>;
+        totalCount = results[1] as int;
+      } catch (e) {
+        print('[STOCK WITHDRAWALS BLOC] Remote fetch error or offline: $e');
+      }
+
+      final combined = <StockWithdrawal>[];
+      final pendingIds = pendingWithdrawals.map((w) => w.id).toSet();
+      combined.addAll(pendingWithdrawals);
+
+      for (var w in remoteWithdrawals) {
+        if (!pendingIds.contains(w.id)) {
+          combined.add(w);
+        }
+      }
+
+      final finalTotal = totalCount + pendingWithdrawals.length;
 
       emit(StockWithdrawalsLoaded(
-        items,
-        totalCount: totalCount > items.length ? totalCount : items.length,
-        hasMore: items.length >= pageSize,
+        combined,
+        totalCount: finalTotal > combined.length ? finalTotal : combined.length,
+        hasMore: remoteWithdrawals.length >= pageSize,
         clientFilter: event.customerId,
         dateFromFilter: event.dateFrom,
         dateToFilter: event.dateTo,

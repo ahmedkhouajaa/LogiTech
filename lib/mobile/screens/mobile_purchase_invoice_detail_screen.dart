@@ -33,6 +33,7 @@ import '../utils/mobile_status_colors.dart';
 import 'forms/mobile_purchase_invoice_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../utils/offline_action_helper.dart';
 import 'forms/mobile_supplier_credit_note_form_screen.dart';
 
 class MobilePurchaseInvoiceDetailScreen extends StatefulWidget {
@@ -298,11 +299,50 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
   }
 
   void _handleAction(BuildContext context, String action, PurchaseInvoice inv) {
+    if (OfflineActionHelper.writeActions.contains(action) || action == 'add_payment') {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, inv),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
         final viewDoc = DocumentWrapper.fromPurchaseInvoice(inv);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
         break;
+      case 'pdf':
+        final doc = DocumentWrapper.fromPurchaseInvoice(inv);
+        PdfService.instance.downloadDocument(context, doc);
+        break;
+      case 'print':
+        final doc = DocumentWrapper.fromPurchaseInvoice(inv);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
+        break;
+      case 'view_credit_note':
+        _openConvertedCreditNote(context, inv.creditNoteId, inv);
+        break;
+      case 'email':
+        final docEmail = DocumentWrapper.fromPurchaseInvoice(inv);
+        DocumentShareService.shareDocument(docEmail, isEmail: true);
+        break;
+      case 'whatsapp':
+        final docWa = DocumentWrapper.fromPurchaseInvoice(inv);
+        DocumentShareService.shareDocument(docWa, isEmail: false);
+        break;
+      case 'duplicate':
+      case 'attachments':
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, PurchaseInvoice inv) {
+    switch (action) {
       case 'edit':
         Navigator.push(
           context,
@@ -320,32 +360,10 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
         );
         break;
       case 'delete':
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer cette facture ?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  context.read<PurchaseInvoicesBloc>().add(DeletePurchaseInvoice(inv.id));
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
+        context.read<PurchaseInvoicesBloc>().add(DeletePurchaseInvoice(inv.id));
         break;
-      case 'pdf':
-        final doc = DocumentWrapper.fromPurchaseInvoice(inv);
-        PdfService.instance.downloadDocument(context, doc);
-        break;
-      case 'print':
-        final doc = DocumentWrapper.fromPurchaseInvoice(inv);
-        Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: doc)));
+      case 'status':
+        _showChangeStatusDialog(context, inv);
         break;
       case 'add_payment':
         _showAddPaymentDialog(context, inv);
@@ -353,26 +371,6 @@ class _MobilePurchaseInvoiceDetailScreenState extends State<MobilePurchaseInvoic
       case 'to_credit_note':
         _createCreditNoteFromInvoice(context, inv);
         break;
-      case 'view_credit_note':
-        _openConvertedCreditNote(context, inv.creditNoteId, inv);
-        break;
-      case 'email':
-        final docEmail = DocumentWrapper.fromPurchaseInvoice(inv);
-        DocumentShareService.shareDocument(docEmail, isEmail: true);
-        break;
-      case 'whatsapp':
-        final docWa = DocumentWrapper.fromPurchaseInvoice(inv);
-        DocumentShareService.shareDocument(docWa, isEmail: false);
-        break;
-      case 'duplicate':
-      case 'attachments':
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action sur mobile en cours de développement')));
-        break;
-      case 'status':
-        _showChangeStatusDialog(context, inv);
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
     }
   }
 

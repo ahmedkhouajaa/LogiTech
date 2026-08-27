@@ -32,6 +32,7 @@ import '../../widgets/delivery_note_payment_dialog.dart';
 import 'forms/mobile_delivery_note_form_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import '../../utils/offline_action_helper.dart';
 import 'forms/mobile_invoice_form_screen.dart';
 import 'forms/mobile_return_voucher_form_screen.dart';
 
@@ -302,60 +303,22 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
   }
 
   void _handleAction(BuildContext context, String action, DeliveryNote deliveryNote) {
+    if (OfflineActionHelper.writeActions.contains(action) || action == 'add_payment') {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, deliveryNote),
+      );
+      return;
+    }
+
     switch (action) {
       case 'view':
         final viewDoc = DocumentWrapper.fromDeliveryNote(deliveryNote);
         Navigator.push(context, MaterialPageRoute(builder: (_) => DocumentPreviewScreen(document: viewDoc)));
         break;
-      case 'edit':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MultiBlocProvider(
-              providers: [
-                BlocProvider.value(value: context.read<DeliveryNotesBloc>()),
-                BlocProvider.value(value: context.read<CustomersBloc>()),
-                BlocProvider.value(value: context.read<ProductsBloc>()),
-              ],
-              child: MobileDeliveryNoteFormScreen(existing: deliveryNote),
-            ),
-          ),
-        );
-        break;
-      case 'delete':
-        showDialog(
-          context: context,
-          builder: (dialogCtx) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer ce bon de livraison ?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(dialogCtx);
-                  context.read<DeliveryNotesBloc>().add(DeleteDeliveryNote(deliveryNote.id));
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
-        break;
-      case 'status':
-        _showChangeStatusDialog(context, deliveryNote);
-        break;
-      case 'to_invoice':
-        _showInvoiceConversionDialog(context, deliveryNote);
-        break;
       case 'view_invoice':
         _openConvertedInvoice(context, deliveryNote.convertedToInvoiceId);
-        break;
-      case 'add_payment':
-        _showAddPaymentDialog(context, deliveryNote);
-        break;
-      case 'to_return':
-        _showReturnConversionDialog(context, deliveryNote);
         break;
       case 'view_return':
         _openConvertedReturn(context, deliveryNote.convertedToReturnId);
@@ -384,6 +347,41 @@ class _MobileDeliveryNoteDetailScreenState extends State<MobileDeliveryNoteDetai
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Action non implémentée')));
+    }
+  }
+
+  void _executeWriteAction(BuildContext context, String action, DeliveryNote deliveryNote) {
+    switch (action) {
+      case 'edit':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: context.read<DeliveryNotesBloc>()),
+                BlocProvider.value(value: context.read<CustomersBloc>()),
+                BlocProvider.value(value: context.read<ProductsBloc>()),
+              ],
+              child: MobileDeliveryNoteFormScreen(existing: deliveryNote),
+            ),
+          ),
+        );
+        break;
+      case 'delete':
+        context.read<DeliveryNotesBloc>().add(DeleteDeliveryNote(deliveryNote.id));
+        break;
+      case 'status':
+        _showChangeStatusDialog(context, deliveryNote);
+        break;
+      case 'to_invoice':
+        _showInvoiceConversionDialog(context, deliveryNote);
+        break;
+      case 'add_payment':
+        _showAddPaymentDialog(context, deliveryNote);
+        break;
+      case 'to_return':
+        _showReturnConversionDialog(context, deliveryNote);
+        break;
     }
   }
 

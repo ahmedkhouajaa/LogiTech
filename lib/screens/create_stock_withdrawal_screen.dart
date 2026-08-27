@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/stock_withdrawals/stock_withdrawals_bloc.dart';
 import '../blocs/exit_vouchers/exit_vouchers_bloc.dart';
+import '../services/connectivity_service.dart';
+import '../services/offline_document_service.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/stock/stock_bloc.dart';
 import '../models/stock_withdrawal.dart';
@@ -104,12 +106,18 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
       seenProducts.add(item.productId);
     }
 
+    final isOnline = ConnectivityService.instance.isOnline;
+
     String number = widget.existing?.number ?? '';
     if (number.isEmpty) {
-      final seq = widget.isExitVoucher 
-          ? await DatabaseHelper.instance.getNextExitVoucherSequence()
-          : await DatabaseHelper.instance.getNextStockWithdrawalSequence();
-      number = generateDocNumber(widget.isExitVoucher ? DocPrefix.exitVoucher : DocPrefix.stockWithdrawal, seq);
+      if (isOnline) {
+        final seq = widget.isExitVoucher 
+            ? await DatabaseHelper.instance.getNextExitVoucherSequence()
+            : await DatabaseHelper.instance.getNextStockWithdrawalSequence();
+        number = generateDocNumber(widget.isExitVoucher ? DocPrefix.exitVoucher : DocPrefix.stockWithdrawal, seq);
+      } else {
+        number = OfflineDocumentService.generateDraftNumber();
+      }
     }
 
     final entry = StockWithdrawal(
@@ -120,9 +128,32 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
       date: _date,
       conditionsGenerales: _reasonController.text,
       notes: _notesController.text,
-      status: 'validated',
+      status: 'created',
       items: validItems,
+      isSynced: isOnline ? (widget.existing?.isSynced ?? true) : false,
     );
+
+    final collectionName = widget.isExitVoucher ? 'exit_vouchers' : 'stock_withdrawals';
+
+    if (!isOnline && widget.existing == null) {
+      await OfflineDocumentService.instance.savePendingDocument(collectionName, entry.toMap());
+      if (widget.isExitVoucher) {
+        context.read<ExitVouchersBloc>().add(LoadFirstExitVouchers());
+      } else {
+        context.read<StockWithdrawalsBloc>().add(LoadFirstStockWithdrawals());
+      }
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${widget.isExitVoucher ? "Bon de Sortie" : "Bon de Prélèvement"} ${entry.number} enregistré hors-ligne (en attente de sync)'),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
 
     final productsBloc = context.read<ProductsBloc>();
 

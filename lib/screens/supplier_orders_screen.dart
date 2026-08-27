@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
@@ -8,6 +9,8 @@ import '../blocs/treasury_accounts/treasury_accounts_bloc.dart';
 import '../blocs/treasury_transactions/treasury_transactions_bloc.dart';
 import '../widgets/supplier_order_payment_dialog.dart';
 import '../blocs/payments/payments_bloc.dart';
+import '../services/sync_service.dart';
+import '../widgets/pending_sync_badge.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/supplier_orders/supplier_orders_bloc.dart';
@@ -34,6 +37,7 @@ import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import 'document_preview_screen.dart';
 import 'document_detail_screen.dart';
+import '../utils/offline_action_helper.dart';
 import '../services/document_share_service.dart';
 import '../models/receiving_voucher.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
@@ -58,11 +62,38 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
   int _rowsPerPage = 20;
   int _currentPage = 0;
 
+  StreamSubscription<int>? _syncSub;
+
   @override
   void initState() {
     super.initState();
     context.read<SupplierOrdersBloc>().add(LoadFirstSupplierOrders());
     context.read<SuppliersBloc>().add(LoadSuppliers());
+
+    _syncSub = SyncService.instance.onDocumentSyncCompleted.listen((count) {
+      if (mounted && count > 0) {
+        context.read<SupplierOrdersBloc>().add(LoadFirstSupplierOrders());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$count document(s) synchronisé(s) avec succès !'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncSub?.cancel();
+    super.dispose();
   }
 
   void _applyFilters() {
@@ -863,17 +894,19 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                             flex: 2,
                                             child: Container(
                                               alignment: Alignment.centerLeft,
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: statusEnum.color.withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
-                                                child: Text(
-                                                  statusEnum.label,
-                                                  style: TextStyle(color: statusEnum.color, fontSize: 11.5, fontWeight: FontWeight.w500),
-                                                ),
-                                              ),
+                                              child: (!order.isSynced || order.number.startsWith('BROUILLON-'))
+                                                  ? const PendingSyncBadge()
+                                                  : Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: statusEnum.color.withValues(alpha: 0.1),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: Text(
+                                                        statusEnum.label,
+                                                        style: TextStyle(color: statusEnum.color, fontSize: 11.5, fontWeight: FontWeight.w500),
+                                                      ),
+                                                    ),
                                             ),
                                           ),
                                           Expanded(
@@ -900,88 +933,94 @@ class _SupplierOrdersScreenState extends State<SupplierOrdersScreen> {
                                                 elevation: 4,
                                                 itemBuilder: (ctx) => _buildActionMenu(context, order),
                                                 onSelected: (val) {
-                                                  if (val == 'view') {
-                                                    final statusEnum = SupplierOrderStatus.values.firstWhere(
-                                                      (e) => e.name == order.status,
-                                                      orElse: () => SupplierOrderStatus.draft,
-                                                    );
-                                                    final doc = DocumentWrapper.fromSupplierOrder(order);
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) => DocumentDetailScreen(
-                                                          document: doc,
-                                                          status: statusEnum.label,
-                                                          statusColor: statusEnum.color,
-                                                        ),
-                                                      ),
-                                                    );
-                                                  } else if (val == 'to_invoice') {
-                                                    _showConversionDialog(context, order, true);
-                                                  } else if (val == 'to_receipt') {
-                                                    _showConversionDialog(context, order, false);
-                                                  } else if (val == 'view_invoice') {
-                                                    _openConvertedInvoice(context, order.convertedToInvoiceId!, order);
-                                                  } else if (val == 'view_receipt') {
-                                                    _openConvertedReceipt(context, order.convertedToReceiptId!, order);
-                                                  } else if (val == 'edit') {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) => MultiBlocProvider(
-                                                          providers: [
-                                                            BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
-                                                            BlocProvider.value(value: context.read<SuppliersBloc>()),
-                                                            BlocProvider.value(value: context.read<ProductsBloc>()),
-                                                            BlocProvider.value(value: context.read<ProjectsBloc>()),
-                                                          ],
-                                                          child: CreateSupplierOrderScreen(existing: order),
-                                                        ),
-                                                      ),
-                                                    );
-                                                  } else if (val == 'delete') {
-                                                    _confirmDelete(order);
-                                                  } else if (val == 'pdf') {
-                                                    final doc = DocumentWrapper.fromSupplierOrder(order);
-                                                    PdfService.instance.downloadDocument(context, doc);
-                                                  } else if (val == 'payment') {
-                                                    showDialog(
-                                                      context: context,
-                                                      builder: (_) => MultiBlocProvider(
-                                                        providers: [
-                                                          BlocProvider.value(value: context.read<PaymentsBloc>()),
-                                                          BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
-                                                          BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
-                                                          BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
-                                                        ],
-                                                        child: SupplierOrderPaymentDialog(supplierOrder: order),
-                                                      ),
-                                                    ).then((created) {
-                                                      if (created == true && context.mounted) {
-                                                        context.read<SupplierOrdersBloc>().add(LoadSupplierOrders());
-                                                      }
-                                                    });
-                                                  } else if (val == 'email') {
-                                                    final doc = DocumentWrapper.fromSupplierOrder(order);
-                                                    DocumentShareService.shareDocument(doc, isEmail: true);
-                                                  } else if (val == 'whatsapp') {
-                                                    final doc = DocumentWrapper.fromSupplierOrder(order);
-                                                    DocumentShareService.shareDocument(doc, isEmail: false);
-                                                  } else if (val == 'print') {
-                                                    final doc = DocumentWrapper.fromSupplierOrder(order);
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) => DocumentPreviewScreen(document: doc),
-                                                      ),
-                                                    );
-                                                  } else if (val == 'credit_note' || val == 'status' || val == 'duplicate' || val == 'attachments') {
-                                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                                      content: Text('Cette fonctionnalité sera disponible prochainement'),
-                                                      backgroundColor: AppColors.info,
-                                                    ));
-                                                  }
-                                                },
+                                                   OfflineActionHelper.executeAction(
+                                                     context: context,
+                                                     action: val,
+                                                     onConfirmed: () {
+                                                       if (val == 'view') {
+                                                         final statusEnum = SupplierOrderStatus.values.firstWhere(
+                                                           (e) => e.name == order.status,
+                                                           orElse: () => SupplierOrderStatus.draft,
+                                                         );
+                                                         final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                         Navigator.push(
+                                                           context,
+                                                           MaterialPageRoute(
+                                                             builder: (_) => DocumentDetailScreen(
+                                                               document: doc,
+                                                               status: statusEnum.label,
+                                                               statusColor: statusEnum.color,
+                                                             ),
+                                                           ),
+                                                         );
+                                                       } else if (val == 'to_invoice') {
+                                                         _showConversionDialog(context, order, true);
+                                                       } else if (val == 'to_receipt') {
+                                                         _showConversionDialog(context, order, false);
+                                                       } else if (val == 'view_invoice') {
+                                                         _openConvertedInvoice(context, order.convertedToInvoiceId!, order);
+                                                       } else if (val == 'view_receipt') {
+                                                         _openConvertedReceipt(context, order.convertedToReceiptId!, order);
+                                                       } else if (val == 'edit') {
+                                                         Navigator.push(
+                                                           context,
+                                                           MaterialPageRoute(
+                                                             builder: (_) => MultiBlocProvider(
+                                                               providers: [
+                                                                 BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
+                                                                 BlocProvider.value(value: context.read<SuppliersBloc>()),
+                                                                 BlocProvider.value(value: context.read<ProductsBloc>()),
+                                                                 BlocProvider.value(value: context.read<ProjectsBloc>()),
+                                                               ],
+                                                               child: CreateSupplierOrderScreen(existing: order),
+                                                             ),
+                                                           ),
+                                                         );
+                                                       } else if (val == 'delete') {
+                                                         context.read<SupplierOrdersBloc>().add(DeleteSupplierOrder(order.id));
+                                                       } else if (val == 'pdf') {
+                                                         final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                         PdfService.instance.downloadDocument(context, doc);
+                                                       } else if (val == 'payment') {
+                                                         showDialog(
+                                                           context: context,
+                                                           builder: (_) => MultiBlocProvider(
+                                                             providers: [
+                                                               BlocProvider.value(value: context.read<PaymentsBloc>()),
+                                                               BlocProvider.value(value: context.read<TreasuryAccountsBloc>()),
+                                                               BlocProvider.value(value: context.read<TreasuryTransactionsBloc>()),
+                                                               BlocProvider.value(value: context.read<SupplierOrdersBloc>()),
+                                                             ],
+                                                             child: SupplierOrderPaymentDialog(supplierOrder: order),
+                                                           ),
+                                                         ).then((created) {
+                                                           if (created == true && context.mounted) {
+                                                             context.read<SupplierOrdersBloc>().add(LoadSupplierOrders());
+                                                           }
+                                                         });
+                                                       } else if (val == 'email') {
+                                                         final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                         DocumentShareService.shareDocument(doc, isEmail: true);
+                                                       } else if (val == 'whatsapp') {
+                                                         final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                         DocumentShareService.shareDocument(doc, isEmail: false);
+                                                       } else if (val == 'print') {
+                                                         final doc = DocumentWrapper.fromSupplierOrder(order);
+                                                         Navigator.push(
+                                                           context,
+                                                           MaterialPageRoute(
+                                                             builder: (_) => DocumentPreviewScreen(document: doc),
+                                                           ),
+                                                         );
+                                                       } else if (val == 'credit_note' || val == 'status' || val == 'duplicate' || val == 'attachments') {
+                                                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                                           content: Text('Cette fonctionnalité sera disponible prochainement'),
+                                                           backgroundColor: AppColors.info,
+                                                         ));
+                                                       }
+                                                     },
+                                                   );
+                                                 },
                                               ),
                                             ),
                                           ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,6 +8,7 @@ import '../utils/file_download_helper.dart';
 import 'package:uuid/uuid.dart';
 import '../blocs/quotes/quotes_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
+import '../services/sync_service.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/invoices/invoices_bloc.dart';
 import '../blocs/customer_orders/customer_orders_bloc.dart';
@@ -42,6 +44,7 @@ import 'document_detail_screen.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
 import '../widgets/shimmer_table_row.dart';
+import '../utils/offline_action_helper.dart';
 
 class QuotesScreen extends StatefulWidget {
   const QuotesScreen({super.key});
@@ -63,11 +66,38 @@ class _QuotesScreenState extends State<QuotesScreen> {
   int _rowsPerPage = 20;
   int _currentPage = 0;
 
+  StreamSubscription<int>? _syncSubscription;
+
   @override
   void initState() {
     super.initState();
     context.read<QuotesBloc>().add(const LoadFirstDevis());
     context.read<CustomersBloc>().add(LoadCustomers());
+
+    _syncSubscription = SyncService.instance.onQuoteSyncCompleted.listen((count) {
+      if (mounted && count > 0) {
+        context.read<QuotesBloc>().add(const LoadFirstDevis());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('$count devis ${count > 1 ? "ont été synchronisés" : "a été synchronisé"} avec succès !'),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncSubscription?.cancel();
+    super.dispose();
   }
 
   void _applyFilters() {
@@ -854,7 +884,12 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
-                                                Text(quote.number, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5, color: AppColors.textPrimary)),
+                                                Text(
+                                                  quote.number,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5, color: AppColors.textPrimary),
+                                                ),
                                                 const SizedBox(height: 1),
                                                 Text(formatDateTimeLong(quote.date), style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                                               ],
@@ -880,17 +915,43 @@ class _QuotesScreenState extends State<QuotesScreen> {
                                             flex: 2,
                                             child: Container(
                                               alignment: Alignment.centerLeft,
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: statusEnum.color.withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
-                                                child: Text(
-                                                  statusEnum.label,
-                                                  style: TextStyle(color: statusEnum.color, fontSize: 11.5, fontWeight: FontWeight.w500),
-                                                ),
-                                              ),
+                                              child: (!quote.isSynced || quote.number.startsWith('BROUILLON-'))
+                                                  ? Tooltip(
+                                                      message: 'En attente de synchronisation',
+                                                      child: Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                        decoration: BoxDecoration(
+                                                          color: Colors.orange.withValues(alpha: 0.15),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                          border: Border.all(color: Colors.orange.shade700, width: 1),
+                                                        ),
+                                                        child: Row(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: [
+                                                            Icon(Icons.sync, size: 13, color: Colors.orange.shade800),
+                                                            const SizedBox(width: 4),
+                                                            Flexible(
+                                                              child: Text(
+                                                                'En attente',
+                                                                overflow: TextOverflow.ellipsis,
+                                                                style: TextStyle(color: Colors.orange.shade900, fontSize: 11, fontWeight: FontWeight.bold),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    )
+                                                  : Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: statusEnum.color.withValues(alpha: 0.1),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: Text(
+                                                        statusEnum.label,
+                                                        style: TextStyle(color: statusEnum.color, fontSize: 11.5, fontWeight: FontWeight.w500),
+                                                      ),
+                                                    ),
                                             ),
                                           ),
                                           Expanded(
@@ -1090,6 +1151,17 @@ class _QuotesScreenState extends State<QuotesScreen> {
   }
 
   void _handleAction(BuildContext context, String action, Quote quote) {
+    // For write actions, use OfflineActionHelper to show confirm dialog + connectivity check
+    if (OfflineActionHelper.writeActions.contains(action)) {
+      OfflineActionHelper.executeAction(
+        context: context,
+        action: action,
+        onConfirmed: () => _executeWriteAction(context, action, quote),
+      );
+      return;
+    }
+
+    // Read actions — execute directly (work offline)
     switch (action) {
       case 'view':
         Navigator.push(
@@ -1103,61 +1175,11 @@ class _QuotesScreenState extends State<QuotesScreen> {
           ),
         );
         break;
-      case 'edit':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MultiBlocProvider(
-              providers: [
-                BlocProvider.value(value: context.read<QuotesBloc>()),
-                BlocProvider.value(value: context.read<CustomersBloc>()),
-                BlocProvider.value(value: context.read<ProductsBloc>()),
-                BlocProvider.value(value: context.read<ProjectsBloc>()),
-                BlocProvider.value(value: context.read<StockBloc>()),
-                BlocProvider.value(value: context.read<WarehousesBloc>()),
-              ],
-              child: CreateQuoteScreen(existing: quote),
-            ),
-          ),
-        );
-        break;
-      case 'delete':
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: Text('Confirmer la suppression'),
-            content: Text('Voulez-vous vraiment supprimer cet enregistrement ?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  context.read<QuotesBloc>().add(DeleteQuote(quote.id));
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                child: Text('Supprimer', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
-        break;
-      case 'status':
-        _showChangeStatusDialog(context, quote);
-        break;
-      case 'to_invoice':
-        _showConversionDialog(context, quote);
-        break;
       case 'view_invoice':
         _openConvertedInvoice(context, quote.convertedToId);
         break;
-      case 'to_order':
-        _showOrderConversionDialog(context, quote);
-        break;
       case 'view_order':
         _openConvertedOrder(context, quote.convertedToOrderId);
-        break;
-      case 'to_delivery':
-        _showDeliveryConversionDialog(context, quote);
         break;
       case 'view_delivery':
         _openConvertedDelivery(context, quote.convertedToDeliveryId);
@@ -1188,6 +1210,45 @@ class _QuotesScreenState extends State<QuotesScreen> {
         break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action non implementee')));
+    }
+  }
+
+  /// Executes write actions after user has confirmed and connectivity is verified.
+  void _executeWriteAction(BuildContext context, String action, Quote quote) {
+    switch (action) {
+      case 'edit':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: context.read<QuotesBloc>()),
+                BlocProvider.value(value: context.read<CustomersBloc>()),
+                BlocProvider.value(value: context.read<ProductsBloc>()),
+                BlocProvider.value(value: context.read<ProjectsBloc>()),
+                BlocProvider.value(value: context.read<StockBloc>()),
+                BlocProvider.value(value: context.read<WarehousesBloc>()),
+              ],
+              child: CreateQuoteScreen(existing: quote),
+            ),
+          ),
+        );
+        break;
+      case 'delete':
+        context.read<QuotesBloc>().add(DeleteQuote(quote.id));
+        break;
+      case 'status':
+        _showChangeStatusDialog(context, quote);
+        break;
+      case 'to_invoice':
+        _showConversionDialog(context, quote);
+        break;
+      case 'to_order':
+        _showOrderConversionDialog(context, quote);
+        break;
+      case 'to_delivery':
+        _showDeliveryConversionDialog(context, quote);
+        break;
     }
   }
 
