@@ -8,6 +8,7 @@ import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import '../../services/permission_service.dart';
 import '../../services/offline_quote_service.dart';
+import '../../services/offline_document_service.dart';
 import '../../models/user_management_model.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
@@ -149,7 +150,17 @@ class QuotesBloc extends Bloc<QuotesEvent, QuotesState> {
   Future<void> _onLoadFirstDevis(LoadFirstDevis event, Emitter<QuotesState> emit) async {
     emit(QuotesLoading());
     try {
-      final pendingQuotes = await OfflineQuoteService.instance.getPendingQuotes();
+      final legacyPending = await OfflineQuoteService.instance.getPendingQuotes();
+      final genericPendingMaps = await OfflineDocumentService.instance.getPendingDocuments('quotes');
+      final genericPending = genericPendingMaps.map((map) => Quote.fromMap(map)).toList();
+
+      final pendingQuotes = <Quote>[];
+      final seenIds = <String>{};
+      for (final q in [...legacyPending, ...genericPending]) {
+        if (seenIds.add(q.id)) {
+          pendingQuotes.add(q);
+        }
+      }
       
       List<Quote> remoteQuotes = [];
       int totalCount = 0;

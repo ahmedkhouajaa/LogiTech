@@ -15,6 +15,7 @@ import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
+import '../../../../utils/offline_action_helper.dart';
 import '../../../../database/database_helper.dart';
 import '../../../../services/document_numbering_service.dart';
 import '../../../../screens/customers_screen.dart';
@@ -98,6 +99,8 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
 
   Future<void> _save() async {
     if (widget.isReadOnly) return;
+    if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
+
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error));
       return;

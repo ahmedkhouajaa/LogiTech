@@ -17,6 +17,7 @@ import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
+import '../../../../utils/offline_action_helper.dart';
 import '../../../../database/database_helper.dart';
 import '../../../../services/document_numbering_service.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
@@ -132,6 +133,8 @@ class _MobileSupplierOrderFormScreenState extends State<MobileSupplierOrderFormS
 
   Future<void> _save() async {
     if (widget.isReadOnly) return;
+    if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
+
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez sélectionner un fournisseur'), backgroundColor: AppColors.error),

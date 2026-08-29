@@ -488,6 +488,7 @@ class _MobileSupplierOrderDetailScreenState extends State<MobileSupplierOrderDet
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
             onPressed: () async {
+              if (!await OfflineActionHelper.checkOnlineOrShowError(context)) return;
               final amountStr = amountCtrl.text.replaceAll(',', '.');
               final amount = double.tryParse(amountStr) ?? 0.0;
               if (amount > 0) {

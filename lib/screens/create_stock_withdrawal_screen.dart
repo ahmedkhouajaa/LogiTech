@@ -12,6 +12,7 @@ import '../blocs/stock/stock_bloc.dart';
 import '../models/stock_withdrawal.dart';
 import '../models/product.dart';
 import '../utils/constants.dart';
+import '../utils/offline_action_helper.dart';
 import '../utils/helpers.dart';
 import '../database/database_helper.dart';
 
@@ -82,6 +83,7 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
   }
 
   Future<void> _save() async {
+    // No online check for create actions — offline creation is allowed
     if (!_formKey.currentState!.validate()) return;
     if (_warehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un entrepôt')));

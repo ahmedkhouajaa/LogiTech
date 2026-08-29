@@ -4,7 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../../../blocs/quotes/quotes_bloc.dart';
 import '../../../../blocs/customers/customers_bloc.dart';
 import '../../../../services/connectivity_service.dart';
-import '../../../../services/offline_quote_service.dart';
+import '../../../../services/offline_document_service.dart';
 import '../../../../blocs/projects/projects_bloc.dart';
 import '../../../../blocs/products/products_bloc.dart';
 import '../../../../models/quote.dart';
@@ -18,6 +18,7 @@ import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
+import '../../../../utils/offline_action_helper.dart';
 import '../../../../database/database_helper.dart';
 import '../../../../services/document_numbering_service.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
@@ -114,6 +115,8 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
   }
 
   Future<void> _save() async {
+    if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
+
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error),
@@ -142,8 +145,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
           }
           number = generateDocNumber('DV', seq);
         } else {
-          final rand6 = 100000 + (DateTime.now().microsecondsSinceEpoch % 900000);
-          number = 'BROUILLON-$rand6';
+          number = OfflineDocumentService.generateDraftNumber();
         }
       }
 
@@ -194,7 +196,7 @@ class _MobileQuoteFormScreenState extends State<MobileQuoteFormScreen> {
       );
 
       if (!isOnline && !_isEditing) {
-        await OfflineQuoteService.instance.savePendingQuote(quote);
+        await OfflineDocumentService.instance.savePendingDocument('quotes', quote.toMap());
         bloc.add(const LoadFirstDevis());
         if (mounted) {
           Navigator.pop(context);

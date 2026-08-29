@@ -14,6 +14,8 @@ import '../../../models/product.dart';
 import '../../../models/stock_movement.dart'; // Contains Warehouse
 import '../../../database/database_helper.dart';
 import '../../../utils/constants.dart';
+import '../../../utils/helpers.dart';
+import '../../../utils/offline_action_helper.dart';
 import '../../../services/enterprise_service.dart';
 import '../../../widgets/article_selection_modal.dart';
 import 'mobile_product_form_screen.dart';
@@ -74,6 +76,8 @@ class _MobileInventorySheetFormScreenState extends State<MobileInventorySheetFor
   }
 
   void _save() async {
+    if (widget.existing != null && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
+
     if (_selectedWarehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez sélectionner un entrepôt'), backgroundColor: AppColors.error),

@@ -88,12 +88,27 @@ class OfflineActionHelper {
     }
   }
 
-  /// Executes [onConfirmed] directly if the action is a read-only action,
-  /// or shows a confirmation dialog with offline check if it's a write action.
+  /// Actions that skip the confirmation dialog — either because they create
+  /// new documents (allowing offline creation) or because the destination
+  /// screen already has its own built-in confirmation/save logic.
+  static const Set<String> _noConfirmActions = {
+    'create',
+    'add',
+    'edit',        // Edit screen has its own save/cancel confirmation
+    'add_payment', // Payment screen has its own confirm/cancel logic
+    'payment',     // Payment screen has its own confirm/cancel logic
+  };
+
+  /// Executes [onConfirmed] directly if the action is a read-only action
+  /// or a create/add action, or shows a confirmation dialog with offline
+  /// check if it's any other write action.
   ///
   /// - For read actions: [onConfirmed] runs immediately (no dialog).
-  /// - For write actions: shows a confirmation dialog. On confirm,
-  ///   checks connectivity and either runs [onConfirmed] or shows an error.
+  /// - For create/add actions: [onConfirmed] runs immediately (no dialog,
+  ///   no internet check) to allow offline document creation.
+  /// - For other write actions (edit, delete, payment, etc.): shows a
+  ///   confirmation dialog. On confirm, checks connectivity and either
+  ///   runs [onConfirmed] or shows an error.
   static void executeAction({
     required BuildContext context,
     required String action,
@@ -106,7 +121,14 @@ class OfflineActionHelper {
       return;
     }
 
-    // Write action — show confirmation dialog
+    if (_noConfirmActions.contains(action)) {
+      // Create/Add action — execute directly without confirmation or
+      // internet check to allow offline document creation.
+      onConfirmed();
+      return;
+    }
+
+    // Other write action — show confirmation dialog
     _showConfirmationDialog(
       context: context,
       action: action,
@@ -180,7 +202,24 @@ class OfflineActionHelper {
     );
   }
 
+  /// Checks online status before saving/submitting in forms or dialogs.
+  /// If online, returns true.
+  /// If offline, displays the offline error dialog and returns false.
+  static Future<bool> checkOnlineOrShowError(BuildContext context) async {
+    final isOnline = await ConnectivityService.instance.checkConnectivity();
+    if (!isOnline && context.mounted) {
+      _showOfflineErrorDialog(context);
+      return false;
+    }
+    return isOnline;
+  }
+
   /// Shows the offline error dialog.
+  static void showOfflineError(BuildContext context) {
+    _showOfflineErrorDialog(context);
+  }
+
+  /// Internal helper to show the offline error dialog.
   static void _showOfflineErrorDialog(BuildContext context) {
     showDialog(
       context: context,

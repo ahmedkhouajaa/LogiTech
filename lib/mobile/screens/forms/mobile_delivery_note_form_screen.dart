@@ -17,6 +17,7 @@ import '../../../../blocs/warehouses/warehouses_event.dart';
 import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
+import '../../../../utils/offline_action_helper.dart';
 import '../../../../database/database_helper.dart';
 import '../../../../services/document_numbering_service.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
@@ -135,6 +136,8 @@ class _MobileDeliveryNoteFormScreenState extends State<MobileDeliveryNoteFormScr
   }
 
   Future<void> _save() async {
+    if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
+
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error),

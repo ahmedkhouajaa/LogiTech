@@ -254,7 +254,7 @@ class _MobileQuotesScreenState extends State<MobileQuotesScreen> {
           onFabPressed: () {
             OfflineActionHelper.executeAction(
               context: context,
-              action: 'edit', // 'edit' is a write action that triggers the confirm + online check
+              action: 'create',
               onConfirmed: () {
                 Navigator.push(
                   context,

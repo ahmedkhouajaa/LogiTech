@@ -13,6 +13,7 @@ import '../models/treasury_account.dart';
 import '../models/treasury_transaction.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../utils/offline_action_helper.dart';
 import '../services/enterprise_service.dart';
 import '../services/firestore_repository.dart';
 import '../services/firestore_pagination_service.dart';
@@ -123,6 +124,8 @@ class _DeliveryNotePaymentDialogState extends State<DeliveryNotePaymentDialog>
 
 
   void _save() async {
+    if (!await OfflineActionHelper.checkOnlineOrShowError(context)) return;
+
     if (_selectedAccountId == null) {
       if (_treasuryAccounts.isNotEmpty) {
         _selectedAccountId = _treasuryAccounts.firstWhere((a) => a.isDefault, orElse: () => _treasuryAccounts.first).id;

@@ -13,6 +13,7 @@ import '../models/treasury_account.dart';
 import '../models/treasury_transaction.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
+import '../utils/offline_action_helper.dart';
 import '../widgets/searchable_dropdown_field.dart';
 
 class ReturnNotePaymentDialog extends StatefulWidget {
@@ -73,7 +74,9 @@ class _ReturnNotePaymentDialogState extends State<ReturnNotePaymentDialog> {
     super.dispose();
   }
 
-  void _save() {
+  void _save() async {
+    if (!await OfflineActionHelper.checkOnlineOrShowError(context)) return;
+
     if (_selectedAccountId == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un compte de trésorerie', style: TextStyle(color: Colors.white)), backgroundColor: AppColors.error));
       return;

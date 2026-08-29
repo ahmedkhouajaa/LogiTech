@@ -13,6 +13,7 @@ import '../../../../blocs/treasury_transactions/treasury_transactions_bloc.dart'
 import '../../../../models/treasury_transaction.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
+import '../../../../utils/offline_action_helper.dart';
 import '../../../../database/database_helper.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
@@ -80,6 +81,8 @@ class _MobilePaymentFormScreenState extends State<MobilePaymentFormScreen> {
 
   Future<void> _save() async {
     if (widget.isReadOnly) return;
+    if (!await OfflineActionHelper.checkOnlineOrShowError(context)) return;
+
     if (_selectedContactId == null || _selectedContactId!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un contact'), backgroundColor: AppColors.error));
       return;

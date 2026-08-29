@@ -12,6 +12,7 @@ import '../../../../database/database_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
+import '../../../../utils/offline_action_helper.dart';
 import '../../../../services/enterprise_service.dart';
 import '../../../../widgets/searchable_dropdown_field.dart';
 import '../../../../blocs/warehouses/warehouses_bloc.dart';
@@ -120,6 +121,8 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
   }
 
   Future<void> _save() async {
+    if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
+
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),

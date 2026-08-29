@@ -5,7 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../blocs/quotes/quotes_bloc.dart';
 import '../blocs/customers/customers_bloc.dart';
 import '../services/connectivity_service.dart';
-import '../services/offline_quote_service.dart';
+import '../services/offline_document_service.dart';
 import '../blocs/products/products_bloc.dart';
 import '../blocs/projects/projects_bloc.dart';
 import '../models/quote.dart';
@@ -143,10 +143,6 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
       return;
     }
 
-    final bloc = context.read<QuotesBloc>();
-    final nav = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-
     if (_isSaving) return;
     setState(() => _isSaving = true);
 
@@ -172,8 +168,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
           }
           number = generateDocNumber('DV', seq);
         } else {
-          final rand6 = 100000 + (DateTime.now().microsecondsSinceEpoch % 900000);
-          number = 'BROUILLON-$rand6';
+          number = OfflineDocumentService.generateDraftNumber();
         }
       }
 
@@ -233,7 +228,7 @@ class _CreateQuoteScreenState extends State<CreateQuoteScreen> {
       );
 
       if (!isOnline && !_isEditing) {
-        await OfflineQuoteService.instance.savePendingQuote(quote);
+        await OfflineDocumentService.instance.savePendingDocument('quotes', quote.toMap());
         bloc.add(const LoadFirstDevis());
         nav.pop();
         messenger.showSnackBar(SnackBar(
