@@ -34,7 +34,7 @@ class StockTransfersScreen extends StatefulWidget {
 }
 
 class _StockTransfersScreenState extends State<StockTransfersScreen> {
-  int _rowsPerPage = 10;
+  int _rowsPerPage = 20;
   int _currentPage = 0;
   List<Warehouse> _warehouses = [];
   String _searchQuery = '';
@@ -854,7 +854,7 @@ class _StockTransfersScreenState extends State<StockTransfersScreen> {
                                   value: _rowsPerPage,
                                   underline: const SizedBox(),
                                   icon: Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textSecondary),
-                                  items: [20, 50, 100].map((v) => DropdownMenuItem(value: v, child: Text('$v', style: const TextStyle(fontSize: 12)))).toList(),
+                                  items: [10, 20, 50, 100].map((v) => DropdownMenuItem(value: v, child: Text('$v', style: const TextStyle(fontSize: 12)))).toList(),
                                   onChanged: (v) {
                                     if (v != null) {
                                       setState(() {

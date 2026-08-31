@@ -19,51 +19,54 @@ class TemplatePreviewWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pageCanvas = Center(
-      child: AspectRatio(
-        aspectRatio: 210 / 297, // A4 proportions
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: AppColors.border),
-            boxShadow: AppShadows.md,
-          ),
-          child: LayoutBuilder(
-            builder: (context, innerConstraints) {
-              final scale = innerConstraints.maxWidth / 210; // scale factor (mm → px)
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: Stack(
-                  children: [
-                    // Header & Client Elements
-                    _buildDraggableLogo(scale),
-                    _buildDraggableCompanyName(scale),
-                    _buildDraggableCompanyDetails(scale),
-                    _buildDraggableDocumentTitle(scale),
-                    _buildDraggableClientDetails(scale),
-                    // Article Table
-                    _buildDraggableTable(scale),
-                    // Notes & Conditions
-                    _buildDraggableNotes(scale),
-                    // Totals
-                    _buildDraggableTotals(scale),
-                    // Signature
-                    _buildDraggableSignature(scale),
-                    // Mentions légales & Footer
-                    _buildDraggableLegalNotice(scale),
-                    // E-Facture elements
-                    if (template.qrCodeConfig['enabled'] == true)
-                      _buildQrCodeOverlay(scale),
-                    if (template.ttnReferenceConfig['enabled'] == true)
-                      _buildTtnOverlay(scale),
-                    if (template.submissionDateConfig['enabled'] == true)
-                      _buildSubmissionDateOverlay(scale),
-                    if (template.statusBadgeConfig['enabled'] == true)
-                      _buildStatusBadgeOverlay(scale),
-                  ],
-                ),
-              );
-            },
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
+        child: AspectRatio(
+          aspectRatio: 210 / 297, // A4 proportions
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: AppColors.border),
+              boxShadow: AppShadows.md,
+            ),
+            child: LayoutBuilder(
+              builder: (context, innerConstraints) {
+                final scale = innerConstraints.maxWidth / 210; // scale factor (mm → px)
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: Stack(
+                    children: [
+                      // Header & Client Elements
+                      _buildDraggableLogo(scale),
+                      _buildDraggableCompanyName(scale),
+                      _buildDraggableCompanyDetails(scale),
+                      _buildDraggableDocumentTitle(scale),
+                      _buildDraggableClientDetails(scale),
+                      // Article Table
+                      _buildDraggableTable(scale),
+                      // Notes & Conditions
+                      _buildDraggableNotes(scale),
+                      // Totals
+                      _buildDraggableTotals(scale),
+                      // Signature
+                      _buildDraggableSignature(scale),
+                      // Mentions légales & Footer
+                      _buildDraggableLegalNotice(scale),
+                      // E-Facture elements
+                      if (template.qrCodeConfig['enabled'] == true)
+                        _buildQrCodeOverlay(scale),
+                      if (template.ttnReferenceConfig['enabled'] == true)
+                        _buildTtnOverlay(scale),
+                      if (template.submissionDateConfig['enabled'] == true)
+                        _buildSubmissionDateOverlay(scale),
+                      if (template.statusBadgeConfig['enabled'] == true)
+                        _buildStatusBadgeOverlay(scale),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -81,7 +84,7 @@ class TemplatePreviewWidget extends StatelessWidget {
             color: AppColors.surfaceAlt,
             borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
-          padding: EdgeInsets.all(isNarrow ? 10 : 20),
+          padding: EdgeInsets.all(isNarrow ? 8 : 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -115,8 +118,16 @@ class TemplatePreviewWidget extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: isNarrow ? 8 : 14),
-              Expanded(child: pageCanvas),
+              SizedBox(height: isNarrow ? 6 : 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: pageCanvas,
+                  ),
+                ),
+              ),
             ],
           ),
         );

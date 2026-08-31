@@ -65,22 +65,57 @@ class _DocumentTemplatesBody extends StatelessWidget {
     return Column(
       children: [
         // Action bar
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Row(
-            children: [
-              Text(
-                '${templates.length} modèle${templates.length > 1 ? 's' : ''}',
-                style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+        Builder(
+          builder: (context) {
+            final isMobile = MediaQuery.of(context).size.width < 600;
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24, vertical: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (!isMobile) ...[
+                          Text(
+                            'Modèles de documents',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                        ],
+                        Text(
+                          '${templates.length} modèle${templates.length > 1 ? 's' : ''}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (PermissionService.instance.canCreate(UserPermissionResources.settingsDocTemplates))
+                    ElevatedButton.icon(
+                      onPressed: () => _createTemplate(context),
+                      icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                      label: Text(
+                        isMobile ? 'Nouveau' : 'Nouveau modèle',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 16, vertical: 10),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                    ),
+                ],
               ),
-              if (PermissionService.instance.canCreate(UserPermissionResources.settingsDocTemplates))
-                AppButton(
-                  label: 'Nouveau modèle',
-                  icon: Icons.add_rounded,
-                  onPressed: () => _createTemplate(context),
-                ),
-            ],
-          ),
+            );
+          },
         ),
         // Template list
         Expanded(

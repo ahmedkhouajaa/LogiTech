@@ -314,18 +314,15 @@ class DatabaseHelper {
     final counterRef = _firestore.collection('enterprises').doc(entId).collection('counters').doc(docCollection);
 
     try {
-      return await _firestore.runTransaction((transaction) async {
-        final snapshot = await transaction.get(counterRef);
-        int currentCount = 0;
-
-        if (snapshot.exists && snapshot.data() != null && snapshot.data()!['count'] != null) {
-          currentCount = (snapshot.data()!['count'] as num).toInt();
-        } else {
-          // Counter document does not exist yet. Initialize from existing records if any
+      // 1. Ensure counter doc exists outside of transaction if needed
+      final counterSnap = await counterRef.get();
+      if (!counterSnap.exists) {
+        int initialCount = 0;
+        try {
           final querySnap = await _firestore
               .collection(docCollection)
               .where('enterprise_id', isEqualTo: entId)
-              .get(const GetOptions(source: Source.server));
+              .get();
 
           for (var doc in querySnap.docs) {
             final data = doc.data();
@@ -333,11 +330,22 @@ class DatabaseHelper {
             final parts = number.split('-');
             if (parts.length >= 3) {
               final numVal = int.tryParse(parts.last) ?? 0;
-              if (numVal > currentCount && numVal < 100000) {
-                currentCount = numVal;
+              if (numVal > initialCount && numVal < 100000) {
+                initialCount = numVal;
               }
             }
           }
+        } catch (_) {}
+        await counterRef.set({'count': initialCount}, SetOptions(merge: true));
+      }
+
+      // 2. Perform atomic transaction
+      return await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(counterRef);
+        int currentCount = 0;
+
+        if (snapshot.exists && snapshot.data() != null && snapshot.data()!['count'] != null) {
+          currentCount = (snapshot.data()!['count'] as num).toInt();
         }
 
         final nextCount = currentCount + 1;

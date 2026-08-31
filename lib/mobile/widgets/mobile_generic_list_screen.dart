@@ -30,6 +30,7 @@ class MobileGenericListScreen extends StatelessWidget {
   final Widget? customFab;
   final String? subtitle;
   final Widget? loadingWidget;
+  final Widget? searchTrailing;
 
   const MobileGenericListScreen({
     super.key,
@@ -53,6 +54,7 @@ class MobileGenericListScreen extends StatelessWidget {
     this.customFab,
     this.subtitle,
     this.loadingWidget,
+    this.searchTrailing,
   });
 
   @override
@@ -89,7 +91,10 @@ class MobileGenericListScreen extends StatelessWidget {
                   ),
                 ),
               // Sticky Search Bar
-              MobileSearchBar(onChanged: onSearchChanged),
+              MobileSearchBar(
+                onChanged: onSearchChanged,
+                trailing: searchTrailing,
+              ),
               
               if (customFilterWidget == null) ...[
                 // Horizontal Filter Chips

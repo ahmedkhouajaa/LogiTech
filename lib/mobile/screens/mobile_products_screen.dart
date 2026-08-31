@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../utils/constants.dart';
 import '../utils/mobile_module_config.dart';
 import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_product_card.dart';
 import 'forms/mobile_product_form_screen.dart';
 import '../../blocs/products/products_bloc.dart';
+import '../../blocs/stock/stock_bloc.dart';
 import '../../widgets/sidebar_menu.dart';
+import '../../services/article_import_export_service.dart';
+import '../../widgets/import_export/article_import_dialog.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
+import '../../models/product.dart';
 
 class MobileProductsScreen extends StatefulWidget {
   const MobileProductsScreen({super.key});
@@ -77,6 +84,114 @@ class _MobileProductsScreenState extends State<MobileProductsScreen> {
     );
   }
 
+  Widget _buildActionsButton(BuildContext context, ProductsState state) {
+    final products = state is ProductsLoaded ? state.products : <Product>[];
+    return PopupMenuButton<String>(
+      tooltip: 'Actions Import / Export Articles',
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+      color: AppColors.surface,
+      elevation: 4,
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.more_horiz_rounded, size: 20, color: AppColors.textPrimary),
+            const SizedBox(width: 6),
+            Text(
+              'Actions',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+      itemBuilder: (ctx) {
+        final canExport = PermissionService.instance.canCreate(UserPermissionResources.importExport);
+        final canImport = PermissionService.instance.canUpdate(UserPermissionResources.importExport);
+        final items = <PopupMenuEntry<String>>[];
+        if (canExport) {
+          items.addAll([
+            const PopupMenuItem(
+              value: 'export_excel',
+              child: Text('Exporter Excel', style: TextStyle(fontSize: 13)),
+            ),
+            const PopupMenuItem(
+              value: 'export_csv',
+              child: Text('Exporter CSV', style: TextStyle(fontSize: 13)),
+            ),
+            const PopupMenuItem(
+              value: 'export_json',
+              child: Text('Exporter JSON', style: TextStyle(fontSize: 13)),
+            ),
+          ]);
+        }
+        if (canExport && canImport) {
+          items.add(const PopupMenuDivider());
+        }
+        if (canImport) {
+          items.add(
+            const PopupMenuItem(
+              value: 'import_excel',
+              child: Text(
+                'Importer depuis Excel',
+                style: TextStyle(fontSize: 13),
+              ),
+            ),
+          );
+        }
+        return items;
+      },
+      onSelected: (val) async {
+        if (!context.mounted) return;
+        if (val == 'export_excel') {
+          if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+          await ArticleImportExportService.instance.exportArticlesToExcel(
+            context: context,
+            products: products,
+          );
+        } else if (val == 'export_csv') {
+          if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+          await ArticleImportExportService.instance.exportArticlesToCsv(
+            context: context,
+            products: products,
+          );
+        } else if (val == 'export_json') {
+          if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+          await ArticleImportExportService.instance.exportArticlesToJson(
+            context: context,
+            products: products,
+          );
+        } else if (val == 'import_excel') {
+          if (!PermissionService.instance.canUpdate(UserPermissionResources.importExport)) return;
+          ArticleImportDialog.show(
+            context,
+            onImportSuccess: () {
+              if (context.mounted) {
+                context.read<ProductsBloc>().add(
+                  ResetProductsPagination(
+                    searchQuery: _searchQuery,
+                    stockFilter: _selectedFilter,
+                  ),
+                );
+                context.read<StockBloc>().add(LoadStock());
+              }
+            },
+          );
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ProductsBloc, ProductsState>(
@@ -100,7 +215,7 @@ class _MobileProductsScreenState extends State<MobileProductsScreen> {
                     builder: (_) => MobileProductFormScreen(existing: product),
                   ),
                 ).then((_) {
-                  if (mounted) {
+                  if (mounted && context.mounted) {
                     context.read<ProductsBloc>().add(
                       ResetProductsPagination(
                         searchQuery: _searchQuery,
@@ -134,6 +249,7 @@ class _MobileProductsScreenState extends State<MobileProductsScreen> {
             );
           },
           onSearchChanged: _onSearchChanged,
+          searchTrailing: _buildActionsButton(context, state),
           filterOptions: const ['Tous', 'En stock', 'Rupture'],
           selectedFilter: _selectedFilter,
           onFilterChanged: _onFilterChanged,
@@ -148,7 +264,7 @@ class _MobileProductsScreenState extends State<MobileProductsScreen> {
               context,
               MaterialPageRoute(builder: (_) => const MobileProductFormScreen()),
             ).then((_) {
-              if (mounted) {
+              if (mounted && context.mounted) {
                 context.read<ProductsBloc>().add(
                   ResetProductsPagination(
                     searchQuery: _searchQuery,

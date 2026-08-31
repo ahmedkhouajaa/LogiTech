@@ -8,6 +8,11 @@ import '../../widgets/sidebar_menu.dart';
 import '../../blocs/customers/customers_bloc.dart';
 import 'forms/mobile_customer_form_screen.dart';
 import '../../screens/customers_screen.dart';
+import '../../services/permission_service.dart';
+import '../../models/user_management_model.dart';
+import '../../services/contact_import_export_service.dart';
+import '../../widgets/import_export/contact_import_dialog.dart';
+import '../../models/customer.dart';
 
 class MobileCustomersScreen extends StatefulWidget {
   const MobileCustomersScreen({super.key});
@@ -55,6 +60,112 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
       _searchQuery = query;
     });
     _fetchFilteredClients();
+  }
+
+  Widget _buildActionsButton(BuildContext context, CustomersState state) {
+    final customers = state is CustomersLoaded ? state.customers : <Customer>[];
+    return PopupMenuButton<String>(
+      tooltip: 'Actions Import / Export',
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+      color: AppColors.surface,
+      elevation: 4,
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.more_horiz_rounded, size: 20, color: AppColors.textPrimary),
+            const SizedBox(width: 6),
+            Text(
+              'Actions',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+      itemBuilder: (ctx) {
+        final canExport = PermissionService.instance.canCreate(UserPermissionResources.importExport);
+        final canImport = PermissionService.instance.canUpdate(UserPermissionResources.importExport);
+        final items = <PopupMenuEntry<String>>[];
+        if (canExport) {
+          items.addAll([
+            const PopupMenuItem(
+              value: 'export_excel',
+              child: Text('Exporter Excel', style: TextStyle(fontSize: 13)),
+            ),
+            const PopupMenuItem(
+              value: 'export_csv',
+              child: Text('Exporter CSV', style: TextStyle(fontSize: 13)),
+            ),
+            const PopupMenuItem(
+              value: 'export_json',
+              child: Text('Exporter JSON', style: TextStyle(fontSize: 13)),
+            ),
+          ]);
+        }
+        if (canExport && canImport) {
+          items.add(const PopupMenuDivider());
+        }
+        if (canImport) {
+          items.add(
+            const PopupMenuItem(
+              value: 'import_excel',
+              child: Text(
+                'Importer depuis Excel',
+                style: TextStyle(fontSize: 13),
+              ),
+            ),
+          );
+        }
+        return items;
+      },
+      onSelected: (val) async {
+        if (!context.mounted) return;
+        if (val == 'export_excel') {
+          if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+          await ContactImportExportService.instance.exportContactsToExcel(
+            context: context,
+            type: ContactType.customer,
+            contacts: customers,
+          );
+        } else if (val == 'export_csv') {
+          if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+          await ContactImportExportService.instance.exportContactsToCsv(
+            context: context,
+            type: ContactType.customer,
+            contacts: customers,
+          );
+        } else if (val == 'export_json') {
+          if (!PermissionService.instance.canCreate(UserPermissionResources.importExport)) return;
+          await ContactImportExportService.instance.exportContactsToJson(
+            context: context,
+            type: ContactType.customer,
+            contacts: customers,
+          );
+        } else if (val == 'import_excel') {
+          if (!PermissionService.instance.canUpdate(UserPermissionResources.importExport)) return;
+          ContactImportDialog.show(
+            context,
+            type: ContactType.customer,
+            onImportSuccess: () {
+              if (context.mounted) {
+                context.read<CustomersBloc>().add(LoadFirstClients(searchQuery: _searchQuery));
+              }
+            },
+          );
+        }
+      },
+    );
   }
 
   @override
@@ -122,6 +233,7 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
             ));
           },
           onSearchChanged: _onSearchChanged,
+          searchTrailing: _buildActionsButton(context, state),
           filterOptions: const [],
           selectedFilter: 'Tous',
           onFilterChanged: (_) {},

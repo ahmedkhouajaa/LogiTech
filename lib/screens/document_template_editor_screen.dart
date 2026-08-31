@@ -210,14 +210,14 @@ class _DocumentTemplateEditorScreenState
                       )
                     : Row(
                         children: [
-                          // Left: Preview
+                          // Left: Preview (takes 70% of horizontal space)
                           Expanded(
-                            flex: 4,
+                            flex: 7,
                             child: _buildPreviewWidget(),
                           ),
-                          // Right: Editor tabs
+                          // Right: Editor tabs (takes 30% of horizontal space)
                           Expanded(
-                            flex: 5,
+                            flex: 3,
                             child: _buildEditorTabs(isMobile),
                           ),
                         ],
@@ -314,6 +314,14 @@ class _DocumentTemplateEditorScreenState
                   ),
                 ],
               ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: Icon(Icons.fullscreen_rounded, size: 22, color: AppColors.primary),
+              onPressed: _openFullScreenPreview,
+              tooltip: 'Aperçu A4 plein écran',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             ),
           ],
         ],
@@ -448,12 +456,12 @@ class _DocumentTemplateEditorScreenState
             ),
             child: TabBar(
               controller: _tabController,
-              isScrollable: isMobile,
-              tabAlignment: isMobile ? TabAlignment.start : TabAlignment.fill,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
               labelColor: AppColors.primary,
               unselectedLabelColor: AppColors.textSecondary,
               indicatorColor: AppColors.primary,
-              labelPadding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 10),
+              labelPadding: const EdgeInsets.symmetric(horizontal: 12),
               labelStyle: TextStyle(
                 fontSize: isMobile ? 12 : 13,
                 fontWeight: FontWeight.w600,
