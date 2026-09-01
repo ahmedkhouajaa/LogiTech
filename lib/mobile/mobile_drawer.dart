@@ -97,8 +97,9 @@ class _MobileDrawerState extends State<MobileDrawer> {
                       _buildItem(AppModule.settings, Icons.settings_rounded, 'Parametres'),
                       _buildThemeToggleItem(),
                       _buildItem(AppModule.companyInfo, Icons.business_center_rounded, 'Ma Societe'),
-                       _buildItem(AppModule.documentTemplates, Icons.design_services_rounded, 'Modeles'),
+                      _buildItem(AppModule.documentTemplates, Icons.design_services_rounded, 'Modeles'),
                       _buildItem(AppModule.importExport, Icons.sync_alt_rounded, 'Import / Export'),
+                      _buildItem(AppModule.support, Icons.support_agent_rounded, 'Support client'),
                       if (PermissionService.instance.isAdmin)
                         _buildItem(AppModule.userManagement, Icons.manage_accounts_rounded, 'Gestion des utilisateurs'),
                     ],

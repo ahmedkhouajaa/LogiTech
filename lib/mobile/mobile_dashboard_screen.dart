@@ -116,9 +116,9 @@ class MobileDashboardScreen extends StatelessWidget {
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.55,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 1.25,
       children: [
         _kpiCard(
           icon: Icons.receipt_rounded,
@@ -128,7 +128,7 @@ class MobileDashboardScreen extends StatelessWidget {
         ),
         _kpiCard(
           icon: Icons.payments_rounded,
-          label: 'Total Paye',
+          label: 'Total Payé',
           value: formatCurrency(state.totalPaid),
           gradient: AppGradients.success,
         ),
@@ -140,7 +140,7 @@ class MobileDashboardScreen extends StatelessWidget {
         ),
         _kpiCard(
           icon: Icons.account_balance_rounded,
-          label: 'TVA Collectee',
+          label: 'TVA Collectée',
           value: formatCurrency(state.totalTvaCollected),
           gradient: AppGradients.warning,
         ),
@@ -155,7 +155,7 @@ class MobileDashboardScreen extends StatelessWidget {
     required LinearGradient gradient,
   }) {
     return Container(
-      padding: EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),

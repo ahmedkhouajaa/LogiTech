@@ -152,6 +152,20 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
+    match /support_tickets/{docId} {
+      allow read, write: if true;
+      match /{allChildren=**} {
+        allow read, write: if true;
+      }
+    }
+
+    match /subscription_payments/{docId} {
+      allow read, write: if true;
+      match /{allChildren=**} {
+        allow read, write: if true;
+      }
+    }
+
     match /{document=**} {
       allow read, write: if isAuthenticated();
     }

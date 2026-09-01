@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/dashboard/dashboard_bloc.dart';
@@ -54,6 +55,10 @@ import '../screens/stock_withdrawals_screen.dart';
 import '../screens/inventory_sheets_screen.dart';
 import 'screens/mobile_user_management_screen.dart';
 import '../screens/import_export_screen.dart';
+import '../screens/support_tickets_screen.dart';
+import '../services/trial_service.dart';
+import '../services/app_navigation_service.dart';
+import '../widgets/trial_banner_widget.dart';
 import '../services/permission_service.dart';
 
 class MobileShellScreen extends StatefulWidget {
@@ -75,16 +80,25 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
     AppModule.customers,
   ];
 
+  StreamSubscription<AppModule>? _navSubscription;
+
   @override
   void initState() {
     super.initState();
     _checkInitialModule();
+    TrialService.instance.initTrial();
     PermissionService.instance.permissionsNotifier.addListener(_onPermissionsChanged);
+    _navSubscription = AppNavigationService.instance.onModuleNavigation.listen((mod) {
+      if (mounted) {
+        _onModuleSelected(mod);
+      }
+    });
     context.read<DashboardBloc>().add(DashboardRefreshRequested());
   }
 
   @override
   void dispose() {
+    _navSubscription?.cancel();
     PermissionService.instance.permissionsNotifier.removeListener(_onPermissionsChanged);
     super.dispose();
   }
@@ -235,8 +249,8 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
         return const MobileUserManagementScreen();
       case AppModule.importExport:
         return const ImportExportScreen();
-      default:
-        return _ComingSoonMobile(module: _activeModule);
+      case AppModule.support:
+        return const SupportTicketsScreen();
     }
   },
 );
@@ -279,6 +293,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       case AppModule.documentTemplates: return 'Modeles';
       case AppModule.userManagement: return 'Gestion des utilisateurs';
       case AppModule.importExport: return 'Import / Export';
+      case AppModule.support: return 'Support client';
       default: return 'LogiTech Pro';
     }
   }
@@ -334,9 +349,16 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
           context.read<ProductsBloc>().add(LoadProducts());
           context.read<DashboardBloc>().add(DashboardRefreshRequested());
         },
-        child: ValueListenableBuilder<bool>(
-          valueListenable: PermissionService.instance.permissionsNotifier,
-          builder: (context, _, __) => _buildContent(),
+        child: Column(
+          children: [
+            const TrialBannerWidget(),
+            Expanded(
+              child: ValueListenableBuilder<bool>(
+                valueListenable: PermissionService.instance.permissionsNotifier,
+                builder: (context, _, __) => _buildContent(),
+              ),
+            ),
+          ],
         ),
       ),
       // TODO: Bottom navigation bar temporarily hidden - use drawer instead

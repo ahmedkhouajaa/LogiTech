@@ -5,6 +5,7 @@ import '../models/user_management_model.dart';
 import '../widgets/sidebar_menu.dart' show AppModule;
 import '../utils/constants.dart';
 import 'enterprise_service.dart';
+import 'trial_service.dart';
 import '../utils/firestore_safe_helper.dart';
 
 /// Singleton service that manages active user permissions for the current enterprise context.
@@ -579,11 +580,20 @@ class PermissionService {
 
   bool canRead(String resourceKey) => hasPermission(resourceKey, action: 'read');
 
-  bool canCreate(String resourceKey) => hasPermission(resourceKey, action: 'create');
+  bool canCreate(String resourceKey) {
+    if (TrialService.instance.isTrialExpired) return false;
+    return hasPermission(resourceKey, action: 'create');
+  }
 
-  bool canUpdate(String resourceKey) => hasPermission(resourceKey, action: 'update');
+  bool canUpdate(String resourceKey) {
+    if (TrialService.instance.isTrialExpired) return false;
+    return hasPermission(resourceKey, action: 'update');
+  }
 
-  bool canDelete(String resourceKey) => hasPermission(resourceKey, action: 'delete');
+  bool canDelete(String resourceKey) {
+    if (TrialService.instance.isTrialExpired) return false;
+    return hasPermission(resourceKey, action: 'delete');
+  }
 
   /// Returns true if the user has AT LEAST ONE permission on the resource (read, create, update, or delete), or is Admin/Owner.
   bool hasAnyPermission(String resourceKey) {
@@ -681,6 +691,7 @@ class PermissionService {
         return UserPermissionResources.userManagement;
       case AppModule.settings:
       case AppModule.reports:
+      case AppModule.support:
         return null;
     }
   }

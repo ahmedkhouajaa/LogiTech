@@ -293,16 +293,20 @@ class _ImportExportScreenState extends State<ImportExportScreen>
             children: [
               Icon(
                 icon,
-                size: 17,
+                size: 16,
                 color: isActive ? Colors.white : AppColors.textSecondary,
               ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: isMobile ? 11 : 13,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: isActive ? Colors.white : AppColors.textSecondary,
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  isMobile ? (index == 0 ? 'Sauvegarde' : 'Restauration') : label,
+                  style: TextStyle(
+                    fontSize: isMobile ? 11 : 13,
+                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                    color: isActive ? Colors.white : AppColors.textSecondary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],
@@ -398,10 +402,16 @@ class _ImportExportScreenState extends State<ImportExportScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildSectionLabel(
-                'COLLECTIONS À EXPORTER (${_selectedExportCollections.length}/${ImportExportService.backupCollections.length})',
+              Expanded(
+                child: _buildSectionLabel(
+                  isMobile
+                      ? 'COLLECTIONS (${_selectedExportCollections.length}/${ImportExportService.backupCollections.length})'
+                      : 'COLLECTIONS À EXPORTER (${_selectedExportCollections.length}/${ImportExportService.backupCollections.length})',
+                ),
               ),
+              const SizedBox(width: 8),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildTextAction(
                     icon: Icons.select_all_rounded,
@@ -848,19 +858,26 @@ class _ImportExportScreenState extends State<ImportExportScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildSectionLabel('CONTENU DU FICHIER ANALYSÉ'),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.info.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(AppRadius.full),
-                ),
-                child: Text(
-                  '$appName • $exportDate',
-                  style: TextStyle(
-                    color: AppColors.info,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
+              Expanded(
+                child: _buildSectionLabel('CONTENU DU FICHIER ANALYSÉ'),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                  ),
+                  child: Text(
+                    '$appName • $exportDate',
+                    style: TextStyle(
+                      color: AppColors.info,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
               ),
@@ -1053,6 +1070,8 @@ class _ImportExportScreenState extends State<ImportExportScreen>
         fontWeight: FontWeight.w700,
         letterSpacing: 0.6,
       ),
+      overflow: TextOverflow.ellipsis,
+      maxLines: 1,
     );
   }
 

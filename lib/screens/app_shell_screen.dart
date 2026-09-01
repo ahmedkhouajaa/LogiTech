@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/dashboard/dashboard_bloc.dart';
@@ -43,6 +44,10 @@ import 'inventory_sheets_screen.dart';
 import 'diagnostic_screen.dart';
 import 'user_management_screen.dart';
 import 'import_export_screen.dart';
+import 'support_tickets_screen.dart';
+import '../services/trial_service.dart';
+import '../services/app_navigation_service.dart';
+import '../widgets/trial_banner_widget.dart';
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
 
@@ -60,16 +65,27 @@ class AppShellScreenState extends State<AppShellScreen> {
     });
   }
 
+  StreamSubscription<AppModule>? _navSubscription;
+
   @override
   void initState() {
     super.initState();
     _checkInitialModule();
+    TrialService.instance.initTrial();
     PermissionService.instance.permissionsNotifier.addListener(_onPermissionsChanged);
+    _navSubscription = AppNavigationService.instance.onModuleNavigation.listen((mod) {
+      if (mounted) {
+        setState(() {
+          _activeModule = mod;
+        });
+      }
+    });
     context.read<DashboardBloc>().add(DashboardRefreshRequested());
   }
 
   @override
   void dispose() {
+    _navSubscription?.cancel();
     PermissionService.instance.permissionsNotifier.removeListener(_onPermissionsChanged);
     super.dispose();
   }
@@ -185,6 +201,8 @@ class AppShellScreenState extends State<AppShellScreen> {
         return const UserManagementScreen();
       case AppModule.importExport:
         return const ImportExportScreen();
+      case AppModule.support:
+        return const SupportTicketsScreen();
     }
   },
 );
@@ -229,6 +247,7 @@ class AppShellScreenState extends State<AppShellScreen> {
       case AppModule.documentTemplates: return 'Modeles de documents';
       case AppModule.userManagement: return 'Gestion des utilisateurs';
       case AppModule.importExport: return 'Import / Export des données';
+      case AppModule.support: return 'Support client & Assistance';
     }
   }
 
@@ -340,6 +359,8 @@ class AppShellScreenState extends State<AppShellScreen> {
                 ],
               ),
             ),
+            // Trial Banner Widget
+            const TrialBannerWidget(),
             // Content area
             Expanded(
               child: ValueListenableBuilder<bool>(
