@@ -23,7 +23,11 @@ class PdfService {
     final rawSettings = await DatabaseHelper.instance.getCompanySettings();
     final CompanySettings companySettings = (rawSettings is CompanySettings) ? rawSettings : CompanySettings();
 
+    // ─── Enrich document with customer/supplier contact details ───
+    document = await _enrichDocumentWithContactDetails(document);
+
     // Fetch product references and designations for all items
+
     final db = DatabaseHelper.instance;
     final allProducts = await db.getProducts();
     for (var item in document.items) {
@@ -126,11 +130,36 @@ class PdfService {
           );
         },
         build: (context) {
+          final customTexts = (config['customTexts'] as List?)
+              ?.whereType<Map>()
+              .map((c) => Map<String, dynamic>.from(c))
+              .toList() ?? [];
+
+          final totalsCfg = config['totals'] as Map<String, dynamic>? ?? {};
+          final notesCfg = config['notes'] as Map<String, dynamic>? ?? {};
+          final sigCfg = config['signature'] as Map<String, dynamic>? ?? {};
+
+          final totalsY = (totalsCfg['positionY'] as num?)?.toDouble() ?? 175.0;
+          final notesY = (notesCfg['positionY'] as num?)?.toDouble() ?? 175.0;
+          final sigY = (sigCfg['positionY'] as num?)?.toDouble() ?? 230.0;
+
+          // Reference baseline is table bottom / minimum Y among bottom elements
+          final minY = [totalsY, notesY, sigY].reduce(math.min);
+          final tableY = ((config['table'] as Map<String, dynamic>?)?['positionY'] as num?)?.toDouble() ?? 82.0;
+
+          // Top gap between table and bottom blocks reflects user Y position
+          final topGap = (minY - tableY - 45.0).clamp(6.0, 60.0);
+
           return [
             _buildItemsTable(document, headerBgColor, headerTextColor, config, fontSize, rowHeight),
-            pw.SizedBox(height: 20),
-            _buildTotals(document, companySettings, config, currency),
-            pw.SizedBox(height: 30),
+            pw.SizedBox(height: 10),
+            if (customTexts.isNotEmpty) ...[
+              _buildCustomTextsPdf(customTexts, fontRegular, fontBold),
+              pw.SizedBox(height: 8),
+            ],
+            pw.SizedBox(height: topGap),
+            _buildBottomSection(document, companySettings, config, currency),
+            pw.SizedBox(height: 16),
             _buildFooter(companySettings, config),
           ];
         },
@@ -175,6 +204,85 @@ class PdfService {
       onLayout: (PdfPageFormat format) async => bytes,
       name: '${document.documentTitle}_${document.number}.pdf',
     );
+  }
+
+  /// Looks up the customer or supplier from the database and enriches the
+  /// DocumentWrapper with their contact details (address, phone, email, code, taxId).
+  Future<DocumentWrapper> _enrichDocumentWithContactDetails(DocumentWrapper document) async {
+    // Skip if no customerId or if details are already fully populated
+    if (document.customerId == null || document.customerId!.isEmpty) {
+      return document;
+    }
+
+    final db = DatabaseHelper.instance;
+    final contactType = document.customData['contactType'] as String? ?? 'customer';
+
+    try {
+      if (contactType == 'supplier') {
+        final supplier = await db.getSupplier(document.customerId!);
+        if (supplier != null) {
+          final address = [
+            supplier.address,
+            supplier.deliveryStreet,
+            supplier.city,
+            supplier.postalCode,
+            supplier.country,
+          ].where((s) => s != null && s.trim().isNotEmpty).toSet().join(', ');
+
+          return document.copyWith(
+            customerName: document.customerName ?? (supplier.companyName?.isNotEmpty == true ? supplier.companyName : supplier.name),
+            customerAddress: (document.customerAddress != null && document.customerAddress!.isNotEmpty)
+                ? document.customerAddress
+                : (address.isNotEmpty ? address : null),
+            customerPhone: (document.customerPhone != null && document.customerPhone!.isNotEmpty)
+                ? document.customerPhone
+                : supplier.phone,
+            customerEmail: (document.customerEmail != null && document.customerEmail!.isNotEmpty)
+                ? document.customerEmail
+                : supplier.email,
+            customerCode: (document.customerCode != null && document.customerCode!.isNotEmpty)
+                ? document.customerCode
+                : (supplier.code.isNotEmpty ? supplier.code : null),
+            customerTaxId: (document.customerTaxId != null && document.customerTaxId!.isNotEmpty)
+                ? document.customerTaxId
+                : supplier.taxId,
+          );
+        }
+      } else {
+        final customer = await db.getCustomer(document.customerId!);
+        if (customer != null) {
+          final address = [
+            customer.streetAddress ?? customer.address,
+            customer.city,
+            customer.postalCode,
+            customer.country,
+          ].where((s) => s != null && s.trim().isNotEmpty).toSet().join(', ');
+
+          return document.copyWith(
+            customerName: document.customerName ?? (customer.companyName?.isNotEmpty == true ? customer.companyName : customer.name),
+            customerAddress: (document.customerAddress != null && document.customerAddress!.isNotEmpty)
+                ? document.customerAddress
+                : (address.isNotEmpty ? address : null),
+            customerPhone: (document.customerPhone != null && document.customerPhone!.isNotEmpty)
+                ? document.customerPhone
+                : customer.phone,
+            customerEmail: (document.customerEmail != null && document.customerEmail!.isNotEmpty)
+                ? document.customerEmail
+                : customer.email,
+            customerCode: (document.customerCode != null && document.customerCode!.isNotEmpty)
+                ? document.customerCode
+                : (customer.code.isNotEmpty ? customer.code : null),
+            customerTaxId: (document.customerTaxId != null && document.customerTaxId!.isNotEmpty)
+                ? document.customerTaxId
+                : customer.taxId,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[PdfService] Error enriching document contact details: $e');
+    }
+
+    return document;
   }
 
   pw.Widget _buildProfessionalHeader(
@@ -323,12 +431,17 @@ class PdfService {
           ),
 
           // Document Title and Header Badge
-          if (showTitle || showNumber || showDate || showDueDate)
-            pw.Positioned(
-              left: (titleX - 10.0).clamp(0.0, 180.0) * mm,
+          if (showTitle || showNumber || showDate || showDueDate) () {
+            final isRightAligned = titleX > 90.0;
+            final rightOffset = isRightAligned ? (200.0 - (titleX + 50.0)).clamp(0.0, 100.0) * mm : null;
+            final leftOffset = !isRightAligned ? (titleX - 10.0).clamp(0.0, 120.0) * mm : null;
+
+            return pw.Positioned(
+              left: leftOffset,
+              right: rightOffset,
               top: (titleY - 10.0).clamp(0.0, 200.0) * mm,
               child: pw.Column(
-                crossAxisAlignment: (titleX > 90) ? pw.CrossAxisAlignment.end : pw.CrossAxisAlignment.start,
+                crossAxisAlignment: isRightAligned ? pw.CrossAxisAlignment.end : pw.CrossAxisAlignment.start,
                 children: [
                   if (showTitle || showNumber)
                     pw.Container(
@@ -338,18 +451,18 @@ class PdfService {
                         borderRadius: pw.BorderRadius.circular(4),
                       ),
                       child: pw.Column(
-                        crossAxisAlignment: (titleX > 90) ? pw.CrossAxisAlignment.end : pw.CrossAxisAlignment.start,
+                        crossAxisAlignment: isRightAligned ? pw.CrossAxisAlignment.end : pw.CrossAxisAlignment.start,
                         children: [
                           if (showTitle)
                             pw.Text(
                               document.documentTitle,
-                              style: pw.TextStyle(font: fontBold, fontSize: 16, color: headerText, letterSpacing: 1.1),
+                              style: pw.TextStyle(font: fontBold, fontSize: 13, color: headerText, letterSpacing: 0.8),
                             ),
                           if (showNumber) ...[
                             pw.SizedBox(height: 2),
                             pw.Text(
                               'N° ${document.number}',
-                              style: pw.TextStyle(font: font, fontSize: 10, color: headerText),
+                              style: pw.TextStyle(font: font, fontSize: 9.5, color: headerText),
                             ),
                           ],
                         ],
@@ -357,12 +470,13 @@ class PdfService {
                     ),
                   pw.SizedBox(height: 4),
                   if (showDate)
-                    pw.Text('Date: ${formatDate(document.date)}', style: pw.TextStyle(font: fontBold, fontSize: 9, color: PdfColors.grey800)),
+                    pw.Text('Date: ${formatDate(document.date)}', style: pw.TextStyle(font: fontBold, fontSize: 8.5, color: PdfColors.grey800)),
                   if (showDueDate && document.dueDate != null)
-                    pw.Text('Echéance: ${formatDate(document.dueDate!)}', style: pw.TextStyle(font: font, fontSize: 9, color: PdfColors.grey800)),
+                    pw.Text('Echéance: ${formatDate(document.dueDate!)}', style: pw.TextStyle(font: font, fontSize: 8.5, color: PdfColors.grey800)),
                 ],
               ),
-            ),
+            );
+          }(),
 
           // Client Details Box
           pw.Positioned(
@@ -542,85 +656,286 @@ class PdfService {
     );
   }
 
-  pw.Widget _buildTotals(DocumentWrapper document, CompanySettings settings, Map<String, dynamic> config, String currency) {
+  pw.Widget _buildBottomSection(DocumentWrapper document, CompanySettings settings, Map<String, dynamic> config, String currency) {
     const double mm = PdfPageFormat.mm;
+
+    // --- Configuration values ---
+    final totalsCfg = config['totals'] as Map<String, dynamic>? ?? {};
+    final totalsX = (totalsCfg['positionX'] as num?)?.toDouble() ?? 130.0;
+    final totalsY = (totalsCfg['positionY'] as num?)?.toDouble() ?? 175.0;
+    final totalsW = ((totalsCfg['width'] as num?)?.toDouble() ?? 65.0).clamp(45.0, 180.0);
+
+    final notesCfg = config['notes'] as Map<String, dynamic>? ?? {};
+    final notesX = (notesCfg['positionX'] as num?)?.toDouble() ?? 15.0;
+    final notesY = (notesCfg['positionY'] as num?)?.toDouble() ?? 175.0;
+    final notesW = ((notesCfg['width'] as num?)?.toDouble() ?? 95.0).clamp(40.0, 180.0);
+
+    final foot = config['footer'] as Map<String, dynamic>? ?? {};
+    final showSignature = foot['showSignature'] != false;
+    final sigCfg = config['signature'] as Map<String, dynamic>? ?? {};
+    final sigX = (sigCfg['positionX'] as num?)?.toDouble() ?? 135.0;
+    final sigY = (sigCfg['positionY'] as num?)?.toDouble() ?? 230.0;
+    final sigW = ((sigCfg['width'] as num?)?.toDouble() ?? 60.0).clamp(40.0, 160.0);
+
+    // --- Content: Totals Card ---
     final showBrut = config['totalBrut']?['visible'] == true;
     final showRemises = config['totalRemises']?['visible'] != false;
     final showHT = config['totalHT']?['visible'] != false;
     final showTaxes = config['taxes']?['visible'] != false;
     final showTimbre = config['timbre']?['visible'] != false;
     final showTTC = config['totalTTC']?['visible'] != false;
+
+    final totalsCard = pw.Container(
+      width: totalsW * mm,
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey100,
+        borderRadius: pw.BorderRadius.circular(4),
+        border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          if (showBrut)
+            _buildTotalRow('Sous-total HT', formatCurrency(document.totalHT + document.totalDiscount, symbol: currency)),
+          if (showRemises && document.totalDiscount > 0)
+            _buildTotalRow('Total Remise', formatCurrency(document.totalDiscount, symbol: currency)),
+          if (showHT)
+            _buildTotalRow('Total HT', formatCurrency(document.totalHT, symbol: currency)),
+          if (showTaxes)
+            _buildTotalRow('Total TVA', formatCurrency(document.totalTva, symbol: currency)),
+          if (showTimbre && document.stampTax > 0)
+            _buildTotalRow('Droit de Timbre', formatCurrency(document.stampTax, symbol: currency)),
+          if (showTTC) ...[
+            pw.SizedBox(height: 4),
+            pw.Divider(color: PdfColors.grey400, thickness: 0.8),
+            pw.SizedBox(height: 2),
+            _buildTotalRow('Total TTC', formatCurrency(document.totalTTC + document.stampTax, symbol: currency), isBold: true, size: 14),
+          ],
+        ],
+      ),
+    );
+
+    // --- Content: Notes & Conditions Card ---
+    final rawNotes = document.notes?.trim() ?? '';
+    final templateNotesText = (notesCfg['notesText'] as String?)?.trim().isNotEmpty == true
+        ? (notesCfg['notesText'] as String).trim()
+        : ((foot['notesText'] as String?)?.trim().isNotEmpty == true
+            ? (foot['notesText'] as String).trim()
+            : 'Merci pour votre confiance.');
+    final showNotes = foot['showNotes'] != false;
+    final effectiveNotes = showNotes
+        ? (rawNotes.isNotEmpty ? rawNotes : templateNotesText)
+        : '';
+
+    final rawCond = document.conditionsGenerales?.trim() ?? '';
+    final templateCondText = (notesCfg['paymentTermsText'] as String?)?.trim().isNotEmpty == true
+        ? (notesCfg['paymentTermsText'] as String).trim()
+        : ((foot['paymentTermsText'] as String?)?.trim().isNotEmpty == true
+            ? (foot['paymentTermsText'] as String).trim()
+            : 'Paiement selon conditions convenues.');
+    final showCond = foot['showPaymentTerms'] != false;
+    final effectiveCond = showCond
+        ? (rawCond.isNotEmpty ? rawCond : templateCondText)
+        : '';
+
+    final hasNotesOrCond = effectiveNotes.trim().isNotEmpty || effectiveCond.trim().isNotEmpty;
     final showLetters = config['totalLetters']?['visible'] == true;
 
-    final totalsCfg = config['totals'] as Map<String, dynamic>? ?? {};
-    final totalsW = ((totalsCfg['width'] as num?)?.toDouble() ?? 80.0).clamp(50.0, 160.0);
+    final notesCard = (hasNotesOrCond || showLetters)
+        ? pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              if (hasNotesOrCond)
+                pw.Container(
+                  width: notesW * mm,
+                  padding: const pw.EdgeInsets.all(8),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.white,
+                    borderRadius: pw.BorderRadius.circular(3),
+                    border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      if (effectiveNotes.trim().isNotEmpty) ...[
+                        pw.Text('Notes :', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5, color: PdfColors.grey700)),
+                        pw.SizedBox(height: 2),
+                        pw.Text(effectiveNotes.trim(), style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey800)),
+                        if (effectiveCond.trim().isNotEmpty) pw.SizedBox(height: 8),
+                      ],
+                      if (effectiveCond.trim().isNotEmpty) ...[
+                        pw.Text('Conditions Générales :', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5, color: PdfColors.grey700)),
+                        pw.SizedBox(height: 2),
+                        pw.Text(effectiveCond.trim(), style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey800)),
+                      ],
+                    ],
+                  ),
+                ),
+              if (showLetters) ...[
+                pw.SizedBox(height: 8),
+                pw.Text(
+                  'Arrêté le présent document à la somme de : ${formatCurrency(document.totalTTC + document.stampTax, symbol: currency)}',
+                  style: pw.TextStyle(fontSize: 8.5, fontStyle: pw.FontStyle.italic, color: PdfColors.grey800),
+                ),
+              ],
+            ],
+          )
+        : null;
 
-    return pw.Container(
-      width: 190 * mm,
-      child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Expanded(
-            child: pw.Padding(
-              padding: const pw.EdgeInsets.only(right: 20),
+    // --- Content: Signature Card ---
+    pw.Widget? signatureCard;
+    if (showSignature) {
+      final styleCode = config['styleCode'] as String? ?? 'classic';
+      final isProfessional = styleCode == 'professional';
+      if (isProfessional) {
+        signatureCard = pw.Row(
+          mainAxisSize: pw.MainAxisSize.min,
+          children: [
+            pw.Container(
+              width: (sigW * 0.48) * mm,
               child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
                 children: [
-                  if (document.notes != null && document.notes!.trim().isNotEmpty) ...[
-                    pw.Text('Notes :', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9, color: PdfColors.grey700)),
-                    pw.SizedBox(height: 2),
-                    pw.Text(document.notes!, style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.black)),
-                    pw.SizedBox(height: 10),
-                  ],
-                  if (document.conditionsGenerales != null && document.conditionsGenerales!.trim().isNotEmpty) ...[
-                    pw.Text('Conditions Générales :', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9, color: PdfColors.grey700)),
-                    pw.SizedBox(height: 2),
-                    pw.Text(document.conditionsGenerales!, style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.black)),
-                  ],
-                  if (showLetters) ...[
-                    pw.SizedBox(height: 6),
-                    pw.Text(
-                      'Arrêté le présent document à la somme de : ${formatCurrency(document.totalTTC + document.stampTax, symbol: currency)}',
-                      style: pw.TextStyle(fontSize: 8.5, fontStyle: pw.FontStyle.italic, color: PdfColors.grey800),
-                    ),
-                  ],
+                  pw.Text('Pour la Société', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5)),
+                  pw.Text('(Cachet & Signature)', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600)),
+                  pw.SizedBox(height: 28),
+                  pw.Container(height: 0.8, width: double.infinity, color: PdfColors.grey800),
                 ],
               ),
             ),
-          ),
-          pw.Container(
-            width: totalsW * mm,
-            padding: const pw.EdgeInsets.all(10),
-            decoration: pw.BoxDecoration(
-              color: PdfColors.grey100,
-              borderRadius: pw.BorderRadius.circular(4),
-              border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                if (showBrut)
-                  _buildTotalRow('Sous-total HT', formatCurrency(document.totalHT + document.totalDiscount, symbol: currency)),
-                if (showRemises && document.totalDiscount > 0)
-                  _buildTotalRow('Total Remise', formatCurrency(document.totalDiscount, symbol: currency)),
-                if (showHT)
-                  _buildTotalRow('Total HT', formatCurrency(document.totalHT, symbol: currency)),
-                if (showTaxes)
-                  _buildTotalRow('Total TVA', formatCurrency(document.totalTva, symbol: currency)),
-                if (showTimbre && document.stampTax > 0)
-                  _buildTotalRow('Droit de Timbre', formatCurrency(document.stampTax, symbol: currency)),
-                if (showTTC) ...[
-                  pw.SizedBox(height: 4),
-                  pw.Divider(color: PdfColors.grey400, thickness: 0.8),
-                  pw.SizedBox(height: 2),
-                  _buildTotalRow('Total TTC', formatCurrency(document.totalTTC + document.stampTax, symbol: currency), isBold: true, size: 14),
+            pw.SizedBox(width: (sigW * 0.04) * mm),
+            pw.Container(
+              width: (sigW * 0.48) * mm,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Text('Bon pour Accord Client', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5)),
+                  pw.Text('(Date et Signature)', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600)),
+                  pw.SizedBox(height: 28),
+                  pw.Container(height: 0.8, width: double.infinity, color: PdfColors.grey800),
                 ],
+              ),
+            ),
+          ],
+        );
+      } else {
+        signatureCard = pw.Container(
+          width: sigW * mm,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.white,
+            borderRadius: pw.BorderRadius.circular(3),
+            border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Text(
+                'Signature & Cachet',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5, color: PdfColors.grey700),
+              ),
+              pw.SizedBox(height: 30),
+              pw.Container(
+                height: 0.8,
+                width: double.infinity,
+                color: PdfColors.grey500,
+              ),
+            ],
+          ),
+        );
+      }
+    }
+
+    // --- Dynamic Layout based on Y and X coordinates of the elements ---
+    // Collect present elements with their coordinates
+    final elements = <({String key, double x, double y, double w, pw.Widget widget})>[];
+    elements.add((key: 'totals', x: totalsX, y: totalsY, w: totalsW, widget: totalsCard));
+    if (notesCard != null) {
+      elements.add((key: 'notes', x: notesX, y: notesY, w: notesW, widget: notesCard));
+    }
+    if (signatureCard != null) {
+      elements.add((key: 'signature', x: sigX, y: sigY, w: sigW, widget: signatureCard));
+    }
+
+    // Sort items vertically by Y
+    elements.sort((a, b) => a.y.compareTo(b.y));
+
+    // Group items that have similar Y (threshold <= 16mm) to render in the same Row
+    final rows = <List<({String key, double x, double y, double w, pw.Widget widget})>>[];
+    for (final el in elements) {
+      if (rows.isEmpty) {
+        rows.add([el]);
+      } else {
+        final lastRow = rows.last;
+        final lastRowY = lastRow.map((e) => e.y).reduce((a, b) => a + b) / lastRow.length;
+        if ((el.y - lastRowY).abs() <= 16.0) {
+          lastRow.add(el);
+        } else {
+          rows.add([el]);
+        }
+      }
+    }
+
+    // Build each row with proper horizontal offsets and vertical spacing between rows
+    final renderedRows = <pw.Widget>[];
+    double previousRowY = rows.first.map((e) => e.y).reduce(math.min);
+
+    for (int i = 0; i < rows.length; i++) {
+      final rowItems = rows[i];
+      // Sort elements horizontally in the row
+      rowItems.sort((a, b) => a.x.compareTo(b.x));
+
+      final currentRowY = rowItems.map((e) => e.y).reduce(math.min);
+      if (i > 0) {
+        final yDiff = (currentRowY - previousRowY).clamp(8.0, 50.0);
+        renderedRows.add(pw.SizedBox(height: yDiff * mm * 0.4)); // scaled vertical spacing
+      }
+      previousRowY = currentRowY;
+
+      if (rowItems.length == 1) {
+        final item = rowItems.first;
+        final leftPadding = (item.x - 10.0).clamp(0.0, 190.0 - item.w) * mm;
+        renderedRows.add(
+          pw.Padding(
+            padding: pw.EdgeInsets.only(left: leftPadding),
+            child: item.widget,
+          ),
+        );
+      } else {
+        // Two or more elements in this row
+        final first = rowItems[0];
+        final second = rowItems[1];
+
+        final firstLeft = (first.x - 10.0).clamp(0.0, 100.0) * mm;
+        final secondRight = (190.0 - (second.x - 10.0 + second.w)).clamp(0.0, 100.0) * mm;
+
+        renderedRows.add(
+          pw.Container(
+            width: 190 * mm,
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Padding(
+                  padding: pw.EdgeInsets.only(left: firstLeft),
+                  child: first.widget,
+                ),
+                pw.Spacer(),
+                pw.Padding(
+                  padding: pw.EdgeInsets.only(right: secondRight),
+                  child: second.widget,
+                ),
               ],
             ),
           ),
-        ],
-      ),
+        );
+      }
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: renderedRows,
     );
   }
 
@@ -637,91 +952,54 @@ class PdfService {
     );
   }
 
+  pw.Widget _buildCustomTextsPdf(List<Map<String, dynamic>> customTexts, pw.Font fontRegular, pw.Font fontBold) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: customTexts.map((ct) {
+        final text = ct['text'] as String? ?? '';
+        if (text.trim().isEmpty) return pw.SizedBox.shrink();
+        final fontSize = (ct['fontSize'] as num?)?.toDouble() ?? 9.0;
+        final isBold = ct['isBold'] == true;
+        final isItalic = ct['isItalic'] == true;
+        final colorInt = ct['color'] as int? ?? 0xFF000000;
+        final color = PdfColor.fromInt(colorInt);
+
+        return pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(vertical: 2),
+          child: pw.Text(
+            text,
+            style: pw.TextStyle(
+              font: isBold ? fontBold : fontRegular,
+              fontSize: fontSize,
+              fontStyle: isItalic ? pw.FontStyle.italic : pw.FontStyle.normal,
+              color: color,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   pw.Widget _buildFooter(CompanySettings settings, [Map<String, dynamic>? config]) {
-    final styleCode = config?['styleCode'] as String? ?? 'classic';
-    final isProfessional = styleCode == 'professional';
     final foot = config?['footer'] as Map<String, dynamic>? ?? {};
-
     final showLegalNotice = foot['showLegalNotice'] != false;
-    final showSignature = foot['showSignature'] != false;
 
-    if (!showLegalNotice && !showSignature) return pw.SizedBox.shrink();
+    if (!showLegalNotice) return pw.SizedBox.shrink();
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
-        pw.Divider(color: PdfColors.grey400),
-        pw.SizedBox(height: 8),
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Expanded(
-              child: showLegalNotice ? pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  if (settings.bankName != null && settings.bankAccount != null) ...[
-                    pw.Text('Règlement par virement bancaire sur le compte:', style: const pw.TextStyle(fontSize: 10)),
-                    pw.SizedBox(height: 2),
-                    pw.Text('${settings.bankName} - RIB: ${settings.rib ?? settings.bankAccount}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                  ] else if (settings.rib != null && settings.rib!.isNotEmpty) ...[
-                    pw.Text('RIB Bancaire:', style: const pw.TextStyle(fontSize: 10)),
-                    pw.SizedBox(height: 2),
-                    pw.Text(settings.rib!, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                  ],
-                ],
-              ) : pw.SizedBox.shrink(),
-            ),
-            if (showSignature) ...[
-              if (isProfessional) ...[
-                pw.Container(
-                  width: 130,
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.center,
-                    children: [
-                      pw.Text('Pour la Société', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                      pw.Text('(Cachet & Signature)', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
-                      pw.SizedBox(height: 35),
-                      pw.Container(height: 1, width: 110, color: PdfColors.grey800),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(width: 16),
-                pw.Container(
-                  width: 130,
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.center,
-                    children: [
-                      pw.Text('Bon pour Accord Client', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                      pw.Text('(Date et Signature)', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
-                      pw.SizedBox(height: 35),
-                      pw.Container(height: 1, width: 110, color: PdfColors.grey800),
-                    ],
-                  ),
-                ),
-              ] else ...[
-                pw.Container(
-                  width: 150,
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.center,
-                    children: [
-                      pw.Text(
-                        'Signature',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14),
-                      ),
-                      pw.SizedBox(height: 40),
-                      pw.Container(
-                        height: 1,
-                        width: 130,
-                        color: PdfColors.grey800,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ],
-        ),
+        pw.Divider(color: PdfColors.grey400, thickness: 0.5),
+        pw.SizedBox(height: 6),
+        if (settings.bankName != null && settings.bankAccount != null) ...[
+          pw.Text('Règlement par virement bancaire sur le compte:', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+          pw.SizedBox(height: 2),
+          pw.Text('${settings.bankName} - RIB: ${settings.rib ?? settings.bankAccount}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5, color: PdfColors.grey800)),
+        ] else if (settings.rib != null && settings.rib!.isNotEmpty) ...[
+          pw.Text('RIB Bancaire:', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+          pw.SizedBox(height: 2),
+          pw.Text(settings.rib!, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5, color: PdfColors.grey800)),
+        ],
       ],
     );
   }

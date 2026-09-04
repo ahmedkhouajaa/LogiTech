@@ -403,11 +403,11 @@ class CanvasPdfGenerator {
       case DynamicFieldType.clientName:
         return document.customerName ?? '';
       case DynamicFieldType.clientAddress:
-        return '';
+        return document.customerAddress ?? '';
       case DynamicFieldType.clientPhone:
-        return '';
+        return document.customerPhone ?? '';
       case DynamicFieldType.clientEmail:
-        return '';
+        return document.customerEmail ?? '';
       case DynamicFieldType.invoiceNumber:
         return document.number;
       case DynamicFieldType.invoiceDate:

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'connectivity_service.dart';
 import 'sync_service.dart';
 import 'enterprise_service.dart';
@@ -15,12 +16,19 @@ class AuthService {
   static final AuthService instance = AuthService._();
   AuthService._();
 
+  static const _prefKeyDeactivated = 'isAccountDeactivated';
+  static const _prefKeyDeactivatedReason = 'accountDeactivatedReason';
+
   String? _currentUserUid;
   bool _offlineMode = false;
+  bool _isDeactivated = false;
+  String? _deactivationReason;
   final _accountDeactivatedController = StreamController<String>.broadcast();
   StreamSubscription<DocumentSnapshot>? _userStatusSubscription;
 
-  bool get isAuthenticated => _currentUserUid != null || _offlineMode;
+  bool get isAuthenticated => !_isDeactivated && (_currentUserUid != null || _offlineMode);
+  bool get isDeactivated => _isDeactivated;
+  String? get deactivationReason => _deactivationReason;
   String? get currentUserUid => _currentUserUid;
   bool get isOfflineMode => _offlineMode;
   User? get currentUser => FirebaseAuth.instance.currentUser;
@@ -29,7 +37,7 @@ class AuthService {
   Stream<User?> get idTokenChanges => FirebaseAuth.instance.idTokenChanges();
   Stream<String> get onAccountDeactivated => _accountDeactivatedController.stream;
 
-  /// Start real-time Firestore listener to detect if the account is deactivated remotely.
+  /// Start real-time Firestore listener to detect if the account or enterprise is deactivated remotely.
   void _startUserStatusListener(String uid) {
     _userStatusSubscription?.cancel();
     try {
@@ -40,12 +48,43 @@ class AuthService {
           .listen((snapshot) async {
         if (snapshot.exists) {
           final data = snapshot.data();
-          final isActive = data?['isActive'] != false &&
-              data?['status'] != 'disabled' &&
-              data?['status'] != 'blocked';
-          if (!isActive) {
-            debugPrint('[AuthService] User account $uid is deactivated in Firestore! Forcing logout.');
-            await triggerDeactivation("Votre compte a été désactivé par l'administrateur.");
+          final isUserBanned = data?['isActive'] == false ||
+              data?['isDisabled'] == true ||
+              data?['isBanned'] == true ||
+              data?['status'] == 'disabled' ||
+              data?['status'] == 'banned' ||
+              data?['status'] == 'blocked';
+
+          if (isUserBanned) {
+            debugPrint('[AuthService] User account $uid is deactivated in Firestore! Forcing lockout.');
+            await triggerDeactivation(data?['banReason'] ?? "Votre compte a été désactivé par l'administrateur.");
+            return;
+          }
+
+          // Check all user's enterprises
+          final entIds = <String>{};
+          final curEnt = data?['currentEnterpriseId'] ?? data?['enterpriseId'];
+          if (curEnt != null && curEnt.toString().isNotEmpty) entIds.add(curEnt.toString());
+          final entList = data?['enterprises'];
+          if (entList is List) {
+            for (final e in entList) {
+              if (e != null && e.toString().isNotEmpty) entIds.add(e.toString());
+            }
+          }
+
+          for (final eid in entIds) {
+            try {
+              final entDoc = await FirebaseFirestore.instance.collection('enterprises').doc(eid).get();
+              if (entDoc.exists) {
+                final entData = entDoc.data() ?? {};
+                if (entData['isBanned'] == true || entData['status'] == 'banned' || entData['status'] == 'disabled') {
+                  final entName = entData['name'] ?? 'Entreprise';
+                  final reason = entData['banReason'] ?? 'Suspension administrative';
+                  await triggerDeactivation('L\'accès de votre entreprise "$entName" a été suspendu par le SuperAdmin.\nMotif : $reason');
+                  return;
+                }
+              }
+            } catch (_) {}
           }
         }
       }, onError: (e) async {
@@ -68,10 +107,17 @@ class AuthService {
 
   /// Triggers immediate full session lockout when account is disabled
   Future<void> triggerDeactivation([String reason = "Votre compte a été désactivé. Contactez l'administrateur."]) async {
+    _isDeactivated = true;
+    _deactivationReason = reason;
     _userStatusSubscription?.cancel();
     _userStatusSubscription = null;
     _currentUserUid = null;
     _offlineMode = false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefKeyDeactivated, true);
+      await prefs.setString(_prefKeyDeactivatedReason, reason);
+    } catch (_) {}
     try {
       if (PlatformUtils.isAndroid) {
         final GoogleSignIn googleSignIn = GoogleSignIn();
@@ -85,9 +131,93 @@ class AuthService {
     _accountDeactivatedController.add(reason);
   }
 
+  /// Checks if the user or their associated enterprise has been banned or deactivated.
+  /// Throws a descriptive FirebaseAuthException if banned and terminates the session.
+  Future<void> _verifyUserAndEnterpriseActive(String uid) async {
+    try {
+      final userSnap = await FirebaseFirestore.instance.collection('users').doc(uid).get().timeout(const Duration(seconds: 4));
+      if (!userSnap.exists) return;
+
+      final data = userSnap.data() ?? {};
+
+      // 1. Direct User Level Ban / Deactivation
+      final isUserBanned = data['isActive'] == false ||
+          data['isDisabled'] == true ||
+          data['isBanned'] == true ||
+          data['status'] == 'disabled' ||
+          data['status'] == 'banned' ||
+          data['status'] == 'blocked';
+
+      if (isUserBanned) {
+        final reason = data['banReason'] ?? 'Ce compte utilisateur a été désactivé ou suspendu par le SuperAdmin.';
+        await triggerDeactivation(reason);
+        throw FirebaseAuthException(
+          code: 'user-disabled',
+          message: reason,
+        );
+      }
+
+      // 2. Enterprise Level Ban (Check all user's enterprises)
+      final entIds = <String>{};
+      final curEnt = data['currentEnterpriseId'] ?? data['enterpriseId'];
+      if (curEnt != null && curEnt.toString().isNotEmpty) entIds.add(curEnt.toString());
+      final entList = data['enterprises'];
+      if (entList is List) {
+        for (final e in entList) {
+          if (e != null && e.toString().isNotEmpty) entIds.add(e.toString());
+        }
+      }
+
+      for (final entId in entIds) {
+        final entSnap = await FirebaseFirestore.instance.collection('enterprises').doc(entId).get().timeout(const Duration(seconds: 4));
+        if (entSnap.exists) {
+          final entData = entSnap.data() ?? {};
+          final isEntBanned = entData['isBanned'] == true ||
+              entData['status'] == 'banned' ||
+              entData['status'] == 'disabled';
+
+          if (isEntBanned) {
+            final entName = entData['name'] ?? 'Entreprise';
+            final reason = entData['banReason'] ?? 'Non-respect des conditions d\'utilisation / Suspension administrative';
+            final fullMsg = 'L\'accès de votre entreprise "$entName" a été suspendu par le SuperAdmin.\nMotif : $reason';
+            await triggerDeactivation(fullMsg);
+            throw FirebaseAuthException(
+              code: 'user-disabled',
+              message: fullMsg,
+            );
+          }
+        }
+      }
+    } on FirebaseAuthException {
+      rethrow;
+    } on FirebaseException catch (fe) {
+      if (fe.code == 'permission-denied' || (fe.message != null && fe.message!.contains('permission-denied'))) {
+        const msg = "Accès refusé. Ce compte ou votre entreprise a été suspendu par l'administrateur.";
+        await triggerDeactivation(msg);
+        throw FirebaseAuthException(code: 'user-disabled', message: msg);
+      }
+    } catch (_) {}
+  }
+
   /// Initialize and verify session validity on app startup.
   Future<void> initialize() async {
     try {
+      // 1. Check local persistent lockout flag first
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_prefKeyDeactivated) == true) {
+        final reason = prefs.getString(_prefKeyDeactivatedReason) ?? "Votre compte a été désactivé par l'administrateur.";
+        _isDeactivated = true;
+        _deactivationReason = reason;
+        _currentUserUid = null;
+        _offlineMode = false;
+        try {
+          await FirebaseAuth.instance.signOut();
+        } catch (_) {}
+        await EnterpriseService.instance.clearCache();
+        _accountDeactivatedController.add(reason);
+        return;
+      }
+
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         // Validate session token on startup
@@ -97,38 +227,26 @@ class AuthService {
           if (token != null && token.isNotEmpty) {
             _currentUserUid = user.uid;
 
-            // Check if active in Firestore
-            try {
-              final data = await FirestoreSafeHelper.getDocData(
-                FirebaseFirestore.instance.collection('users'),
-                user.uid,
-              ).timeout(const Duration(seconds: 3));
-              if (data != null) {
-                final isActive = data['isActive'] != false &&
-                    data['status'] != 'disabled' &&
-                    data['status'] != 'blocked';
-                if (!isActive) {
-                  await triggerDeactivation("Votre compte a été désactivé. Contactez l'administrateur.");
-                  return;
-                }
-              }
-            } catch (_) {}
+            // Strict user & enterprise check on startup
+            await _verifyUserAndEnterpriseActive(user.uid);
 
-            _startUserStatusListener(user.uid);
+            if (!_isDeactivated) {
+              _startUserStatusListener(user.uid);
+            }
           } else {
             _currentUserUid = null;
             await FirebaseAuth.instance.signOut();
           }
         } catch (e) {
-          // If token refresh fails due to revocation / expiration / disabled
-          if (e is FirebaseAuthException &&
-              (e.code == 'user-disabled' ||
-                  e.code == 'user-token-expired' ||
-                  e.code == 'user-not-found')) {
-            await triggerDeactivation("Votre compte a été désactivé.");
+          if (e is FirebaseAuthException && e.code == 'user-disabled') {
+            await triggerDeactivation(e.message ?? "Votre compte a été désactivé.");
+          } else if (e is FirebaseAuthException &&
+              (e.code == 'user-token-expired' || e.code == 'user-not-found')) {
+            await triggerDeactivation("Votre session a expiré.");
           } else {
-            // Offline or timeout fallback - allow local cached session
-            _currentUserUid = user.uid;
+            if (!_isDeactivated) {
+              _currentUserUid = user.uid;
+            }
           }
         }
       } else {
@@ -175,37 +293,34 @@ class AuthService {
         _currentUserUid = userCredential.user!.uid;
         _offlineMode = false;
 
-        // Verify account is active in background or with short timeout
-        unawaited(() async {
-          try {
-            final data = await FirestoreSafeHelper.getDocData(
-              FirebaseFirestore.instance.collection('users'),
-              _currentUserUid!,
-            ).timeout(const Duration(seconds: 3));
-            if (data != null) {
-              if (data['isActive'] == false) {
-                await logout();
-                return;
-              }
-              final Map<String, dynamic> updates = {
-                'lastLoginAt': FieldValue.serverTimestamp(),
-              };
-              if (data['role'] == null || (data['role'] == 'admin' && data['permissions'] == null)) {
-                final adminPerms = UserPermissionResources.getAdminDefaultPermissions()
-                    .map((k, v) => MapEntry(k, v.toMap()));
-                updates['role'] = 'admin';
-                updates['isOwner'] = true;
-                updates['permissions'] = adminPerms;
-              }
-              await FirebaseFirestore.instance.collection('users').doc(_currentUserUid).set(
-                updates,
-                SetOptions(merge: true),
-              ).timeout(const Duration(seconds: 3));
-            } else if (userCredential.user != null) {
-              await _createUserProfile(userCredential.user!);
+        // Synchronously verify user and enterprise active status before allowing access
+        await _verifyUserAndEnterpriseActive(_currentUserUid!);
+
+        // Update profile / lastLoginAt
+        try {
+          final data = await FirestoreSafeHelper.getDocData(
+            FirebaseFirestore.instance.collection('users'),
+            _currentUserUid!,
+          ).timeout(const Duration(seconds: 3));
+          if (data != null) {
+            final Map<String, dynamic> updates = {
+              'lastLoginAt': FieldValue.serverTimestamp(),
+            };
+            if (data['role'] == null || (data['role'] == 'admin' && data['permissions'] == null)) {
+              final adminPerms = UserPermissionResources.getAdminDefaultPermissions()
+                  .map((k, v) => MapEntry(k, v.toMap()));
+              updates['role'] = 'admin';
+              updates['isOwner'] = true;
+              updates['permissions'] = adminPerms;
             }
-          } catch (_) {}
-        }());
+            await FirebaseFirestore.instance.collection('users').doc(_currentUserUid).set(
+              updates,
+              SetOptions(merge: true),
+            ).timeout(const Duration(seconds: 3));
+          } else if (userCredential.user != null) {
+            await _createUserProfile(userCredential.user!);
+          }
+        } catch (_) {}
 
         _startUserStatusListener(_currentUserUid!);
 
@@ -510,8 +625,15 @@ class AuthService {
   Future<void> logout() async {
     _userStatusSubscription?.cancel();
     _userStatusSubscription = null;
+    _isDeactivated = false;
+    _deactivationReason = null;
     _offlineMode = false;
     _currentUserUid = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_prefKeyDeactivated);
+      await prefs.remove(_prefKeyDeactivatedReason);
+    } catch (_) {}
     try {
       if (PlatformUtils.isAndroid) {
         final GoogleSignIn googleSignIn = GoogleSignIn();

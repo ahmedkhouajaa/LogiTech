@@ -44,7 +44,9 @@ class _ContactImportDialogState extends State<ContactImportDialog>
   final Map<String, dynamic> _fallbackValues = {};
 
   List<ContactImportRow> _validatedRows = [];
+  String _filterMode = 'all'; // 'all', 'valid', 'error'
   bool _isValidating = false;
+  bool _isParsingFile = false;
   bool _isImporting = false;
   double _importProgress = 0.0;
   String _importStatus = '';
@@ -58,67 +60,156 @@ class _ContactImportDialogState extends State<ContactImportDialog>
     final createCount = _validatedRows.where((r) => r.isValid && !r.isUpdate).length;
     final errorCount = _validatedRows.where((r) => !r.isValid).length;
 
-    return Dialog(
-      backgroundColor: AppColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-      insetPadding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 12 : 32,
-        vertical: isMobile ? 16 : 24,
-      ),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 920,
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
+    return PopScope(
+      canPop: !_isImporting && !_isParsingFile,
+      child: Dialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 12 : 32,
+          vertical: isMobile ? 16 : 24,
         ),
-        child: Column(
-          children: [
-            // Modal Header
-            _buildDialogHeader(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 920,
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
+          ),
+          child: Column(
+            children: [
+              // Modal Header
+              _buildDialogHeader(),
 
-            // Modal Body
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Instructions Box (Matching Finco / ERP reference exactly)
-                    _buildInstructionsBox(),
-                    const SizedBox(height: 16),
-
-                    // Download Template Row
-                    _buildDownloadTemplateRow(),
-                    const SizedBox(height: 16),
-
-                    // File Picker Dropzone
-                    _buildFilePickerDropzone(),
-
-                    // If file is selected and parsed
-                    if (_parsedFile != null) ...[
-                      const SizedBox(height: 20),
-                      _buildValidationSummaryChips(validCount, createCount, updateCount, errorCount),
-                      const SizedBox(height: 16),
-                      _buildDataTablePreview(),
-                    ],
-
-                    if (_isImporting) ...[
-                      const SizedBox(height: 20),
-                      LinearProgressIndicator(
-                        value: _importProgress,
-                        backgroundColor: AppColors.surfaceAlt,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              // Dedicated Loading Overlay when importing
+              if (_isImporting)
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 68,
+                            height: 68,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: SizedBox(
+                                width: 38,
+                                height: 38,
+                                child: CircularProgressIndicator(
+                                  value: _importProgress > 0 ? _importProgress : null,
+                                  strokeWidth: 3.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+                          Text(
+                            'Importation en cours...',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _importStatus.isNotEmpty
+                                ? _importStatus
+                                : 'Veuillez patienter pendant l\'enregistrement de vos contacts...',
+                            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: 320,
+                            child: Column(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: LinearProgressIndicator(
+                                    value: _importProgress > 0 ? _importProgress : null,
+                                    minHeight: 8,
+                                    backgroundColor: AppColors.surfaceAlt,
+                                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${(_importProgress * 100).toInt()}% terminé',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.info_outline_rounded, size: 16, color: AppColors.warning),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Traitement en cours : ne fermez pas cette fenêtre.',
+                                  style: TextStyle(fontSize: 11.5, color: AppColors.warning, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(_importStatus, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                    ],
-                  ],
-                ),
-              ),
-            ),
+                    ),
+                  ),
+                )
+              else
+                // Modal Body
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Instructions Box (Matching Finco / ERP reference exactly)
+                        _buildInstructionsBox(),
+                        const SizedBox(height: 16),
 
-            // Modal Footer Actions
-            _buildDialogFooter(validCount),
-          ],
+                        // Download Template Row
+                        _buildDownloadTemplateRow(),
+                        const SizedBox(height: 16),
+
+                        // File Picker Dropzone
+                        _buildFilePickerDropzone(),
+
+                        // If file is selected and parsed
+                        if (_parsedFile != null) ...[
+                          const SizedBox(height: 20),
+                          _buildValidationSummaryChips(validCount, createCount, updateCount, errorCount),
+                          const SizedBox(height: 16),
+                          _buildDataTablePreview(),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+
+              // Modal Footer Actions
+              _buildDialogFooter(validCount, errorCount),
+            ],
+          ),
         ),
       ),
     );
@@ -155,7 +246,7 @@ class _ContactImportDialogState extends State<ContactImportDialog>
             ),
           ),
           IconButton(
-            onPressed: _isImporting ? null : () => Navigator.of(context).pop(),
+            onPressed: (_isImporting || _isParsingFile) ? null : () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close_rounded, size: 22),
             color: AppColors.textSecondary,
           ),
@@ -243,10 +334,45 @@ class _ContactImportDialogState extends State<ContactImportDialog>
   }
 
   Widget _buildFilePickerDropzone() {
+    if (_isParsingFile) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.6), width: 1.5),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(
+              width: 30,
+              height: 30,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Lecture et validation du fichier en cours...',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Vérification des colonnes et détection des doublons...',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+            ),
+          ],
+        ),
+      );
+    }
+
     final isFileSelected = _pickedFileName != null;
 
     return InkWell(
-      onTap: _pickFile,
+      onTap: (_isImporting || _isParsingFile) ? null : _pickFile,
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: Container(
         width: double.infinity,
@@ -289,18 +415,143 @@ class _ContactImportDialogState extends State<ContactImportDialog>
   }
 
   Widget _buildValidationSummaryChips(int valid, int create, int update, int errors) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildBadgeChip('Total lignes: ${_validatedRows.length}', AppColors.surfaceAlt, AppColors.textPrimary),
-        const SizedBox(width: 8),
-        _buildBadgeChip('$create à créer', AppColors.successLight, AppColors.success),
-        const SizedBox(width: 8),
-        _buildBadgeChip('$update à mettre à jour', AppColors.infoLight, AppColors.info),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildFilterBadgeChip(
+                label: 'Toutes (${_validatedRows.length})',
+                bg: _filterMode == 'all' ? AppColors.textPrimary : AppColors.surfaceAlt,
+                text: _filterMode == 'all' ? Colors.white : AppColors.textPrimary,
+                isSelected: _filterMode == 'all',
+                onTap: () => setState(() => _filterMode = 'all'),
+              ),
+              const SizedBox(width: 8),
+              _buildFilterBadgeChip(
+                label: 'Valides ($valid)',
+                bg: _filterMode == 'valid' ? AppColors.success : AppColors.successLight,
+                text: _filterMode == 'valid' ? Colors.white : AppColors.success,
+                isSelected: _filterMode == 'valid',
+                onTap: () => setState(() => _filterMode = 'valid'),
+              ),
+              const SizedBox(width: 8),
+              _buildBadgeChip('$create à créer', AppColors.surfaceAlt, AppColors.textSecondary),
+              const SizedBox(width: 8),
+              _buildBadgeChip('$update à mettre à jour', AppColors.infoLight, AppColors.info),
+              if (errors > 0) ...[
+                const SizedBox(width: 8),
+                _buildFilterBadgeChip(
+                  label: '$errors erreur(s)',
+                  bg: _filterMode == 'error' ? AppColors.error : AppColors.errorLight,
+                  text: _filterMode == 'error' ? Colors.white : AppColors.error,
+                  isSelected: _filterMode == 'error',
+                  icon: Icons.error_outline_rounded,
+                  onTap: () => setState(() => _filterMode = 'error'),
+                ),
+              ],
+            ],
+          ),
+        ),
         if (errors > 0) ...[
-          const SizedBox(width: 8),
-          _buildBadgeChip('$errors erreurs', AppColors.errorLight, AppColors.error),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: valid > 0
+                  ? AppColors.warning.withValues(alpha: 0.08)
+                  : AppColors.error.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: valid > 0
+                    ? AppColors.warning.withValues(alpha: 0.35)
+                    : AppColors.error.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  valid > 0 ? Icons.info_outline_rounded : Icons.block_rounded,
+                  color: valid > 0 ? AppColors.warning : AppColors.error,
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    valid > 0
+                        ? '$valid ${widget.type.label.toLowerCase()}(s) valide(s) seront importés. Les $errors ligne(s) contenant des erreurs ou doublons seront ignorées.'
+                        : 'Importation impossible : toutes les $errors ligne(s) contiennent des erreurs à corriger.',
+                    style: TextStyle(
+                      color: valid > 0 ? AppColors.warning : AppColors.error,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (_filterMode != 'error')
+                  TextButton.icon(
+                    onPressed: () => setState(() => _filterMode = 'error'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: valid > 0 ? AppColors.warning : AppColors.error,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.filter_list_rounded, size: 14),
+                    label: const Text(
+                      'Voir les erreurs',
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ],
+    );
+  }
+
+  Widget _buildFilterBadgeChip({
+    required String label,
+    required Color bg,
+    required Color text,
+    required bool isSelected,
+    required VoidCallback onTap,
+    IconData? icon,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(
+            color: isSelected ? text.withValues(alpha: 0.6) : Colors.transparent,
+            width: 1.2,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 13, color: text),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: text,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -319,8 +570,14 @@ class _ContactImportDialogState extends State<ContactImportDialog>
   }
 
   Widget _buildDataTablePreview() {
+    final displayedRows = _validatedRows.where((r) {
+      if (_filterMode == 'valid') return r.isValid;
+      if (_filterMode == 'error') return !r.isValid;
+      return true;
+    }).toList();
+
     return Container(
-      height: 260,
+      height: 280,
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -328,82 +585,258 @@ class _ContactImportDialogState extends State<ContactImportDialog>
       ),
       child: _isValidating
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  headingRowColor: WidgetStateProperty.all(AppColors.surfaceAlt),
-                  headingTextStyle: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  dataTextStyle: TextStyle(color: AppColors.textPrimary, fontSize: 11),
-                  columns: const [
-                    DataColumn(label: Text('STATUT')),
-                    DataColumn(label: Text('ID EXISTANT (_id)')),
-                    DataColumn(label: Text('CODE')),
-                    DataColumn(label: Text('NOM / RAISON SOCIALE')),
-                    DataColumn(label: Text('TYPE')),
-                    DataColumn(label: Text('MATRICULE FISCAL')),
-                    DataColumn(label: Text('TÉLÉPHONE')),
-                    DataColumn(label: Text('VILLE')),
-                    DataColumn(label: Text('SOLDE DÉPART')),
-                  ],
-                  rows: _validatedRows.map((row) {
-                    final isUpdate = row.isUpdate;
-                    final isValid = row.isValid;
-
-                    return DataRow(
-                      cells: [
-                        DataCell(
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: !isValid
-                                  ? AppColors.errorLight
-                                  : isUpdate
-                                      ? AppColors.infoLight
-                                      : AppColors.successLight,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              !isValid
-                                  ? 'Invalide'
-                                  : isUpdate
-                                      ? 'Mise à jour'
-                                      : 'Nouveau',
-                              style: TextStyle(
-                                color: !isValid
-                                    ? AppColors.error
-                                    : isUpdate
-                                        ? AppColors.info
-                                        : AppColors.success,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+          : displayedRows.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _filterMode == 'error'
+                              ? Icons.check_circle_outline_rounded
+                              : Icons.people_outline_rounded,
+                          size: 36,
+                          color: _filterMode == 'error' ? AppColors.success : AppColors.textTertiary,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _filterMode == 'error'
+                              ? 'Félicitations ! Aucune ligne ne comporte d\'erreur.'
+                              : 'Aucun contact à afficher pour ce filtre.',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        DataCell(Text(row.existingId ?? '-')),
-                        DataCell(Text(row.code)),
-                        DataCell(Text(row.displayName)),
-                        DataCell(Text(row.mappedValues['businessType']?.toString() ?? 'individual')),
-                        DataCell(Text(row.taxId)),
-                        DataCell(Text(row.phone)),
-                        DataCell(Text(row.city)),
-                        DataCell(Text('${row.balance.toStringAsFixed(3)} DT')),
                       ],
-                    );
-                  }).toList(),
+                    ),
+                  ),
+                )
+              : SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      dataRowMinHeight: 38,
+                      dataRowMaxHeight: 44,
+                      headingRowHeight: 40,
+                      columnSpacing: 20,
+                      horizontalMargin: 16,
+                      headingRowColor: WidgetStateProperty.all(AppColors.surfaceAlt),
+                      headingTextStyle: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      dataTextStyle: TextStyle(color: AppColors.textPrimary, fontSize: 11),
+                      columns: const [
+                        DataColumn(label: Text('STATUT')),
+                        DataColumn(label: Text('LIGNE')),
+                        DataColumn(label: Text('NOM / RAISON SOCIALE')),
+                        DataColumn(label: Text('CODE')),
+                        DataColumn(label: Text('TYPE')),
+                        DataColumn(label: Text('MATRICULE FISCAL')),
+                        DataColumn(label: Text('TÉLÉPHONE')),
+                        DataColumn(label: Text('VILLE')),
+                        DataColumn(label: Text('SOLDE DÉPART')),
+                        DataColumn(label: Text('ID EXISTANT (_id)')),
+                      ],
+                      rows: displayedRows.map((row) {
+                        final isUpdate = row.isUpdate;
+                        final isValid = row.isValid;
+
+                        return DataRow(
+                          color: WidgetStateProperty.resolveWith<Color?>((states) {
+                            if (!isValid) return AppColors.error.withValues(alpha: 0.05);
+                            if (isUpdate) return AppColors.info.withValues(alpha: 0.03);
+                            return null;
+                          }),
+                          cells: [
+                            DataCell(
+                              !isValid
+                                  ? Tooltip(
+                                      message: 'Cliquez pour voir les erreurs :\n${row.errors.join('\n')}',
+                                      waitDuration: const Duration(milliseconds: 300),
+                                      child: InkWell(
+                                        onTap: () => _showRowErrorsDialog(row),
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.errorLight,
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(color: AppColors.error.withValues(alpha: 0.35)),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.error_outline_rounded, size: 12, color: AppColors.error),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '${row.errors.length} erreur${row.errors.length > 1 ? 's' : ''}',
+                                                style: TextStyle(
+                                                  color: AppColors.error,
+                                                  fontSize: 10.5,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: isUpdate ? AppColors.infoLight : AppColors.successLight,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            isUpdate ? Icons.sync_rounded : Icons.add_circle_outline_rounded,
+                                            size: 12,
+                                            color: isUpdate ? AppColors.info : AppColors.success,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            isUpdate ? 'Mise à jour' : 'Nouveau',
+                                            style: TextStyle(
+                                              color: isUpdate ? AppColors.info : AppColors.success,
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                            ),
+                            DataCell(Text('Ligne ${row.rowIndex}', style: const TextStyle(fontWeight: FontWeight.w600))),
+                            DataCell(
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 180),
+                                child: Text(
+                                  row.displayName.isNotEmpty ? row.displayName : '(sans nom)',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ),
+                            DataCell(Text(row.code.isNotEmpty ? row.code : '-')),
+                            DataCell(Text(row.mappedValues['businessType']?.toString() == 'business' ? 'Entreprise' : 'Particulier')),
+                            DataCell(Text(row.taxId.isNotEmpty ? row.taxId : '-')),
+                            DataCell(Text(row.phone.isNotEmpty ? row.phone : '-')),
+                            DataCell(Text(row.city.isNotEmpty ? row.city : '-')),
+                            DataCell(Text('${row.balance.toStringAsFixed(3)} DT')),
+                            DataCell(Text(row.existingId ?? '-')),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ),
-              ),
-            ),
     );
   }
 
-  Widget _buildDialogFooter(int validCount) {
+  void _showRowErrorsDialog(ContactImportRow row) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        title: Row(
+          children: [
+            Icon(Icons.error_outline_rounded, color: AppColors.error, size: 22),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Détail des erreurs - Ligne ${row.rowIndex}',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 480,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Contact : ${row.displayName.isNotEmpty ? row.displayName : "(sans nom)"}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                if (row.code.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text('Code : ${row.code}', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                ],
+                const SizedBox(height: 14),
+                Text(
+                  'Erreurs bloquantes :',
+                  style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+                const SizedBox(height: 6),
+                for (final err in row.errors)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('• ', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                        Expanded(
+                          child: Text(
+                            err,
+                            style: TextStyle(color: AppColors.textPrimary, fontSize: 12, height: 1.3),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (row.warnings.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Avertissements :',
+                    style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  const SizedBox(height: 6),
+                  for (final warn in row.warnings)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('• ', style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold)),
+                          Expanded(
+                            child: Text(
+                              warn,
+                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.3),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDialogFooter(int validCount, int errorCount) {
+    final canImport = !_isImporting && !_isParsingFile && validCount > 0;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
@@ -412,32 +845,78 @@ class _ContactImportDialogState extends State<ContactImportDialog>
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(AppRadius.lg)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          OutlinedButton(
-            onPressed: _isImporting ? null : () => Navigator.of(context).pop(),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.textPrimary,
-              side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: const Text('Annuler'),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: _isImporting || validCount == 0 ? null : _handleExecuteImport,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF93C5FD), // Soft Blue matching screenshot
-              foregroundColor: const Color(0xFF1E3A8A),
-              disabledBackgroundColor: AppColors.surfaceAlt,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-            ),
-            child: Text(
-              'Importer $validCount ${widget.type.labelPlural.toLowerCase()}',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
+          if (validCount > 0 && errorCount > 0)
+            Row(
+              children: [
+                Icon(Icons.check_circle_outline_rounded, size: 16, color: AppColors.success),
+                const SizedBox(width: 6),
+                Text(
+                  '$validCount ${widget.type.label.toLowerCase()}(s) valide(s) prêt(s) à être importé(s) • $errorCount ignoré(s)',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            )
+          else if (validCount > 0)
+            Text(
+              '$validCount ${widget.type.labelPlural.toLowerCase()} prêts à être importés.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            )
+          else if (errorCount > 0)
+            Row(
+              children: [
+                Icon(Icons.block_rounded, size: 16, color: AppColors.error),
+                const SizedBox(width: 6),
+                Text(
+                  'Aucun ${widget.type.label.toLowerCase()} valide ($errorCount erreurs).',
+                  style: TextStyle(
+                    color: AppColors.error,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            )
+          else
+            const SizedBox.shrink(),
+          Row(
+            children: [
+              OutlinedButton(
+                onPressed: (_isImporting || _isParsingFile) ? null : () => Navigator.of(context).pop(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textPrimary,
+                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+                child: const Text('Annuler'),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: canImport ? _handleExecuteImport : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: canImport ? const Color(0xFF93C5FD) : AppColors.surfaceAlt,
+                  foregroundColor: canImport ? const Color(0xFF1E3A8A) : AppColors.textTertiary,
+                  disabledBackgroundColor: AppColors.surfaceAlt,
+                  disabledForegroundColor: AppColors.textTertiary,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                ),
+                child: Text(
+                  validCount == 0
+                      ? 'Aucun ${widget.type.label.toLowerCase()} valide'
+                      : (errorCount > 0
+                          ? 'Importer les $validCount ${widget.type.labelPlural.toLowerCase()} valides'
+                          : 'Importer $validCount ${widget.type.labelPlural.toLowerCase()}'),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -477,6 +956,15 @@ class _ContactImportDialogState extends State<ContactImportDialog>
 
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
+
+        setState(() {
+          _isParsingFile = true;
+          _pickedFileName = file.name;
+        });
+
+        // Let UI paint the loading spinner
+        await Future.delayed(const Duration(milliseconds: 60));
+
         Uint8List? bytes = file.bytes;
         if (bytes == null && file.path != null) {
           bytes = await File(file.path!).readAsBytes();
@@ -491,7 +979,6 @@ class _ContactImportDialogState extends State<ContactImportDialog>
           final autoMapping = ContactImportExportService.instance.autoSuggestMappings(headers);
 
           setState(() {
-            _pickedFileName = file.name;
             _parsedFile = parsed;
             _rawRows = rawRows;
             _fieldMapping = autoMapping;
@@ -505,6 +992,10 @@ class _ContactImportDialogState extends State<ContactImportDialog>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur de fichier : $e'), backgroundColor: AppColors.error),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isParsingFile = false);
       }
     }
   }
@@ -526,6 +1017,17 @@ class _ContactImportDialogState extends State<ContactImportDialog>
   }
 
   Future<void> _handleExecuteImport() async {
+    final validRows = _validatedRows.where((r) => r.isValid).toList();
+    if (validRows.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Aucun ${widget.type.label.toLowerCase()} valide à importer.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isImporting = true;
       _importProgress = 0.0;

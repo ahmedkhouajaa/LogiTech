@@ -221,7 +221,44 @@ class DatabaseHelper {
   Future<List<Customer>> getCustomers() async => [];
   Future<List<Customer>> getCustomersPaginated({int limit = 10, int offset = 0, String? searchQuery, String? category, String? city}) async => [];
   Future<int> getCustomersCount({String? searchQuery, String? category, String? city}) async => 0;
-  Future<Customer?> getCustomer(String id) async => null;
+  Future<Customer?> getCustomer(String id) async {
+    if (id.isEmpty) return null;
+    try {
+      final data = await FirestoreSafeHelper.getDocData(
+        _firestore.collection('clients'),
+        id,
+      );
+      if (data != null) {
+        data['id'] = id;
+        if (!data.containsKey('code') && data.containsKey('clientCode')) {
+          data['code'] = data['clientCode'];
+        }
+        if (!data.containsKey('customer_type') && data.containsKey('type')) {
+          data['customer_type'] = data['type'];
+        }
+        return Customer.fromMap(data);
+      }
+    } catch (_) {}
+
+    // Fallback: search by id or code in collection
+    try {
+      final entId = currentEnterpriseId;
+      Query query = _firestore.collection('clients').limit(100);
+      if (entId != null && entId.isNotEmpty) {
+        query = query.where('enterprise_id', isEqualTo: entId);
+      }
+      final snap = await query.get(const GetOptions(source: Source.cache));
+      final normId = id.trim().toLowerCase();
+      for (final doc in snap.docs) {
+        final d = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
+        d['id'] = doc.id;
+        if (doc.id.toLowerCase() == normId || (d['code']?.toString().toLowerCase() == normId) || (d['clientCode']?.toString().toLowerCase() == normId)) {
+          return Customer.fromMap(d);
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
   Future<void> insertCustomer(dynamic customer) async {}
   Future<void> updateCustomer(dynamic customer) async {}
   Future<void> deleteCustomer(String id) async {}
@@ -452,7 +489,44 @@ class DatabaseHelper {
   Future<List<Supplier>> getSuppliers() async => [];
   Future<List<Supplier>> getSuppliersPaginated({int limit = 10, int offset = 0, String? searchQuery, String? category, String? city}) async => [];
   Future<int> getSuppliersCount({String? searchQuery, String? category, String? city}) async => 0;
-  Future<Supplier?> getSupplier(String id) async => null;
+  Future<Supplier?> getSupplier(String id) async {
+    if (id.isEmpty) return null;
+    try {
+      final data = await FirestoreSafeHelper.getDocData(
+        _firestore.collection('fournisseurs'),
+        id,
+      );
+      if (data != null) {
+        data['id'] = id;
+        if (!data.containsKey('code') && data.containsKey('supplierCode')) {
+          data['code'] = data['supplierCode'];
+        }
+        if (!data.containsKey('supplier_type') && data.containsKey('type')) {
+          data['supplier_type'] = data['type'];
+        }
+        return Supplier.fromMap(data);
+      }
+    } catch (_) {}
+
+    // Fallback: search by id or code in collection
+    try {
+      final entId = currentEnterpriseId;
+      Query query = _firestore.collection('fournisseurs').limit(100);
+      if (entId != null && entId.isNotEmpty) {
+        query = query.where('enterprise_id', isEqualTo: entId);
+      }
+      final snap = await query.get(const GetOptions(source: Source.cache));
+      final normId = id.trim().toLowerCase();
+      for (final doc in snap.docs) {
+        final d = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
+        d['id'] = doc.id;
+        if (doc.id.toLowerCase() == normId || (d['code']?.toString().toLowerCase() == normId) || (d['supplierCode']?.toString().toLowerCase() == normId)) {
+          return Supplier.fromMap(d);
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
   Future<void> insertSupplier(dynamic supplier) async {}
   Future<void> updateSupplier(dynamic supplier) async {}
   Future<void> deleteSupplier(String id) async {}

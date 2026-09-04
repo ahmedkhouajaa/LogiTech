@@ -13,6 +13,7 @@ import '../../widgets/import_export/article_import_dialog.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../models/product.dart';
+import '../../screens/article_detail_screen.dart';
 
 class MobileProductsScreen extends StatefulWidget {
   const MobileProductsScreen({super.key});
@@ -212,7 +213,7 @@ class _MobileProductsScreenState extends State<MobileProductsScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => MobileProductFormScreen(existing: product),
+                    builder: (_) => ArticleDetailScreen(product: product),
                   ),
                 ).then((_) {
                   if (mounted && context.mounted) {

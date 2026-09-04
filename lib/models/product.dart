@@ -99,12 +99,20 @@ class Product {
       if (d == null) return DateTime.now();
       if (d is DateTime) return d;
       try {
-        if (d.runtimeType.toString().contains('Timestamp') || d is dynamic) {
-          final toDate = (d as dynamic).toDate;
-          if (toDate != null) return (d as dynamic).toDate() as DateTime;
-        }
+        final toDate = (d as dynamic).toDate;
+        if (toDate != null) return (d as dynamic).toDate() as DateTime;
       } catch (_) {}
       return DateTime.tryParse(d.toString()) ?? DateTime.now();
+    }
+
+    double parseDouble(dynamic val, [double defaultVal = 0.0]) {
+      if (val == null) return defaultVal;
+      if (val is num) return val.toDouble();
+      if (val is String) {
+        final clean = val.replaceAll(' ', '').replaceAll(',', '.').replaceAll(RegExp(r'[^0-9.-]'), '');
+        return double.tryParse(clean) ?? defaultVal;
+      }
+      return defaultVal;
     }
 
     return Product(
@@ -114,31 +122,31 @@ class Product {
       reference: map['reference']?.toString(),
       description: map['description']?.toString(),
       category: map['category']?.toString(),
-      productType: map['product_type']?.toString() ?? 'produit',
-      familyId: map['family_id']?.toString(),
-      subFamilyId: map['sub_family_id']?.toString(),
-      brandId: map['brand_id']?.toString(),
+      productType: (map['product_type'] ?? map['productType'])?.toString() ?? 'produit',
+      familyId: (map['family_id'] ?? map['familyId'])?.toString(),
+      subFamilyId: (map['sub_family_id'] ?? map['subFamilyId'])?.toString(),
+      brandId: (map['brand_id'] ?? map['brandId'])?.toString(),
       unit: map['unit']?.toString() ?? 'Unite',
-      purchasePrice: (map['purchase_price'] as num?)?.toDouble() ?? 0,
-      sellingPrice: (map['selling_price'] as num?)?.toDouble() ?? 0,
-      usualDiscount: (map['usual_discount'] as num?)?.toDouble() ?? 0,
-      tvaRate: (map['tva_rate'] as num?)?.toDouble() ?? 19,
-      stockQty: (map['stock_qty'] as num?)?.toDouble() ?? 0,
-      minStockQty: (map['min_stock_qty'] as num?)?.toDouble() ?? 0,
-      allowNegativeStock: map['allow_negative_stock'] == 1 || map['allow_negative_stock'] == true,
-      lowStockAlert: map['low_stock_alert'] == 1 || map['low_stock_alert'] == true,
-      lowStockThreshold: (map['low_stock_threshold'] as num?)?.toDouble() ?? 5,
-      highStockAlert: map['high_stock_alert'] == 1 || map['high_stock_alert'] == true,
-      highStockThreshold: (map['high_stock_threshold'] as num?)?.toDouble() ?? 0,
-      defaultWarehouseId: map['default_warehouse_id']?.toString(),
-      barcode: map['barcode']?.toString(),
-      privateNotes: map['private_notes']?.toString(),
-      isActive: map['is_active'] != 0 && map['is_active'] != false,
-      firebaseUid: map['firebase_uid']?.toString(),
-      enterpriseId: map['enterprise_id']?.toString(),
-      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true,
-      createdAt: parseDate(map['created_at']),
-      updatedAt: parseDate(map['updated_at']),
+      purchasePrice: parseDouble(map['purchase_price'] ?? map['purchasePrice'], 0.0),
+      sellingPrice: parseDouble(map['selling_price'] ?? map['sellingPrice'], 0.0),
+      usualDiscount: parseDouble(map['usual_discount'] ?? map['usualDiscount'], 0.0),
+      tvaRate: parseDouble(map['tva_rate'] ?? map['tvaRate'], 19.0),
+      stockQty: parseDouble(map['stock_qty'] ?? map['stockQty'], 0.0),
+      minStockQty: parseDouble(map['min_stock_qty'] ?? map['minStockQty'], 0.0),
+      allowNegativeStock: map['allow_negative_stock'] == 1 || map['allow_negative_stock'] == true || map['allowNegativeStock'] == true,
+      lowStockAlert: map['low_stock_alert'] == 1 || map['low_stock_alert'] == true || map['lowStockAlert'] == true,
+      lowStockThreshold: parseDouble(map['low_stock_threshold'] ?? map['lowStockThreshold'], 5.0),
+      highStockAlert: map['high_stock_alert'] == 1 || map['high_stock_alert'] == true || map['highStockAlert'] == true,
+      highStockThreshold: parseDouble(map['high_stock_threshold'] ?? map['highStockThreshold'], 0.0),
+      defaultWarehouseId: (map['default_warehouse_id'] ?? map['defaultWarehouseId'])?.toString(),
+      barcode: (map['barcode'] ?? map['barCode'])?.toString(),
+      privateNotes: (map['private_notes'] ?? map['privateNotes'])?.toString(),
+      isActive: map['is_active'] != 0 && map['is_active'] != false && map['isActive'] != false,
+      firebaseUid: (map['firebase_uid'] ?? map['userId'] ?? map['firebaseUid'])?.toString(),
+      enterpriseId: (map['enterprise_id'] ?? map['enterpriseId'])?.toString(),
+      isDeleted: map['is_deleted'] == 1 || map['is_deleted'] == true || map['isDeleted'] == 1 || map['isDeleted'] == true,
+      createdAt: parseDate(map['created_at'] ?? map['createdAt']),
+      updatedAt: parseDate(map['updated_at'] ?? map['updatedAt']),
     );
   }
 

@@ -92,15 +92,23 @@ class SubscriptionScreen extends StatelessWidget {
                                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                               ),
                               const Spacer(),
-                              // Status pill (Expiré / Actif / Essai)
+                              // Status pill (Expiré / VIP / Actif / Essai)
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: isExpired ? const Color(0xFFE74C3C) : AppColors.success,
+                                  color: isExpired
+                                      ? const Color(0xFFE74C3C)
+                                      : (trial?.isVip == true
+                                          ? const Color(0xFFD97706)
+                                          : (trial?.isUpgraded == true ? AppColors.success : AppColors.primary)),
                                   borderRadius: BorderRadius.circular(AppRadius.sm),
                                 ),
                                 child: Text(
-                                  isExpired ? 'Expiré' : (trial?.isUpgraded == true ? 'Actif' : 'Essai gratuit'),
+                                  isExpired
+                                      ? 'Expiré'
+                                      : (trial?.isVip == true
+                                          ? 'Abonnement VIP'
+                                          : (trial?.isUpgraded == true ? 'Actif' : 'Essai gratuit')),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -113,12 +121,20 @@ class SubscriptionScreen extends StatelessWidget {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textTertiary),
+                              Icon(
+                                trial?.isVip == true ? Icons.stars_rounded : Icons.calendar_today_rounded,
+                                size: 16,
+                                color: trial?.isVip == true ? const Color(0xFFD97706) : AppColors.textTertiary,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  dateRangeStr,
-                                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                  trial?.isVip == true ? 'Accès VIP illimité (Actif)' : dateRangeStr,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: trial?.isVip == true ? FontWeight.w600 : FontWeight.normal,
+                                    color: trial?.isVip == true ? const Color(0xFF92400E) : AppColors.textSecondary,
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                   maxLines: 1,
                                 ),

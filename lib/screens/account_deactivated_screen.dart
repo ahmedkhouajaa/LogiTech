@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/auth/auth_bloc.dart';
 
@@ -16,192 +15,180 @@ class AccountDeactivatedScreen extends StatelessWidget {
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: const Color(0xFF0F172A),
+        backgroundColor: const Color(0xFF0B0F19),
         body: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
+              constraints: const BoxConstraints(maxWidth: 440),
               child: Container(
-                padding: const EdgeInsets.all(32),
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(24),
+                  color: const Color(0xFF111827),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: const Color(0x66EF4444),
-                    width: 1.5,
+                    color: const Color(0xFF1F2937),
+                    width: 1.2,
                   ),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(
-                      color: Color(0x26EF4444),
-                      blurRadius: 32,
-                      offset: Offset(0, 8),
+                      color: Colors.black.withValues(alpha: 0.4),
+                      blurRadius: 24,
+                      offset: const Offset(0, 10),
                     ),
                   ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Warning Lock Icon with glowing red ring
+                    // Professional security icon badge
                     Container(
-                      width: 88,
-                      height: 88,
+                      width: 56,
+                      height: 56,
                       decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
                         shape: BoxShape.circle,
-                        color: const Color(0x26EF4444),
                         border: Border.all(
-                          color: const Color(0x4DEF4444),
-                          width: 2,
+                          color: const Color(0xFF334155),
+                          width: 1,
                         ),
                       ),
                       child: const Center(
                         child: Icon(
-                          Icons.lock_person_rounded,
-                          size: 48,
+                          Icons.lock_outline_rounded,
+                          size: 26,
                           color: Color(0xFFEF4444),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 18),
 
                     // Title
                     const Text(
-                      'Accès Refusé',
+                      'Accès Suspendu',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: -0.5,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFF8FAFC),
+                        letterSpacing: -0.3,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
 
-                    // Badge
+                    // Subtitle
+                    const Text(
+                      'L\'accès à cette application et à vos données a été restreint par l\'administrateur système.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF94A3B8),
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Clean Reason Box
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0x33EF4444),
-                        borderRadius: BorderRadius.circular(100),
+                        color: const Color(0xFF1A2234),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: const Color(0x80EF4444),
-                          width: 1,
+                          color: const Color(0xFF26334D),
+                          width: 1.0,
                         ),
                       ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.error_outline_rounded,
-                            size: 14,
-                            color: Color(0xFFFCA5A5),
+                          Row(
+                            children: const [
+                              Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFFEF4444)),
+                              SizedBox(width: 6),
+                              Text(
+                                'Motif notifié :',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFCBD5E1),
+                                ),
+                              ),
+                            ],
                           ),
-                          SizedBox(width: 6),
+                          const SizedBox(height: 6),
                           Text(
-                            'Compte Désactivé',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFFFCA5A5),
+                            reason,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: Color(0xFFF1F5F9),
+                              height: 1.4,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
-                    // Reason Text Box
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: const Color(0x14FFFFFF),
-                        ),
-                      ),
-                      child: Text(
-                        reason,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFFCBD5E1),
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Explanation Note
+                    // Contact hint
                     const Text(
-                      'L\'accès à toutes les fonctionnalités et à la base de données de cette application a été bloqué.',
+                      'Pour régulariser votre compte ou pour toute assistance, veuillez contacter le support à support@logitech.tn.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF94A3B8),
+                        fontSize: 11.5,
+                        color: Color(0xFF64748B),
                         height: 1.4,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
 
-                    // Action Button: Sign In with Another Account
+                    // Primary Button: Switch Account
                     SizedBox(
                       width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
+                      height: 42,
+                      child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3B82F6),
+                          backgroundColor: const Color(0xFF2563EB),
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                         onPressed: () {
                           context.read<AuthBloc>().add(AuthLogoutRequested());
                         },
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.logout_rounded, size: 18),
-                            SizedBox(width: 8),
-                            Text(
-                              'Changer de compte',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                        icon: const Icon(Icons.logout_rounded, size: 16),
+                        label: const Text(
+                          'Changer de compte',
+                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
 
-                    // Action Button: Close App
+                    // Secondary Button: Quit Application
                     SizedBox(
                       width: double.infinity,
-                      height: 44,
-                      child: OutlinedButton(
+                      height: 40,
+                      child: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFF94A3B8),
-                          side: const BorderSide(
-                            color: Color(0x26FFFFFF),
-                          ),
+                          side: const BorderSide(color: Color(0xFF334155)),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                         onPressed: () {
-                          SystemNavigator.pop();
+                          context.read<AuthBloc>().add(AuthLogoutRequested());
                         },
-                        child: const Text(
+                        icon: const Icon(Icons.power_settings_new_rounded, size: 16),
+                        label: const Text(
                           "Quitter l'application",
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                         ),
                       ),
                     ),

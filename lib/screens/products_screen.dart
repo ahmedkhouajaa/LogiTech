@@ -3,23 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:excel/excel.dart' hide Border;
 import '../utils/file_download_helper.dart';
-import 'package:uuid/uuid.dart';
 import '../blocs/products/products_bloc.dart';
 import '../models/product.dart';
 import '../blocs/stock/stock_bloc.dart';
-import '../models/stock_movement.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
-import '../widgets/data_table_widget.dart';
-import '../widgets/dashboard_card.dart';
 import 'create_article_screen.dart';
+import 'article_detail_screen.dart';
 import '../utils/offline_action_helper.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
-import '../widgets/shimmer_table_row.dart';
 import '../services/article_import_export_service.dart';
 import '../widgets/import_export/article_import_dialog.dart';
 
@@ -32,12 +28,33 @@ class ProductsScreen extends StatefulWidget {
 class _ProductsScreenState extends State<ProductsScreen> {
   final Set<String> _selectedProductIds = {};
   String _search = '';
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    context.read<ProductsBloc>().add(const LoadFirstProducts());
+    _scrollController.addListener(_onScroll);
+    context.read<ProductsBloc>().add(const LoadFirstProducts(pageSize: 50));
     context.read<StockBloc>().add(LoadStock());
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.8) {
+      final state = context.read<ProductsBloc>().state;
+      if (state is ProductsLoaded && state.hasMore && !state.isLoadingMore) {
+        context.read<ProductsBloc>().add(
+          const LoadNextProducts(pageSize: 50),
+        );
+      }
+    }
   }
 
   @override
@@ -50,13 +67,58 @@ class _ProductsScreenState extends State<ProductsScreen> {
           padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Articles', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                  const SizedBox(height: 2),
-                  Text('Gérer vos articles', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                ],
+              BlocBuilder<ProductsBloc, ProductsState>(
+                buildWhen: (prev, curr) => curr is ProductsLoaded || curr is ProductsLoading || curr is ProductsInitial,
+                builder: (context, state) {
+                  final totalCount = state is ProductsLoaded
+                      ? (state.totalCount > state.products.length ? state.totalCount : state.products.length)
+                      : null;
+                  final matchingCount = (state is ProductsLoaded && _search.isNotEmpty)
+                      ? state.products.where((p) =>
+                          p.name.toLowerCase().contains(_search) ||
+                          p.code.toLowerCase().contains(_search) ||
+                          (p.reference?.toLowerCase().contains(_search) ?? false)).length
+                      : null;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text('Articles', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                          if (totalCount != null) ...[
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                              ),
+                              child: Text(
+                                matchingCount != null ? '$matchingCount / $totalCount' : '$totalCount',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        totalCount != null
+                            ? (matchingCount != null
+                                ? '$matchingCount article${matchingCount > 1 ? 's' : ''} trouvé${matchingCount > 1 ? 's' : ''} sur $totalCount au total'
+                                : '$totalCount article${totalCount > 1 ? 's' : ''} au total')
+                            : 'Gérer vos articles',
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  );
+                },
               ),
               const Spacer(),
               if (_selectedProductIds.isNotEmpty) ...[
@@ -164,7 +226,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     ArticleImportDialog.show(
                       context,
                       onImportSuccess: () {
-                        context.read<ProductsBloc>().add(const LoadFirstProducts());
+                        context.read<ProductsBloc>().add(const LoadFirstProducts(pageSize: 50));
                         context.read<StockBloc>().add(LoadStock());
                       },
                     );
@@ -192,12 +254,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
         
         // Data List
         Expanded(
-          child: BlocBuilder<StockBloc, StockState>(
-            builder: (context, stockState) {
-              final movements = stockState is StockLoaded ? stockState.movements : <StockMovement>[];
-              
-              return BlocBuilder<ProductsBloc, ProductsState>(
-                builder: (context, state) {
+          child: BlocBuilder<ProductsBloc, ProductsState>(
+            builder: (context, state) {
                   if (state is ProductsLoading || state is ProductsInitial) {
                     return AppShimmer(
                       child: ListView.separated(
@@ -267,21 +325,49 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   );
                 }
 
+                final hasMore = state.hasMore;
+                final isLoadingMore = state.isLoadingMore;
+                final hasFooter = hasMore || isLoadingMore;
+
                 return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, 10),
-                  itemCount: filtered.length,
+                  controller: _scrollController,
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, 20),
+                  itemCount: filtered.length + (hasFooter ? 1 : 0),
                   separatorBuilder: (context, index) => const SizedBox(height: 6),
                   itemBuilder: (context, index) {
-                    final p = filtered[index];
-                    
-                    double realStock = 0;
-                    for (var m in movements) {
-                      if (m.productId == p.id) {
-                        if (m.type == MovementType.entry || m.type == MovementType.transfer_in || m.type == MovementType.adjustment) realStock += m.quantity;
-                        else if (m.type == MovementType.exit || m.type == MovementType.transfer_out) realStock -= m.quantity;
-                      }
+                    if (index == filtered.length) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        child: Center(
+                          child: isLoadingMore
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                                )
+                              : OutlinedButton.icon(
+                                  onPressed: () {
+                                    context.read<ProductsBloc>().add(
+                                      const LoadNextProducts(pageSize: 50),
+                                    );
+                                  },
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primary,
+                                    side: BorderSide(color: AppColors.border),
+                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                  ),
+                                  icon: const Icon(Icons.expand_more_rounded, size: 18),
+                                  label: Text(
+                                    'Charger plus d\'articles (${state.products.length} affichés sur ${state.totalCount})',
+                                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                        ),
+                      );
                     }
 
+                    final p = filtered[index];
                     final tvaMultiplier = 1 + (p.tvaRate / 100);
                     final sellTtc = p.sellingPrice * tvaMultiplier;
                     
@@ -299,7 +385,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(AppRadius.md),
-                          onTap: () => _navigateToCreate(context, p),
+                          onTap: () => _navigateToDetail(context, p),
                           hoverColor: AppColors.primary.withValues(alpha: 0.02),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -390,35 +476,34 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   ),
                                 ),
                                 
-                                // Stock
+                                const SizedBox(width: 12),
+                                
+                                // Prix Achat
                                 Expanded(
                                   flex: 1,
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Text('Stock', style: TextStyle(fontSize: 10.5, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
+                                      Text('Prix Achat (HT)', style: TextStyle(fontSize: 10.5, color: AppColors.textTertiary, fontWeight: FontWeight.w500)),
                                       const SizedBox(height: 2),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: realStock <= 0 ? AppColors.errorLight : AppColors.successLight.withValues(alpha: 0.5),
+                                          color: AppColors.surfaceAlt,
                                           borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(color: AppColors.border),
                                         ),
                                         child: Text(
-                                          formatQuantity(realStock),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: realStock <= 0 ? AppColors.error : AppColors.success,
-                                          ),
+                                          formatCurrency(p.purchasePrice),
+                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                
-                                // Price
+
+                                // Prix Vente
                                 Expanded(
                                   flex: 1,
                                   child: Column(
@@ -454,7 +539,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                       context: context,
                                       action: val,
                                       onConfirmed: () {
-                                        if (val == 'view' || val == 'edit') _navigateToCreate(context, p);
+                                        if (val == 'view') _navigateToDetail(context, p);
+                                        if (val == 'edit') _navigateToCreate(context, p);
                                         if (val == 'delete') context.read<ProductsBloc>().add(DeleteProduct(p.id));
                                       },
                                     );
@@ -530,12 +616,22 @@ class _ProductsScreenState extends State<ProductsScreen> {
               }
               return const SizedBox();
             },
-          );
-        },
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _navigateToDetail(BuildContext context, Product product) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<ProductsBloc>(),
+          child: ArticleDetailScreen(product: product),
+        ),
       ),
-    ),
-  ],
-);
+    );
   }
 
   void _navigateToCreate(BuildContext context, Product? existing) {
@@ -686,9 +782,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(dialogCtx);
-              for (final p in selectedProducts) {
-                context.read<ProductsBloc>().add(DeleteProduct(p.id));
-              }
+              final idsToDelete = selectedProducts.map((p) => p.id).toList();
+              context.read<ProductsBloc>().add(BulkDeleteProducts(idsToDelete));
               setState(() => _selectedProductIds.clear());
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text('${selectedProducts.length} article(s) supprimé(s)'),

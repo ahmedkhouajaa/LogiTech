@@ -176,6 +176,8 @@ class DocumentTemplate {
         'showPaymentTerms': true,
         'showLegalNotice': true,
         'showPageNumbers': true,
+        'notesText': 'Merci pour votre confiance.',
+        'paymentTermsText': 'Paiement selon conditions convenues.',
       };
 
   /// Template 1: Classique (Default) - Standard, proven layout matching PDF example
@@ -205,7 +207,7 @@ class DocumentTemplate {
         'clientDetails': {'positionX': 15.0, 'positionY': 45.0, 'width': 180.0, 'height': 30.0},
 
         // Totals section positioning & visibility
-        'totals': {'positionX': 130.0, 'width': 65.0, 'lineSpacing': 7.0, 'labelWidth': 35.0},
+        'totals': {'positionX': 130.0, 'positionY': 175.0, 'width': 65.0, 'lineSpacing': 7.0, 'labelWidth': 35.0},
         'totalBrut': {'visible': false, 'fontSize': 10.0, 'color': 0xFF000000, 'style': 'Normal'},
         'totalRemises': {'visible': true, 'fontSize': 10.0, 'color': 0xFF000000, 'style': 'Normal'},
         'totalHT': {'visible': true, 'fontSize': 10.0, 'color': 0xFF000000, 'style': 'Normal'},
@@ -222,11 +224,26 @@ class DocumentTemplate {
         },
         'totalLetters': {'visible': false, 'fontSize': 9.0, 'color': 0xFF000000, 'style': 'Normal'},
 
+        // Signature section positioning
+        'signature': {'positionX': 135.0, 'positionY': 230.0, 'width': 60.0},
+
         // E-Facture section
         'qrCode': {'enabled': true, 'positionX': 15.0, 'positionY': 98.0, 'width': 25.0, 'height': 25.0, 'showLabel': true, 'labelText': 'E-Facture'},
         'ttnReference': {'enabled': true, 'positionX': 45.0, 'positionY': 99.0, 'fontSize': 9.0, 'color': 0xFF1A56DB, 'fontWeight': 'Gras', 'showLabel': true, 'labelText': 'Réf TTN:'},
         'submissionDate': {'enabled': true, 'positionX': 45.0, 'positionY': 232.0, 'fontSize': 8.0, 'color': 0xFF000000, 'showLabel': true, 'labelText': 'Envoyé le:'},
         'statusBadge': {'enabled': true, 'positionX': 45.0, 'positionY': 239.0, 'width': 40.0, 'height': 6.0, 'fontSize': 8.0},
+
+        // Notes & Conditions element positioning & content
+        'notes': {
+          'positionX': 15.0,
+          'positionY': 175.0,
+          'width': 95.0,
+          'notesText': 'Merci pour votre confiance.',
+          'paymentTermsText': 'Paiement selon conditions convenues.',
+        },
+
+        // Custom free-form texts on document
+        'customTexts': <Map<String, dynamic>>[],
 
         // Table settings
         'table': {'fixedHeight': false, 'borderColor': 0xFFE2E8F0, 'borderWidth': 0.3, 'showOutline': true},
@@ -514,4 +531,40 @@ class DocumentTemplate {
       config['documentTitle'] as Map<String, dynamic>? ?? {};
   Map<String, dynamic> get clientDetailsConfig =>
       config['clientDetails'] as Map<String, dynamic>? ?? {};
+  Map<String, dynamic> get signatureConfig =>
+      config['signature'] as Map<String, dynamic>? ?? {};
+  Map<String, dynamic> get notesConfig =>
+      config['notes'] as Map<String, dynamic>? ?? {};
+
+  String get notesText {
+    final notesCfg = config['notes'] as Map<String, dynamic>?;
+    if (notesCfg != null && notesCfg['notesText'] is String && (notesCfg['notesText'] as String).trim().isNotEmpty) {
+      return (notesCfg['notesText'] as String).trim();
+    }
+    final foot = footerConfig;
+    if (foot['notesText'] is String && (foot['notesText'] as String).trim().isNotEmpty) {
+      return (foot['notesText'] as String).trim();
+    }
+    return 'Merci pour votre confiance.';
+  }
+
+  String get paymentTermsText {
+    final notesCfg = config['notes'] as Map<String, dynamic>?;
+    if (notesCfg != null && notesCfg['paymentTermsText'] is String && (notesCfg['paymentTermsText'] as String).trim().isNotEmpty) {
+      return (notesCfg['paymentTermsText'] as String).trim();
+    }
+    final foot = footerConfig;
+    if (foot['paymentTermsText'] is String && (foot['paymentTermsText'] as String).trim().isNotEmpty) {
+      return (foot['paymentTermsText'] as String).trim();
+    }
+    return 'Paiement selon conditions convenues.';
+  }
+
+  List<Map<String, dynamic>> get customTexts {
+    final raw = config['customTexts'];
+    if (raw is List) {
+      return raw.whereType<Map>().map((m) => Map<String, dynamic>.from(m)).toList();
+    }
+    return [];
+  }
 }

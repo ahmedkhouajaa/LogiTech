@@ -153,18 +153,34 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onAuthCheckRequested(AuthCheckRequested event, Emitter<AuthState> emit) async {
     try {
       await _authService.initialize().timeout(const Duration(seconds: 4));
+      if (state is AuthAccountDeactivated || _authService.isDeactivated) {
+        emit(AuthAccountDeactivated(_authService.deactivationReason ?? "Votre compte a été désactivé."));
+        return;
+      }
       if (_authService.isAuthenticated) {
         try {
           await EnterpriseService.instance.loadEnterprisesFromFirestore(maxRetries: 2);
         } catch (_) {}
+        if (state is AuthAccountDeactivated || _authService.isDeactivated) {
+          emit(AuthAccountDeactivated(_authService.deactivationReason ?? "Votre compte a été désactivé."));
+          return;
+        }
         try {
           await PermissionService.instance.loadPermissions();
         } catch (_) {}
+        if (state is AuthAccountDeactivated || _authService.isDeactivated) {
+          emit(AuthAccountDeactivated(_authService.deactivationReason ?? "Votre compte a été désactivé."));
+          return;
+        }
         emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
       } else {
         emit(AuthUnauthenticated());
       }
     } catch (_) {
+      if (state is AuthAccountDeactivated || _authService.isDeactivated) {
+        emit(AuthAccountDeactivated(_authService.deactivationReason ?? "Votre compte a été désactivé."));
+        return;
+      }
       if (_authService.isAuthenticated) {
         emit(AuthAuthenticated(isOffline: _authService.isOfflineMode));
       } else {

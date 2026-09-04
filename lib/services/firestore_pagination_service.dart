@@ -629,8 +629,14 @@ class FirestorePaginationService {
         _lastCustomerSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) {
+      final results = <Customer>[];
+      for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
+        final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
+        if (isDel) {
+          doc.reference.delete().catchError((_) {});
+          continue;
+        }
         final mappedData = Map<String, dynamic>.from(data);
         mappedData['id'] = doc.id;
         if (!mappedData.containsKey('code') &&
@@ -645,8 +651,13 @@ class FirestorePaginationService {
             mappedData['created_at'] ?? DateTime.now().toIso8601String();
         mappedData['updated_at'] =
             mappedData['updated_at'] ?? DateTime.now().toIso8601String();
-        return Customer.fromMap(mappedData);
-      }).toList();
+        try {
+          results.add(Customer.fromMap(mappedData));
+        } catch (e) {
+          print("Error parsing customer ${doc.id}: $e");
+        }
+      }
+      return results;
     } catch (e) {
       return [];
     }
@@ -677,8 +688,14 @@ class FirestorePaginationService {
         _lastCustomerSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) {
+      final results = <Customer>[];
+      for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
+        final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
+        if (isDel) {
+          doc.reference.delete().catchError((_) {});
+          continue;
+        }
         final mappedData = Map<String, dynamic>.from(data);
         mappedData['id'] = doc.id;
         if (!mappedData.containsKey('code') &&
@@ -693,8 +710,13 @@ class FirestorePaginationService {
             mappedData['created_at'] ?? DateTime.now().toIso8601String();
         mappedData['updated_at'] =
             mappedData['updated_at'] ?? DateTime.now().toIso8601String();
-        return Customer.fromMap(mappedData);
-      }).toList();
+        try {
+          results.add(Customer.fromMap(mappedData));
+        } catch (e) {
+          print("Error parsing customer ${doc.id}: $e");
+        }
+      }
+      return results;
     } catch (e) {
       return [];
     }
@@ -715,8 +737,18 @@ class FirestorePaginationService {
             .where('name', isLessThanOrEqualTo: '$q\uf8ff');
       }
 
-      final aggregateSnapshot = await query.get().timeout(_queryTimeout);
-      return aggregateSnapshot.docs.length;
+      final snapshot = await query.get().timeout(_queryTimeout);
+      int count = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
+        if (isDel) {
+          doc.reference.delete().catchError((_) {});
+        } else {
+          count++;
+        }
+      }
+      return count;
     } catch (e) {
       return 0;
     }
@@ -759,8 +791,14 @@ class FirestorePaginationService {
         _lastSupplierSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) {
+      final results = <Supplier>[];
+      for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
+        final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
+        if (isDel) {
+          doc.reference.delete().catchError((_) {});
+          continue;
+        }
         final mappedData = Map<String, dynamic>.from(data);
         mappedData['id'] = doc.id;
         if (!mappedData.containsKey('code') &&
@@ -775,8 +813,13 @@ class FirestorePaginationService {
             mappedData['created_at'] ?? DateTime.now().toIso8601String();
         mappedData['updated_at'] =
             mappedData['updated_at'] ?? DateTime.now().toIso8601String();
-        return Supplier.fromMap(mappedData);
-      }).toList();
+        try {
+          results.add(Supplier.fromMap(mappedData));
+        } catch (e) {
+          print("Error parsing supplier ${doc.id}: $e");
+        }
+      }
+      return results;
     } catch (e) {
       return [];
     }
@@ -809,8 +852,14 @@ class FirestorePaginationService {
         _lastSupplierSnapshot = snapshot.docs.last;
       }
 
-      return snapshot.docs.map((doc) {
+      final results = <Supplier>[];
+      for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
+        final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
+        if (isDel) {
+          doc.reference.delete().catchError((_) {});
+          continue;
+        }
         final mappedData = Map<String, dynamic>.from(data);
         mappedData['id'] = doc.id;
         if (!mappedData.containsKey('code') &&
@@ -825,8 +874,13 @@ class FirestorePaginationService {
             mappedData['created_at'] ?? DateTime.now().toIso8601String();
         mappedData['updated_at'] =
             mappedData['updated_at'] ?? DateTime.now().toIso8601String();
-        return Supplier.fromMap(mappedData);
-      }).toList();
+        try {
+          results.add(Supplier.fromMap(mappedData));
+        } catch (e) {
+          print("Error parsing supplier ${doc.id}: $e");
+        }
+      }
+      return results;
     } catch (e) {
       return [];
     }
@@ -849,8 +903,18 @@ class FirestorePaginationService {
             .where('name', isLessThanOrEqualTo: '$q\uf8ff');
       }
 
-      final aggregateSnapshot = await query.get().timeout(_queryTimeout);
-      return aggregateSnapshot.docs.length;
+      final snapshot = await query.get().timeout(_queryTimeout);
+      int count = 0;
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
+        if (isDel) {
+          doc.reference.delete().catchError((_) {});
+        } else {
+          count++;
+        }
+      }
+      return count;
     } catch (e) {
       return 0;
     }
@@ -4011,7 +4075,7 @@ class FirestorePaginationService {
   }
 
   Future<List<Product>> getFirstProducts({
-    int pageSize = 10,
+    int pageSize = 50,
     String? searchQuery,
     String stockFilter = 'Tous',
   }) async {
@@ -4041,20 +4105,21 @@ class FirestorePaginationService {
       if (snapshot.docs.isNotEmpty) {
         _lastProductSnapshot = snapshot.docs.last;
         try {
-          var results = snapshot.docs
-              .map((doc) => Product.fromMap(doc.data() as Map<String, dynamic>))
-              .toList();
-          print("DEBUG: getFirstProducts mapped ${results.length} products successfully.");
+          var results = <Product>[];
+          for (var doc in snapshot.docs) {
+            final data = Map<String, dynamic>.from(doc.data() as Map);
+            data['id'] = doc.id;
+            final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1';
+            if (isDel) {
+              doc.reference.delete().catchError((_) {});
+              continue;
+            }
+            results.add(Product.fromMap(data));
+          }
+          print("DEBUG: getFirstProducts mapped ${results.length} active products successfully.");
           return results;
         } catch (e) {
           print("DEBUG: Product.fromMap CRASHED! Error: $e");
-          for (var doc in snapshot.docs) {
-            try {
-              Product.fromMap(doc.data() as Map<String, dynamic>);
-            } catch (e2) {
-              print("DEBUG: Crashed on document ${doc.id}: $e2\nData: ${doc.data()}");
-            }
-          }
         }
       }
     } catch (e) {
@@ -4069,7 +4134,7 @@ class FirestorePaginationService {
   }
 
   Future<List<Product>> getNextProducts({
-    int pageSize = 10,
+    int pageSize = 50,
     String? searchQuery,
     String stockFilter = 'Tous',
   }) async {
@@ -4104,9 +4169,17 @@ class FirestorePaginationService {
 
       if (snapshot.docs.isNotEmpty) {
         _lastProductSnapshot = snapshot.docs.last;
-        var results = snapshot.docs
-            .map((doc) => Product.fromMap(doc.data() as Map<String, dynamic>))
-            .toList();
+        var results = <Product>[];
+        for (var doc in snapshot.docs) {
+          final data = Map<String, dynamic>.from(doc.data() as Map);
+          data['id'] = doc.id;
+          final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1';
+          if (isDel) {
+            doc.reference.delete().catchError((_) {});
+            continue;
+          }
+          results.add(Product.fromMap(data));
+        }
         return results;
       }
     } catch (e) {
@@ -4142,15 +4215,18 @@ class FirestorePaginationService {
             .where('name', isLessThanOrEqualTo: '$q\uf8ff');
       }
 
-      try {
-        final countSnapshot = await query.count().get().timeout(_queryTimeout);
-        int count = countSnapshot.count ?? 0;
-        if (count > 0) return count;
-      } catch (_) {
-        final QuerySnapshot snapshot = await query.get().timeout(_queryTimeout);
-        int count = snapshot.docs.length;
-        if (count > 0) return count;
+      final snapshot = await query.get().timeout(_queryTimeout);
+      int count = 0;
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1';
+        if (isDel) {
+          doc.reference.delete().catchError((_) {});
+        } else {
+          count++;
+        }
       }
+      return count;
     } catch (e) {
       print("Error getting products count from Firebase: $e");
     }

@@ -10,7 +10,7 @@ import '../screens/subscription_screen.dart';
 class TrialInfo {
   final DateTime trialStartDate;
   final DateTime trialEndDate;
-  final String plan; // 'trial', 'pro', 'enterprise'
+  final String plan; // 'trial', 'pro', 'enterprise', 'annual', 'monthly'
   final bool isUpgraded;
 
   TrialInfo({
@@ -21,21 +21,29 @@ class TrialInfo {
   });
 
   int get daysRemaining {
-    if (isUpgraded) return 9999;
     final now = DateTime.now();
     if (now.isAfter(trialEndDate)) return 0;
     final diffDays = trialEndDate.difference(now).inDays;
     return diffDays < 0 ? 0 : diffDays;
   }
 
-  bool get isTrialExpired => !isUpgraded && daysRemaining <= 0;
-  bool get isTrialActive => !isUpgraded && daysRemaining > 0;
+  bool get isTrial => !isUpgraded || plan == 'trial' || plan == 'free';
+  bool get isVip =>
+      plan.toLowerCase().trim() == 'vip' ||
+      plan.toLowerCase().trim().contains('vip') ||
+      daysRemaining >= 3000;
+  bool get isTrialExpired => isTrial && daysRemaining <= 0;
+  bool get isTrialActive => isTrial && daysRemaining > 0;
+  bool get isSubscriptionActive => !isTrial && (isVip || daysRemaining > 0);
+  bool get isSubscriptionExpired => !isTrial && !isVip && daysRemaining <= 0;
 
   Map<String, dynamic> toMap() => {
         'trialStartDate': Timestamp.fromDate(trialStartDate),
         'trialEndDate': Timestamp.fromDate(trialEndDate),
         'plan': plan,
+        'subscriptionPlan': plan,
         'isUpgraded': isUpgraded,
+        'isVip': isVip,
       };
 
   factory TrialInfo.fromMap(Map<String, dynamic> map) {
@@ -53,14 +61,28 @@ class TrialInfo {
         ? parseDate(map['trialEndDate'])
         : start.add(const Duration(days: 7));
 
-    final planStr = map['plan']?.toString() ?? 'trial';
-    final isUpgraded = map['isUpgraded'] == true ||
-        (planStr != 'trial' && planStr != 'free' && planStr.isNotEmpty);
+    // Check multiple potential keys for plan
+    final rawPlan = map['plan'] ??
+        map['subscriptionPlan'] ??
+        map['subscriptionTier'] ??
+        (map['isVip'] == true ? 'vip' : 'trial');
+    final planStr = rawPlan.toString().toLowerCase().trim();
+
+    final isVipFlag = map['isVip'] == true ||
+        planStr == 'vip' ||
+        planStr.contains('vip') ||
+        end.difference(DateTime.now()).inDays >= 3000;
+
+    final resolvedPlan = isVipFlag ? 'vip' : planStr;
+
+    final isUpgraded = isVipFlag ||
+        map['isUpgraded'] == true ||
+        (resolvedPlan != 'trial' && resolvedPlan != 'free' && resolvedPlan.isNotEmpty);
 
     return TrialInfo(
       trialStartDate: start,
       trialEndDate: end,
-      plan: planStr,
+      plan: resolvedPlan,
       isUpgraded: isUpgraded,
     );
   }
@@ -73,6 +95,8 @@ class TrialService {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final ValueNotifier<TrialInfo?> trialNotifier = ValueNotifier<TrialInfo?>(null);
+  StreamSubscription<DocumentSnapshot>? _trialDocSub;
+  StreamSubscription<String?>? _entSub;
 
   TrialInfo? _currentTrial;
   TrialInfo? get currentTrial => _currentTrial ?? trialNotifier.value;
@@ -83,7 +107,7 @@ class TrialService {
   /// Check if plan is upgraded
   bool get isPlanUpgraded => currentTrial?.isUpgraded ?? false;
 
-  /// Days remaining in trial
+  /// Days remaining in trial or subscription
   int get daysRemaining => currentTrial?.daysRemaining ?? 7;
 
   /// Initialize trial status for current user / enterprise
@@ -96,19 +120,28 @@ class TrialService {
       // 1. Try local cache first for immediate UI responsiveness
       final cachedEndStr = prefs.getString('trial_end_date_$entId');
       final cachedUpgraded = prefs.getBool('trial_upgraded_$entId') ?? false;
+      final cachedPlan = prefs.getString('trial_plan_$entId') ?? (cachedUpgraded ? 'annual' : 'trial');
 
       if (cachedEndStr != null) {
         final cachedEnd = DateTime.tryParse(cachedEndStr) ?? DateTime.now().add(const Duration(days: 7));
         _currentTrial = TrialInfo(
           trialStartDate: cachedEnd.subtract(const Duration(days: 7)),
           trialEndDate: cachedEnd,
-          isUpgraded: cachedUpgraded,
+          plan: cachedPlan,
+          isUpgraded: cachedUpgraded || cachedPlan == 'vip',
         );
         trialNotifier.value = _currentTrial;
       }
 
       // 2. Fetch from Firestore (Enterprise doc or User doc)
       if (entId != null && entId.isNotEmpty) {
+        _startRealtimeTrialListener(entId);
+
+        _entSub?.cancel();
+        _entSub = EnterpriseService.instance.enterpriseStream.listen((newEntId) {
+          _startRealtimeTrialListener(newEntId);
+        });
+
         final entDoc = await _firestore.collection('enterprises').doc(entId).get();
         if (entDoc.exists && entDoc.data() != null) {
           final data = entDoc.data()!;
@@ -162,6 +195,20 @@ class TrialService {
     }
   }
 
+  void _startRealtimeTrialListener(String? entId) {
+    _trialDocSub?.cancel();
+    _trialDocSub = null;
+    if (entId == null || entId.isEmpty) return;
+
+    _trialDocSub = _firestore.collection('enterprises').doc(entId).snapshots().listen((snap) {
+      if (snap.exists && snap.data() != null) {
+        _updateFromMap(snap.data()!, entId);
+      }
+    }, onError: (e) {
+      debugPrint('[TrialService] Error in realtime trial listener: $e');
+    });
+  }
+
   void _updateFromMap(Map<String, dynamic> map, String keyId) async {
     final info = TrialInfo.fromMap(map);
     _currentTrial = info;
@@ -170,6 +217,7 @@ class TrialService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('trial_end_date_$keyId', info.trialEndDate.toIso8601String());
     await prefs.setBool('trial_upgraded_$keyId', info.isUpgraded);
+    await prefs.setString('trial_plan_$keyId', info.plan);
   }
 
   /// Check if an action (create, update, delete) is allowed.

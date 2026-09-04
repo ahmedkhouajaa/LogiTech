@@ -34,7 +34,6 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
   final GlobalKey _faqKey = GlobalKey();
 
   int _selectedSectorIndex = 0;
-  bool _isAnnualBilling = true;
   final Set<int> _expandedFaqIndices = {0};
 
   // ─── Finco Style Color Palette ─────────────────────────────────────────
@@ -132,11 +131,11 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
   }
 
   // =========================================================================
-  // 1. NAVBAR (Brand logo/name hidden for now)
+  // 1. NAVBAR
   // =========================================================================
   Widget _buildNavbar(BuildContext context, bool isMobile) {
     return Container(
-      height: 72,
+      height: 76,
       padding: EdgeInsets.symmetric(horizontal: isMobile ? 20 : 48),
       decoration: BoxDecoration(
         color: _cardBg.withValues(alpha: 0.96),
@@ -145,8 +144,31 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Brand Logo/Name hidden for now
-          const SizedBox.shrink(),
+          // Brand Logo/Name
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: _primary,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.inventory_2_rounded, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'LogiTech Pro',
+                style: TextStyle(
+                  color: _textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ],
+          ),
 
           // Nav links (Desktop only)
           if (!isMobile)
@@ -167,23 +189,23 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                 onPressed: widget.onLoginRequested,
                 style: TextButton.styleFrom(
                   foregroundColor: _textPrimary,
-                  textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 ),
                 child: const Text('Se connecter'),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               ElevatedButton(
                 onPressed: widget.onSignUpRequested,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _primary,
                   foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 20, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 22, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   elevation: 0,
                 ),
                 child: Text(
                   isMobile ? 'Essayer' : 'Essayer gratuitement',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                 ),
               ),
             ],
@@ -195,12 +217,12 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
 
   Widget _navLink(String title, VoidCallback onTap) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: TextButton(
         onPressed: onTap,
         style: TextButton.styleFrom(
           foregroundColor: _textSecondary,
-          textStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
         child: Text(title),
       ),
@@ -214,9 +236,9 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isMobile ? 24 : 48,
-        vertical: isMobile ? 40 : 60,
+        vertical: isMobile ? 40 : 64,
       ),
-      constraints: const BoxConstraints(maxWidth: 1100),
+      constraints: const BoxConstraints(maxWidth: 1240),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -226,9 +248,9 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
             text: TextSpan(
               style: TextStyle(
                 color: _textPrimary,
-                fontSize: isMobile ? 36 : (isTablet ? 52 : 62),
+                fontSize: isMobile ? 40 : (isTablet ? 58 : 68),
                 height: 1.12,
-                letterSpacing: -1.2,
+                letterSpacing: -1.4,
                 fontFamily: 'Inter',
               ),
               children: const [
@@ -254,18 +276,18 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
 
           // Sub-paragraph with bold/italic emphasis
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 700),
+            constraints: const BoxConstraints(maxWidth: 820),
             child: RichText(
               textAlign: TextAlign.center,
               text: const TextSpan(
                 style: TextStyle(
                   color: _textSecondary,
-                  fontSize: 17,
-                  height: 1.6,
+                  fontSize: 19,
+                  height: 1.65,
                   fontFamily: 'Inter',
                 ),
                 children: [
@@ -307,34 +329,34 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 36),
+          const SizedBox(height: 38),
 
           // CTAs (Primary Blue + Télécharger Desktop + Outline Se connecter)
           Wrap(
-            spacing: 14,
-            runSpacing: 12,
+            spacing: 16,
+            runSpacing: 14,
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               // 1. Créer un compte gratuit
               SizedBox(
-                height: 52,
+                height: 56,
                 child: ElevatedButton.icon(
                   onPressed: widget.onSignUpRequested,
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 20),
                   label: const Text(
                     'Créer un compte gratuit',
                     style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
                       letterSpacing: -0.2,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     elevation: 0,
                   ),
                 ),
@@ -342,24 +364,24 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
 
               // 2. Télécharger Desktop (ZIP Windows)
               SizedBox(
-                height: 52,
+                height: 56,
                 child: ElevatedButton.icon(
                   onPressed: () => _triggerDesktopDownload(context),
-                  icon: const Icon(Icons.download_rounded, size: 20),
+                  icon: const Icon(Icons.download_rounded, size: 22),
                   label: const Text(
                     'Télécharger Desktop',
                     style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
                       letterSpacing: -0.2,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: _primary,
-                    side: const BorderSide(color: _primary, width: 1.5),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    side: const BorderSide(color: _primary, width: 1.8),
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     elevation: 0,
                   ),
                 ),
@@ -367,21 +389,21 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
 
               // 3. Se connecter
               SizedBox(
-                height: 52,
+                height: 56,
                 child: OutlinedButton(
                   onPressed: widget.onLoginRequested,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: _textPrimary,
-                    side: const BorderSide(color: _border, width: 1.5),
+                    side: const BorderSide(color: _border, width: 1.8),
                     backgroundColor: _cardBg,
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   child: const Text(
                     'Se connecter',
                     style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
                     ),
                   ),
                 ),
@@ -390,19 +412,19 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
           ),
 
           // Small note below the buttons
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Row(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.desktop_windows_rounded, size: 14, color: _textSecondary),
-              const SizedBox(width: 6),
+              Icon(Icons.desktop_windows_rounded, size: 16, color: _textSecondary),
+              const SizedBox(width: 8),
               const Text(
                 'Disponible pour Windows • Version 1.0.0 (64-bit)',
                 style: TextStyle(
                   color: _textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -417,16 +439,23 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
   // =========================================================================
   Widget _buildTrustIndicatorsBar(BuildContext context, bool isMobile) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: isMobile ? 20 : 48, vertical: 16),
-      constraints: const BoxConstraints(maxWidth: 1100),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      margin: EdgeInsets.symmetric(horizontal: isMobile ? 20 : 48, vertical: 20),
+      constraints: const BoxConstraints(maxWidth: 1240),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
       decoration: BoxDecoration(
         color: _cardBg,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Wrap(
-        spacing: 36,
+        spacing: 40,
         runSpacing: 20,
         alignment: WrapAlignment.spaceAround,
         crossAxisAlignment: WrapCrossAlignment.center,
@@ -446,7 +475,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
   Widget _divider() {
     return Container(
       width: 1,
-      height: 36,
+      height: 42,
       color: _border,
     );
   }
@@ -460,25 +489,26 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
           number,
           style: const TextStyle(
             color: _primary,
-            fontSize: 22,
+            fontSize: 26,
             fontWeight: FontWeight.w900,
             letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Text(
           label,
           style: const TextStyle(
             color: _textPrimary,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
           ),
         ),
+        const SizedBox(height: 2),
         Text(
           subtext,
           style: const TextStyle(
             color: _textSecondary,
-            fontSize: 11,
+            fontSize: 13,
           ),
         ),
       ],
@@ -501,39 +531,39 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     ];
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 24),
+      margin: const EdgeInsets.symmetric(vertical: 28),
       padding: EdgeInsets.symmetric(horizontal: isMobile ? 20 : 48),
-      constraints: const BoxConstraints(maxWidth: 1100),
+      constraints: const BoxConstraints(maxWidth: 1240),
       child: Column(
         children: [
           const Text(
             'CYCLE COMMERCIAL COMPLET INTÉGRÉ',
             style: TextStyle(
               color: _primary,
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.5,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 18),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 10,
+            runSpacing: 10,
             alignment: WrapAlignment.center,
             children: types.map((t) {
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                 decoration: BoxDecoration(
                   color: _cardBg,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: _border),
                 ),
                 child: Text(
                   t,
                   style: const TextStyle(
                     color: _textPrimary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               );
@@ -550,19 +580,19 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
   Widget _buildKeyBenefitsSection(BuildContext context, bool isMobile, bool isTablet) {
     return Container(
       key: _benefitsKey,
-      color: _bgAlt, // Alternate section background
+      color: _bgAlt,
       padding: EdgeInsets.symmetric(
         horizontal: isMobile ? 20 : 48,
-        vertical: 56,
+        vertical: 68,
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
+          constraints: const BoxConstraints(maxWidth: 1240),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
                   color: _primaryLight,
                   borderRadius: BorderRadius.circular(6),
@@ -571,23 +601,23 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                   'AVANTAGES FONDAMENTAUX',
                   style: TextStyle(
                     color: _primary,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.2,
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               const Text(
                 'L\'essentiel d\'un outil de travail bien pensé.',
                 style: TextStyle(
                   color: _textPrimary,
-                  fontSize: 28,
+                  fontSize: 34,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
+                  letterSpacing: -0.6,
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 36),
 
               // 6 Benefits Grid
               LayoutBuilder(
@@ -597,9 +627,9 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisCount: crossAxisCount,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: isMobile ? 1.5 : (isTablet ? 1.35 : 1.3),
+                    mainAxisSpacing: 20,
+                    crossAxisSpacing: 20,
+                    childAspectRatio: isMobile ? 1.4 : (isTablet ? 1.25 : 1.15),
                     children: [
                       _minimalBenefitCard(
                         '100% Hors-Ligne',
@@ -644,40 +674,47 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
 
   Widget _minimalBenefitCard(String title, String description, IconData icon) {
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(26),
       decoration: BoxDecoration(
         color: _cardBg,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: _primaryLight,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: _primary, size: 20),
+            child: Icon(icon, color: _primary, size: 24),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Text(
             title,
             style: const TextStyle(
               color: _textPrimary,
-              fontSize: 16,
+              fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Expanded(
             child: Text(
               description,
               style: const TextStyle(
                 color: _textSecondary,
-                fontSize: 13,
-                height: 1.5,
+                fontSize: 14.5,
+                height: 1.55,
               ),
             ),
           ),
@@ -701,14 +738,14 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isMobile ? 20 : 48,
-        vertical: 48,
+        vertical: 60,
       ),
-      constraints: const BoxConstraints(maxWidth: 1100),
+      constraints: const BoxConstraints(maxWidth: 1240),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
               color: _primaryLight,
               borderRadius: BorderRadius.circular(6),
@@ -717,23 +754,23 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
               'CYCLE COMMERCIAL 1-CLIC',
               style: TextStyle(
                 color: _primary,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.2,
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           const Text(
             'Un flux de facturation continu et sans friction.',
             style: TextStyle(
               color: _textPrimary,
-              fontSize: 24,
+              fontSize: 32,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
 
           if (isMobile)
             Column(
@@ -750,11 +787,11 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
 
   Widget _pipelineCard(String number, String title, String desc) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: _cardBg,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: _border),
       ),
       child: Column(
@@ -764,26 +801,26 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
             number,
             style: const TextStyle(
               color: _primary,
-              fontSize: 13,
+              fontSize: 16,
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(
             title,
             style: const TextStyle(
               color: _textPrimary,
-              fontSize: 15,
+              fontSize: 18,
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             desc,
             style: const TextStyle(
               color: _textSecondary,
-              fontSize: 11,
-              height: 1.4,
+              fontSize: 13.5,
+              height: 1.45,
             ),
           ),
         ],
@@ -820,20 +857,20 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
 
     return Container(
       key: _sectorsKey,
-      color: _bgDark, // Deep navy background like Finco reference
+      color: _bgDark,
       padding: EdgeInsets.symmetric(
         horizontal: isMobile ? 20 : 48,
-        vertical: 60,
+        vertical: 72,
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
+          constraints: const BoxConstraints(maxWidth: 1240),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Pill tag matching image: "Domaines d'activités"
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
                   color: _primary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
@@ -843,18 +880,18 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                   'Domaines d\'activités',
                   style: TextStyle(
                     color: Color(0xFF93C5FD),
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               // Heading matching image: "Pour tous les secteurs d'activité"
               RichText(
                 text: const TextSpan(
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 32,
+                    fontSize: 38,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.8,
                     fontFamily: 'Inter',
@@ -868,7 +905,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 32),
 
               // Sector selector buttons
               SingleChildScrollView(
@@ -877,15 +914,15 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                   children: List.generate(sectors.length, (idx) {
                     final isSel = _selectedSectorIndex == idx;
                     return Padding(
-                      padding: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.only(right: 10),
                       child: InkWell(
                         onTap: () => setState(() => _selectedSectorIndex = idx),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                           decoration: BoxDecoration(
                             color: isSel ? _primary : const Color(0xFF1E293B),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: isSel ? _primary : const Color(0xFF334155),
                             ),
@@ -894,8 +931,8 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                             sectors[idx]['title'] as String,
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: isSel ? FontWeight.w800 : FontWeight.w500,
+                              fontSize: 15,
+                              fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
                             ),
                           ),
                         ),
@@ -904,14 +941,14 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                   }),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
 
               // Active Sector Details Card on dark
               Container(
-                padding: const EdgeInsets.all(28),
+                padding: const EdgeInsets.all(34),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: const Color(0xFF334155)),
                 ),
                 child: Column(
@@ -919,24 +956,24 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                   children: [
                     Text(
                       sectors[_selectedSectorIndex]['title'] as String,
-                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800),
+                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Text(
                       sectors[_selectedSectorIndex]['desc'] as String,
-                      style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14, height: 1.6),
+                      style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 16, height: 1.65),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                     Wrap(
-                      spacing: 20,
-                      runSpacing: 10,
+                      spacing: 24,
+                      runSpacing: 12,
                       children: (sectors[_selectedSectorIndex]['points'] as List<String>).map((p) {
                         return Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.check_circle_rounded, color: Color(0xFF60A5FA), size: 16),
-                            const SizedBox(width: 8),
-                            Text(p, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                            const Icon(Icons.check_circle_rounded, color: Color(0xFF60A5FA), size: 18),
+                            const SizedBox(width: 10),
+                            Text(p, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
                           ],
                         );
                       }).toList(),
@@ -986,14 +1023,14 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
       key: _featuresKey,
       padding: EdgeInsets.symmetric(
         horizontal: isMobile ? 20 : 48,
-        vertical: 56,
+        vertical: 68,
       ),
-      constraints: const BoxConstraints(maxWidth: 1100),
+      constraints: const BoxConstraints(maxWidth: 1240),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
               color: _primaryLight,
               borderRadius: BorderRadius.circular(6),
@@ -1002,23 +1039,23 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
               'MODULES & FONCTIONNALITÉS',
               style: TextStyle(
                 color: _primary,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.2,
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           const Text(
             'Une couverture fonctionnelle sans compromis.',
             style: TextStyle(
               color: _textPrimary,
-              fontSize: 24,
+              fontSize: 32,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
 
           LayoutBuilder(
             builder: (context, constraints) {
@@ -1027,44 +1064,51 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: cols,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                childAspectRatio: isMobile ? 2.2 : 1.6,
+                mainAxisSpacing: 18,
+                crossAxisSpacing: 18,
+                childAspectRatio: isMobile ? 2.0 : 1.5,
                 children: modules.map((m) {
                   return Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
                       color: _cardBg,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: _border),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.check, color: _primary, size: 16),
-                            const SizedBox(width: 8),
+                            const Icon(Icons.check_circle_rounded, color: _primary, size: 18),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 m['title']!,
                                 style: const TextStyle(
                                   color: _textPrimary,
                                   fontWeight: FontWeight.w800,
-                                  fontSize: 15,
+                                  fontSize: 17,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         Expanded(
                           child: Text(
                             m['desc']!,
                             style: const TextStyle(
                               color: _textSecondary,
-                              fontSize: 12,
-                              height: 1.4,
+                              fontSize: 14,
+                              height: 1.5,
                             ),
                           ),
                         ),
@@ -1081,24 +1125,26 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
   }
 
   // =========================================================================
-  // 9. PRICING SECTION (Updated to 49 DT Annual / 59 DT Monthly)
+  // 9. PRICING SECTION
   // =========================================================================
   Widget _buildPricingSection(BuildContext context, bool isMobile, bool isTablet) {
+    final useColumn = isMobile || isTablet;
+
     return Container(
       key: _pricingKey,
       color: _bgAlt,
       padding: EdgeInsets.symmetric(
         horizontal: isMobile ? 20 : 48,
-        vertical: 56,
+        vertical: 72,
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
+          constraints: const BoxConstraints(maxWidth: 1240),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
                   color: _primaryLight,
                   borderRadius: BorderRadius.circular(6),
@@ -1107,114 +1153,53 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                   'TARIFS TRANSPARENTS',
                   style: TextStyle(
                     color: _primary,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.2,
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               const Text(
                 'Une tarification claire et sans engagement.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: _textPrimary,
-                  fontSize: 28,
+                  fontSize: 34,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
+                  letterSpacing: -0.6,
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Billing Switcher
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: _cardBg,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _border),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _pricingToggleBtn('Facturation mensuelle', !_isAnnualBilling, () {
-                      setState(() => _isAnnualBilling = false);
-                    }),
-                    _pricingToggleBtn('Facturation annuelle (-20%)', _isAnnualBilling, () {
-                      setState(() => _isAnnualBilling = true);
-                    }),
-                  ],
+              const SizedBox(height: 12),
+              const Text(
+                'Choisissez l\'offre qui correspond le mieux aux besoins de votre entreprise.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _textSecondary,
+                  fontSize: 16,
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 48),
 
-              if (isMobile)
+              if (useColumn)
                 Column(
                   children: [
-                    _pricingCard(
-                      title: 'Pack Démarrage',
-                      price: '0 DT',
-                      sub: 'Gratuit pour toujours',
-                      features: [
-                        'Mode Hors-Ligne 100% actif',
-                        'Devis, Factures & BL illimités',
-                        'Catalogue clients & articles',
-                        'Export PDF & QR Code fiscal',
-                      ],
-                      isPro: false,
-                    ),
-                    const SizedBox(height: 16),
-                    _pricingCard(
-                      title: 'Pack Professionnel',
-                      price: _isAnnualBilling ? '49 DT' : '59 DT',
-                      sub: 'par mois sans engagement',
-                      features: [
-                        'Tout du pack Démarrage',
-                        'Entreprises illimitées & collaborateurs',
-                        'Stock multi-entrepôts & inventaires',
-                        'Achats & fournisseurs complets',
-                        'Trésorerie, Chèques & Traites',
-                        'Éditeur A4 sur-mesure & Export TEJ',
-                      ],
-                      isPro: true,
-                    ),
+                    _buildMonthlyPlanCard(context),
+                    const SizedBox(height: 32),
+                    _buildAnnualPlanCard(context),
+                    const SizedBox(height: 32),
+                    _buildCustomPlanCard(context),
                   ],
                 )
               else
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: _pricingCard(
-                        title: 'Pack Démarrage',
-                        price: '0 DT',
-                        sub: 'Gratuit pour toujours',
-                        features: [
-                          'Mode Hors-Ligne 100% actif',
-                          'Devis, Factures & BL illimités',
-                          'Catalogue clients & articles',
-                          'Export PDF & QR Code fiscal',
-                        ],
-                        isPro: false,
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: _pricingCard(
-                        title: 'Pack Professionnel',
-                        price: _isAnnualBilling ? '49 DT' : '59 DT',
-                        sub: 'par mois sans engagement',
-                        features: [
-                          'Tout du pack Démarrage',
-                          'Entreprises illimitées & collaborateurs',
-                          'Stock multi-entrepôts & inventaires',
-                          'Achats & fournisseurs complets',
-                          'Trésorerie, Chèques & Traites',
-                          'Éditeur A4 sur-mesure & Export TEJ',
-                        ],
-                        isPro: true,
-                      ),
-                    ),
+                    Expanded(child: _buildMonthlyPlanCard(context)),
+                    const SizedBox(width: 24),
+                    Expanded(child: _buildAnnualPlanCard(context)),
+                    const SizedBox(width: 24),
+                    Expanded(child: _buildCustomPlanCard(context)),
                   ],
                 ),
             ],
@@ -1224,104 +1209,318 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     );
   }
 
-  Widget _pricingToggleBtn(String label, bool isSel, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSel ? _primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSel ? Colors.white : _textSecondary,
-            fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
-            fontSize: 12,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _pricingCard({
-    required String title,
-    required String price,
-    required String sub,
-    required List<String> features,
-    required bool isPro,
-  }) {
+  // ─── Card 1: Plan Mensuel ────────────────────────────────────────────
+  Widget _buildMonthlyPlanCard(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 34),
       decoration: BoxDecoration(
         color: _cardBg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: isPro ? _primary : _border, width: isPro ? 2 : 1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _border, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: const TextStyle(color: _textPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
-              if (isPro)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: _primaryLight,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text('RECOMMANDÉ', style: TextStyle(color: _primary, fontSize: 10, fontWeight: FontWeight.w800)),
-                ),
-            ],
+          const Text(
+            'Plan Mensuel',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _textPrimary),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(price, style: const TextStyle(color: _textPrimary, fontSize: 32, fontWeight: FontWeight.w900)),
-              const SizedBox(width: 6),
-              Text(sub, style: const TextStyle(color: _textSecondary, fontSize: 12)),
+            children: const [
+              Text('59 DT ', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: -0.8)),
+              Text('TTC ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black54)),
+              Text('30 jours', style: TextStyle(fontSize: 15, color: _textSecondary)),
             ],
           ),
-          const SizedBox(height: 20),
-          const Divider(color: _border),
-          const SizedBox(height: 14),
-          ...features.map((f) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              children: [
-                const Icon(Icons.check, color: _primary, size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    f,
-                    style: const TextStyle(color: _textPrimary, fontSize: 13, fontWeight: FontWeight.w500),
+          const SizedBox(height: 24),
+          _featureRow('Utilisateurs illimités'),
+          _featureRow('Entrepôts illimités'),
+          _featureRow('Documents illimités'),
+          _featureRow('Accès pendant 30 jours'),
+          const SizedBox(height: 12),
+          Row(
+            children: const [
+              Icon(Icons.star_rounded, color: Color(0xFF27AE60), size: 18),
+              SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '-50% sur la deuxième entreprise',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF27AE60)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: widget.onSignUpRequested,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.black87,
+                side: const BorderSide(color: _border, width: 1.2),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Choisir le plan', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Card 2: Plan Annuel (Populaire) ─────────────────────────────────
+  Widget _buildAnnualPlanCard(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 34),
+          decoration: BoxDecoration(
+            color: _cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF2ECC71), width: 2.0),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF2ECC71).withValues(alpha: 0.16),
+                blurRadius: 22,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 10,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text('Plan Annuel', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _textPrimary)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F8F5),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'Économisez 15% (109 DT)',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF27AE60)),
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: const [
+                  Text('599 DT ', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: -0.8)),
+                  Text('TTC ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black54)),
+                  Text('365 jours', style: TextStyle(fontSize: 15, color: _textSecondary)),
+                ],
+              ),
+              const SizedBox(height: 4),
+              const Text('≈ 50 DT /mois', style: TextStyle(fontSize: 13, color: Color(0xFF27AE60), fontWeight: FontWeight.w700)),
+              const SizedBox(height: 20),
+              _featureRow('Utilisateurs illimités'),
+              _featureRow('Entrepôts illimités'),
+              _featureRow('Documents illimités'),
+              _featureRow('Accès pendant 365 jours'),
+              const SizedBox(height: 12),
+              Row(
+                children: const [
+                  Icon(Icons.star_rounded, color: Color(0xFF27AE60), size: 18),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '-50% sur la deuxième entreprise',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF27AE60)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: widget.onSignUpRequested,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E56D0),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Choisir le plan', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Populaire Badge on Top Right
+        Positioned(
+          top: -14,
+          right: 24,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF27AE60),
+              borderRadius: BorderRadius.circular(6),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF27AE60).withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-          )),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: widget.onSignUpRequested,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isPro ? _primary : _cardBg,
-                foregroundColor: isPro ? Colors.white : _textPrimary,
-                side: isPro ? null : const BorderSide(color: _border),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                elevation: 0,
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.star_rounded, color: Colors.white, size: 15),
+                SizedBox(width: 5),
+                Text(
+                  'Populaire',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Card 3: Plan Personnalisé ───────────────────────────────────────
+  Widget _buildCustomPlanCard(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 34),
+          decoration: BoxDecoration(
+            color: _cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFF39C12), width: 2.0),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFF39C12).withValues(alpha: 0.14),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
               ),
-              child: Text(
-                isPro ? 'Commencer l\'essai' : 'Démarrer gratuitement',
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Plan Personnalisé',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _textPrimary),
               ),
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF9E7),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Center(
+                  child: Text(
+                    'Contactez notre équipe',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFFD68910)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _featureRow('Accès sur mesure'),
+              _featureRow('Utilisateurs illimités'),
+              _featureRow('Entrepôts illimités'),
+              _featureRow('Documents illimités'),
+              const SizedBox(height: 52),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: widget.onSignUpRequested,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD35400),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Contacter-nous', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Entreprise Badge on Top Right
+        Positioned(
+          top: -14,
+          right: 24,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD35400),
+              borderRadius: BorderRadius.circular(6),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFD35400).withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.star_outline_rounded, color: Colors.white, size: 15),
+                SizedBox(width: 5),
+                Text(
+                  'Entreprise',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Feature Row Item Builder ────────────────────────────────────────
+  Widget _featureRow(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: const BoxDecoration(
+              color: Color(0xFFEBF5FB),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.check_rounded, color: Color(0xFF2980B9), size: 16),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -1356,14 +1555,14 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
       key: _faqKey,
       padding: EdgeInsets.symmetric(
         horizontal: isMobile ? 20 : 48,
-        vertical: 56,
+        vertical: 68,
       ),
-      constraints: const BoxConstraints(maxWidth: 800),
+      constraints: const BoxConstraints(maxWidth: 960),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
               color: _primaryLight,
               borderRadius: BorderRadius.circular(6),
@@ -1372,36 +1571,43 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
               'QUESTIONS FRÉQUENTES',
               style: TextStyle(
                 color: _primary,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.2,
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           const Text(
             'Tout ce que vous devez savoir.',
             style: TextStyle(
               color: _textPrimary,
-              fontSize: 24,
+              fontSize: 32,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
 
           ...List.generate(faqs.length, (idx) {
             final faq = faqs[idx];
             final isOpen = _expandedFaqIndices.contains(idx);
             return Container(
-              margin: const EdgeInsets.only(bottom: 8),
+              margin: const EdgeInsets.only(bottom: 10),
               decoration: BoxDecoration(
                 color: _cardBg,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: _border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: InkWell(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 onTap: () {
                   setState(() {
                     if (isOpen) {
@@ -1412,7 +1618,7 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                   });
                 },
                 child: Padding(
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(22),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1424,28 +1630,28 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
                               faq['q']!,
                               style: TextStyle(
                                 color: isOpen ? _primary : _textPrimary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
                           Icon(
                             isOpen ? Icons.remove : Icons.add,
                             color: isOpen ? _primary : _textSecondary,
-                            size: 18,
+                            size: 20,
                           ),
                         ],
                       ),
                       if (isOpen) ...[
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         const Divider(color: _border),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 8),
                         Text(
                           faq['a']!,
                           style: const TextStyle(
                             color: _textSecondary,
-                            fontSize: 13,
-                            height: 1.5,
+                            fontSize: 15,
+                            height: 1.6,
                           ),
                         ),
                       ],
@@ -1467,16 +1673,23 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
     return Container(
       margin: EdgeInsets.symmetric(
         horizontal: isMobile ? 20 : 48,
-        vertical: 40,
+        vertical: 48,
       ),
-      constraints: const BoxConstraints(maxWidth: 1100),
+      constraints: const BoxConstraints(maxWidth: 1240),
       padding: EdgeInsets.symmetric(
         horizontal: isMobile ? 24 : 48,
-        vertical: 36,
+        vertical: 48,
       ),
       decoration: BoxDecoration(
-        color: _bgDark, // Deep navy banner matching Finco reference image
-        borderRadius: BorderRadius.circular(16),
+        color: _bgDark,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: _bgDark.withValues(alpha: 0.3),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -1486,25 +1699,25 @@ class _WebLandingScreenState extends State<WebLandingScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.4,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 24),
-          // White button matching reference image: "Créer un compte gratuit →"
+          const SizedBox(height: 28),
+          // White button: "Créer un compte gratuit →"
           ElevatedButton.icon(
             onPressed: widget.onSignUpRequested,
-            icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+            icon: const Icon(Icons.arrow_forward_rounded, size: 18),
             label: const Text(
               'Créer un compte gratuit',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: _bgDark,
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 18),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               elevation: 0,
             ),
           ),

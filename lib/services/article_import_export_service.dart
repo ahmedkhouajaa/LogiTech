@@ -7,6 +7,7 @@ import 'package:excel/excel.dart';
 import 'package:uuid/uuid.dart';
 
 import '../utils/file_save_helper.dart';
+import '../utils/excel_safe_helper.dart';
 import '../models/product.dart';
 import 'enterprise_service.dart';
 
@@ -72,7 +73,7 @@ class ArticleImportExportService {
   static final ArticleImportExportService instance = ArticleImportExportService._();
   ArticleImportExportService._();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
   final Uuid _uuid = const Uuid();
 
   String? get _currentUid => FirebaseAuth.instance.currentUser?.uid;
@@ -339,6 +340,9 @@ class ArticleImportExportService {
     const sheetName = 'Modèle Import Articles';
     final sheet = excel[sheetName];
     excel.setDefaultSheet(sheetName);
+    try {
+      excel.delete('Sheet1');
+    } catch (_) {}
 
     final headers = [
       '_id',
@@ -442,21 +446,21 @@ class ArticleImportExportService {
   }
 
   Map<String, dynamic> _parseExcelFile(Uint8List bytes) {
-    final excel = Excel.decodeBytes(bytes);
+    final sanitizedBytes = ExcelSafeHelper.sanitizeXlsxBytes(bytes);
+    final excel = Excel.decodeBytes(sanitizedBytes);
     if (excel.tables.isEmpty) {
       throw 'Le fichier Excel ne contient aucune feuille de calcul.';
     }
 
     final tableKey = excel.tables.keys.firstWhere(
-      (k) => excel.tables[k]!.rows.isNotEmpty,
-      orElse: () => excel.tables.keys.first,
+      (k) => (excel.tables[k]?.rows.isNotEmpty ?? false),
+      orElse: () => excel.tables.keys.isNotEmpty ? excel.tables.keys.first : '',
     );
-    final sheet = excel.tables[tableKey]!;
-    final rowsList = sheet.rows;
-
-    if (rowsList.isEmpty) {
+    final sheet = excel.tables[tableKey];
+    if (sheet == null || sheet.rows.isEmpty) {
       throw 'La feuille Excel sélectionnée est vide.';
     }
+    final rowsList = sheet.rows;
 
     final headerRow = rowsList.first;
     final List<String> headers = [];
@@ -632,6 +636,48 @@ class ArticleImportExportService {
 
   // ─── 5. VALIDATION, DATA PREVIEW & DEDUPLICATION ─────────────────
 
+  /// Strict double parser: validates format, non-numeric types, negative bounds, and min/max limits
+  double? _parseStrictDouble(
+    String raw, {
+    required String fieldName,
+    required List<String> errors,
+    bool allowNegative = false,
+    double? min,
+    double? max,
+  }) {
+    final clean = raw.replaceAll(' ', '').replaceAll('\u00A0', '').replaceAll(',', '.');
+
+    // Reject non-numeric inputs like "abc", "NaN", "12.34.56", "$50"
+    final isMatch = RegExp(r'^[+-]?[0-9]+(\.[0-9]+)?$').hasMatch(clean);
+    if (!isMatch) {
+      errors.add('$fieldName "$raw" invalide : doit être un nombre numérique.');
+      return null;
+    }
+
+    final parsed = double.tryParse(clean);
+    if (parsed == null || parsed.isNaN || parsed.isInfinite) {
+      errors.add('$fieldName "$raw" invalide : format numérique incorrect.');
+      return null;
+    }
+
+    if (!allowNegative && parsed < 0) {
+      errors.add('$fieldName ne peut pas être négatif ("$raw").');
+      return null;
+    }
+
+    if (min != null && parsed < min) {
+      errors.add('$fieldName ("$raw") doit être supérieur ou égal à $min.');
+      return null;
+    }
+
+    if (max != null && parsed > max) {
+      errors.add('$fieldName ("$raw") doit être inférieur ou égal à $max.');
+      return null;
+    }
+
+    return parsed;
+  }
+
   Future<List<ArticleImportRow>> validateAndPrepareRows({
     required List<Map<String, dynamic>> rawRows,
     required Map<String, String?> fieldMapping,
@@ -639,8 +685,11 @@ class ArticleImportExportService {
   }) async {
     final entId = _currentEnterpriseId;
 
-    // Fetch existing product IDs and codes in Firestore
+    // Fetch existing product IDs, codes and barcodes in Firestore for intelligent deduplication & reference validation
     final Set<String> existingIds = {};
+    final Map<String, String> existingCodeToId = {};
+    final Map<String, String> existingBarcodeToId = {};
+
     if (entId != null && entId.isNotEmpty) {
       try {
         final snap = await _firestore
@@ -648,12 +697,32 @@ class ArticleImportExportService {
             .where('enterprise_id', isEqualTo: entId)
             .get();
         for (final doc in snap.docs) {
+          final data = doc.data();
+          final isDeleted = data['isDeleted'] == 1 ||
+              data['isDeleted'] == true ||
+              data['is_deleted'] == 1 ||
+              data['is_deleted'] == true;
+          if (isDeleted) continue;
+
           existingIds.add(doc.id);
+          final code = data['code']?.toString().trim();
+          if (code != null && code.isNotEmpty) {
+            existingCodeToId[code.toLowerCase()] = doc.id;
+          }
+          final barcode = data['barcode']?.toString().trim();
+          if (barcode != null && barcode.isNotEmpty) {
+            existingBarcodeToId[barcode.toLowerCase()] = doc.id;
+          }
         }
       } catch (e) {
         debugPrint('Validation prefetch error: $e');
       }
     }
+
+    // Maps to track in-file duplicates (code, barcode, _id)
+    final Map<String, int> fileCodeToFirstRow = {};
+    final Map<String, int> fileBarcodeToFirstRow = {};
+    final Map<String, int> fileIdToFirstRow = {};
 
     final List<ArticleImportRow> validatedList = [];
 
@@ -662,10 +731,14 @@ class ArticleImportExportService {
       final mapped = <String, dynamic>{};
       final List<String> errors = [];
       final List<String> warnings = [];
+      final int rowNumber = i + 1;
 
       fieldMapping.forEach((targetKey, sourceCol) {
         dynamic val;
-        if (sourceCol != null && sourceCol.isNotEmpty && sourceCol != '__skip__' && raw.containsKey(sourceCol)) {
+        if (sourceCol != null &&
+            sourceCol.isNotEmpty &&
+            sourceCol != '__skip__' &&
+            raw.containsKey(sourceCol)) {
           val = raw[sourceCol];
         }
         val ??= fallbackValues[targetKey];
@@ -674,99 +747,191 @@ class ArticleImportExportService {
         }
       });
 
-      // Extract _id
-      String rawId = mapped['_id']?.toString().trim() ?? '';
+      // 1. Extract and validate internal _id (Update reference check)
+      final rawId = mapped['_id']?.toString().trim() ?? '';
       bool isUpdate = false;
       String? existingId;
 
-      if (rawId.isNotEmpty && existingIds.contains(rawId)) {
-        isUpdate = true;
-        existingId = rawId;
-      } else if (rawId.isNotEmpty) {
-        warnings.add('L\'identifiant _id "$rawId" est introuvable. Un nouvel article sera créé.');
+      if (rawId.isNotEmpty) {
+        final idKey = rawId.toLowerCase();
+        if (fileIdToFirstRow.containsKey(idKey)) {
+          errors.add('Identifiant interne _id "$rawId" en double dans le fichier Excel (identique à la ligne ${fileIdToFirstRow[idKey]}).');
+        } else {
+          fileIdToFirstRow[idKey] = rowNumber;
+        }
+
+        if (existingIds.contains(rawId)) {
+          isUpdate = true;
+          existingId = rawId;
+        } else {
+          errors.add('Référence _id "$rawId" introuvable dans la base de données de cette entreprise.');
+        }
       }
 
-      // Check name (required)
+      // 2. Validate Code / Référence and detect in-file duplicates & reference conflicts
+      final rawCode = mapped['code']?.toString().trim() ?? '';
+      if (rawCode.isNotEmpty) {
+        final codeKey = rawCode.toLowerCase();
+        if (fileCodeToFirstRow.containsKey(codeKey)) {
+          errors.add('Code / Référence "$rawCode" en double dans le fichier Excel (identique à la ligne ${fileCodeToFirstRow[codeKey]}).');
+        } else {
+          fileCodeToFirstRow[codeKey] = rowNumber;
+        }
+
+        // Keep existing create/update logic: Match by unique Article Code if not already matched
+        if (!isUpdate && existingCodeToId.containsKey(codeKey)) {
+          isUpdate = true;
+          existingId = existingCodeToId[codeKey];
+        } else if (isUpdate && existingCodeToId.containsKey(codeKey) && existingCodeToId[codeKey] != existingId) {
+          errors.add('Conflit de référence : le code "$rawCode" est déjà assigné à un autre article existant (ID: ${existingCodeToId[codeKey]}).');
+        }
+      }
+
+      // 3. Validate Barcode and detect in-file duplicates & reference conflicts
+      final rawBarcode = mapped['barcode']?.toString().trim() ?? '';
+      if (rawBarcode.isNotEmpty) {
+        final barcodeKey = rawBarcode.toLowerCase();
+        if (fileBarcodeToFirstRow.containsKey(barcodeKey)) {
+          errors.add('Code-barres "$rawBarcode" en double dans le fichier Excel (identique à la ligne ${fileBarcodeToFirstRow[barcodeKey]}).');
+        } else {
+          fileBarcodeToFirstRow[barcodeKey] = rowNumber;
+        }
+
+        // Keep existing create/update logic: Match by Barcode if not already matched
+        if (!isUpdate && existingBarcodeToId.containsKey(barcodeKey)) {
+          isUpdate = true;
+          existingId = existingBarcodeToId[barcodeKey];
+        } else if (isUpdate && existingBarcodeToId.containsKey(barcodeKey) && existingBarcodeToId[barcodeKey] != existingId) {
+          errors.add('Conflit de référence : le code-barres "$rawBarcode" est déjà assigné à un autre article existant (ID: ${existingBarcodeToId[barcodeKey]}).');
+        }
+      }
+
+      // 4. Validate Name / Désignation (Required field according to Product schema)
       final name = mapped['name']?.toString().trim() ?? '';
       if (name.isEmpty) {
         errors.add('Le nom / la désignation de l\'article est obligatoire.');
       }
 
-      // Product Type
-      String productType = mapped['productType']?.toString().toLowerCase().trim() ?? 'produit';
-      if (productType.contains('service') || productType.contains('prestation')) {
-        productType = 'service';
-      } else if (productType.contains('matiere') || productType.contains('consommable')) {
-        productType = 'matiere_premiere';
-      } else {
-        productType = 'produit';
+      // 5. Validate Product Type (Allowed values: 'produit', 'service', 'consommable')
+      final rawProductType = mapped['productType']?.toString().trim() ?? '';
+      String productType = 'produit';
+      if (rawProductType.isNotEmpty) {
+        final lower = rawProductType.toLowerCase();
+        if (lower == 'produit' || lower == 'product' || lower == 'marchandise' || lower == 'article' || lower == 'bien') {
+          productType = 'produit';
+        } else if (lower == 'service' || lower == 'prestation' || lower == 'services') {
+          productType = 'service';
+        } else if (lower == 'consommable' || lower == 'matiere_premiere' || lower == 'matiere' || lower == 'fourniture') {
+          productType = 'consommable';
+        } else {
+          errors.add('Type d\'article "$rawProductType" invalide. Valeurs acceptées : produit, service, consommable (ou matière première).');
+        }
       }
       mapped['productType'] = productType;
 
-      // Format code if empty
+      // 6. Generate code if empty and creating a new article
       if (!mapped.containsKey('code') || (mapped['code'] as String).isEmpty) {
-        mapped['code'] = 'ART-${(i + 1).toString().padLeft(5, '0')}';
+        mapped['code'] = 'ART-${rowNumber.toString().padLeft(5, '0')}';
       }
 
-      // Parse sellingPrice
+      // 7. Validate sellingPrice (Price must be numeric, >= 0)
       final sellPriceStr = mapped['sellingPrice']?.toString().trim() ?? '';
+      double sellingPriceVal = 0.0;
       if (sellPriceStr.isNotEmpty) {
-        final clean = sellPriceStr.replaceAll(RegExp(r'[^0-9.-]'), '');
-        final parsed = double.tryParse(clean);
-        if (parsed == null) {
-          warnings.add('Prix de vente "$sellPriceStr" invalide (0 par défaut).');
-          mapped['sellingPrice'] = 0.0;
-        } else {
+        final parsed = _parseStrictDouble(
+          sellPriceStr,
+          fieldName: 'Prix de vente HT',
+          errors: errors,
+          allowNegative: false,
+        );
+        if (parsed != null) {
+          sellingPriceVal = parsed;
           mapped['sellingPrice'] = parsed;
         }
       } else {
         mapped['sellingPrice'] = 0.0;
       }
 
-      // Parse purchasePrice
+      // 8. Validate purchasePrice (Must be numeric, >= 0)
       final buyPriceStr = mapped['purchasePrice']?.toString().trim() ?? '';
+      double purchasePriceVal = 0.0;
       if (buyPriceStr.isNotEmpty) {
-        final clean = buyPriceStr.replaceAll(RegExp(r'[^0-9.-]'), '');
-        mapped['purchasePrice'] = double.tryParse(clean) ?? 0.0;
+        final parsed = _parseStrictDouble(
+          buyPriceStr,
+          fieldName: 'Prix d\'achat HT',
+          errors: errors,
+          allowNegative: false,
+        );
+        if (parsed != null) {
+          purchasePriceVal = parsed;
+          mapped['purchasePrice'] = parsed;
+        }
       } else {
         mapped['purchasePrice'] = 0.0;
       }
 
-      // Parse tvaRate
+      if (sellingPriceVal > 0 && purchasePriceVal > sellingPriceVal) {
+        warnings.add('Le prix d\'achat (${purchasePriceVal.toStringAsFixed(3)} DT) est supérieur au prix de vente (${sellingPriceVal.toStringAsFixed(3)} DT).');
+      }
+
+      // 9. Validate tvaRate (Must be numeric percentage between 0 and 100)
       final tvaStr = mapped['tvaRate']?.toString().trim() ?? '';
       if (tvaStr.isNotEmpty) {
-        final clean = tvaStr.replaceAll(RegExp(r'[^0-9.]'), '');
-        mapped['tvaRate'] = double.tryParse(clean) ?? 19.0;
+        final parsed = _parseStrictDouble(
+          tvaStr,
+          fieldName: 'Taux TVA (%)',
+          errors: errors,
+          allowNegative: false,
+          min: 0.0,
+          max: 100.0,
+        );
+        if (parsed != null) {
+          mapped['tvaRate'] = parsed;
+        }
       } else {
         mapped['tvaRate'] = 19.0;
       }
 
-      // Parse stockQty
+      // 10. Validate stockQty (Must be numeric; non-negative for physical products)
       final stockStr = mapped['stockQty']?.toString().trim() ?? '';
       if (stockStr.isNotEmpty) {
-        final clean = stockStr.replaceAll(RegExp(r'[^0-9.-]'), '');
-        mapped['stockQty'] = double.tryParse(clean) ?? 0.0;
+        final parsed = _parseStrictDouble(
+          stockStr,
+          fieldName: 'Quantité en stock',
+          errors: errors,
+          allowNegative: productType == 'service',
+        );
+        if (parsed != null) {
+          mapped['stockQty'] = parsed;
+        }
       } else {
         mapped['stockQty'] = 0.0;
       }
 
-      // Parse minStockQty
+      // 11. Validate minStockQty (Must be numeric, >= 0)
       final minStockStr = mapped['minStockQty']?.toString().trim() ?? '';
       if (minStockStr.isNotEmpty) {
-        final clean = minStockStr.replaceAll(RegExp(r'[^0-9.-]'), '');
-        mapped['minStockQty'] = double.tryParse(clean) ?? 0.0;
+        final parsed = _parseStrictDouble(
+          minStockStr,
+          fieldName: 'Stock minimum',
+          errors: errors,
+          allowNegative: false,
+        );
+        if (parsed != null) {
+          mapped['minStockQty'] = parsed;
+        }
       } else {
         mapped['minStockQty'] = 0.0;
       }
 
-      // Unit
+      // 12. Unit
       if (!mapped.containsKey('unit') || (mapped['unit'] as String).isEmpty) {
         mapped['unit'] = 'Unite';
       }
 
       validatedList.add(
         ArticleImportRow(
-          rowIndex: i + 1,
+          rowIndex: rowNumber,
           rawValues: raw,
           mappedValues: mapped,
           isUpdate: isUpdate,
@@ -798,10 +963,12 @@ class ArticleImportExportService {
     }
 
     final validRows = rows.where((r) => r.isValid).toList();
+
     if (validRows.isEmpty) {
       return ArticleImportResult(
         success: false,
-        message: 'Aucune ligne valide à importer.',
+        message: 'Aucune ligne valide à importer sur les ${rows.length} lignes du fichier.',
+        totalRows: rows.length,
         errorCount: rows.length,
       );
     }
@@ -845,17 +1012,26 @@ class ArticleImportExportService {
             'code': m['code'] ?? 'ART-${_uuid.v4().substring(0, 4).toUpperCase()}',
             'name': m['name'] ?? 'Article sans nom',
             'productType': m['productType'] ?? 'produit',
+            'product_type': m['productType'] ?? 'produit',
             'category': m['category'] ?? '',
             'sellingPrice': m['sellingPrice'] ?? 0.0,
+            'selling_price': m['sellingPrice'] ?? 0.0,
             'purchasePrice': m['purchasePrice'] ?? 0.0,
+            'purchase_price': m['purchasePrice'] ?? 0.0,
             'tvaRate': m['tvaRate'] ?? 19.0,
+            'tva_rate': m['tvaRate'] ?? 19.0,
             'stockQty': m['stockQty'] ?? 0.0,
+            'stock_qty': m['stockQty'] ?? 0.0,
             'minStockQty': m['minStockQty'] ?? 0.0,
+            'min_stock_qty': m['minStockQty'] ?? 0.0,
             'unit': m['unit'] ?? 'Unite',
             'barcode': m['barcode'] ?? '',
             'brandId': m['brand'] ?? '',
+            'brand_id': m['brand'] ?? '',
             'privateNotes': m['notes'] ?? '',
+            'private_notes': m['notes'] ?? '',
             'isActive': true,
+            'is_active': 1,
             'isDeleted': 0,
             'is_deleted': 0,
             'enterprise_id': entId,
@@ -892,13 +1068,18 @@ class ArticleImportExportService {
 
     onProgress?.call(1.0, 'Importation terminée avec succès !');
 
+    final totalSkipped = rows.length - validRows.length;
+    final successMessage = totalSkipped > 0
+        ? 'Importation réussie : $createdCount créé(s), $updatedCount mis à jour. ($totalSkipped ligne(s) avec erreurs ou doublons ont été ignorées).'
+        : 'Importation réussie : $createdCount créé(s), $updatedCount mis à jour sur ${rows.length} lignes.';
+
     return ArticleImportResult(
       success: createdCount > 0 || updatedCount > 0,
-      message: 'Importation terminée : $createdCount créés, $updatedCount mis à jour sur ${rows.length} lignes.',
+      message: successMessage,
       totalRows: rows.length,
       createdCount: createdCount,
       updatedCount: updatedCount,
-      skippedCount: rows.length - validRows.length,
+      skippedCount: totalSkipped,
       errorCount: errorCount,
       errorMessages: errorMessages,
     );

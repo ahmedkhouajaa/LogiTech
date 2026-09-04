@@ -26,6 +26,7 @@ dependencies:
   google_fonts: any
   file_picker: ^8.1.4
   excel: any
+  archive: ^3.6.1
   url_launcher: ^6.3.1
   provider: ^6.1.4
   open_filex: ^4.4.0

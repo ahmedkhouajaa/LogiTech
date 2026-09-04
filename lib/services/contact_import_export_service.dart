@@ -7,6 +7,7 @@ import 'package:excel/excel.dart';
 import 'package:uuid/uuid.dart';
 
 import '../utils/file_save_helper.dart';
+import '../utils/excel_safe_helper.dart';
 import '../models/customer.dart';
 import '../models/supplier.dart';
 import 'enterprise_service.dart';
@@ -93,7 +94,7 @@ class ContactImportExportService {
   static final ContactImportExportService instance = ContactImportExportService._();
   ContactImportExportService._();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
   final Uuid _uuid = const Uuid();
 
   String? get _currentUid => FirebaseAuth.instance.currentUser?.uid;
@@ -498,6 +499,9 @@ class ContactImportExportService {
     final sheetName = 'Modèle Import ${type.labelPlural}';
     final sheet = excel[sheetName];
     excel.setDefaultSheet(sheetName);
+    try {
+      excel.delete('Sheet1');
+    } catch (_) {}
 
     final headers = [
       '_id',
@@ -627,22 +631,22 @@ class ContactImportExportService {
   }
 
   Map<String, dynamic> _parseExcelFile(Uint8List bytes) {
-    final excel = Excel.decodeBytes(bytes);
+    final sanitizedBytes = ExcelSafeHelper.sanitizeXlsxBytes(bytes);
+    final excel = Excel.decodeBytes(sanitizedBytes);
     if (excel.tables.isEmpty) {
       throw 'Le fichier Excel ne contient aucune feuille de calcul.';
     }
 
     // Pick first non-empty sheet
     final tableKey = excel.tables.keys.firstWhere(
-      (k) => excel.tables[k]!.rows.isNotEmpty,
-      orElse: () => excel.tables.keys.first,
+      (k) => (excel.tables[k]?.rows.isNotEmpty ?? false),
+      orElse: () => excel.tables.keys.isNotEmpty ? excel.tables.keys.first : '',
     );
-    final sheet = excel.tables[tableKey]!;
-    final rowsList = sheet.rows;
-
-    if (rowsList.isEmpty) {
+    final sheet = excel.tables[tableKey];
+    if (sheet == null || sheet.rows.isEmpty) {
       throw 'La feuille Excel sélectionnée est vide.';
     }
+    final rowsList = sheet.rows;
 
     // Extract headers from row 0
     final headerRow = rowsList.first;
@@ -835,7 +839,9 @@ class ContactImportExportService {
 
     // Fetch existing contact IDs and codes for the current enterprise
     final Set<String> existingIds = {};
-    final Set<String> existingCodes = {};
+    final Map<String, String> existingCodeToId = {};
+    final Map<String, String> existingTaxIdToId = {};
+
     if (entId != null && entId.isNotEmpty) {
       try {
         final snap = await _firestore
@@ -844,8 +850,11 @@ class ContactImportExportService {
             .get();
         for (final doc in snap.docs) {
           existingIds.add(doc.id);
-          final c = doc.data()['code']?.toString().trim();
-          if (c != null && c.isNotEmpty) existingCodes.add(c.toLowerCase());
+          final data = doc.data();
+          final c = data['code']?.toString().trim();
+          if (c != null && c.isNotEmpty) existingCodeToId[c.toLowerCase()] = doc.id;
+          final taxId = data['taxId']?.toString().trim();
+          if (taxId != null && taxId.isNotEmpty) existingTaxIdToId[taxId.toLowerCase()] = doc.id;
         }
       } catch (e) {
         debugPrint('Validation prefetch error: $e');
@@ -853,6 +862,9 @@ class ContactImportExportService {
     }
 
     final List<ContactImportRow> validatedList = [];
+    final Map<String, int> seenCodes = {};
+    final Map<String, int> seenTaxIds = {};
+    final Map<String, int> seenIds = {};
 
     for (int i = 0; i < rawRows.length; i++) {
       final raw = rawRows[i];
@@ -871,29 +883,79 @@ class ContactImportExportService {
         }
       });
 
-      // Extract _id
+      // Extract _id, code, and taxId for smart deduplication & validation
       String rawId = mapped['_id']?.toString().trim() ?? '';
+      String rawCode = mapped['code']?.toString().trim() ?? '';
+      String rawTaxId = mapped['taxId']?.toString().trim() ?? '';
       bool isUpdate = false;
       String? existingId;
 
-      if (rawId.isNotEmpty && existingIds.contains(rawId)) {
-        isUpdate = true;
-        existingId = rawId;
-      } else if (rawId.isNotEmpty) {
-        warnings.add('L\'identifiant _id "$rawId" est introuvable. Un nouveau contact sera créé.');
+      // 1. Check in-file duplicates & database existence for _id
+      if (rawId.isNotEmpty) {
+        if (seenIds.containsKey(rawId)) {
+          errors.add('Identifiant _id "$rawId" en double dans le fichier (identique à la ligne ${seenIds[rawId]}).');
+        } else {
+          seenIds[rawId] = i + 1;
+        }
+
+        if (existingIds.contains(rawId)) {
+          isUpdate = true;
+          existingId = rawId;
+        } else {
+          errors.add('Référence _id "$rawId" introuvable dans la base de données de cette entreprise.');
+        }
+      }
+
+      // 2. Check in-file duplicates & match by unique Contact Code
+      if (rawCode.isNotEmpty) {
+        final codeLower = rawCode.toLowerCase();
+        if (seenCodes.containsKey(codeLower)) {
+          errors.add('Code "$rawCode" en double dans le fichier Excel (identique à la ligne ${seenCodes[codeLower]}).');
+        } else {
+          seenCodes[codeLower] = i + 1;
+        }
+
+        if (!isUpdate && existingCodeToId.containsKey(codeLower)) {
+          isUpdate = true;
+          existingId = existingCodeToId[codeLower];
+        }
+      }
+
+      // 3. Check in-file duplicates & match by unique Tax ID (Matricule fiscal)
+      if (rawTaxId.isNotEmpty) {
+        final taxIdLower = rawTaxId.toLowerCase();
+        if (seenTaxIds.containsKey(taxIdLower)) {
+          errors.add('Matricule fiscal "$rawTaxId" en double dans le fichier (identique à la ligne ${seenTaxIds[taxIdLower]}).');
+        } else {
+          seenTaxIds[taxIdLower] = i + 1;
+        }
+
+        if (!isUpdate && existingTaxIdToId.containsKey(taxIdLower)) {
+          isUpdate = true;
+          existingId = existingTaxIdToId[taxIdLower];
+        }
       }
 
       // Check businessType
-      String businessType = mapped['businessType']?.toString().toLowerCase().trim() ?? '';
-      if (businessType.contains('business') ||
-          businessType.contains('entreprise') ||
-          businessType.contains('societe') ||
-          businessType.contains('morale') ||
-          businessType == 'true' ||
-          businessType == '1') {
-        businessType = 'business';
-      } else {
-        businessType = 'individual';
+      final rawBusinessType = mapped['businessType']?.toString().toLowerCase().trim() ?? '';
+      String businessType = 'individual';
+      if (rawBusinessType.isNotEmpty) {
+        if (rawBusinessType.contains('business') ||
+            rawBusinessType.contains('entreprise') ||
+            rawBusinessType.contains('societe') ||
+            rawBusinessType.contains('morale') ||
+            rawBusinessType == 'true' ||
+            rawBusinessType == '1') {
+          businessType = 'business';
+        } else if (rawBusinessType.contains('individual') ||
+            rawBusinessType.contains('particulier') ||
+            rawBusinessType.contains('physique') ||
+            rawBusinessType == 'false' ||
+            rawBusinessType == '0') {
+          businessType = 'individual';
+        } else {
+          errors.add('Type de contact "$rawBusinessType" invalide. Valeurs acceptées : business, individual.');
+        }
       }
       mapped['businessType'] = businessType;
 
@@ -915,13 +977,19 @@ class ContactImportExportService {
       // Parse balance
       final balanceStr = mapped['openingBalance']?.toString().trim() ?? '';
       if (balanceStr.isNotEmpty) {
-        final cleanBal = balanceStr.replaceAll(RegExp(r'[^0-9.-]'), '');
-        final parsedBal = double.tryParse(cleanBal);
-        if (parsedBal == null) {
-          warnings.add('Solde de départ "$balanceStr" invalide (0 par défaut appliqué).');
+        if (RegExp(r'[a-zA-Z]').hasMatch(balanceStr)) {
+          errors.add('Solde de départ "$balanceStr" invalide (format numérique requis).');
           mapped['openingBalance'] = 0.0;
         } else {
-          mapped['openingBalance'] = parsedBal;
+          final normalized = balanceStr.replaceAll(' ', '').replaceAll(',', '.');
+          final cleanBal = normalized.replaceAll(RegExp(r'[^0-9.-]'), '');
+          final parsedBal = double.tryParse(cleanBal);
+          if (parsedBal == null) {
+            errors.add('Solde de départ "$balanceStr" invalide (format numérique requis).');
+            mapped['openingBalance'] = 0.0;
+          } else {
+            mapped['openingBalance'] = parsedBal;
+          }
         }
       } else {
         mapped['openingBalance'] = 0.0;
@@ -930,8 +998,20 @@ class ContactImportExportService {
       // Parse credit limit
       final creditStr = mapped['creditLimit']?.toString().trim() ?? '';
       if (creditStr.isNotEmpty) {
-        final cleanCred = creditStr.replaceAll(RegExp(r'[^0-9.-]'), '');
-        mapped['creditLimit'] = double.tryParse(cleanCred) ?? 0.0;
+        if (RegExp(r'[a-zA-Z]').hasMatch(creditStr)) {
+          errors.add('Limite de crédit "$creditStr" invalide (format numérique requis).');
+          mapped['creditLimit'] = 0.0;
+        } else {
+          final normalized = creditStr.replaceAll(' ', '').replaceAll(',', '.');
+          final cleanCred = normalized.replaceAll(RegExp(r'[^0-9.-]'), '');
+          final parsedCred = double.tryParse(cleanCred);
+          if (parsedCred == null || parsedCred < 0) {
+            errors.add('Limite de crédit "$creditStr" invalide (nombre positif requis).');
+            mapped['creditLimit'] = 0.0;
+          } else {
+            mapped['creditLimit'] = parsedCred;
+          }
+        }
       } else {
         mapped['creditLimit'] = 0.0;
       }
@@ -1080,13 +1160,18 @@ class ContactImportExportService {
 
     onProgress?.call(1.0, 'Importation terminée avec succès !');
 
+    final totalSkipped = rows.length - validRows.length;
+    final successMessage = totalSkipped > 0
+        ? 'Importation réussie : $createdCount créé(s), $updatedCount mis à jour. ($totalSkipped ligne(s) avec erreurs ou doublons ont été ignorées).'
+        : 'Importation terminée : $createdCount créés, $updatedCount mis à jour sur ${rows.length} lignes.';
+
     return ContactImportResult(
       success: createdCount > 0 || updatedCount > 0,
-      message: 'Importation terminée : $createdCount créés, $updatedCount mis à jour sur ${rows.length} lignes.',
+      message: successMessage,
       totalRows: rows.length,
       createdCount: createdCount,
       updatedCount: updatedCount,
-      skippedCount: rows.length - validRows.length,
+      skippedCount: totalSkipped,
       errorCount: errorCount,
       errorMessages: errorMessages,
     );

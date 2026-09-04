@@ -65,6 +65,8 @@ import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
 import 'screens/diagnostic_screen.dart';
 import 'screens/account_deactivated_screen.dart';
+import 'screens/web_landing_screen.dart';
+import 'screens/signup_screen.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
@@ -609,10 +611,18 @@ class _AppGate extends StatelessWidget {
             ),
           );
         }
-        if (authState is AuthAccountDeactivated) {
-          return AccountDeactivatedScreen(reason: authState.reason);
+        if (authState is AuthAccountDeactivated || AuthService.instance.isDeactivated) {
+          final reason = authState is AuthAccountDeactivated
+              ? authState.reason
+              : (AuthService.instance.deactivationReason ?? "Votre compte a été désactivé.");
+          return AccountDeactivatedScreen(reason: reason);
         }
         if (authState is AuthAuthenticated) {
+          if (AuthService.instance.isDeactivated) {
+            return AccountDeactivatedScreen(
+              reason: AuthService.instance.deactivationReason ?? "Votre compte a été désactivé.",
+            );
+          }
           return const _EnterpriseGate();
         }
         return const _ResponsiveLoginGate();
@@ -621,18 +631,88 @@ class _AppGate extends StatelessWidget {
   }
 }
 
-class _ResponsiveLoginGate extends StatelessWidget {
+class _ResponsiveLoginGate extends StatefulWidget {
   const _ResponsiveLoginGate();
+
+  @override
+  State<_ResponsiveLoginGate> createState() => _ResponsiveLoginGateState();
+}
+
+class _ResponsiveLoginGateState extends State<_ResponsiveLoginGate> {
+  bool _showLanding = kIsWeb;
+
+  @override
+  void initState() {
+    super.initState();
+    if (kIsWeb) {
+      final path = Uri.base.path.toLowerCase();
+      final fragment = Uri.base.fragment.toLowerCase();
+      if (path.contains('login') || fragment.contains('login')) {
+        _showLanding = false;
+      } else if (path.contains('signup') || fragment.contains('signup') || path.contains('register')) {
+        _showLanding = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => SignUpScreen(
+                  onBackToLanding: _goToLanding,
+                ),
+              ),
+            );
+          }
+        });
+      }
+    }
+  }
+
+  void _goToLanding() {
+    if (mounted) {
+      Navigator.of(context, rootNavigator: false).popUntil((route) => route.isFirst);
+      setState(() {
+        _showLanding = true;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     if (PlatformUtils.isAndroid) return const MobileLoginScreen();
+
+    if (kIsWeb && _showLanding) {
+      return WebLandingScreen(
+        onLoginRequested: () {
+          setState(() {
+            _showLanding = false;
+          });
+        },
+        onSignUpRequested: () {
+          setState(() {
+            _showLanding = false;
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SignUpScreen(
+                    onBackToLanding: _goToLanding,
+                  ),
+                ),
+              );
+            }
+          });
+        },
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 850 && !PlatformUtils.isDesktop) {
+        if (constraints.maxWidth < 850 && !PlatformUtils.isDesktop && !kIsWeb) {
           return const MobileLoginScreen();
         }
-        return const LoginScreen();
+        return LoginScreen(
+          onBackToLanding: kIsWeb ? _goToLanding : null,
+        );
       },
     );
   }
@@ -699,6 +779,11 @@ class _EnterpriseGateState extends State<_EnterpriseGate> {
         }
       },
       builder: (context, state) {
+        if (AuthService.instance.isDeactivated) {
+          return AccountDeactivatedScreen(
+            reason: AuthService.instance.deactivationReason ?? "Votre compte a été désactivé.",
+          );
+        }
         Widget content;
         if (state is EnterpriseLoading || state is EnterpriseInitial) {
           content = const _EnterpriseSplashLoadingScreen(

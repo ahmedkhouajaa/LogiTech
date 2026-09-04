@@ -63,6 +63,13 @@ class DeleteCustomer extends CustomersEvent {
   List<Object?> get props => [id];
 }
 
+class BulkDeleteCustomers extends CustomersEvent {
+  final List<String> ids;
+  const BulkDeleteCustomers(this.ids);
+  @override
+  List<Object?> get props => [ids];
+}
+
 // States
 abstract class CustomersState extends Equatable {
   const CustomersState();
@@ -126,6 +133,7 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
     on<AddCustomer>(_onAddCustomer);
     on<UpdateCustomer>(_onUpdateCustomer);
     on<DeleteCustomer>(_onDeleteCustomer);
+    on<BulkDeleteCustomers>(_onBulkDeleteCustomers);
   }
 
   Future<void> _onLoadCustomers(LoadCustomers event, Emitter<CustomersState> emit) async {
@@ -142,14 +150,19 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
       } else if (uid != null && uid.isNotEmpty) {
         query = query.where('userId', isEqualTo: uid);
       }
-      query = query.where('is_deleted', isEqualTo: 0);
       return query;
     }
 
     List<Customer> parseSnapshot(QuerySnapshot snapshot) {
-      return snapshot.docs.map((doc) {
+      final results = <Customer>[];
+      for (final doc in snapshot.docs) {
         final data = Map<String, dynamic>.from(doc.data() as Map<String, dynamic>);
         data['id'] = doc.id;
+        final isDel = data['is_deleted'] == 1 || data['is_deleted'] == true || data['is_deleted'] == '1' || data['isDeleted'] == 1 || data['isDeleted'] == true;
+        if (isDel) {
+          doc.reference.delete().catchError((_) {});
+          continue;
+        }
         data['created_at'] = data['created_at'] ?? DateTime.now().toIso8601String();
         data['updated_at'] = data['updated_at'] ?? DateTime.now().toIso8601String();
         if (!data.containsKey('code') && data.containsKey('clientCode')) {
@@ -158,8 +171,13 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
         if (!data.containsKey('customer_type') && data.containsKey('type')) {
           data['customer_type'] = data['type'];
         }
-        return Customer.fromMap(data);
-      }).toList();
+        try {
+          results.add(Customer.fromMap(data));
+        } catch (e) {
+          print("Error parsing customer ${doc.id}: $e");
+        }
+      }
+      return results;
     }
 
     List<Customer> deduplicateDefaults(List<Customer> list) {
@@ -338,8 +356,10 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
 
     final currentState = state;
     List<Customer> currentList = [];
+    int newCount = 1;
     if (currentState is CustomersLoaded) {
       currentList = List<Customer>.from(currentState.customers);
+      newCount = (currentState.totalCount > 0) ? currentState.totalCount + 1 : currentList.length + 1;
     }
     currentList.removeWhere((c) => c.id == customer.id);
     currentList.add(customer);
@@ -347,7 +367,14 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
     // Maintain list sorted by code ascending
     currentList.sort((a, b) => a.code.compareTo(b.code));
     
-    emit(CustomersLoaded(currentList, totalCount: currentList.length, hasMore: false));
+    if (currentState is CustomersLoaded) {
+      emit(currentState.copyWith(
+        customers: currentList,
+        totalCount: newCount,
+      ));
+    } else {
+      emit(CustomersLoaded(currentList, totalCount: newCount, hasMore: false));
+    }
 
     try {
       await FirestoreRepository.instance.saveCustomer(customer);
@@ -374,7 +401,7 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
       // Maintain list sorted by code ascending
       currentList.sort((a, b) => a.code.compareTo(b.code));
       
-      emit(CustomersLoaded(currentList, totalCount: currentList.length, hasMore: false));
+      emit(currentState.copyWith(customers: currentList));
     }
 
     try {
@@ -385,9 +412,12 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
   }
 
   Future<void> _onDeleteCustomer(DeleteCustomer event, Emitter<CustomersState> emit) async {
+    final trimmedId = event.id.trim();
+    if (trimmedId.isEmpty) return;
+
     final currentState = state;
     if (currentState is CustomersLoaded) {
-      final target = currentState.customers.where((c) => c.id == event.id).firstOrNull;
+      final target = currentState.customers.where((c) => c.id == trimmedId).firstOrNull;
       if (target != null && (target.isDefault || target.name.trim().toLowerCase() == 'client passager')) {
         emit(const CustomersError('Cet élément est un élément par défaut et ne peut pas être supprimé.'));
         return;
@@ -397,15 +427,78 @@ class CustomersBloc extends Bloc<CustomersEvent, CustomersState> {
       emit(const CustomersError('Permission refusée : Vous n\'avez pas le droit de supprimer un client.'));
       return;
     }
+
+    // 1. Optimistically remove from state immediately
     if (currentState is CustomersLoaded) {
-      final currentList = List<Customer>.from(currentState.customers)..removeWhere((c) => c.id == event.id);
-      emit(CustomersLoaded(currentList, totalCount: currentList.length, hasMore: false));
+      final updatedList = currentState.customers.where((c) => c.id != trimmedId).toList();
+      final newCount = (currentState.totalCount > 0 ? currentState.totalCount - 1 : updatedList.length);
+      emit(currentState.copyWith(
+        customers: updatedList,
+        totalCount: newCount,
+      ));
     }
 
     try {
-      await FirestoreRepository.instance.softDeleteDocument('clients', event.id);
+      await FirestoreRepository.instance.deleteDocument('clients', trimmedId);
+      await DatabaseHelper.instance.deleteCustomer(trimmedId);
     } catch (e) {
       print("Failed to delete customer in Firestore: $e");
+    }
+  }
+
+  Future<void> _onBulkDeleteCustomers(BulkDeleteCustomers event, Emitter<CustomersState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.customers)) {
+      emit(const CustomersError('Permission refusée : Vous n\'avez pas le droit de supprimer des clients.'));
+      return;
+    }
+
+    final validIds = event.ids.map((id) => id.trim()).where((id) => id.isNotEmpty).toList();
+    if (validIds.isEmpty) return;
+
+    final currentState = state;
+    final protectedIds = <String>{};
+    if (currentState is CustomersLoaded) {
+      for (final c in currentState.customers) {
+        if (validIds.contains(c.id) && (c.isDefault || c.name.trim().toLowerCase() == 'client passager')) {
+          protectedIds.add(c.id);
+        }
+      }
+    }
+
+    final idsToDelete = validIds.where((id) => !protectedIds.contains(id)).toList();
+    if (idsToDelete.isEmpty) return;
+    final idsSet = idsToDelete.toSet();
+
+    // 1. Optimistically remove from state immediately
+    if (currentState is CustomersLoaded) {
+      final updatedList = currentState.customers.where((c) => !idsSet.contains(c.id)).toList();
+      final newCount = (currentState.totalCount >= idsToDelete.length
+          ? currentState.totalCount - idsToDelete.length
+          : updatedList.length);
+      emit(currentState.copyWith(
+        customers: updatedList,
+        totalCount: newCount,
+      ));
+    }
+
+    // 2. Batch delete in chunks of 400
+    try {
+      const chunkSize = 400;
+      for (var i = 0; i < idsToDelete.length; i += chunkSize) {
+        final end = (i + chunkSize < idsToDelete.length) ? i + chunkSize : idsToDelete.length;
+        final chunk = idsToDelete.sublist(i, end);
+        final batch = FirebaseFirestore.instance.batch();
+        for (final id in chunk) {
+          batch.delete(FirebaseFirestore.instance.collection('clients').doc(id));
+        }
+        await batch.commit();
+      }
+
+      for (final id in idsToDelete) {
+        await DatabaseHelper.instance.deleteCustomer(id);
+      }
+    } catch (e) {
+      print("Error in bulk deleting customers: $e");
     }
   }
 }

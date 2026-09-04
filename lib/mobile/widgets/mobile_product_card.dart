@@ -17,8 +17,6 @@ class MobileProductCard extends StatelessWidget {
     final isService = product.productType.toLowerCase() == 'service';
     final typeColor = isService ? Colors.blue : Colors.green;
     final typeLabel = isService ? 'Service' : 'Produit';
-    final hasStock = product.stockQty > 0;
-    final stockColor = hasStock ? Colors.green : Colors.red;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -139,32 +137,32 @@ class MobileProductCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
 
-                      // Row 3: Stock & Price
+                      // Row 3: Prices (Achat & Vente)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Stock
+                          // Prix Achat
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Stock',
+                                'Prix Achat (HT)',
                                 style: TextStyle(
                                   fontSize: 10,
                                   color: AppColors.textTertiary,
                                 ),
                               ),
                               Text(
-                                product.stockQty.toInt().toString(),
+                                '${product.purchasePrice.toStringAsFixed(2).replaceAll('.', ',')} TND',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.bold,
-                                  color: stockColor,
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
                             ],
                           ),
-                          // Price
+                          // Prix Vente
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
@@ -176,9 +174,9 @@ class MobileProductCard extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                '${product.sellingPrice.toStringAsFixed(2).replaceAll('.', ',')} TND',
+                                '${(product.sellingPrice * (1 + (product.tvaRate / 100))).toStringAsFixed(2).replaceAll('.', ',')} TND',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.success,
                                 ),

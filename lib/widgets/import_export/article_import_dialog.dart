@@ -45,6 +45,7 @@ class _ArticleImportDialogState extends State<ArticleImportDialog>
   double _importProgress = 0.0;
   String _importStatus = '';
   bool _isDownloadingTemplate = false;
+  String _filterMode = 'all'; // 'all', 'valid', 'error'
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +114,7 @@ class _ArticleImportDialogState extends State<ArticleImportDialog>
             ),
 
             // Modal Footer Actions
-            _buildDialogFooter(validCount),
+            _buildDialogFooter(validCount, errorCount),
           ],
         ),
       ),
@@ -285,16 +286,99 @@ class _ArticleImportDialogState extends State<ArticleImportDialog>
   }
 
   Widget _buildValidationSummaryChips(int valid, int create, int update, int errors) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildBadgeChip('Total lignes: ${_validatedRows.length}', AppColors.surfaceAlt, AppColors.textPrimary),
-        const SizedBox(width: 8),
-        _buildBadgeChip('$create à créer', AppColors.successLight, AppColors.success),
-        const SizedBox(width: 8),
-        _buildBadgeChip('$update à mettre à jour', AppColors.infoLight, AppColors.info),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildFilterBadgeChip(
+                label: 'Toutes (${_validatedRows.length})',
+                bg: _filterMode == 'all' ? AppColors.textPrimary : AppColors.surfaceAlt,
+                text: _filterMode == 'all' ? Colors.white : AppColors.textPrimary,
+                isSelected: _filterMode == 'all',
+                onTap: () => setState(() => _filterMode = 'all'),
+              ),
+              const SizedBox(width: 8),
+              _buildFilterBadgeChip(
+                label: 'Valides ($valid)',
+                bg: _filterMode == 'valid' ? AppColors.success : AppColors.successLight,
+                text: _filterMode == 'valid' ? Colors.white : AppColors.success,
+                isSelected: _filterMode == 'valid',
+                onTap: () => setState(() => _filterMode = 'valid'),
+              ),
+              const SizedBox(width: 8),
+              _buildBadgeChip('$create à créer', AppColors.surfaceAlt, AppColors.textSecondary),
+              const SizedBox(width: 8),
+              _buildBadgeChip('$update à mettre à jour', AppColors.infoLight, AppColors.info),
+              if (errors > 0) ...[
+                const SizedBox(width: 8),
+                _buildFilterBadgeChip(
+                  label: '$errors erreur(s)',
+                  bg: _filterMode == 'error' ? AppColors.error : AppColors.errorLight,
+                  text: _filterMode == 'error' ? Colors.white : AppColors.error,
+                  isSelected: _filterMode == 'error',
+                  icon: Icons.error_outline_rounded,
+                  onTap: () => setState(() => _filterMode = 'error'),
+                ),
+              ],
+            ],
+          ),
+        ),
         if (errors > 0) ...[
-          const SizedBox(width: 8),
-          _buildBadgeChip('$errors erreurs', AppColors.errorLight, AppColors.error),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: valid > 0
+                  ? AppColors.warning.withValues(alpha: 0.08)
+                  : AppColors.error.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: valid > 0
+                    ? AppColors.warning.withValues(alpha: 0.35)
+                    : AppColors.error.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  valid > 0 ? Icons.info_outline_rounded : Icons.block_rounded,
+                  color: valid > 0 ? AppColors.warning : AppColors.error,
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    valid > 0
+                        ? '$valid article(s) valide(s) seront importés. Les $errors ligne(s) contenant des erreurs ou doublons seront ignorées.'
+                        : 'Importation impossible : toutes les $errors ligne(s) contiennent des erreurs à corriger.',
+                    style: TextStyle(
+                      color: valid > 0 ? AppColors.warning : AppColors.error,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (_filterMode != 'error')
+                  TextButton.icon(
+                    onPressed: () => setState(() => _filterMode = 'error'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: valid > 0 ? AppColors.warning : AppColors.error,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.filter_list_rounded, size: 14),
+                    label: const Text(
+                      'Voir les erreurs',
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ],
     );
@@ -309,14 +393,62 @@ class _ArticleImportDialogState extends State<ArticleImportDialog>
       ),
       child: Text(
         label,
-        style: TextStyle(color: text, fontSize: 11, fontWeight: FontWeight.bold),
+        style: TextStyle(color: text, fontSize: 11, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  Widget _buildFilterBadgeChip({
+    required String label,
+    required Color bg,
+    required Color text,
+    required bool isSelected,
+    required VoidCallback onTap,
+    IconData? icon,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(
+            color: isSelected ? text.withValues(alpha: 0.6) : Colors.transparent,
+            width: 1.2,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 13, color: text),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: text,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildDataTablePreview() {
+    final displayedRows = _validatedRows.where((r) {
+      if (_filterMode == 'valid') return r.isValid;
+      if (_filterMode == 'error') return !r.isValid;
+      return true;
+    }).toList();
+
     return Container(
-      height: 260,
+      height: 280,
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -324,88 +456,264 @@ class _ArticleImportDialogState extends State<ArticleImportDialog>
       ),
       child: _isValidating
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  headingRowColor: WidgetStateProperty.all(AppColors.surfaceAlt),
-                  headingTextStyle: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  dataTextStyle: TextStyle(color: AppColors.textPrimary, fontSize: 11),
-                  columns: const [
-                    DataColumn(label: Text('STATUT')),
-                    DataColumn(label: Text('ID EXISTANT (_id)')),
-                    DataColumn(label: Text('CODE')),
-                    DataColumn(label: Text('DÉSIGNATION / NOM')),
-                    DataColumn(label: Text('TYPE')),
-                    DataColumn(label: Text('CATÉGORIE')),
-                    DataColumn(label: Text('PRIX VENTE HT')),
-                    DataColumn(label: Text('PRIX ACHAT HT')),
-                    DataColumn(label: Text('TVA %')),
-                    DataColumn(label: Text('STOCK')),
-                    DataColumn(label: Text('UNITÉ')),
-                    DataColumn(label: Text('CODE-BARRES')),
-                  ],
-                  rows: _validatedRows.map((row) {
-                    final isUpdate = row.isUpdate;
-                    final isValid = row.isValid;
-
-                    return DataRow(
-                      cells: [
-                        DataCell(
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: !isValid
-                                  ? AppColors.errorLight
-                                  : isUpdate
-                                      ? AppColors.infoLight
-                                      : AppColors.successLight,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              !isValid
-                                  ? 'Invalide'
-                                  : isUpdate
-                                      ? 'Mise à jour'
-                                      : 'Nouveau',
-                              style: TextStyle(
-                                color: !isValid
-                                    ? AppColors.error
-                                    : isUpdate
-                                        ? AppColors.info
-                                        : AppColors.success,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+          : displayedRows.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _filterMode == 'error'
+                              ? Icons.check_circle_outline_rounded
+                              : Icons.inventory_2_outlined,
+                          size: 36,
+                          color: _filterMode == 'error' ? AppColors.success : AppColors.textTertiary,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _filterMode == 'error'
+                              ? 'Félicitations ! Aucune ligne ne comporte d\'erreur.'
+                              : 'Aucun article à afficher pour ce filtre.',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        DataCell(Text(row.existingId ?? '-')),
-                        DataCell(Text(row.code)),
-                        DataCell(Text(row.displayName)),
-                        DataCell(Text(row.productType)),
-                        DataCell(Text(row.category)),
-                        DataCell(Text('${row.sellingPrice.toStringAsFixed(3)} DT')),
-                        DataCell(Text('${row.purchasePrice.toStringAsFixed(3)} DT')),
-                        DataCell(Text('${row.tvaRate.toStringAsFixed(0)}%')),
-                        DataCell(Text(row.stockQty.toStringAsFixed(0))),
-                        DataCell(Text(row.unit)),
-                        DataCell(Text(row.barcode)),
                       ],
-                    );
-                  }).toList(),
+                    ),
+                  ),
+                )
+              : SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      dataRowMinHeight: 38,
+                      dataRowMaxHeight: 44,
+                      headingRowHeight: 40,
+                      columnSpacing: 20,
+                      horizontalMargin: 16,
+                      headingRowColor: WidgetStateProperty.all(AppColors.surfaceAlt),
+                      headingTextStyle: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      dataTextStyle: TextStyle(color: AppColors.textPrimary, fontSize: 11),
+                      columns: const [
+                        DataColumn(label: Text('STATUT')),
+                        DataColumn(label: Text('LIGNE')),
+                        DataColumn(label: Text('DÉSIGNATION / NOM')),
+                        DataColumn(label: Text('CODE')),
+                        DataColumn(label: Text('TYPE')),
+                        DataColumn(label: Text('CATÉGORIE')),
+                        DataColumn(label: Text('PRIX VENTE HT')),
+                        DataColumn(label: Text('PRIX ACHAT HT')),
+                        DataColumn(label: Text('TVA %')),
+                        DataColumn(label: Text('STOCK')),
+                        DataColumn(label: Text('UNITÉ')),
+                        DataColumn(label: Text('CODE-BARRES')),
+                        DataColumn(label: Text('ID EXISTANT (_id)')),
+                      ],
+                      rows: displayedRows.map((row) {
+                        final isUpdate = row.isUpdate;
+                        final isValid = row.isValid;
+
+                        return DataRow(
+                          color: WidgetStateProperty.resolveWith<Color?>((states) {
+                            if (!isValid) return AppColors.error.withValues(alpha: 0.05);
+                            if (isUpdate) return AppColors.info.withValues(alpha: 0.03);
+                            return null;
+                          }),
+                          cells: [
+                            DataCell(
+                              !isValid
+                                  ? Tooltip(
+                                      message: 'Cliquez pour voir les erreurs :\n${row.errors.join('\n')}',
+                                      waitDuration: const Duration(milliseconds: 300),
+                                      child: InkWell(
+                                        onTap: () => _showRowErrorsDialog(row),
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.errorLight,
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(color: AppColors.error.withValues(alpha: 0.35)),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.error_outline_rounded, size: 12, color: AppColors.error),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '${row.errors.length} erreur${row.errors.length > 1 ? 's' : ''}',
+                                                style: TextStyle(
+                                                  color: AppColors.error,
+                                                  fontSize: 10.5,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: isUpdate ? AppColors.infoLight : AppColors.successLight,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            isUpdate ? Icons.sync_rounded : Icons.add_circle_outline_rounded,
+                                            size: 12,
+                                            color: isUpdate ? AppColors.info : AppColors.success,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            isUpdate ? 'Mise à jour' : 'Nouveau',
+                                            style: TextStyle(
+                                              color: isUpdate ? AppColors.info : AppColors.success,
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                            ),
+                            DataCell(Text('Ligne ${row.rowIndex}', style: const TextStyle(fontWeight: FontWeight.w600))),
+                            DataCell(
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 180),
+                                child: Text(
+                                  row.displayName.isNotEmpty ? row.displayName : '(sans nom)',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ),
+                            DataCell(Text(row.code.isNotEmpty ? row.code : '-')),
+                            DataCell(Text(row.productType)),
+                            DataCell(Text(row.category.isNotEmpty ? row.category : '-')),
+                            DataCell(Text('${row.sellingPrice.toStringAsFixed(3)} DT')),
+                            DataCell(Text('${row.purchasePrice.toStringAsFixed(3)} DT')),
+                            DataCell(Text('${row.tvaRate.toStringAsFixed(0)}%')),
+                            DataCell(Text(row.stockQty.toStringAsFixed(0))),
+                            DataCell(Text(row.unit)),
+                            DataCell(Text(row.barcode.isNotEmpty ? row.barcode : '-')),
+                            DataCell(Text(row.existingId ?? '-')),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ),
-              ),
-            ),
     );
   }
 
-  Widget _buildDialogFooter(int validCount) {
+  void _showRowErrorsDialog(ArticleImportRow row) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        title: Row(
+          children: [
+            Icon(Icons.error_outline_rounded, color: AppColors.error, size: 22),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Détail des erreurs - Ligne ${row.rowIndex}',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 480,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Article : ${row.displayName.isNotEmpty ? row.displayName : "(sans désignation)"}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                if (row.code.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text('Code article : ${row.code}', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                ],
+                const SizedBox(height: 14),
+                Text(
+                  'Erreurs bloquantes :',
+                  style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+                const SizedBox(height: 6),
+                for (final err in row.errors)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('• ', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                        Expanded(
+                          child: Text(
+                            err,
+                            style: TextStyle(color: AppColors.textPrimary, fontSize: 12, height: 1.3),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (row.warnings.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Avertissements :',
+                    style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  const SizedBox(height: 6),
+                  for (final warn in row.warnings)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('• ', style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold)),
+                          Expanded(
+                            child: Text(
+                              warn,
+                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.3),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDialogFooter(int validCount, int errorCount) {
+    final canImport = !_isImporting && validCount > 0;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
@@ -414,32 +722,76 @@ class _ArticleImportDialogState extends State<ArticleImportDialog>
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(AppRadius.lg)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          OutlinedButton(
-            onPressed: _isImporting ? null : () => Navigator.of(context).pop(),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.textPrimary,
-              side: BorderSide(color: AppColors.textPrimary, width: 1.5),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: const Text('Annuler'),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: _isImporting || validCount == 0 ? null : _handleExecuteImport,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF93C5FD), // Soft Blue
-              foregroundColor: const Color(0xFF1E3A8A),
-              disabledBackgroundColor: AppColors.surfaceAlt,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-            ),
-            child: Text(
-              'Importer $validCount articles',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
+          if (validCount > 0 && errorCount > 0)
+            Row(
+              children: [
+                Icon(Icons.check_circle_outline_rounded, size: 16, color: AppColors.success),
+                const SizedBox(width: 6),
+                Text(
+                  '$validCount article(s) valide(s) prêt(s) à être importé(s) • $errorCount ignoré(s)',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            )
+          else if (validCount > 0)
+            Text(
+              '$validCount article(s) prêts à être importés.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            )
+          else if (errorCount > 0)
+            Row(
+              children: [
+                Icon(Icons.block_rounded, size: 16, color: AppColors.error),
+                const SizedBox(width: 6),
+                Text(
+                  'Aucun article valide ($errorCount erreurs).',
+                  style: TextStyle(
+                    color: AppColors.error,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            )
+          else
+            const SizedBox.shrink(),
+          Row(
+            children: [
+              OutlinedButton(
+                onPressed: _isImporting ? null : () => Navigator.of(context).pop(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textPrimary,
+                  side: BorderSide(color: AppColors.textPrimary, width: 1.5),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+                child: const Text('Annuler'),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: canImport ? _handleExecuteImport : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: canImport ? const Color(0xFF93C5FD) : AppColors.surfaceAlt,
+                  foregroundColor: canImport ? const Color(0xFF1E3A8A) : AppColors.textTertiary,
+                  disabledBackgroundColor: AppColors.surfaceAlt,
+                  disabledForegroundColor: AppColors.textTertiary,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                ),
+                child: Text(
+                  validCount == 0
+                      ? 'Aucun article valide'
+                      : (errorCount > 0 ? 'Importer les $validCount articles valides' : 'Importer $validCount articles'),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -527,6 +879,17 @@ class _ArticleImportDialogState extends State<ArticleImportDialog>
   }
 
   Future<void> _handleExecuteImport() async {
+    final validRows = _validatedRows.where((r) => r.isValid).toList();
+    if (validRows.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Aucun article valide à importer.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isImporting = true;
       _importProgress = 0.0;
@@ -549,6 +912,35 @@ class _ArticleImportDialogState extends State<ArticleImportDialog>
 
       if (mounted) {
         setState(() => _isImporting = false);
+
+        if (!result.success) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: AppColors.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+              title: Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, color: AppColors.error, size: 24),
+                  const SizedBox(width: 8),
+                  const Text('Échec de l\'importation', style: TextStyle(fontSize: 16)),
+                ],
+              ),
+              content: Text(
+                result.message,
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Fermer'),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+
         Navigator.of(context).pop();
         widget.onImportSuccess();
 
@@ -587,3 +979,4 @@ class _ArticleImportDialogState extends State<ArticleImportDialog>
     }
   }
 }
+

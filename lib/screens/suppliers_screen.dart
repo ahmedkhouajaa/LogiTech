@@ -7,17 +7,14 @@ import 'package:uuid/uuid.dart';
 import '../blocs/suppliers/suppliers_bloc.dart';
 import '../models/supplier.dart';
 import '../utils/constants.dart';
-import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
-import '../widgets/data_table_widget.dart';
-import '../widgets/dashboard_card.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
-import '../widgets/shimmer_table_row.dart';
 import '../services/contact_import_export_service.dart';
 import '../widgets/import_export/contact_import_dialog.dart';
+import 'supplier_detail_screen.dart';
 
 class SuppliersScreen extends StatefulWidget {
   const SuppliersScreen({super.key});
@@ -45,13 +42,59 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Fournisseurs', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                  const SizedBox(height: 2),
-                  Text('Gérer vos fournisseurs', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                ],
+              BlocBuilder<SuppliersBloc, SuppliersState>(
+                buildWhen: (prev, curr) => curr is SuppliersLoaded || curr is SuppliersLoading || curr is SuppliersInitial,
+                builder: (context, state) {
+                  final totalCount = state is SuppliersLoaded
+                      ? (state.totalCount > state.suppliers.length ? state.totalCount : state.suppliers.length)
+                      : null;
+                  final matchingCount = (state is SuppliersLoaded && _search.isNotEmpty)
+                      ? state.suppliers.where((s) =>
+                          s.name.toLowerCase().contains(_search) ||
+                          s.code.toLowerCase().contains(_search) ||
+                          (s.phone?.toLowerCase().contains(_search) ?? false) ||
+                          (s.companyName?.toLowerCase().contains(_search) ?? false)).length
+                      : null;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text('Fournisseurs', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                          if (totalCount != null) ...[
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                              ),
+                              child: Text(
+                                matchingCount != null ? '$matchingCount / $totalCount' : '$totalCount',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        totalCount != null
+                            ? (matchingCount != null
+                                ? '$matchingCount fournisseur${matchingCount > 1 ? 's' : ''} trouvé${matchingCount > 1 ? 's' : ''} sur $totalCount au total'
+                                : '$totalCount fournisseur${totalCount > 1 ? 's' : ''} au total')
+                            : 'Gérer vos fournisseurs',
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  );
+                },
               ),
               const Spacer(),
               if (_selectedSupplierIds.isNotEmpty) ...[
@@ -275,19 +318,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(AppRadius.md),
-                          onTap: () {
-                            if (isDefault) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
-                                  backgroundColor: AppColors.warning,
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            } else {
-                              _showDialog(context, s);
-                            }
-                          },
+                          onTap: () => _navigateToDetail(context, s),
                           hoverColor: AppColors.primary.withValues(alpha: 0.02),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -416,8 +447,9 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   elevation: 4,
                                   onSelected: (val) {
-                                    if (val == 'view' || val == 'edit') _showDialog(context, s);
-                                    if (val == 'delete') context.read<SuppliersBloc>().add(DeleteSupplier(s.id));
+                                    if (val == 'view') _navigateToDetail(context, s);
+                                    if (val == 'edit') _showDialog(context, s);
+                                    if (val == 'delete') _confirmDeleteSupplier(s);
                                   },
                                   itemBuilder: (context) {
                                     final canRead = PermissionService.instance.canRead(UserPermissionResources.suppliers);
@@ -509,6 +541,18 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _navigateToDetail(BuildContext context, Supplier s) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<SuppliersBloc>(),
+          child: SupplierDetailScreen(supplier: s),
+        ),
+      ),
     );
   }
 
@@ -632,7 +676,63 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
     }
   }
 
+  void _confirmDeleteSupplier(Supplier s) {
+    if (s.isDefault || s.name.trim().toLowerCase() == 'fournisseur passager') {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Cet élément est un élément par défaut et ne peut pas être supprimé.'),
+        backgroundColor: AppColors.warning,
+      ));
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.error),
+            const SizedBox(width: 8),
+            const Text('Supprimer le fournisseur'),
+          ],
+        ),
+        content: Text('Voulez-vous vraiment supprimer le fournisseur "${s.name}" ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              context.read<SuppliersBloc>().add(DeleteSupplier(s.id));
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Fournisseur "${s.name}" supprimé'),
+                backgroundColor: AppColors.success,
+              ));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _bulkDeleteSelected(List<Supplier> selectedSuppliers) {
+    final nonDefault = selectedSuppliers
+        .where((s) => !s.isDefault && s.name.trim().toLowerCase() != 'fournisseur passager' && s.id.trim().isNotEmpty)
+        .toList();
+    if (nonDefault.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Les éléments sélectionnés sont protégés et ne peuvent pas être supprimés.'),
+        backgroundColor: AppColors.warning,
+      ));
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -643,7 +743,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
             const Text('Suppression groupée'),
           ],
         ),
-        content: Text('Voulez-vous vraiment supprimer ${selectedSuppliers.length} fournisseur(s) sélectionné(s) ?'),
+        content: Text('Voulez-vous vraiment supprimer ${nonDefault.length} fournisseur(s) sélectionné(s) ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
@@ -652,12 +752,11 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(dialogCtx);
-              for (final s in selectedSuppliers) {
-                context.read<SuppliersBloc>().add(DeleteSupplier(s.id));
-              }
+              final idsToDelete = nonDefault.map((s) => s.id).toList();
+              context.read<SuppliersBloc>().add(BulkDeleteSuppliers(idsToDelete));
               setState(() => _selectedSupplierIds.clear());
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('${selectedSuppliers.length} fournisseur(s) supprimé(s)'),
+                content: Text('${idsToDelete.length} fournisseur(s) supprimé(s)'),
                 backgroundColor: AppColors.success,
               ));
             },

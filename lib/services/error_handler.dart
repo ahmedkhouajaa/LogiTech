@@ -55,7 +55,10 @@ class ErrorHandler {
       case 'popup_closed_by_user':
         return "Connexion Google annulée.";
       case 'user-disabled':
-        return "Ce compte utilisateur a été désactivé. Veuillez contacter le support technique.";
+        if (e is FirebaseAuthException && e.message != null && e.message!.isNotEmpty && !e.message!.contains('user-disabled')) {
+          return e.message!;
+        }
+        return "Ce compte utilisateur ou son entreprise a été suspendu par l'administrateur. Veuillez contacter le support technique.";
       case 'account-exists-with-different-credential':
       case 'credential-already-in-use':
       case 'email-already-in-use':

@@ -12,6 +12,7 @@ import '../../models/user_management_model.dart';
 import '../../services/contact_import_export_service.dart';
 import '../../widgets/import_export/contact_import_dialog.dart';
 import '../../models/supplier.dart';
+import '../../screens/supplier_detail_screen.dart';
 
 class MobileSuppliersScreen extends StatefulWidget {
   const MobileSuppliersScreen({super.key});
@@ -200,20 +201,11 @@ class _MobileSuppliersScreenState extends State<MobileSuppliersScreen> {
             return MobileSupplierCard(
               supplier: supplier,
               onTap: () {
-                if (supplier.isDefault || supplier.name.trim().toLowerCase() == 'fournisseur passager') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
-                      backgroundColor: AppColors.warning,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                  return;
-                }
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (ctx) => SupplierDialog(existing: supplier),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SupplierDetailScreen(supplier: supplier),
+                  ),
                 ).then((_) {
                   _fetchFilteredSuppliers();
                 });

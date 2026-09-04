@@ -70,6 +70,58 @@ class _DocumentTemplateEditorScreenState
     });
   }
 
+  String _getNotesText() {
+    final notesCfg = _config['notes'] as Map<String, dynamic>?;
+    if (notesCfg != null && notesCfg['notesText'] is String && (notesCfg['notesText'] as String).isNotEmpty) {
+      return notesCfg['notesText'] as String;
+    }
+    final foot = _config['footer'] as Map<String, dynamic>?;
+    if (foot != null && foot['notesText'] is String && (foot['notesText'] as String).isNotEmpty) {
+      return foot['notesText'] as String;
+    }
+    return 'Merci pour votre confiance.';
+  }
+
+  void _updateNotesText(String text) {
+    setState(() {
+      final notesMap = Map<String, dynamic>.from(_config['notes'] as Map<String, dynamic>? ?? {});
+      notesMap['notesText'] = text;
+      _config['notes'] = notesMap;
+
+      final footerMap = Map<String, dynamic>.from(_config['footer'] as Map<String, dynamic>? ?? {});
+      footerMap['notesText'] = text;
+      _config['footer'] = footerMap;
+
+      _hasChanges = true;
+    });
+  }
+
+  String _getPaymentTermsText() {
+    final notesCfg = _config['notes'] as Map<String, dynamic>?;
+    if (notesCfg != null && notesCfg['paymentTermsText'] is String && (notesCfg['paymentTermsText'] as String).isNotEmpty) {
+      return notesCfg['paymentTermsText'] as String;
+    }
+    final foot = _config['footer'] as Map<String, dynamic>?;
+    if (foot != null && foot['paymentTermsText'] is String && (foot['paymentTermsText'] as String).isNotEmpty) {
+      return foot['paymentTermsText'] as String;
+    }
+    return 'Paiement selon conditions convenues.';
+  }
+
+  void _updatePaymentTermsText(String text) {
+    setState(() {
+      final notesMap = Map<String, dynamic>.from(_config['notes'] as Map<String, dynamic>? ?? {});
+      notesMap['paymentTermsText'] = text;
+      _config['notes'] = notesMap;
+
+      final footerMap = Map<String, dynamic>.from(_config['footer'] as Map<String, dynamic>? ?? {});
+      footerMap['paymentTermsText'] = text;
+      _config['footer'] = footerMap;
+
+      _hasChanges = true;
+    });
+  }
+
   void _save() {
     final updated = widget.template.copyWith(
       name: _name,
@@ -431,12 +483,25 @@ class _DocumentTemplateEditorScreenState
       showHeader: showHeader,
       onPositionChanged: (itemKey, newX, newY) {
         setState(() {
+          if (itemKey.startsWith('customText_')) {
+            final id = itemKey.substring('customText_'.length);
+            final customTexts = List<Map<String, dynamic>>.from(
+              (_config['customTexts'] as List?)?.map((c) => Map<String, dynamic>.from(c as Map)) ?? [],
+            );
+            final idx = customTexts.indexWhere((c) => c['id'] == id);
+            if (idx != -1) {
+              customTexts[idx]['positionX'] = newX;
+              customTexts[idx]['positionY'] = newY;
+              customTexts[idx]['placement'] = 'custom';
+              _config['customTexts'] = customTexts;
+              _hasChanges = true;
+            }
+            return;
+          }
           final map = Map<String, dynamic>.from(
               _config[itemKey] as Map<String, dynamic>? ?? {});
           map['positionX'] = newX;
-          if (itemKey != 'totals') {
-            map['positionY'] = newY;
-          }
+          map['positionY'] = newY;
           _config[itemKey] = map;
           _hasChanges = true;
         });
@@ -652,9 +717,100 @@ class _DocumentTemplateEditorScreenState
             children: [
               _buildToggleItem('Bloc de Signature', footer['showSignature'] != false, (v) => _updateNestedConfig('footer', 'showSignature', v), isMobile: isMobile),
               _buildToggleItem('Notes supplémentaires', footer['showNotes'] != false, (v) => _updateNestedConfig('footer', 'showNotes', v), isMobile: isMobile),
+              if (footer['showNotes'] != false)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Texte des notes :',
+                        style: TextStyle(
+                          fontSize: isMobile ? 11 : 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      TextFormField(
+                        initialValue: _getNotesText(),
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          hintText: 'Ex: Merci pour votre confiance.',
+                          filled: true,
+                          fillColor: AppColors.surface,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                        ),
+                        style: TextStyle(fontSize: isMobile ? 12 : 12.5),
+                        onChanged: _updateNotesText,
+                      ),
+                    ],
+                  ),
+                ),
               _buildToggleItem('Conditions de paiement / Conditions Générales', footer['showPaymentTerms'] != false, (v) => _updateNestedConfig('footer', 'showPaymentTerms', v), isMobile: isMobile),
+              if (footer['showPaymentTerms'] != false)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Texte des conditions générales :',
+                        style: TextStyle(
+                          fontSize: isMobile ? 11 : 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      TextFormField(
+                        initialValue: _getPaymentTermsText(),
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          hintText: 'Ex: Paiement selon conditions convenues.',
+                          filled: true,
+                          fillColor: AppColors.surface,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderSide: BorderSide(color: AppColors.border),
+                          ),
+                        ),
+                        style: TextStyle(fontSize: isMobile ? 12 : 12.5),
+                        onChanged: _updatePaymentTermsText,
+                      ),
+                    ],
+                  ),
+                ),
               _buildToggleItem('Mentions légales / RIB bancaire', footer['showLegalNotice'] != false, (v) => _updateNestedConfig('footer', 'showLegalNotice', v), isMobile: isMobile),
               _buildToggleItem('Numéro de page (Page X / Y)', footer['showPageNumbers'] != false, (v) => _updateNestedConfig('footer', 'showPageNumbers', v), isMobile: isMobile),
+            ],
+          ),
+
+          SizedBox(height: isMobile ? 12 : 16),
+
+          // ─── 7. Textes & Mentions Personnalisés ──────────────
+          _buildFieldSection(
+            title: 'Textes & Mentions Personnalisés',
+            icon: Icons.text_fields_rounded,
+            color: const Color(0xFFEC4899),
+            isMobile: isMobile,
+            children: [
+              _buildCustomTextsSection(isMobile),
             ],
           ),
         ],
@@ -739,6 +895,297 @@ class _DocumentTemplateEditorScreenState
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCustomTextsSection(bool isMobile) {
+    final customTexts = List<Map<String, dynamic>>.from(
+      (_config['customTexts'] as List?)?.map((c) => Map<String, dynamic>.from(c as Map)) ?? [],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (customTexts.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Aucun texte personnalisé ajouté. Cliquez sur le bouton ci-dessous pour insérer une mention libre, un avertissement ou une note spécifique.',
+              style: TextStyle(
+                fontSize: isMobile ? 11.5 : 12,
+                color: AppColors.textTertiary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          )
+        else
+          ...customTexts.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final item = entry.value;
+            final placement = item['placement'] as String? ?? 'under_table';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.all(isMobile ? 10 : 12),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEC4899).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Icon(Icons.text_format_rounded, size: 14, color: Color(0xFFEC4899)),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Texte #${idx + 1}',
+                        style: TextStyle(
+                          fontSize: isMobile ? 12 : 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: Icon(Icons.delete_outline_rounded, color: AppColors.error, size: isMobile ? 17 : 19),
+                        tooltip: 'Supprimer ce texte',
+                        onPressed: () {
+                          setState(() {
+                            customTexts.removeAt(idx);
+                            _config['customTexts'] = customTexts;
+                            _hasChanges = true;
+                          });
+                        },
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Contenu du texte :',
+                    style: TextStyle(fontSize: isMobile ? 11 : 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 4),
+                  TextFormField(
+                    initialValue: item['text'] as String? ?? '',
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: 'Ex: Garantie 1 an pièces et main d\'œuvre...',
+                      filled: true,
+                      fillColor: AppColors.surfaceAlt.withValues(alpha: 0.5),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                    ),
+                    style: TextStyle(fontSize: isMobile ? 12 : 12.5),
+                    onChanged: (val) {
+                      setState(() {
+                        customTexts[idx]['text'] = val;
+                        _config['customTexts'] = customTexts;
+                        _hasChanges = true;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Emplacement :',
+                    style: TextStyle(fontSize: isMobile ? 11 : 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 4),
+                  DropdownButtonFormField<String>(
+                    initialValue: placement,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: AppColors.surfaceAlt.withValues(alpha: 0.5),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.border)),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'header_left', child: Text('En-tête (Haut gauche)')),
+                      DropdownMenuItem(value: 'header_right', child: Text('En-tête (Haut droite)')),
+                      DropdownMenuItem(value: 'under_client', child: Text('Sous les coordonnées client')),
+                      DropdownMenuItem(value: 'above_table', child: Text('Au-dessus du tableau')),
+                      DropdownMenuItem(value: 'under_table', child: Text('Sous le tableau des articles')),
+                      DropdownMenuItem(value: 'footer', child: Text('Pied de page (Bas)')),
+                      DropdownMenuItem(value: 'custom', child: Text('Position libre (Glisser-déposer sur A4)')),
+                    ],
+                    onChanged: (val) {
+                      if (val == null) return;
+                      setState(() {
+                        customTexts[idx]['placement'] = val;
+                        if (val == 'header_left') {
+                          customTexts[idx]['positionX'] = 15.0;
+                          customTexts[idx]['positionY'] = 38.0;
+                        } else if (val == 'header_right') {
+                          customTexts[idx]['positionX'] = 135.0;
+                          customTexts[idx]['positionY'] = 38.0;
+                        } else if (val == 'under_client') {
+                          customTexts[idx]['positionX'] = 15.0;
+                          customTexts[idx]['positionY'] = 76.0;
+                        } else if (val == 'above_table') {
+                          customTexts[idx]['positionX'] = 15.0;
+                          customTexts[idx]['positionY'] = 88.0;
+                        } else if (val == 'under_table') {
+                          customTexts[idx]['positionX'] = 15.0;
+                          customTexts[idx]['positionY'] = 165.0;
+                        } else if (val == 'footer') {
+                          customTexts[idx]['positionX'] = 15.0;
+                          customTexts[idx]['positionY'] = 262.0;
+                        }
+                        _config['customTexts'] = customTexts;
+                        _hasChanges = true;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  // Style controls: Size, Bold, Italic, Color
+                  Row(
+                    children: [
+                      // Bold toggle
+                      IconButton(
+                        icon: Icon(
+                          Icons.format_bold_rounded,
+                          color: item['isBold'] == true ? AppColors.primary : AppColors.textTertiary,
+                          size: 20,
+                        ),
+                        tooltip: 'Gras',
+                        onPressed: () {
+                          setState(() {
+                            customTexts[idx]['isBold'] = !(item['isBold'] == true);
+                            _config['customTexts'] = customTexts;
+                            _hasChanges = true;
+                          });
+                        },
+                      ),
+                      // Italic toggle
+                      IconButton(
+                        icon: Icon(
+                          Icons.format_italic_rounded,
+                          color: item['isItalic'] == true ? AppColors.primary : AppColors.textTertiary,
+                          size: 20,
+                        ),
+                        tooltip: 'Italique',
+                        onPressed: () {
+                          setState(() {
+                            customTexts[idx]['isItalic'] = !(item['isItalic'] == true);
+                            _config['customTexts'] = customTexts;
+                            _hasChanges = true;
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      // Color selection
+                      Text('Couleur :', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                      const SizedBox(width: 4),
+                      ...[
+                        0xFF000000, // Noir
+                        0xFF1A56DB, // Bleu
+                        0xFF475569, // Gris
+                        0xFFEF4444, // Rouge
+                      ].map((colorInt) {
+                        final isSel = (item['color'] as int? ?? 0xFF000000) == colorInt;
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              customTexts[idx]['color'] = colorInt;
+                              _config['customTexts'] = customTexts;
+                              _hasChanges = true;
+                            });
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              color: Color(colorInt),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSel ? AppColors.primary : Colors.grey.shade300,
+                                width: isSel ? 2 : 1,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                      const Spacer(),
+                      // Font size indicator
+                      DropdownButton<double>(
+                        value: (item['fontSize'] as num?)?.toDouble() ?? 9.0,
+                        underline: const SizedBox.shrink(),
+                        isDense: true,
+                        items: const [
+                          DropdownMenuItem(value: 8.0, child: Text('8 pt', style: TextStyle(fontSize: 11))),
+                          DropdownMenuItem(value: 9.0, child: Text('9 pt', style: TextStyle(fontSize: 11))),
+                          DropdownMenuItem(value: 10.0, child: Text('10 pt', style: TextStyle(fontSize: 11))),
+                          DropdownMenuItem(value: 12.0, child: Text('12 pt', style: TextStyle(fontSize: 11))),
+                          DropdownMenuItem(value: 14.0, child: Text('14 pt', style: TextStyle(fontSize: 11))),
+                        ],
+                        onChanged: (sz) {
+                          if (sz == null) return;
+                          setState(() {
+                            customTexts[idx]['fontSize'] = sz;
+                            _config['customTexts'] = customTexts;
+                            _hasChanges = true;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+        const SizedBox(height: 6),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              final newId = 'ct_${DateTime.now().millisecondsSinceEpoch}';
+              setState(() {
+                customTexts.add({
+                  'id': newId,
+                  'text': 'Mention personnalisée',
+                  'placement': 'under_table',
+                  'positionX': 15.0,
+                  'positionY': 165.0,
+                  'fontSize': 9.0,
+                  'isBold': false,
+                  'isItalic': false,
+                  'color': 0xFF000000,
+                  'alignment': 'left',
+                });
+                _config['customTexts'] = customTexts;
+                _hasChanges = true;
+              });
+            },
+            icon: const Icon(Icons.add_rounded, size: 16),
+            label: Text(
+              'Ajouter un texte personnalisé',
+              style: TextStyle(fontSize: isMobile ? 12 : 13),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFFEC4899),
+              side: const BorderSide(color: Color(0xFFEC4899)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: isMobile ? 10 : 12),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -987,6 +1434,14 @@ class _DocumentTemplateEditorScreenState
                   label: 'Position X',
                   value: _getTotalsVal('positionX', 130),
                   onChanged: (v) => _updateNestedConfig('totals', 'positionX', v),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TemplateMeasurementInput(
+                  label: 'Position Y',
+                  value: _getTotalsVal('positionY', 175),
+                  onChanged: (v) => _updateNestedConfig('totals', 'positionY', v),
                 ),
               ),
               const SizedBox(width: 10),

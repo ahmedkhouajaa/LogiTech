@@ -9,18 +9,15 @@ import '../blocs/customers/customers_bloc.dart';
 import '../models/customer.dart';
 import '../database/database_helper.dart';
 import '../utils/constants.dart';
-import '../utils/helpers.dart';
 import '../widgets/custom_app_bar.dart';
-import '../widgets/data_table_widget.dart';
-import '../widgets/dashboard_card.dart';
 import '../services/enterprise_service.dart';
 import '../services/permission_service.dart';
 import '../models/user_management_model.dart';
 import 'package:business_manager_pro/widgets/app_error_widget.dart';
 import '../widgets/shimmer_effect.dart';
-import '../widgets/shimmer_table_row.dart';
 import '../services/contact_import_export_service.dart';
 import '../widgets/import_export/contact_import_dialog.dart';
+import 'customer_detail_screen.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -48,13 +45,59 @@ class _CustomersScreenState extends State<CustomersScreen> {
           padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
           child: Row(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Clients', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                  const SizedBox(height: 2),
-                  Text('Gérer vos clients', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                ],
+              BlocBuilder<CustomersBloc, CustomersState>(
+                buildWhen: (prev, curr) => curr is CustomersLoaded || curr is CustomersLoading || curr is CustomersInitial,
+                builder: (context, state) {
+                  final totalCount = state is CustomersLoaded
+                      ? (state.totalCount > state.customers.length ? state.totalCount : state.customers.length)
+                      : null;
+                  final matchingCount = (state is CustomersLoaded && _search.isNotEmpty)
+                      ? state.customers.where((c) =>
+                          c.name.toLowerCase().contains(_search) ||
+                          c.code.toLowerCase().contains(_search) ||
+                          (c.phone?.toLowerCase().contains(_search) ?? false) ||
+                          (c.companyName?.toLowerCase().contains(_search) ?? false)).length
+                      : null;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text('Clients', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                          if (totalCount != null) ...[
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                              ),
+                              child: Text(
+                                matchingCount != null ? '$matchingCount / $totalCount' : '$totalCount',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        totalCount != null
+                            ? (matchingCount != null
+                                ? '$matchingCount client${matchingCount > 1 ? 's' : ''} trouvé${matchingCount > 1 ? 's' : ''} sur $totalCount au total'
+                                : '$totalCount client${totalCount > 1 ? 's' : ''} au total')
+                            : 'Gérer vos clients',
+                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  );
+                },
               ),
               const Spacer(),
               if (_selectedCustomerIds.isNotEmpty) ...[
@@ -280,19 +323,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(AppRadius.md),
-                          onTap: () {
-                            if (isDefault) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
-                                  backgroundColor: AppColors.warning,
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            } else {
-                              _showDialog(context, c);
-                            }
-                          },
+                          onTap: () => _navigateToDetail(context, c),
                           hoverColor: AppColors.primary.withValues(alpha: 0.02),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -421,8 +452,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   elevation: 4,
                                   onSelected: (val) {
-                                    if (val == 'view' || val == 'edit') _showDialog(context, c);
-                                    if (val == 'delete') context.read<CustomersBloc>().add(DeleteCustomer(c.id));
+                                    if (val == 'view') _navigateToDetail(context, c);
+                                    if (val == 'edit') _showDialog(context, c);
+                                    if (val == 'delete') _confirmDeleteCustomer(c);
                                   },
                                   itemBuilder: (context) {
                                     final canRead = PermissionService.instance.canRead(UserPermissionResources.customers);
@@ -514,6 +546,18 @@ class _CustomersScreenState extends State<CustomersScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _navigateToDetail(BuildContext context, Customer c) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<CustomersBloc>(),
+          child: CustomerDetailScreen(customer: c),
+        ),
+      ),
     );
   }
 
@@ -641,7 +685,63 @@ class _CustomersScreenState extends State<CustomersScreen> {
     }
   }
 
+  void _confirmDeleteCustomer(Customer c) {
+    if (c.isDefault || c.name.trim().toLowerCase() == 'client passager') {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Cet élément est un élément par défaut et ne peut pas être supprimé.'),
+        backgroundColor: AppColors.warning,
+      ));
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.error),
+            const SizedBox(width: 8),
+            const Text('Supprimer le client'),
+          ],
+        ),
+        content: Text('Voulez-vous vraiment supprimer le client "${c.name}" ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              context.read<CustomersBloc>().add(DeleteCustomer(c.id));
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Client "${c.name}" supprimé'),
+                backgroundColor: AppColors.success,
+              ));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _bulkDeleteSelected(List<Customer> selectedCustomers) {
+    final nonDefault = selectedCustomers
+        .where((c) => !c.isDefault && c.name.trim().toLowerCase() != 'client passager' && c.id.trim().isNotEmpty)
+        .toList();
+    if (nonDefault.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Les éléments sélectionnés sont protégés et ne peuvent pas être supprimés.'),
+        backgroundColor: AppColors.warning,
+      ));
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -652,7 +752,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
             const Text('Suppression groupée'),
           ],
         ),
-        content: Text('Voulez-vous vraiment supprimer ${selectedCustomers.length} client(s) sélectionné(s) ?'),
+        content: Text('Voulez-vous vraiment supprimer ${nonDefault.length} client(s) sélectionné(s) ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
@@ -661,12 +761,11 @@ class _CustomersScreenState extends State<CustomersScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(dialogCtx);
-              for (final c in selectedCustomers) {
-                context.read<CustomersBloc>().add(DeleteCustomer(c.id));
-              }
+              final idsToDelete = nonDefault.map((c) => c.id).toList();
+              context.read<CustomersBloc>().add(BulkDeleteCustomers(idsToDelete));
               setState(() => _selectedCustomerIds.clear());
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('${selectedCustomers.length} client(s) supprimé(s)'),
+                content: Text('${idsToDelete.length} client(s) supprimé(s)'),
                 backgroundColor: AppColors.success,
               ));
             },

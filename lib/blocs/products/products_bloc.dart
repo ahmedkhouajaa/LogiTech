@@ -5,6 +5,8 @@ import '../../services/firestore_pagination_service.dart';
 import '../../services/firestore_repository.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../database/database_helper.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 abstract class ProductsEvent extends Equatable {
@@ -23,7 +25,7 @@ class LoadFirstProducts extends ProductsEvent {
   const LoadFirstProducts({
     this.searchQuery,
     this.stockFilter = 'Tous',
-    this.pageSize = 10,
+    this.pageSize = 50,
   });
 
   @override
@@ -38,7 +40,7 @@ class LoadNextProducts extends ProductsEvent {
   const LoadNextProducts({
     this.searchQuery,
     this.stockFilter = 'Tous',
-    this.pageSize = 10,
+    this.pageSize = 50,
   });
 
   @override
@@ -74,6 +76,13 @@ class DeleteProduct extends ProductsEvent {
   const DeleteProduct(this.id);
   @override
   List<Object?> get props => [id];
+}
+
+class BulkDeleteProducts extends ProductsEvent {
+  final List<String> ids;
+  const BulkDeleteProducts(this.ids);
+  @override
+  List<Object?> get props => [ids];
 }
 
 abstract class ProductsState extends Equatable {
@@ -152,6 +161,7 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
     on<AddProduct>(_onAdd);
     on<UpdateProduct>(_onUpdate);
     on<DeleteProduct>(_onDelete);
+    on<BulkDeleteProducts>(_onBulkDelete);
   }
 
   Future<void> _onLoad(LoadProducts event, Emitter<ProductsState> emit) async {
@@ -260,11 +270,72 @@ class ProductsBloc extends Bloc<ProductsEvent, ProductsState> {
       emit(const ProductsError('Permission refusée : Vous n\'avez pas le droit de supprimer un article.'));
       return;
     }
+
+    // 1. Optimistically remove from state immediately
+    final currentState = state;
+    if (currentState is ProductsLoaded) {
+      final updatedProducts = currentState.products.where((p) => p.id != event.id).toList();
+      final newCount = (currentState.totalCount > 0 ? currentState.totalCount - 1 : updatedProducts.length);
+      emit(ProductsLoaded(
+        updatedProducts,
+        currentState.lowStockProducts.where((p) => p.id != event.id).toList(),
+        totalCount: newCount,
+        hasMore: currentState.hasMore,
+        isLoadingMore: currentState.isLoadingMore,
+        activeStockFilter: currentState.activeStockFilter,
+        searchQuery: currentState.searchQuery,
+      ));
+    }
+
+    if (event.id.trim().isNotEmpty) {
+      try {
+        await FirestoreRepository.instance.deleteDocument('articles', event.id);
+        await DatabaseHelper.instance.deleteProduct(event.id);
+      } catch (e) {
+        print("Error deleting product in Firestore: $e");
+      }
+    }
+  }
+
+  Future<void> _onBulkDelete(BulkDeleteProducts event, Emitter<ProductsState> emit) async {
+    if (!PermissionService.instance.canDelete(UserPermissionResources.productsList)) {
+      emit(const ProductsError('Permission refusée : Vous n\'avez pas le droit de supprimer des articles.'));
+      return;
+    }
+
+    final idsSet = event.ids.where((id) => id.trim().isNotEmpty).toSet();
+
+    // 1. Optimistically remove from state immediately
+    final currentState = state;
+    if (currentState is ProductsLoaded) {
+      final updatedProducts = currentState.products.where((p) => !idsSet.contains(p.id)).toList();
+      final newCount = (currentState.totalCount >= event.ids.length ? currentState.totalCount - event.ids.length : updatedProducts.length);
+      emit(ProductsLoaded(
+        updatedProducts,
+        currentState.lowStockProducts.where((p) => !idsSet.contains(p.id)).toList(),
+        totalCount: newCount,
+        hasMore: currentState.hasMore,
+        isLoadingMore: currentState.isLoadingMore,
+        activeStockFilter: currentState.activeStockFilter,
+        searchQuery: currentState.searchQuery,
+      ));
+    }
+
     try {
-      await FirestoreRepository.instance.softDeleteDocument('articles', event.id);
-      add(const LoadFirstProducts());
+      final validIds = event.ids.where((id) => id.trim().isNotEmpty).toList();
+      if (validIds.isNotEmpty) {
+        final batch = FirebaseFirestore.instance.batch();
+        for (final id in validIds) {
+          batch.delete(FirebaseFirestore.instance.collection('articles').doc(id));
+        }
+        await batch.commit();
+
+        for (final id in validIds) {
+          await DatabaseHelper.instance.deleteProduct(id);
+        }
+      }
     } catch (e) {
-      emit(ProductsError(ErrorHandler.parseError(e)));
+      print("Error in bulk deleting products: $e");
     }
   }
 }

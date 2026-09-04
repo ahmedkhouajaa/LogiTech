@@ -3,6 +3,7 @@ class DocumentWrapper {
   final String number;
   final String documentTitle; // "FACTURE", "DEVIS", "BON DE LIVRAISON", etc.
   final String? customerName;
+  final String? customerId; // ID of the customer or supplier contact
   final DateTime date;
   final DateTime? dueDate;
   final double totalHT;
@@ -27,6 +28,7 @@ class DocumentWrapper {
     required this.number,
     required this.documentTitle,
     this.customerName,
+    this.customerId,
     this.customerAddress,
     this.customerPhone,
     this.customerEmail,
@@ -46,6 +48,43 @@ class DocumentWrapper {
     required this.items,
     this.customData = const {},
   });
+
+  /// Creates a copy of this wrapper with optional field overrides.
+  /// Used by PdfService to enrich with customer/supplier details from the database.
+  DocumentWrapper copyWith({
+    String? customerName,
+    String? customerAddress,
+    String? customerPhone,
+    String? customerEmail,
+    String? customerCode,
+    String? customerTaxId,
+  }) {
+    return DocumentWrapper(
+      id: id,
+      number: number,
+      documentTitle: documentTitle,
+      customerName: customerName ?? this.customerName,
+      customerId: customerId,
+      customerAddress: customerAddress ?? this.customerAddress,
+      customerPhone: customerPhone ?? this.customerPhone,
+      customerEmail: customerEmail ?? this.customerEmail,
+      customerCode: customerCode ?? this.customerCode,
+      customerTaxId: customerTaxId ?? this.customerTaxId,
+      validityDate: validityDate,
+      subtotalHT: subtotalHT,
+      totalDiscountAmount: totalDiscountAmount,
+      date: date,
+      dueDate: dueDate,
+      totalHT: totalHT,
+      totalTva: totalTva,
+      totalTTC: totalTTC,
+      stampTax: stampTax,
+      notes: notes,
+      conditionsGenerales: conditionsGenerales,
+      items: items,
+      customData: customData,
+    );
+  }
 
   double get totalDiscount {
     if (totalDiscountAmount != null) return totalDiscountAmount!;
@@ -105,6 +144,7 @@ class DocumentWrapper {
       number: inv.number,
       documentTitle: 'FACTURE',
       customerName: inv.customerName,
+      customerId: inv.customerId,
       date: inv.date,
       dueDate: inv.dueDate,
       totalHT: inv.totalHT,
@@ -115,6 +155,7 @@ class DocumentWrapper {
       conditionsGenerales: inv.conditionsGenerales,
       customData: {
         'projectName': inv.projectName,
+        'contactType': 'customer',
       },
       items: (inv.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -135,6 +176,7 @@ class DocumentWrapper {
       number: quote.number,
       documentTitle: 'DEVIS',
       customerName: quote.customerName,
+      customerId: quote.customerId,
       date: quote.date,
       dueDate: quote.validityDate,
       totalHT: quote.totalHT,
@@ -145,6 +187,7 @@ class DocumentWrapper {
       conditionsGenerales: quote.conditionsGenerales,
       customData: {
         'projectName': quote.projectName,
+        'contactType': 'customer',
       },
       items: (quote.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -165,6 +208,7 @@ class DocumentWrapper {
       number: order.number,
       documentTitle: 'COMMANDE CLIENT',
       customerName: order.customerName,
+      customerId: order.customerId,
       date: order.date,
       dueDate: order.deliveryDate,
       totalHT: order.subTotalHT,
@@ -175,6 +219,7 @@ class DocumentWrapper {
       conditionsGenerales: order.conditionsGenerales,
       customData: {
         'projectName': order.projectName,
+        'contactType': 'customer',
       },
       items: (order.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -195,6 +240,7 @@ class DocumentWrapper {
       number: doc.number,
       documentTitle: 'BON DE LIVRAISON',
       customerName: doc.customerName,
+      customerId: doc.customerId,
       date: doc.date,
       totalHT: doc.subTotalHT,
       totalTva: doc.totalTVA,
@@ -204,6 +250,7 @@ class DocumentWrapper {
       conditionsGenerales: doc.conditionsGenerales,
       customData: {
         'projectName': doc.projectName,
+        'contactType': 'customer',
       },
       items: (doc.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
@@ -253,6 +300,7 @@ class DocumentWrapper {
       number: inv.number,
       documentTitle: 'FACTURE D\'ACHAT',
       customerName: inv.supplierName,
+      customerId: inv.supplierId,
       date: inv.date,
       dueDate: inv.dueDate,
       totalHT: inv.totalHT,
@@ -261,6 +309,9 @@ class DocumentWrapper {
       stampTax: inv.timbreFiscal ?? 0,
       notes: inv.notes,
       conditionsGenerales: inv.conditionsGenerales,
+      customData: {
+        'contactType': 'supplier',
+      },
       items: (inv.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
         reference: _extractItemReference(i),
@@ -280,6 +331,7 @@ class DocumentWrapper {
       number: order.number,
       documentTitle: 'COMMANDE FOURNISSEUR',
       customerName: order.supplierName,
+      customerId: order.supplierId,
       date: order.date,
       totalHT: order.totalHTAfterDiscount ?? 0,
       totalTva: order.totalTVA ?? 0,
@@ -287,6 +339,9 @@ class DocumentWrapper {
       stampTax: order.timbreFiscal ?? 0,
       notes: order.notes,
       conditionsGenerales: order.conditionsGenerales,
+      customData: {
+        'contactType': 'supplier',
+      },
       items: (order.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
         reference: _extractItemReference(i),
@@ -302,17 +357,23 @@ class DocumentWrapper {
 
 
   static DocumentWrapper fromReturnNote(dynamic note) {
+    String? cId;
+    try { cId = note.customerId; } catch (_) {}
     return DocumentWrapper(
       id: note.id,
       number: note.returnNumber ?? note.number,
       documentTitle: 'BON DE RETOUR',
       customerName: note.customerName ?? note.customerCompany ?? 'Client',
+      customerId: cId,
       date: note.dateEmission ?? note.date ?? DateTime.now(),
       totalHT: note.subtotalHT ?? 0,
       totalTva: (note.totalTTC ?? 0) - (note.subtotalHT ?? 0),
       totalTTC: note.totalTTC ?? 0,
       notes: note.notes,
       conditionsGenerales: note.conditions,
+      customData: {
+        'contactType': 'customer',
+      },
       items: (note.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
         reference: _extractItemReference(i),
@@ -327,11 +388,14 @@ class DocumentWrapper {
   }
 
   static DocumentWrapper fromReceivingVoucher(dynamic voucher) {
+    String? sId;
+    try { sId = voucher.supplierId; } catch (_) {}
     return DocumentWrapper(
       id: voucher.id,
       number: voucher.number,
       documentTitle: 'BON DE RECEPTION',
       customerName: voucher.supplierName,
+      customerId: sId,
       date: voucher.date,
       totalHT: voucher.computedTotalHTAfterDiscount ?? 0,
       totalTva: voucher.computedTotalTvaAfterDiscount ?? 0,
@@ -339,6 +403,9 @@ class DocumentWrapper {
       stampTax: voucher.timbreFiscal ?? 0,
       notes: voucher.notes,
       conditionsGenerales: voucher.conditionsGenerales,
+      customData: {
+        'contactType': 'supplier',
+      },
       items: (voucher.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
         reference: _extractItemReference(i),
@@ -353,16 +420,22 @@ class DocumentWrapper {
   }
 
   static DocumentWrapper fromSupplierCreditNote(dynamic note, [String? supplierName]) {
+    String? sId;
+    try { sId = note.supplierId; } catch (_) {}
     return DocumentWrapper(
       id: note.id,
       number: note.number,
       documentTitle: 'AVOIR FOURNISSEUR',
       customerName: supplierName ?? 'Fournisseur',
+      customerId: sId,
       date: note.date,
       totalHT: note.totalHT ?? 0,
       totalTva: note.totalTVA ?? 0,
       totalTTC: note.totalTTC ?? 0,
       notes: note.reason,
+      customData: {
+        'contactType': 'supplier',
+      },
       items: (note.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
         reference: _extractItemReference(i),
@@ -377,16 +450,22 @@ class DocumentWrapper {
   }
 
   static DocumentWrapper fromSupplierReturn(dynamic note) {
+    String? sId;
+    try { sId = note.supplierId; } catch (_) {}
     return DocumentWrapper(
       id: note.id,
       number: note.number,
       documentTitle: 'RETOUR FOURNISSEUR',
       customerName: note.supplierName ?? 'Fournisseur Inconnu',
+      customerId: sId,
       date: note.date,
       totalHT: note.totalHT ?? 0,
       totalTva: note.totalTVA ?? 0,
       totalTTC: note.totalTTC ?? 0,
       notes: note.reason,
+      customData: {
+        'contactType': 'supplier',
+      },
       items: (note.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
         reference: _extractItemReference(i),
@@ -401,16 +480,22 @@ class DocumentWrapper {
   }
 
   static DocumentWrapper fromCreditNote(dynamic note) {
+    String? cId;
+    try { cId = note.customerId; } catch (_) {}
     return DocumentWrapper(
       id: note.id,
       number: note.number,
       documentTitle: 'AVOIR',
       customerName: note.customerName ?? 'Client Inconnu',
+      customerId: cId,
       date: note.date,
       totalHT: note.totalHT ?? 0,
       totalTva: note.totalTva ?? 0,
       totalTTC: note.totalTTC ?? 0,
       notes: note.notes,
+      customData: {
+        'contactType': 'customer',
+      },
       items: (note.items as List).map((i) => DocumentItemWrapper(
         productId: i.productId,
         reference: _extractItemReference(i),

@@ -47,6 +47,8 @@ class TemplatePreviewWidget extends StatelessWidget {
                       _buildDraggableTable(scale),
                       // Notes & Conditions
                       _buildDraggableNotes(scale),
+                      // Custom free-form texts
+                      ...template.customTexts.map((ct) => _buildDraggableCustomText(ct, scale)),
                       // Totals
                       _buildDraggableTotals(scale),
                       // Signature
@@ -279,7 +281,7 @@ class TemplatePreviewWidget extends StatelessWidget {
       'clientDetails', x, y, scale,
       Container(
         width: w,
-        height: h,
+        constraints: BoxConstraints(minHeight: h),
         padding: EdgeInsets.all(3 * scale),
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -288,12 +290,14 @@ class TemplatePreviewWidget extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text('Adressé à :', style: TextStyle(fontSize: 3 * scale, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             SizedBox(height: 1 * scale),
-            ...clientLines.take(3).map((l) => Text(
+            ...clientLines.map((l) => Text(
               l,
               style: TextStyle(fontSize: 2.6 * scale, color: AppColors.textSecondary, height: 1.2),
+              overflow: TextOverflow.ellipsis,
             )),
           ],
         ),
@@ -520,15 +524,60 @@ class TemplatePreviewWidget extends StatelessWidget {
             if (foot['showNotes'] != false) ...[
               Text('Notes :', style: TextStyle(fontSize: 2.6 * scale, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
               SizedBox(height: 1 * scale),
-              Text('Merci pour votre confiance.', style: TextStyle(fontSize: 2.3 * scale, color: AppColors.textTertiary)),
+              Text(template.notesText, style: TextStyle(fontSize: 2.3 * scale, color: AppColors.textTertiary)),
               SizedBox(height: 2 * scale),
             ],
             if (foot['showPaymentTerms'] != false) ...[
               Text('Conditions Générales :', style: TextStyle(fontSize: 2.6 * scale, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
               SizedBox(height: 1 * scale),
-              Text('Paiement selon conditions convenues.', style: TextStyle(fontSize: 2.3 * scale, color: AppColors.textTertiary)),
+              Text(template.paymentTermsText, style: TextStyle(fontSize: 2.3 * scale, color: AppColors.textTertiary)),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDraggableCustomText(Map<String, dynamic> item, double scale) {
+    final id = item['id'] as String? ?? 'custom';
+    final text = item['text'] as String? ?? '';
+    if (text.trim().isEmpty) return const SizedBox.shrink();
+
+    final x = (item['positionX'] as num?)?.toDouble() ?? 15.0;
+    final y = (item['positionY'] as num?)?.toDouble() ?? 165.0;
+    final fontSize = ((item['fontSize'] as num?)?.toDouble() ?? 9.0) * scale * 0.35;
+    final isBold = item['isBold'] == true;
+    final isItalic = item['isItalic'] == true;
+    final color = Color(item['color'] as int? ?? 0xFF000000);
+    final alignmentStr = item['alignment'] as String? ?? 'left';
+    final textAlign = alignmentStr == 'center'
+        ? TextAlign.center
+        : alignmentStr == 'right'
+            ? TextAlign.right
+            : TextAlign.left;
+
+    return _buildDraggableOverlay(
+      'customText_$id',
+      x,
+      y,
+      scale,
+      Container(
+        constraints: BoxConstraints(maxWidth: 180 * scale),
+        padding: EdgeInsets.symmetric(horizontal: 2.5 * scale, vertical: 1.5 * scale),
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.35), width: 0.5),
+        ),
+        child: Text(
+          text,
+          textAlign: textAlign,
+          style: TextStyle(
+            fontSize: fontSize.clamp(4.0, 30.0),
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+            color: color,
+          ),
         ),
       ),
     );

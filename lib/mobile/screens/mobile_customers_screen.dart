@@ -6,13 +6,13 @@ import '../widgets/mobile_generic_list_screen.dart';
 import '../widgets/mobile_client_card.dart';
 import '../../widgets/sidebar_menu.dart';
 import '../../blocs/customers/customers_bloc.dart';
-import 'forms/mobile_customer_form_screen.dart';
 import '../../screens/customers_screen.dart';
 import '../../services/permission_service.dart';
 import '../../models/user_management_model.dart';
 import '../../services/contact_import_export_service.dart';
 import '../../widgets/import_export/contact_import_dialog.dart';
 import '../../models/customer.dart';
+import '../../screens/customer_detail_screen.dart';
 
 class MobileCustomersScreen extends StatefulWidget {
   const MobileCustomersScreen({super.key});
@@ -201,20 +201,11 @@ class _MobileCustomersScreenState extends State<MobileCustomersScreen> {
             return MobileClientCard(
               customer: customer,
               onTap: () {
-                if (customer.isDefault || customer.name.trim().toLowerCase() == 'client passager') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Cet élément est un élément par défaut et ne peut pas être modifié.'),
-                      backgroundColor: AppColors.warning,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                  return;
-                }
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (ctx) => CustomerDialog(existing: customer),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CustomerDetailScreen(customer: customer),
+                  ),
                 ).then((_) {
                   _fetchFilteredClients();
                 });

@@ -217,11 +217,11 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                 ElevatedButton.icon(
                   onPressed: _showNewTicketDialog,
                   icon: const Icon(Icons.add_rounded, size: 18),
-                  label: Text(isMobile ? 'Nouveau' : '+ Ticket'),
+                  label: Text(isMobile ? 'Nouveau' : 'Nouveau ticket'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     elevation: 0,
                   ),
