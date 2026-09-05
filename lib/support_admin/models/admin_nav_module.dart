@@ -14,12 +14,13 @@ enum AdminNavModule {
 
   // 3. Client Management (GESTION DES CLIENTS)
   clientsAll,             // 1. Tous les Clients
-  clientsSearch,          // 2. Rechercher un Client
-  clientsBanned,          // 3. Clients Bannis/Désactivés
-  clientsPasswords,       // 4. Gestion des Mots de Passe
-  clientsLicenseExtend,   // 5. Extension de Licence
-  clientsHistory,         // 6. Historique Clients
-  clientsExport,          // 7. Exporter Clients (Excel/CSV)
+  userActivation,         // 2. User Activation (Activation Utilisateurs)
+  clientsSearch,          // 3. Rechercher un Client
+  clientsBanned,          // 4. Clients Bannis/Désactivés
+  clientsPasswords,       // 5. Gestion des Mots de Passe
+  clientsLicenseExtend,   // 6. Extension de Licence
+  clientsHistory,         // 7. Historique Clients
+  clientsExport,          // 8. Exporter Clients (Excel/CSV)
 
   // 3. Tenant Management (Legacy/Direct inspection)
   tenantXRay,

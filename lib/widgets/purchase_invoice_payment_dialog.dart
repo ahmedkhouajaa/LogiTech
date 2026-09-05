@@ -42,6 +42,8 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
   int _selectedTab = 0; // 0: Nouveau, 1: Existant, 2: Avoir
   bool _applyWithholdingTax = false;
   
+  bool _isSaving = false;
+  
   // Treasury accounts loaded directly from DB
   List<TreasuryAccount> _treasuryAccounts = [];
   bool _isLoadingAccounts = true;
@@ -133,6 +135,7 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
 
 
   void _save() async {
+    if (_isSaving) return;
     if (!await OfflineActionHelper.checkOnlineOrShowError(context)) return;
 
     if (_selectedAccountId == null) {
@@ -163,157 +166,163 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
       return;
     }
 
-    final db = context.read<PaymentsBloc>();
-    final now = DateTime.now();
-    final paymentNumber = 'PAI-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
+    setState(() => _isSaving = true);
 
+    try {
+      final db = context.read<PaymentsBloc>();
+      final now = DateTime.now();
+      final paymentNumber = 'PAI-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0');
 
-
-    final payment = Payment(
-      id: const Uuid().v4(),
-      paymentNumber: paymentNumber,
-      direction: 'decaissement',
-      contactId: widget.purchaseInvoice.supplierId,
-      contactType: 'supplier',
-      contactName: widget.purchaseInvoice.supplierName,
-      amount: parsedAmount,
-      method: _paymentMethod,
-      accountId: _selectedAccountId,
-      reference: _referenceCtrl.text.isNotEmpty ? _referenceCtrl.text : null,
-      paymentDate: _paymentDate,
-      notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
-      status: 'paid',
-      relatedInvoiceId: widget.purchaseInvoice.id,
-      createdAt: now,
-      updatedAt: now,
-    );
-
-    // Save payment using FirestoreRepository to 'paiements' and update treasury balance
-    await FirestoreRepository.instance.savePayment(payment);
-    db.add(AddPayment(payment));
-
-    // Create TreasuryTransaction to decrease caisse (expense)
-    final treasuryTx = TreasuryTransaction(
-      id: const Uuid().v4(),
-      transactionNumber: 'TR-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0'),
-      accountId: _selectedAccountId!,
-      amount: parsedAmount,
-      type: 'expense',
-      category: 'Paiement Fournisseur',
-      dateTransaction: _paymentDate,
-      description: 'Paiement de la facture ${widget.purchaseInvoice.number}',
-      paymentId: payment.id,
-      createdAt: now,
-      updatedAt: now,
-    );
-    context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(treasuryTx));
-
-    // Update Invoice status and amount paid
-    double taxAmount = _applyWithholdingTax ? ((widget.purchaseInvoice.totalTTC + widget.purchaseInvoice.timbreFiscal) * _withholdingTaxRate) / 100 : 0;
-
-    if (_applyWithholdingTax && taxAmount > 0) {
-      final rsPaymentNumber = 'RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0');
-      
-      final rsPayment = Payment(
+      final payment = Payment(
         id: const Uuid().v4(),
-        paymentNumber: rsPaymentNumber,
+        paymentNumber: paymentNumber,
         direction: 'decaissement',
         contactId: widget.purchaseInvoice.supplierId,
         contactType: 'supplier',
         contactName: widget.purchaseInvoice.supplierName,
-        amount: taxAmount,
-        method: 'retenue_source',
-        reference: widget.purchaseInvoice.number,
-        paymentDate: _withholdingTaxDate,
-        notes: 'Retenue à la source ($_withholdingTaxRate%)',
+        amount: parsedAmount,
+        method: _paymentMethod,
+        accountId: _selectedAccountId,
+        reference: _referenceCtrl.text.isNotEmpty ? _referenceCtrl.text : null,
+        paymentDate: _paymentDate,
+        notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
         status: 'paid',
         relatedInvoiceId: widget.purchaseInvoice.id,
-        createdAt: now.add(const Duration(seconds: 1)),
-        updatedAt: now.add(const Duration(seconds: 1)),
+        createdAt: now,
+        updatedAt: now,
       );
-      
-      await FirestoreRepository.instance.savePayment(rsPayment);
-      db.add(AddPayment(rsPayment));
-    }
 
-    double newAmountPaid = widget.purchaseInvoice.amountPaid + parsedAmount + taxAmount;
-    
-    InvoiceStatus newStatus = widget.purchaseInvoice.status;
-    double totalDue = widget.purchaseInvoice.totalTTC + widget.purchaseInvoice.timbreFiscal;
-    
-    if (newAmountPaid >= totalDue - 0.01) { // 0.01 tolerance for floating point issues
-      newStatus = InvoiceStatus.paid;
-    } else if (newAmountPaid > 0) {
-      newStatus = InvoiceStatus.partial;
-    }
+      // Save payment using FirestoreRepository to 'paiements' and update treasury balance
+      await FirestoreRepository.instance.savePayment(payment);
+      db.add(AddPayment(payment));
 
-    final updatedInvoice = widget.purchaseInvoice.copyWith(
-      amountPaid: newAmountPaid,
-      status: newStatus,
-    );
-    context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedInvoice));
-    await FirestoreRepository.instance.saveDocument('invoices', updatedInvoice.id, updatedInvoice.toMap());
+      // Create TreasuryTransaction to decrease caisse (expense)
+      final treasuryTx = TreasuryTransaction(
+        id: const Uuid().v4(),
+        transactionNumber: 'TR-${now.year}-${now.millisecondsSinceEpoch % 1000000}'.padRight(6, '0'),
+        accountId: _selectedAccountId!,
+        amount: parsedAmount,
+        type: 'expense',
+        category: 'Paiement Fournisseur',
+        dateTransaction: _paymentDate,
+        description: 'Paiement de la facture ${widget.purchaseInvoice.number}',
+        paymentId: payment.id,
+        createdAt: now,
+        updatedAt: now,
+      );
+      context.read<TreasuryTransactionsBloc>().add(CreateTreasuryTransaction(treasuryTx));
 
-    // Update stock and create stock movements when payment is created
-    for (var item in widget.purchaseInvoice.items) {
-      if (item.productId.isEmpty) continue;
-      
-      try {
-        final productData = await FirestoreSafeHelper.getDocData(
-          FirebaseFirestore.instance.collection('articles'),
-          item.productId,
+      // Update Invoice status and amount paid
+      double taxAmount = _applyWithholdingTax ? ((widget.purchaseInvoice.totalTTC + widget.purchaseInvoice.timbreFiscal) * _withholdingTaxRate) / 100 : 0;
+
+      if (_applyWithholdingTax && taxAmount > 0) {
+        final rsPaymentNumber = 'RS-${now.year}-${(now.millisecondsSinceEpoch + 1) % 1000000}'.padRight(6, '0');
+        
+        final rsPayment = Payment(
+          id: const Uuid().v4(),
+          paymentNumber: rsPaymentNumber,
+          direction: 'decaissement',
+          contactId: widget.purchaseInvoice.supplierId,
+          contactType: 'supplier',
+          contactName: widget.purchaseInvoice.supplierName,
+          amount: taxAmount,
+          method: 'retenue_source',
+          reference: widget.purchaseInvoice.number,
+          paymentDate: _withholdingTaxDate,
+          notes: 'Retenue à la source ($_withholdingTaxRate%)',
+          status: 'paid',
+          relatedInvoiceId: widget.purchaseInvoice.id,
+          createdAt: now.add(const Duration(seconds: 1)),
+          updatedAt: now.add(const Duration(seconds: 1)),
         );
-        if (productData != null) {
-          productData['id'] = item.productId;
-          final product = Product.fromMap(productData);
-          
-          final newStock = product.stockQty + item.quantity;
-          final updatedProduct = product.copyWith(stockQty: newStock, updatedAt: now);
-          
-          await FirestoreRepository.instance.saveDocument('articles', product.id, updatedProduct.toMap());
-          
-          String resolvedWarehouseId = widget.purchaseInvoice.warehouseId ?? product.defaultWarehouseId ?? '';
-          if (resolvedWarehouseId.isEmpty || resolvedWarehouseId == 'default') {
-            try {
-              final whState = context.read<WarehousesBloc>().state;
-              if (whState is WarehousesLoaded && whState.warehouses.isNotEmpty) {
-                final defWh = whState.warehouses.firstWhere((w) => w.isDefault, orElse: () => whState.warehouses.first);
-                resolvedWarehouseId = defWh.id;
-              }
-            } catch (_) {}
-          }
-          if (resolvedWarehouseId.isEmpty) resolvedWarehouseId = 'default';
+        
+        await FirestoreRepository.instance.savePayment(rsPayment);
+        db.add(AddPayment(rsPayment));
+      }
 
-          final movement = StockMovement(
-            id: const Uuid().v4(),
-            productId: product.id,
-            productName: product.name,
-            warehouseId: resolvedWarehouseId,
-            type: MovementType.entry,
-            quantity: item.quantity,
-            referenceType: 'PurchaseInvoice',
-            referenceId: widget.purchaseInvoice.number,
-            date: now,
-            notes: 'Paiement de la facture ${widget.purchaseInvoice.number}',
-            enterpriseId: EnterpriseService.instance.currentEnterpriseId,
+      double newAmountPaid = widget.purchaseInvoice.amountPaid + parsedAmount + taxAmount;
+      
+      InvoiceStatus newStatus = widget.purchaseInvoice.status;
+      double totalDue = widget.purchaseInvoice.totalTTC + widget.purchaseInvoice.timbreFiscal;
+      
+      if (newAmountPaid >= totalDue - 0.01) { // 0.01 tolerance for floating point issues
+        newStatus = InvoiceStatus.paid;
+      } else if (newAmountPaid > 0) {
+        newStatus = InvoiceStatus.partial;
+      }
+
+      final updatedInvoice = widget.purchaseInvoice.copyWith(
+        amountPaid: newAmountPaid,
+        status: newStatus,
+      );
+      context.read<PurchaseInvoicesBloc>().add(UpdatePurchaseInvoice(updatedInvoice));
+      await FirestoreRepository.instance.saveDocument('invoices', updatedInvoice.id, updatedInvoice.toMap());
+
+      // Update stock and create stock movements when payment is created
+      for (var item in widget.purchaseInvoice.items) {
+        if (item.productId.isEmpty) continue;
+        
+        try {
+          final productData = await FirestoreSafeHelper.getDocData(
+            FirebaseFirestore.instance.collection('articles'),
+            item.productId,
           );
-          await FirestoreRepository.instance.saveDocument('stock_movements', movement.id, movement.toMap());
-        }
-      } catch (e) {
-        debugPrint('Error updating stock for purchase payment: $e');
-      }
-    }
-    if (mounted) {
-      try {
-        context.read<ProductsBloc>().add(LoadProducts());
-        context.read<StockBloc>().add(LoadStock());
-      } catch (e) {
-        debugPrint('Could not refresh products/stock blocs: $e');
-      }
-    }
+          if (productData != null) {
+            productData['id'] = item.productId;
+            final product = Product.fromMap(productData);
+            
+            final newStock = product.stockQty + item.quantity;
+            final updatedProduct = product.copyWith(stockQty: newStock, updatedAt: now);
+            
+            await FirestoreRepository.instance.saveDocument('articles', product.id, updatedProduct.toMap());
+            
+            String resolvedWarehouseId = widget.purchaseInvoice.warehouseId ?? product.defaultWarehouseId ?? '';
+            if (resolvedWarehouseId.isEmpty || resolvedWarehouseId == 'default') {
+              try {
+                final whState = context.read<WarehousesBloc>().state;
+                if (whState is WarehousesLoaded && whState.warehouses.isNotEmpty) {
+                  final defWh = whState.warehouses.firstWhere((w) => w.isDefault, orElse: () => whState.warehouses.first);
+                  resolvedWarehouseId = defWh.id;
+                }
+              } catch (_) {}
+            }
+            if (resolvedWarehouseId.isEmpty) resolvedWarehouseId = 'default';
 
-    if (mounted) {
-      Navigator.pop(context, true);
+            final movement = StockMovement(
+              id: const Uuid().v4(),
+              productId: product.id,
+              productName: product.name,
+              warehouseId: resolvedWarehouseId,
+              type: MovementType.entry,
+              quantity: item.quantity,
+              referenceType: 'PurchaseInvoice',
+              referenceId: widget.purchaseInvoice.number,
+              date: now,
+              notes: 'Paiement de la facture ${widget.purchaseInvoice.number}',
+              enterpriseId: EnterpriseService.instance.currentEnterpriseId,
+            );
+            await FirestoreRepository.instance.saveDocument('stock_movements', movement.id, movement.toMap());
+          }
+        } catch (e) {
+          debugPrint('Error updating stock for purchase payment: $e');
+        }
+      }
+      if (mounted) {
+        try {
+          context.read<ProductsBloc>().add(LoadProducts());
+          context.read<StockBloc>().add(LoadStock());
+        } catch (e) {
+          debugPrint('Could not refresh products/stock blocs: $e');
+        }
+      }
+
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -655,12 +664,12 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                       dropdownColor: AppColors.surfaceAlt,
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                      value: _withholdingTaxRate,
+                      value: _taxRates.firstWhere((t) => t['rate'] == _withholdingTaxRate, orElse: () => _taxRates.first),
                       isExpanded: true,
                       decoration: _mobileInputDecoration('Sélectionner le taux'),
                       items: _taxRates.map((t) {
-                        return DropdownMenuItem<double>(
-                          value: t['rate'],
+                        return DropdownMenuItem<Map<String, dynamic>>(
+                          value: t,
                           child: Row(
                             children: [
                               Container(
@@ -689,7 +698,7 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                       onChanged: (v) {
                         if (v != null) {
                           setState(() {
-                            _withholdingTaxRate = v;
+                            _withholdingTaxRate = (v['rate'] as num).toDouble();
                             _updateAmountField();
                           });
                         }
@@ -1002,9 +1011,11 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                 ],
               ),
               child: ElevatedButton.icon(
-                onPressed: _save,
-                icon: Icon(Icons.check_circle, color: Colors.white, size: 20),
-                label: Text('Confirmer le paiement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                onPressed: _isSaving ? null : _save,
+                icon: _isSaving
+                    ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Icon(Icons.check_circle, color: Colors.white, size: 20),
+                label: Text(_isSaving ? 'Traitement en cours...' : 'Confirmer le paiement', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
@@ -1138,9 +1149,11 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                   ),
                   SizedBox(width: 12),
                   ElevatedButton.icon(
-                    onPressed: _save,
-                    icon: Icon(Icons.save, size: 16, color: Colors.white),
-                    label: Text('Créer', style: TextStyle(color: Colors.white)),
+                    onPressed: _isSaving ? null : _save,
+                    icon: _isSaving
+                        ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : Icon(Icons.save, size: 16, color: Colors.white),
+                    label: Text(_isSaving ? 'Création...' : 'Créer', style: TextStyle(color: Colors.white)),
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                   ),
                 ],
@@ -1226,12 +1239,12 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                                     dropdownColor: AppColors.surfaceAlt,
                                     borderRadius: BorderRadius.circular(AppRadius.md),
                                     style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                    value: _withholdingTaxRate,
+                                    value: _taxRates.firstWhere((t) => t['rate'] == _withholdingTaxRate, orElse: () => _taxRates.first),
                                     isExpanded: true,
                                     decoration: InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                                     items: _taxRates.map((t) {
-                                      return DropdownMenuItem<double>(
-                                        value: t['rate'],
+                                      return DropdownMenuItem<Map<String, dynamic>>(
+                                        value: t,
                                         child: Row(
                                           children: [
                                             Container(
@@ -1248,7 +1261,7 @@ class _PurchaseInvoicePaymentDialogState extends State<PurchaseInvoicePaymentDia
                                     onChanged: (v) {
                                       if (v != null) {
                                         setState(() {
-                                          _withholdingTaxRate = v;
+                                          _withholdingTaxRate = (v['rate'] as num).toDouble();
                                           _updateAmountField();
                                         });
                                       }

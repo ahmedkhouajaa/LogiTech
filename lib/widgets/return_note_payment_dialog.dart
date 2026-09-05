@@ -310,16 +310,16 @@ class _ReturnNotePaymentDialogState extends State<ReturnNotePaymentDialog> {
                                 children: [
                                   Text('Statut: ${widget.returnNote.status}', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
                                   const SizedBox(height: 6),
-                                  DropdownButtonFormField(
-                                  dropdownColor: AppColors.surfaceAlt,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                    value: _withholdingTaxRate,
+                                  DropdownButtonFormField<Map<String, dynamic>>(
+                                    dropdownColor: AppColors.surfaceAlt,
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                    value: _taxRates.firstWhere((t) => t['rate'] == _withholdingTaxRate, orElse: () => _taxRates.first),
                                     isExpanded: true,
                                     decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                                     items: _taxRates.map((t) {
-                                      return DropdownMenuItem<double>(
-                                        value: t['rate'],
+                                      return DropdownMenuItem<Map<String, dynamic>>(
+                                        value: t,
                                         child: Row(
                                           children: [
                                             Container(
@@ -336,7 +336,7 @@ class _ReturnNotePaymentDialogState extends State<ReturnNotePaymentDialog> {
                                     onChanged: (v) {
                                       if (v != null) {
                                         setState(() {
-                                          _withholdingTaxRate = v;
+                                          _withholdingTaxRate = (v['rate'] as num).toDouble();
                                           _updateAmountField();
                                         });
                                       }

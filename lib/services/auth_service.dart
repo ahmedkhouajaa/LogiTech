@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,9 +13,24 @@ import '../utils/platform_utils.dart';
 import '../utils/firestore_safe_helper.dart';
 import 'auth/desktop_google_auth_helper.dart';
 
-class AuthService {
+class AuthService with WidgetsBindingObserver {
   static final AuthService instance = AuthService._();
   AuthService._();
+
+  bool _observerRegistered = false;
+
+  /// Registers the WidgetsBindingObserver safely after Flutter binding initialization.
+  void initLifecycleObserver() {
+    if (_observerRegistered) return;
+    try {
+      WidgetsBinding.instance.removeObserver(this);
+      WidgetsBinding.instance.addObserver(this);
+      _observerRegistered = true;
+      debugPrint('[AuthService] WidgetsBindingObserver registered successfully.');
+    } catch (e) {
+      debugPrint('[AuthService] Could not register lifecycle observer yet: $e');
+    }
+  }
 
   static const _prefKeyDeactivated = 'isAccountDeactivated';
   static const _prefKeyDeactivatedReason = 'accountDeactivatedReason';
@@ -25,6 +41,8 @@ class AuthService {
   String? _deactivationReason;
   final _accountDeactivatedController = StreamController<String>.broadcast();
   StreamSubscription<DocumentSnapshot>? _userStatusSubscription;
+  Timer? _presenceHeartbeatTimer;
+  Timer? _presenceOfflineDebounceTimer;
 
   bool get isAuthenticated => !_isDeactivated && (_currentUserUid != null || _offlineMode);
   bool get isDeactivated => _isDeactivated;
@@ -40,6 +58,7 @@ class AuthService {
   /// Start real-time Firestore listener to detect if the account or enterprise is deactivated remotely.
   void _startUserStatusListener(String uid) {
     _userStatusSubscription?.cancel();
+    startUserPresenceHeartbeat(uid);
     try {
       _userStatusSubscription = FirebaseFirestore.instance
           .collection('users')
@@ -109,6 +128,7 @@ class AuthService {
   Future<void> triggerDeactivation([String reason = "Votre compte a été désactivé. Contactez l'administrateur."]) async {
     _isDeactivated = true;
     _deactivationReason = reason;
+    stopUserPresenceHeartbeat();
     _userStatusSubscription?.cancel();
     _userStatusSubscription = null;
     _currentUserUid = null;
@@ -232,6 +252,7 @@ class AuthService {
 
             if (!_isDeactivated) {
               _startUserStatusListener(user.uid);
+              startUserPresenceHeartbeat(user.uid);
             }
           } else {
             _currentUserUid = null;
@@ -304,7 +325,9 @@ class AuthService {
           ).timeout(const Duration(seconds: 3));
           if (data != null) {
             final Map<String, dynamic> updates = {
+              'isOnline': true,
               'lastLoginAt': FieldValue.serverTimestamp(),
+              'lastHeartbeat': FieldValue.serverTimestamp(),
             };
             if (data['role'] == null || (data['role'] == 'admin' && data['permissions'] == null)) {
               final adminPerms = UserPermissionResources.getAdminDefaultPermissions()
@@ -623,6 +646,7 @@ class AuthService {
 
   /// Scenario 10: Clean logout for both Firebase and Google Sign In
   Future<void> logout() async {
+    stopUserPresenceHeartbeat();
     _userStatusSubscription?.cancel();
     _userStatusSubscription = null;
     _isDeactivated = false;
@@ -645,4 +669,87 @@ class AuthService {
     } catch (_) {}
     await EnterpriseService.instance.clearCache();
   }
+
+  /// Starts a 25-second heartbeat for the logged-in user to maintain real-time online status.
+  /// Also cancels any pending offline debounce (user is back online).
+  void startUserPresenceHeartbeat(String uid) {
+    if (uid.isEmpty) return;
+    // Cancel any pending offline grace timer — user is active again
+    _presenceOfflineDebounceTimer?.cancel();
+    _presenceOfflineDebounceTimer = null;
+
+    _presenceHeartbeatTimer?.cancel();
+    // Immediately mark online
+    _updateUserPresence(uid, true);
+
+    _presenceHeartbeatTimer = Timer.periodic(const Duration(seconds: 25), (_) {
+      _updateUserPresence(uid, true);
+    });
+  }
+
+  /// Stops user presence heartbeat and schedules an offline mark after a
+  /// 35-second grace period. If the user resumes before the timer fires,
+  /// the offline mark is cancelled — preventing false offline flips.
+  void stopUserPresenceHeartbeat([String? uid]) {
+    _presenceHeartbeatTimer?.cancel();
+    _presenceHeartbeatTimer = null;
+
+    final targetUid = uid ?? _currentUserUid ?? FirebaseAuth.instance.currentUser?.uid;
+    if (targetUid == null || targetUid.isEmpty) return;
+
+    // Cancel any existing debounce before starting a new one
+    _presenceOfflineDebounceTimer?.cancel();
+    // Wait 35 seconds before marking offline — if user comes back, this is cancelled
+    _presenceOfflineDebounceTimer = Timer(const Duration(seconds: 35), () {
+      _updateUserPresence(targetUid, false);
+      _presenceOfflineDebounceTimer = null;
+    });
+  }
+
+  Future<void> _updateUserPresence(String uid, bool isOnline) async {
+    if (uid.isEmpty) return;
+    try {
+      final Map<String, dynamic> updates = {
+        'isOnline': isOnline,
+        'lastHeartbeat': FieldValue.serverTimestamp(),
+      };
+      if (isOnline) {
+        updates['lastLoginAt'] = FieldValue.serverTimestamp();
+      } else {
+        updates['lastConnectedAt'] = FieldValue.serverTimestamp();
+      }
+      await FirebaseFirestore.instance.collection('users').doc(uid).set(
+        updates,
+        SetOptions(merge: true),
+      );
+    } catch (e) {
+      debugPrint('[AuthService] Error updating user presence: $e');
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    final uid = _currentUserUid ?? FirebaseAuth.instance.currentUser?.uid;
+    debugPrint('[AuthService] AppLifecycleState changed to: $state for user: $uid');
+    if (uid == null || uid.isEmpty) return;
+
+    if (state == AppLifecycleState.resumed) {
+      // User returned to the app — immediately mark online and restart heartbeat
+      debugPrint('[AuthService] App resumed -> cancelling offline timer, marking ONLINE for $uid');
+      startUserPresenceHeartbeat(uid);
+    } else if (state == AppLifecycleState.paused ||
+               state == AppLifecycleState.detached ||
+               state == AppLifecycleState.hidden) {
+      // Only schedule offline on true background/close — NOT on 'inactive'
+      // 'inactive' fires briefly during app-switching and should NOT mark offline
+      debugPrint('[AuthService] App backgrounded ($state) -> scheduling offline in 35s for $uid');
+      stopUserPresenceHeartbeat(uid);
+    }
+    // AppLifecycleState.inactive is intentionally ignored:
+    // it fires transiently during multitasking, notification pulls, etc.
+  }
 }
+
+
+

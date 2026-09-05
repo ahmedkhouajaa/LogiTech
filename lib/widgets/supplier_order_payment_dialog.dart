@@ -311,12 +311,12 @@ class _SupplierOrderPaymentDialogState extends State<SupplierOrderPaymentDialog>
                                   dropdownColor: AppColors.surfaceAlt,
                                   borderRadius: BorderRadius.circular(AppRadius.md),
                                   style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                    value: _withholdingTaxRate,
+                                    value: _taxRates.firstWhere((t) => t['rate'] == _withholdingTaxRate, orElse: () => _taxRates.first),
                                     isExpanded: true,
                                     decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                                     items: _taxRates.map((t) {
-                                      return DropdownMenuItem<double>(
-                                        value: t['rate'],
+                                      return DropdownMenuItem<Map<String, dynamic>>(
+                                        value: t,
                                         child: Row(
                                           children: [
                                             Container(
@@ -333,7 +333,7 @@ class _SupplierOrderPaymentDialogState extends State<SupplierOrderPaymentDialog>
                                     onChanged: (v) {
                                       if (v != null) {
                                         setState(() {
-                                          _withholdingTaxRate = v;
+                                          _withholdingTaxRate = (v['rate'] as num).toDouble();
                                           _updateAmountField();
                                         });
                                       }

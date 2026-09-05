@@ -412,12 +412,12 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                                         dropdownColor: AppColors.surfaceAlt,
                                         borderRadius: BorderRadius.circular(AppRadius.md),
                                         style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                        value: _withholdingTaxRate,
+                                        value: _taxRates.firstWhere((t) => t['rate'] == _withholdingTaxRate, orElse: () => _taxRates.first),
                                         isExpanded: true,
                                         decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                                         items: _taxRates.map((t) {
-                                          return DropdownMenuItem<double>(
-                                            value: t['rate'],
+                                           return DropdownMenuItem<Map<String, dynamic>>(
+                                             value: t,
                                             child: Row(
                                               children: [
                                                 Container(
@@ -434,7 +434,7 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                                         onChanged: (v) {
                                           if (v != null) {
                                             setState(() {
-                                              _withholdingTaxRate = v;
+                                              _withholdingTaxRate = (v['rate'] as num).toDouble();
                                               _updateAmountField();
                                             });
                                           }
@@ -477,38 +477,38 @@ class _ReceivingVoucherPaymentDialogState extends State<ReceivingVoucherPaymentD
                                       children: [
                                         Text('Statut: ${widget.receivingVoucher.status}', style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
                                         const SizedBox(height: 6),
-                                        DropdownButtonFormField(
-                                          dropdownColor: AppColors.surfaceAlt,
-                                          borderRadius: BorderRadius.circular(AppRadius.md),
-                                          style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
-                                          value: _withholdingTaxRate,
-                                          isExpanded: true,
-                                          decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-                                          items: _taxRates.map((t) {
-                                            return DropdownMenuItem<double>(
-                                              value: t['rate'],
-                                              child: Row(
-                                                children: [
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                    decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                                                    child: Text('${t['rate']}%', style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Expanded(child: Text(t['label'], overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
-                                                ],
-                                              ),
-                                            );
-                                          }).toList(),
-                                          onChanged: (v) {
-                                            if (v != null) {
-                                              setState(() {
-                                                _withholdingTaxRate = v;
-                                                _updateAmountField();
-                                              });
-                                            }
-                                          },
-                                        ),
+                                        DropdownButtonFormField<Map<String, dynamic>>(
+                                         dropdownColor: AppColors.surfaceAlt,
+                                         borderRadius: BorderRadius.circular(AppRadius.md),
+                                         style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                                         value: _taxRates.firstWhere((t) => t['rate'] == _withholdingTaxRate, orElse: () => _taxRates.first),
+                                         isExpanded: true,
+                                         decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                                         items: _taxRates.map((t) {
+                                           return DropdownMenuItem<Map<String, dynamic>>(
+                                             value: t,
+                                             child: Row(
+                                               children: [
+                                                 Container(
+                                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                   decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                                   child: Text('${t['rate']}%', style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                                                 ),
+                                                 const SizedBox(width: 8),
+                                                 Expanded(child: Text(t['label'], overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
+                                               ],
+                                             ),
+                                           );
+                                         }).toList(),
+                                         onChanged: (v) {
+                                           if (v != null) {
+                                             setState(() {
+                                               _withholdingTaxRate = (v['rate'] as num).toDouble();
+                                               _updateAmountField();
+                                             });
+                                           }
+                                         },
+                                       ),
                                       ],
                                     ),
                                   ),

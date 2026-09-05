@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../tenant_xray_screen.dart';
+import '../../services/user_presence_helper.dart';
 
 class AllClientsScreen extends StatefulWidget {
   const AllClientsScreen({super.key});
@@ -629,24 +630,73 @@ class _AllClientsScreenState extends State<AllClientsScreen> {
                                                       children: [
                                                         Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Color(0xFF0F172A))),
                                                         const SizedBox(width: 8),
-                                                        Container(
-                                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                          decoration: BoxDecoration(
-                                                            color: isBanned ? const Color(0xFFEF4444).withValues(alpha: 0.1) : const Color(0xFF10B981).withValues(alpha: 0.1),
-                                                            borderRadius: BorderRadius.circular(4),
-                                                          ),
-                                                          child: Text(
-                                                            isBanned ? 'BANNI / SUSPENDU' : 'CLIENT ACTIF',
-                                                            style: TextStyle(
-                                                              fontSize: 10,
-                                                              fontWeight: FontWeight.bold,
-                                                              color: isBanned ? const Color(0xFFDC2626) : const Color(0xFF059669),
+                                                        // Activation Status Chip
+                                                        Builder(builder: (_) {
+                                                          final actInfo = UserPresenceHelper.getActivationInfo(data);
+                                                          return Container(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                                            decoration: BoxDecoration(
+                                                              color: actInfo.backgroundColor,
+                                                              borderRadius: BorderRadius.circular(4),
                                                             ),
-                                                          ),
-                                                        ),
+                                                            child: Row(
+                                                              mainAxisSize: MainAxisSize.min,
+                                                              children: [
+                                                                Icon(actInfo.icon, size: 11, color: actInfo.color),
+                                                                const SizedBox(width: 4),
+                                                                Text(
+                                                                  actInfo.shortLabel,
+                                                                  style: TextStyle(
+                                                                    fontSize: 10,
+                                                                    fontWeight: FontWeight.bold,
+                                                                    color: actInfo.color,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          );
+                                                        }),
+                                                        const SizedBox(width: 6),
+                                                        // Presence Status & Last Connected Badge
+                                                        Builder(builder: (_) {
+                                                          final isOnline = data['isOnline'] == true;
+                                                          final lastConn = data['lastLoginAt'] ?? data['lastHeartbeat'] ?? data['lastConnectedAt'] ?? data['updatedAt'];
+                                                          final lastConnStr = UserPresenceHelper.formatLastConnected(lastConn);
+
+                                                          return Container(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                                            decoration: BoxDecoration(
+                                                              color: isOnline ? const Color(0xFFD1FAE5) : const Color(0xFFF1F5F9),
+                                                              borderRadius: BorderRadius.circular(4),
+                                                              border: Border.all(color: isOnline ? const Color(0xFF6EE7B7) : const Color(0xFFE2E8F0)),
+                                                            ),
+                                                            child: Row(
+                                                              mainAxisSize: MainAxisSize.min,
+                                                              children: [
+                                                                Container(
+                                                                  width: 6,
+                                                                  height: 6,
+                                                                  decoration: BoxDecoration(
+                                                                    color: isOnline ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+                                                                    shape: BoxShape.circle,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(width: 5),
+                                                                Text(
+                                                                  isOnline ? 'EN LIGNE' : 'HORS LIGNE • Vu: $lastConnStr',
+                                                                  style: TextStyle(
+                                                                    fontSize: 10,
+                                                                    fontWeight: FontWeight.bold,
+                                                                    color: isOnline ? const Color(0xFF059669) : const Color(0xFF64748B),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          );
+                                                        }),
                                                         const SizedBox(width: 6),
                                                         Container(
-                                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
                                                           decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(4)),
                                                           child: Text(
                                                             isOwner ? 'PROPRIÉTAIRE' : role,
@@ -655,7 +705,7 @@ class _AllClientsScreenState extends State<AllClientsScreen> {
                                                         ),
                                                       ],
                                                     ),
-                                                    const SizedBox(height: 3),
+                                                    const SizedBox(height: 4),
                                                     Text(
                                                       'ID : $userId • Email : $email • Tél : $phone ${createdAt != null ? "• Inscrit le : ${dateFormat.format(createdAt)}" : ""}',
                                                       style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),

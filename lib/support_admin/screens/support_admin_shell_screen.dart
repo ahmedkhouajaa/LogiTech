@@ -22,6 +22,8 @@ import 'clients/password_management_screen.dart';
 import 'clients/license_extension_screen.dart';
 import 'clients/client_history_screen.dart';
 import 'clients/client_export_screen.dart';
+import 'clients/user_activation_screen.dart';
+import '../services/user_presence_helper.dart';
 import 'firestore_metrics_screen.dart';
 
 class SupportAdminShellScreen extends StatefulWidget {
@@ -206,6 +208,8 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
       // 3. Client Management views (GESTION DES CLIENTS)
       case AdminNavModule.clientsAll:
         return const AllClientsScreen(key: ValueKey('clientsAll'));
+      case AdminNavModule.userActivation:
+        return const UserActivationScreen(key: ValueKey('userActivation'));
       case AdminNavModule.clientsSearch:
         return const ClientSearchScreen(key: ValueKey('clientsSearch'));
       case AdminNavModule.clientsBanned:
@@ -321,128 +325,190 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
             }
 
             return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: FirebaseFirestore.instance
-                  .collection('subscription_payments')
-                  .where('status', isEqualTo: 'pending')
-                  .snapshots(),
-              builder: (context, paymentSnap) {
-                final pendingPaymentCount = paymentSnap.data?.docs.length ?? 0;
+              stream: FirebaseFirestore.instance.collection('users').snapshots(),
+              builder: (context, userSnap) {
+                int onlineUsersCount = 0;
+                int activeUsersCount = 0;
+                int invitedUsersCount = 0;
 
-                final Map<String, int> badgeCounts = {
-                  'open': openCount,
-                  'urgent': urgentCount,
-                  'unassigned': unassignedCount,
-                  'escalated': escalatedCount,
-                  'bannedClients': bannedCount,
-                  'pendingPayments': pendingPaymentCount,
-                };
+                if (userSnap.hasData) {
+                  for (final doc in userSnap.data!.docs) {
+                    final d = doc.data();
+                    final isOnline = UserPresenceHelper.isUserOnline(d);
+                    final isBanned = d['isBanned'] == true || d['isDisabled'] == true || d['status'] == 'banned' || d['status'] == 'disabled' || d['isActive'] == false;
+                    final isInvited = d['status'] == 'invited' || d['status'] == 'pending';
 
-                return Column(
-                  children: [
-                    const SizedBox(height: 12),
+                    if (isOnline) onlineUsersCount++;
+                    if (isInvited) {
+                      invitedUsersCount++;
+                    } else if (!isBanned) {
+                      activeUsersCount++;
+                    }
+                  }
+                }
 
-                    // Navigation Sections
-                    Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        children: [
-                          // 1. Dashboard
-                          _menuItem(AdminNavModule.dashboard, 'Tableau de Bord', Icons.dashboard_rounded, collapsed, isDrawer),
-                          const Divider(color: Color(0xFF1E293B), height: 16),
+                return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('subscription_payments')
+                      .where('status', isEqualTo: 'pending')
+                      .snapshots(),
+                  builder: (context, paymentSnap) {
+                    final pendingPaymentCount = paymentSnap.data?.docs.length ?? 0;
 
-                          // 2. Ticket Management (The 6 Drawer Options)
-                          _sectionHeader('GESTION DES TICKETS', collapsed),
-                          _menuItem(AdminNavModule.ticketsQueue, 'File d\'attente', Icons.inbox_rounded, collapsed, isDrawer, badge: badgeCounts['open']),
-                          _menuItem(AdminNavModule.ticketsMy, 'Mes Tickets', Icons.person_outline_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.ticketsUrgent, 'Tickets Urgents', Icons.warning_amber_rounded, collapsed, isDrawer, badge: badgeCounts['urgent'], badgeColor: const Color(0xFFEF4444)),
-                          _menuItem(AdminNavModule.ticketsUnassigned, 'Non Assignés', Icons.push_pin_outlined, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.ticketsEscalated, 'Tickets Escaladés', Icons.sync_problem_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.ticketsAll, 'Tous les Tickets', Icons.all_inbox_rounded, collapsed, isDrawer),
-                          const Divider(color: Color(0xFF1E293B), height: 16),
+                    final Map<String, int> badgeCounts = {
+                      'open': openCount,
+                      'urgent': urgentCount,
+                      'unassigned': unassignedCount,
+                      'escalated': escalatedCount,
+                      'bannedClients': bannedCount,
+                      'pendingPayments': pendingPaymentCount,
+                      'onlineUsers': onlineUsersCount,
+                    };
 
-                          // 3. Client Management (GESTION DES CLIENTS - 7 options)
-                          _sectionHeader('GESTION DES CLIENTS', collapsed),
-                          _menuItem(AdminNavModule.clientsAll, 'Tous les Clients', Icons.groups_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.clientsSearch, 'Rechercher un Client', Icons.person_search_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.clientsBanned, 'Clients Bannis/Désactivés', Icons.block_rounded, collapsed, isDrawer, badge: badgeCounts['bannedClients'], badgeColor: const Color(0xFFEF4444)),
-                          _menuItem(AdminNavModule.clientsPasswords, 'Gestion Mots de Passe', Icons.key_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.clientsLicenseExtend, 'Extension de Licence', Icons.event_available_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.clientsHistory, 'Historique Clients', Icons.history_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.clientsExport, 'Exporter Clients (Excel/CSV)', Icons.file_download_rounded, collapsed, isDrawer),
-                          const Divider(color: Color(0xFF1E293B), height: 16),
+                    return Column(
+                      children: [
+                        const SizedBox(height: 12),
 
-                          // 4. Payment & Billing
-                          _sectionHeader('PAIEMENTS & FACTURATION', collapsed),
-                          _menuItem(AdminNavModule.paymentValidation, 'Validation Paiements', Icons.verified_rounded, collapsed, isDrawer, badge: badgeCounts['pendingPayments'], badgeColor: const Color(0xFFF59E0B)),
-                          _menuItem(AdminNavModule.paymentHistory, 'Historique Paiements', Icons.receipt_long_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.paymentPlans, 'Plans & Abonnements', Icons.card_membership_rounded, collapsed, isDrawer),
-                          const Divider(color: Color(0xFF1E293B), height: 16),
-
-                          // 5. Agent Management (SuperAdmin)
-                          _sectionHeader('GESTION DES AGENTS', collapsed),
-                          _menuItem(AdminNavModule.agentsTeam, 'Équipe Support', Icons.people_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.agentsPerformance, 'Performance Agents', Icons.leaderboard_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.agentsPresence, 'Présence en Direct', Icons.sensors_rounded, collapsed, isDrawer),
-                          const Divider(color: Color(0xFF1E293B), height: 16),
-
-                          // 6. Audit & Security
-                          _sectionHeader('AUDIT & SÉCURITÉ', collapsed),
-                          _menuItem(AdminNavModule.auditLogs, 'Journal d\'Audit', Icons.security_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.loginLogs, 'Logs de Connexion', Icons.lock_clock_rounded, collapsed, isDrawer),
-                          const Divider(color: Color(0xFF1E293B), height: 16),
-
-                          // 7. Configuration
-                          _sectionHeader('CONFIGURATION', collapsed),
-                          _menuItem(AdminNavModule.configSla, 'Paramètres SLA', Icons.timer_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.configTemplates, 'Modèles de Réponse', Icons.flash_on_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.configCategories, 'Catégories Tickets', Icons.category_rounded, collapsed, isDrawer),
-                          const Divider(color: Color(0xFF1E293B), height: 16),
-
-                          // 8. Reports & Analytics
-                          _sectionHeader('MÉTRIQUES & ANALYTIQUE', collapsed),
-                          _menuItem(AdminNavModule.firestoreMetrics, 'Métriques Firestore (R/W/D)', Icons.query_stats_rounded, collapsed, isDrawer),
-                          _menuItem(AdminNavModule.reportsSla, 'Rapports SLA & CSAT', Icons.analytics_rounded, collapsed, isDrawer),
-                          const Divider(color: Color(0xFF1E293B), height: 16),
-
-                          // 9. System
-                          _sectionHeader('SYSTÈME', collapsed),
-                          _menuItem(AdminNavModule.systemProfile, 'Mon Profil & Thème', Icons.person_rounded, collapsed, isDrawer),
-                        ],
-                      ),
-                    ),
-
-                    // Bottom Logout
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: InkWell(
-                        onTap: _logout,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: collapsed ? 0 : 14, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
+                        // Navigation Sections
+                        Expanded(
+                          child: ListView(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                             children: [
-                              const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 18),
+                              // 1. Dashboard
+                              _menuItem(AdminNavModule.dashboard, 'Tableau de Bord', Icons.dashboard_rounded, collapsed, isDrawer),
+                              const Divider(color: Color(0xFF1E293B), height: 16),
+
+                              // Drawer Quick Presence & Activation Summary Pill Card
                               if (!collapsed) ...[
-                                const SizedBox(width: 12),
-                                const Text('Déconnexion', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600, fontSize: 13)),
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1E293B),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFF334155)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: const [
+                                          Icon(Icons.sensors_rounded, size: 14, color: Color(0xFF10B981)),
+                                          SizedBox(width: 6),
+                                          Text('PRÉSENCE & ACTIVATION', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          _presenceBadge('En Ligne', '$onlineUsersCount', const Color(0xFF10B981)),
+                                          _presenceBadge('Comptes Actifs', '$activeUsersCount', const Color(0xFF3B82F6)),
+                                          _presenceBadge('En Attente', '$invitedUsersCount', const Color(0xFFF59E0B)),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
+
+                              // 2. Ticket Management (The 6 Drawer Options)
+                              _sectionHeader('GESTION DES TICKETS', collapsed),
+                              _menuItem(AdminNavModule.ticketsQueue, 'File d\'attente', Icons.inbox_rounded, collapsed, isDrawer, badge: badgeCounts['open']),
+                              _menuItem(AdminNavModule.ticketsMy, 'Mes Tickets', Icons.person_outline_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.ticketsUrgent, 'Tickets Urgents', Icons.warning_amber_rounded, collapsed, isDrawer, badge: badgeCounts['urgent'], badgeColor: const Color(0xFFEF4444)),
+                              _menuItem(AdminNavModule.ticketsUnassigned, 'Non Assignés', Icons.push_pin_outlined, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.ticketsEscalated, 'Tickets Escaladés', Icons.sync_problem_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.ticketsAll, 'Tous les Tickets', Icons.all_inbox_rounded, collapsed, isDrawer),
+                              const Divider(color: Color(0xFF1E293B), height: 16),
+
+                              // 3. Client Management (GESTION DES CLIENTS - 8 options)
+                              _sectionHeader('GESTION DES CLIENTS', collapsed),
+                              _menuItem(AdminNavModule.clientsAll, 'Tous les Clients', Icons.groups_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.userActivation, 'User Activation', Icons.how_to_reg_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.clientsSearch, 'Rechercher un Client', Icons.person_search_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.clientsBanned, 'Clients Bannis/Désactivés', Icons.block_rounded, collapsed, isDrawer, badge: badgeCounts['bannedClients'], badgeColor: const Color(0xFFEF4444)),
+                              _menuItem(AdminNavModule.clientsPasswords, 'Gestion Mots de Passe', Icons.key_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.clientsLicenseExtend, 'Extension de Licence', Icons.event_available_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.clientsHistory, 'Historique Clients', Icons.history_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.clientsExport, 'Exporter Clients (Excel/CSV)', Icons.file_download_rounded, collapsed, isDrawer),
+                              const Divider(color: Color(0xFF1E293B), height: 16),
+
+                              // 4. Payment & Billing
+                              _sectionHeader('PAIEMENTS & FACTURATION', collapsed),
+                              _menuItem(AdminNavModule.paymentValidation, 'Validation Paiements', Icons.verified_rounded, collapsed, isDrawer, badge: badgeCounts['pendingPayments'], badgeColor: const Color(0xFFF59E0B)),
+                              _menuItem(AdminNavModule.paymentHistory, 'Historique Paiements', Icons.receipt_long_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.paymentPlans, 'Plans & Abonnements', Icons.card_membership_rounded, collapsed, isDrawer),
+                              const Divider(color: Color(0xFF1E293B), height: 16),
+
+                              // 5. Agent Management (SuperAdmin)
+                              _sectionHeader('GESTION DES AGENTS', collapsed),
+                              _menuItem(AdminNavModule.agentsTeam, 'Équipe Support', Icons.people_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.agentsPerformance, 'Performance Agents', Icons.leaderboard_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.agentsPresence, 'Présence en Direct', Icons.sensors_rounded, collapsed, isDrawer, badge: badgeCounts['onlineUsers'], badgeColor: const Color(0xFF10B981)),
+                              const Divider(color: Color(0xFF1E293B), height: 16),
+
+                              // 6. Audit & Security
+                              _sectionHeader('AUDIT & SÉCURITÉ', collapsed),
+                              _menuItem(AdminNavModule.auditLogs, 'Journal d\'Audit', Icons.security_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.loginLogs, 'Logs de Connexion', Icons.lock_clock_rounded, collapsed, isDrawer),
+                              const Divider(color: Color(0xFF1E293B), height: 16),
+
+                              // 7. Configuration
+                              _sectionHeader('CONFIGURATION', collapsed),
+                              _menuItem(AdminNavModule.configSla, 'Paramètres SLA', Icons.timer_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.configTemplates, 'Modèles de Réponse', Icons.flash_on_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.configCategories, 'Catégories Tickets', Icons.category_rounded, collapsed, isDrawer),
+                              const Divider(color: Color(0xFF1E293B), height: 16),
+
+                              // 8. Reports & Analytics
+                              _sectionHeader('MÉTRIQUES & ANALYTIQUE', collapsed),
+                              _menuItem(AdminNavModule.firestoreMetrics, 'Métriques Firestore (R/W/D)', Icons.query_stats_rounded, collapsed, isDrawer),
+                              _menuItem(AdminNavModule.reportsSla, 'Rapports SLA & CSAT', Icons.analytics_rounded, collapsed, isDrawer),
+                              const Divider(color: Color(0xFF1E293B), height: 16),
+
+                              // 9. System
+                              _sectionHeader('SYSTÈME', collapsed),
+                              _menuItem(AdminNavModule.systemProfile, 'Mon Profil & Thème', Icons.person_rounded, collapsed, isDrawer),
                             ],
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
+
+                        // Bottom Logout
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: InkWell(
+                            onTap: _logout,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: collapsed ? 0 : 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: collapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 18),
+                                  if (!collapsed) ...[
+                                    const SizedBox(width: 12),
+                                    const Text('Déconnexion', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600, fontSize: 13)),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    );
+                  },
                 );
               },
             );
           },
         );
+
       },
     );
   }
@@ -537,6 +603,7 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
 
       // Client Management
       case AdminNavModule.clientsAll: return 'Annuaire de Tous les Clients';
+      case AdminNavModule.userActivation: return 'Activation & Présence des Utilisateurs (User Activation)';
       case AdminNavModule.clientsSearch: return 'Recherche Globale de Clients';
       case AdminNavModule.clientsBanned: return 'Clients Bannis & Suspendus';
       case AdminNavModule.clientsPasswords: return 'Gestion des Mots de Passe Utilisateurs';
@@ -571,4 +638,15 @@ class _SupportAdminShellScreenState extends State<SupportAdminShellScreen> {
       case AdminNavModule.systemLanguage: return 'Langue du Système';
     }
   }
+
+  Widget _presenceBadge(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(value, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 9, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
 }
+

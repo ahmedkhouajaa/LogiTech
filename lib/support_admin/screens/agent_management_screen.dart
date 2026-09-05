@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/user_presence_helper.dart';
 
 class AgentManagementScreen extends StatefulWidget {
   final bool showOnlyPresence;
@@ -136,7 +137,7 @@ class _AgentManagementScreenState extends State<AgentManagementScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Supervisez les agents, la charge de travail et la disponibilité en temps réel.',
+                      'Supervisez les agents, la charge de travail, l\'activation et la disponibilité en temps réel.',
                       style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                     ),
                   ],
@@ -162,12 +163,13 @@ class _AgentManagementScreenState extends State<AgentManagementScreen> {
                 stream: _firestore.collection('support_agents_presence').snapshots(),
                 builder: (context, presenceSnap) {
                   final presenceDocs = presenceSnap.data?.docs ?? [];
-                  final onlineAgentEmails = <String>{};
+                  final presenceMap = <String, Map<String, dynamic>>{};
 
                   for (final p in presenceDocs) {
-                    if (p.data()['isOnline'] == true) {
-                      final email = p.data()['email']?.toString().toLowerCase();
-                      if (email != null) onlineAgentEmails.add(email);
+                    final data = p.data();
+                    final email = data['email']?.toString().toLowerCase();
+                    if (email != null) {
+                      presenceMap[email] = data;
                     }
                   }
 
@@ -186,25 +188,34 @@ class _AgentManagementScreenState extends State<AgentManagementScreen> {
                         itemBuilder: (context, index) {
                           if (index == 0) {
                             // Default System SuperAdmin Card
-                            final isOnline = onlineAgentEmails.contains('support@logitech.tn');
+                            final pData = presenceMap['support@logitech.tn'];
+                            final isOnline = pData?['isOnline'] == true;
+                            final lastConn = pData?['lastHeartbeat'];
+
                             return _agentCard(
                               name: 'Support LogiTech (SuperAdmin)',
                               email: 'support@logitech.tn',
                               role: 'superadmin',
                               isOnline: isOnline,
+                              lastConnected: lastConn,
+                              agentData: const {'status': 'active', 'isActive': true},
                               resolvedCount: 24,
                             );
                           }
 
                           final data = docs[index - 1].data();
                           final email = (data['email'] ?? '').toString();
-                          final isOnline = onlineAgentEmails.contains(email.toLowerCase());
+                          final pData = presenceMap[email.toLowerCase()];
+                          final isOnline = pData?['isOnline'] == true;
+                          final lastConn = pData?['lastHeartbeat'] ?? data['invitedAt'] ?? data['createdAt'];
 
                           return _agentCard(
                             name: data['name'] ?? email.split('@').first,
                             email: email,
                             role: data['role'] ?? 'support_agent',
                             isOnline: isOnline,
+                            lastConnected: lastConn,
+                            agentData: data,
                             resolvedCount: 0,
                           );
                         },
@@ -225,8 +236,13 @@ class _AgentManagementScreenState extends State<AgentManagementScreen> {
     required String email,
     required String role,
     required bool isOnline,
+    required dynamic lastConnected,
+    required Map<String, dynamic> agentData,
     required int resolvedCount,
   }) {
+    final actInfo = UserPresenceHelper.getActivationInfo(agentData);
+    final lastConnStr = UserPresenceHelper.formatLastConnected(lastConnected);
+
     return Card(
       elevation: 0,
       color: Colors.white,
@@ -265,12 +281,28 @@ class _AgentManagementScreenState extends State<AgentManagementScreen> {
                     children: [
                       Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                       const SizedBox(width: 8),
+                      // Role badge
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(color: const Color(0xFF2563EB).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
                         child: Text(role.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
+                      // Activation Status Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: actInfo.backgroundColor, borderRadius: BorderRadius.circular(4)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(actInfo.icon, size: 10, color: actInfo.color),
+                            const SizedBox(width: 3),
+                            Text(actInfo.shortLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: actInfo.color)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      // Presence & Offline last connection
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
@@ -278,7 +310,7 @@ class _AgentManagementScreenState extends State<AgentManagementScreen> {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          isOnline ? 'EN LIGNE' : 'HORS LIGNE',
+                          isOnline ? 'EN LIGNE' : 'HORS LIGNE • Vu: $lastConnStr',
                           style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isOnline ? const Color(0xFF059669) : const Color(0xFF64748B)),
                         ),
                       ),

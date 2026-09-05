@@ -6,6 +6,8 @@ import 'firebase_options.dart';
 import 'support_admin/screens/admin_login_screen.dart';
 import 'support_admin/screens/support_admin_shell_screen.dart';
 
+import 'services/auth_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -15,8 +17,11 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  AuthService.instance.initLifecycleObserver();
+
   runApp(const LogitechAdminWebApp());
 }
+
 
 class LogitechAdminWebApp extends StatelessWidget {
   const LogitechAdminWebApp({super.key});

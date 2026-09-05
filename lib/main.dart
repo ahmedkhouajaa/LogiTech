@@ -82,6 +82,7 @@ import 'dart:async';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AuthService.instance.initLifecycleObserver();
   
   if (kIsWeb) {
     usePathUrlStrategy();
