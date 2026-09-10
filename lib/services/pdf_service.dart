@@ -143,9 +143,12 @@ class PdfService {
           final totalsY = (totalsCfg['positionY'] as num?)?.toDouble() ?? 175.0;
           final notesY = (notesCfg['positionY'] as num?)?.toDouble() ?? 175.0;
           final sigY = (sigCfg['positionY'] as num?)?.toDouble() ?? 230.0;
+          final stampCfg = config['stamp'] as Map<String, dynamic>? ?? {};
+          final showStamp = (config['companyInfo']?['showStamp'] == true) || (stampCfg['visible'] == true);
+          final stampY = (stampCfg['positionY'] as num?)?.toDouble() ?? 225.0;
 
           // Reference baseline is table bottom / minimum Y among bottom elements
-          final minY = [totalsY, notesY, sigY].reduce(math.min);
+          final minY = [totalsY, notesY, sigY, if (showStamp) stampY].reduce(math.min);
           final tableY = ((config['table'] as Map<String, dynamic>?)?['positionY'] as num?)?.toDouble() ?? 82.0;
 
           // Top gap between table and bottom blocks reflects user Y position
@@ -863,6 +866,31 @@ class PdfService {
       }
     }
 
+    // --- Content: Stamp / Cachet Card ---
+    final stampCfg = config['stamp'] as Map<String, dynamic>? ?? {};
+    final showStamp = (config['companyInfo']?['showStamp'] == true) || (stampCfg['visible'] == true);
+    final stampX = (stampCfg['positionX'] as num?)?.toDouble() ?? 140.0;
+    final stampY = (stampCfg['positionY'] as num?)?.toDouble() ?? 225.0;
+    final stampW = (stampCfg['width'] as num?)?.toDouble() ?? 35.0;
+    final stampH = (stampCfg['height'] as num?)?.toDouble() ?? 35.0;
+
+    pw.Widget? stampCard;
+    if (showStamp) {
+      final stampData = EnterpriseService.instance.currentEnterprise?.stampUrl ??
+          (settings.stampPath != null && settings.stampPath!.isNotEmpty ? settings.stampPath : null);
+      final stampBytes = CompanyLogoHelper.decodeBase64Logo(stampData);
+      if (stampBytes != null && stampBytes.isNotEmpty) {
+        stampCard = pw.Container(
+          width: stampW * mm,
+          height: stampH * mm,
+          child: pw.Image(
+            pw.MemoryImage(stampBytes),
+            fit: pw.BoxFit.contain,
+          ),
+        );
+      }
+    }
+
     // --- Dynamic Layout based on Y and X coordinates of the elements ---
     // Collect present elements with their coordinates
     final elements = <({String key, double x, double y, double w, pw.Widget widget})>[];
@@ -870,8 +898,33 @@ class PdfService {
     if (notesCard != null) {
       elements.add((key: 'notes', x: notesX, y: notesY, w: notesW, widget: notesCard));
     }
-    if (signatureCard != null) {
-      elements.add((key: 'signature', x: sigX, y: sigY, w: sigW, widget: signatureCard));
+
+    if (stampCard != null && signatureCard != null && (stampX - sigX).abs() <= 50 && (stampY - sigY).abs() <= 35) {
+      final overlayLeft = (stampX - sigX).clamp(-10.0, sigW - 10.0) * mm;
+      final overlayTop = (stampY - sigY + 8.0).clamp(-10.0, 30.0) * mm;
+      elements.add((
+        key: 'signature',
+        x: sigX,
+        y: sigY,
+        w: sigW,
+        widget: pw.Stack(
+          children: [
+            signatureCard,
+            pw.Positioned(
+              left: overlayLeft,
+              top: overlayTop,
+              child: stampCard,
+            ),
+          ],
+        ),
+      ));
+    } else {
+      if (signatureCard != null) {
+        elements.add((key: 'signature', x: sigX, y: sigY, w: sigW, widget: signatureCard));
+      }
+      if (stampCard != null) {
+        elements.add((key: 'stamp', x: stampX, y: stampY, w: stampW, widget: stampCard));
+      }
     }
 
     // Sort items vertically by Y

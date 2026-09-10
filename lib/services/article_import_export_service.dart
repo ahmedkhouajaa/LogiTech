@@ -812,7 +812,7 @@ class ArticleImportExportService {
         errors.add('Le nom / la désignation de l\'article est obligatoire.');
       }
 
-      // 5. Validate Product Type (Allowed values: 'produit', 'service', 'consommable')
+      // 5. Validate Product Type (Allowed values: 'produit', 'service', 'consommable', 'immobilisation')
       final rawProductType = mapped['productType']?.toString().trim() ?? '';
       String productType = 'produit';
       if (rawProductType.isNotEmpty) {
@@ -823,8 +823,10 @@ class ArticleImportExportService {
           productType = 'service';
         } else if (lower == 'consommable' || lower == 'matiere_premiere' || lower == 'matiere' || lower == 'fourniture') {
           productType = 'consommable';
+        } else if (lower == 'immobilisation' || lower == 'immo' || lower == 'asset') {
+          productType = 'immobilisation';
         } else {
-          errors.add('Type d\'article "$rawProductType" invalide. Valeurs acceptées : produit, service, consommable (ou matière première).');
+          errors.add('Type d\'article "$rawProductType" invalide. Valeurs acceptées : produit, service, consommable, immobilisation.');
         }
       }
       mapped['productType'] = productType;

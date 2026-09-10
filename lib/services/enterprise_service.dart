@@ -790,6 +790,8 @@ class EnterpriseService {
       'rib': updatedWithTimestamp.rib?.trim(),
       'logo_url': updatedWithTimestamp.logoUrl,
       'logoUrl': updatedWithTimestamp.logoUrl,
+      'stamp_url': updatedWithTimestamp.stampUrl,
+      'stampUrl': updatedWithTimestamp.stampUrl,
       'updated_at': now.toIso8601String(),
       'updatedAt': now.toIso8601String(),
     };

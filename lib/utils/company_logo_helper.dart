@@ -98,6 +98,53 @@ class CompanyLogoHelper {
     }
   }
 
+  /// Opens the platform file picker for enterprise stamp/seal (PNG, JPG, JPEG, WebP),
+  /// compresses the selected image, and returns a Base64 data URI string.
+  static Future<String?> pickAndProcessStamp({
+    BuildContext? context,
+    int maxDimension = 512,
+  }) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['png', 'jpg', 'jpeg', 'webp'],
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) {
+        return null;
+      }
+
+      final file = result.files.first;
+      Uint8List? bytes = file.bytes;
+
+      // Desktop platforms fallback: read using SupportImageReader
+      if (bytes == null && file.path != null) {
+        bytes = await SupportImageReader.readFileBytes(file.path!);
+      }
+
+      if (bytes == null || bytes.isEmpty) {
+        return null;
+      }
+
+      // Downscale/compress to keep doc size minimal (~20-80KB)
+      final processedBytes = await compressImageBytes(bytes, maxDimension: maxDimension);
+      final base64String = base64Encode(processedBytes);
+      return 'data:image/png;base64,$base64String';
+    } catch (e) {
+      debugPrint('[CompanyLogoHelper] Error picking company stamp: $e');
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Impossible de charger le cachet : $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return null;
+    }
+  }
+
   /// Convenience widget to display an enterprise logo or a fallback widget.
   static Widget buildLogoWidget({
     required String? logoUrl,
@@ -119,4 +166,27 @@ class CompanyLogoHelper {
     }
     return fallback ?? const SizedBox.shrink();
   }
+
+  /// Convenience widget to display an enterprise stamp or a fallback widget.
+  static Widget buildStampWidget({
+    required String? stampUrl,
+    double? width,
+    double? height,
+    BoxFit fit = BoxFit.contain,
+    Widget? fallback,
+  }) {
+    final bytes = decodeBase64Logo(stampUrl);
+    if (bytes != null && bytes.isNotEmpty) {
+      return Image.memory(
+        bytes,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) =>
+            fallback ?? const SizedBox.shrink(),
+      );
+    }
+    return fallback ?? const SizedBox.shrink();
+  }
 }
+

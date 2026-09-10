@@ -49,6 +49,7 @@ class _DocumentTemplateEditorScreenState
       (_config['tableColumns'] as List?)?.map((c) => Map<String, dynamic>.from(c as Map)) ?? DocumentTemplate.defaultTableColumns(),
     );
     _config['footer'] = Map<String, dynamic>.from(_config['footer'] as Map? ?? DocumentTemplate.defaultFooter());
+    _config['stamp'] = Map<String, dynamic>.from(_config['stamp'] as Map? ?? widget.template.stampConfig);
   }
 
   @override
@@ -614,6 +615,22 @@ class _DocumentTemplateEditorScreenState
                 },
                 isMobile: isMobile,
               ),
+              _buildToggleItem(
+                'Cachet de l\'entreprise',
+                companyInfo['showStamp'] == true || _config['stamp']?['visible'] == true,
+                (v) {
+                  setState(() {
+                    final map = Map<String, dynamic>.from(_config['companyInfo'] as Map? ?? {});
+                    map['showStamp'] = v;
+                    _config['companyInfo'] = map;
+                    final stampMap = Map<String, dynamic>.from(_config['stamp'] as Map? ?? {});
+                    stampMap['visible'] = v;
+                    _config['stamp'] = stampMap;
+                    _hasChanges = true;
+                  });
+                },
+                isMobile: isMobile,
+              ),
             ],
           ),
 
@@ -737,6 +754,22 @@ class _DocumentTemplateEditorScreenState
             isMobile: isMobile,
             children: [
               _buildToggleItem('Bloc de Signature', footer['showSignature'] != false, (v) => _updateNestedConfig('footer', 'showSignature', v), isMobile: isMobile),
+              _buildToggleItem(
+                'Cachet de l\'entreprise',
+                companyInfo['showStamp'] == true || _config['stamp']?['visible'] == true,
+                (v) {
+                  setState(() {
+                    final map = Map<String, dynamic>.from(_config['companyInfo'] as Map? ?? {});
+                    map['showStamp'] = v;
+                    _config['companyInfo'] = map;
+                    final stampMap = Map<String, dynamic>.from(_config['stamp'] as Map? ?? {});
+                    stampMap['visible'] = v;
+                    _config['stamp'] = stampMap;
+                    _hasChanges = true;
+                  });
+                },
+                isMobile: isMobile,
+              ),
               _buildToggleItem('Notes supplémentaires', footer['showNotes'] != false, (v) => _updateNestedConfig('footer', 'showNotes', v), isMobile: isMobile),
               if (footer['showNotes'] != false)
                 Padding(

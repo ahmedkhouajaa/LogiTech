@@ -141,6 +141,7 @@ class DocumentTemplate {
         'showAddress': true,
         'showRib': true,
         'showLogo': true,
+        'showStamp': false, // Cachet de l'entreprise
       };
 
   /// Standard document info default toggles
@@ -235,6 +236,9 @@ class DocumentTemplate {
 
         // Signature section positioning
         'signature': {'positionX': 135.0, 'positionY': 230.0, 'width': 60.0},
+
+        // Stamp section positioning
+        'stamp': {'positionX': 140.0, 'positionY': 225.0, 'width': 35.0, 'height': 35.0, 'visible': false},
 
         // E-Facture section (disabled by default)
         'qrCode': {'enabled': false, 'positionX': 15.0, 'positionY': 98.0, 'width': 25.0, 'height': 25.0, 'showLabel': true, 'labelText': 'E-Facture'},
@@ -549,6 +553,15 @@ class DocumentTemplate {
       config['clientDetails'] as Map<String, dynamic>? ?? {};
   Map<String, dynamic> get signatureConfig =>
       config['signature'] as Map<String, dynamic>? ?? {};
+  Map<String, dynamic> get stampConfig =>
+      config['stamp'] as Map<String, dynamic>? ??
+      {
+        'positionX': 140.0,
+        'positionY': 225.0,
+        'width': 35.0,
+        'height': 35.0,
+        'visible': false,
+      };
   Map<String, dynamic> get notesConfig =>
       config['notes'] as Map<String, dynamic>? ?? {};
 

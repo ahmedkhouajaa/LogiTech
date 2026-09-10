@@ -20,6 +20,8 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
   bool _isSaving = false;
   String? _logoBase64;
   bool _isPickingLogo = false;
+  String? _stampBase64;
+  bool _isPickingStamp = false;
 
   Future<void> _pickLogo() async {
     setState(() => _isPickingLogo = true);
@@ -35,6 +37,22 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
 
   void _removeLogo() {
     setState(() => _logoBase64 = null);
+  }
+
+  Future<void> _pickStamp() async {
+    setState(() => _isPickingStamp = true);
+    try {
+      final stamp = await CompanyLogoHelper.pickAndProcessStamp(context: context);
+      if (stamp != null && mounted) {
+        setState(() => _stampBase64 = stamp);
+      }
+    } finally {
+      if (mounted) setState(() => _isPickingStamp = false);
+    }
+  }
+
+  void _removeStamp() {
+    setState(() => _stampBase64 = null);
   }
 
   final _nameController = TextEditingController();
@@ -81,6 +99,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
       String address = currentEnt?.address ?? '';
       String rib = currentEnt?.rib ?? '';
       String? logoUrl = currentEnt?.logoUrl;
+      String? stampUrl = currentEnt?.stampUrl;
 
       // Also fetch the freshest data directly from Firestore if available
       if (eid != null && eid.isNotEmpty) {
@@ -100,6 +119,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
             address = data['address']?.toString() ?? address;
             rib = data['rib']?.toString() ?? rib;
             logoUrl = (data['logo_url'] ?? data['logoUrl'] ?? data['logoPath'])?.toString() ?? logoUrl;
+            stampUrl = (data['stamp_url'] ?? data['stampUrl'] ?? data['cachet_url'] ?? data['cachetUrl'])?.toString() ?? stampUrl;
           }
         } catch (e) {
           debugPrint('[CompanyInfoScreen] Direct Firestore fetch error: $e');
@@ -116,6 +136,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
         _addressController.text = address;
         _ribController.text = rib;
         _logoBase64 = logoUrl;
+        _stampBase64 = stampUrl;
         setState(() => _isLoading = false);
       }
     } catch (e) {
@@ -180,6 +201,8 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
         rib: _ribController.text.trim(),
         logoUrl: _logoBase64,
         clearLogo: _logoBase64 == null,
+        stampUrl: _stampBase64,
+        clearStamp: _stampBase64 == null,
         updatedAt: DateTime.now(),
       );
 
@@ -332,6 +355,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildLogoSection(isMobile),
+                  _buildStampSection(isMobile),
                   if (isMobile) ...[
                     AppTextField(
                       label: 'Nom de votre société (Tireur) *',
@@ -615,4 +639,274 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
       ),
     );
   }
+
+  Widget _buildStampSection(bool isMobile) {
+    if (_stampBase64 == null) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Ajouter le cachet de l\'entreprise',
+              style: TextStyle(
+                fontSize: isMobile ? 15 : 17,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Téléchargez votre cachet d\'entreprise (formats PNG, JPG)',
+              style: TextStyle(
+                fontSize: isMobile ? 12 : 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 14),
+            InkWell(
+              onTap: _isPickingStamp ? null : _pickStamp,
+              borderRadius: BorderRadius.circular(10),
+              child: CustomPaint(
+                painter: _DashedBorderPainter(
+                  color: AppColors.isDarkMode
+                      ? Colors.white24
+                      : const Color(0xFFCBD5E1),
+                  strokeWidth: 1.5,
+                  dashWidth: 6,
+                  dashSpace: 4,
+                  borderRadius: 10,
+                ),
+                child: Container(
+                  width: isMobile ? 180 : 200,
+                  height: isMobile ? 170 : 190,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.isDarkMode
+                        ? AppColors.surfaceAlt.withValues(alpha: 0.3)
+                        : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: _isPickingStamp
+                      ? const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.upload_rounded,
+                              size: 38,
+                              color: Color(0xFF64748B),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Cliquez, glissez ou collez\nune image',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 14 : 18),
+      margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: AppColors.isDarkMode
+            ? AppColors.surfaceAlt.withValues(alpha: 0.5)
+            : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: AppColors.border.withValues(alpha: AppColors.isDarkMode ? 0.6 : 0.8),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: isMobile ? 80 : 96,
+                height: isMobile ? 80 : 96,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: AppShadows.sm,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: _isPickingStamp
+                      ? const Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : CompanyLogoHelper.buildStampWidget(
+                          stampUrl: _stampBase64,
+                          fit: BoxFit.contain,
+                        ),
+                ),
+              ),
+              Positioned(
+                top: -5,
+                right: -5,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.success,
+                    shape: BoxShape.circle,
+                    boxShadow: AppShadows.sm,
+                  ),
+                  child: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Cachet officiel de l\'entreprise',
+                      style: TextStyle(
+                        fontSize: isMobile ? 14 : 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Cachet configuré',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.success,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Cachet importé avec succès. Vous pouvez maintenant l\'activer et le positionner sur vos documents via l\'éditeur de modèle.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _isPickingStamp ? null : _pickStamp,
+                      icon: const Icon(Icons.photo_library_rounded, size: 16),
+                      label: const Text(
+                        'Modifier le cachet',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _removeStamp,
+                      icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
+                      label: const Text('Supprimer', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double dashWidth;
+  final double dashSpace;
+  final double borderRadius;
+
+  const _DashedBorderPainter({
+    required this.color,
+    this.strokeWidth = 1.5,
+    this.dashWidth = 6.0,
+    this.dashSpace = 4.0,
+    this.borderRadius = 10.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(strokeWidth / 2, strokeWidth / 2, size.width - strokeWidth, size.height - strokeWidth),
+      Radius.circular(borderRadius),
+    );
+
+    final path = Path()..addRRect(rrect);
+    final metrics = path.computeMetrics();
+
+    for (final metric in metrics) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        final length = (distance + dashWidth > metric.length)
+            ? metric.length - distance
+            : dashWidth;
+        final extractPath = metric.extractPath(distance, distance + length);
+        canvas.drawPath(extractPath, paint);
+        distance += dashWidth + dashSpace;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) =>
+      oldDelegate.color != color ||
+      oldDelegate.strokeWidth != strokeWidth ||
+      oldDelegate.dashWidth != dashWidth ||
+      oldDelegate.dashSpace != dashSpace ||
+      oldDelegate.borderRadius != borderRadius;
+}
+

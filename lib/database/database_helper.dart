@@ -910,6 +910,7 @@ class DatabaseHelper {
           address: currentEnt.address,
           rib: currentEnt.rib,
           logoPath: currentEnt.logoUrl,
+          stampPath: currentEnt.stampUrl,
         );
       }
     } catch (_) {}
@@ -933,6 +934,8 @@ class DatabaseHelper {
           'rib': settings.rib?.trim(),
           'logo_url': settings.logoPath,
           'logoUrl': settings.logoPath,
+          'stamp_url': settings.stampPath,
+          'stampUrl': settings.stampPath,
           'updated_at': now.toIso8601String(),
           'updatedAt': now.toIso8601String(),
         };
@@ -950,6 +953,8 @@ class DatabaseHelper {
             rib: settings.rib,
             logoUrl: settings.logoPath,
             clearLogo: settings.logoPath == null,
+            stampUrl: settings.stampPath,
+            clearStamp: settings.stampPath == null,
           );
         }
 

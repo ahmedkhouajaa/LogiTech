@@ -134,6 +134,9 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
     } else if (currentProduct.productType == 'consommable') {
       typeIcon = Icons.handyman_rounded;
       typeColor = const Color(0xFFF59E0B);
+    } else if (currentProduct.productType == 'immobilisation') {
+      typeIcon = Icons.account_balance_outlined;
+      typeColor = const Color(0xFF0284C7);
     }
 
     return BlocListener<ProductsBloc, ProductsState>(

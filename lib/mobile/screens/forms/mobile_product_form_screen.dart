@@ -153,7 +153,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
 
     _notesCtrl = TextEditingController(text: p?.privateNotes ?? '');
 
-    _productType = ['produit', 'service', 'consommable'].contains(p?.productType) ? p!.productType : 'produit';
+    _productType = ['produit', 'service', 'consommable', 'immobilisation'].contains(p?.productType) ? p!.productType : 'produit';
     _tvaRate = p?.tvaRate ?? 19.0;
 
     // Unit normalize
@@ -744,6 +744,7 @@ class _MobileProductFormScreenState extends State<MobileProductFormScreen> {
       {'value': 'produit', 'label': 'PRODUIT', 'icon': Icons.inventory_2_outlined},
       {'value': 'service', 'label': 'SERVICE', 'icon': Icons.handyman_outlined},
       {'value': 'consommable', 'label': 'CONSOMMABLE', 'icon': Icons.label_outline_rounded},
+      {'value': 'immobilisation', 'label': 'IMMOBILISATION', 'icon': Icons.account_balance_outlined},
     ];
 
     return Container(

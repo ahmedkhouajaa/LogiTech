@@ -14,9 +14,20 @@ class MobileProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isService = product.productType.toLowerCase() == 'service';
-    final typeColor = isService ? Colors.blue : Colors.green;
-    final typeLabel = isService ? 'Service' : 'Produit';
+    final pType = product.productType.toLowerCase();
+    final isService = pType == 'service';
+    final isImmobilisation = pType == 'immobilisation';
+    final isConsommable = pType == 'consommable';
+    final typeColor = isService
+        ? Colors.blue
+        : (isImmobilisation
+            ? const Color(0xFF0284C7)
+            : (isConsommable ? Colors.orange : Colors.green));
+    final typeLabel = isService
+        ? 'Service'
+        : (isImmobilisation
+            ? 'Immobilisation'
+            : (isConsommable ? 'Consommable' : 'Produit'));
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

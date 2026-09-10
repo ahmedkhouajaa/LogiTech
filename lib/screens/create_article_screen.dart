@@ -117,7 +117,16 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
     _barcodeCtrl = TextEditingController(text: p?.barcode ?? '');
     _privateNotesCtrl = TextEditingController(text: p?.privateNotes ?? '');
     
-    _productType = ['produit', 'service', 'consommable'].contains(p?.productType) ? p!.productType : 'produit';
+    _productType = ['produit', 'service', 'consommable', 'immobilisation'].contains(p?.productType) ? p!.productType : 'produit';
+    if (_productType == 'immobilisation') {
+      _destination = 'Achat';
+    } else if (p != null) {
+      if (p.purchasePrice > 0 && p.sellingPrice == 0) {
+        _destination = 'Achat';
+      } else if (p.sellingPrice > 0 && p.purchasePrice == 0) {
+        _destination = 'Vente';
+      }
+    }
     _tvaRate = p?.tvaRate ?? 19;
     
     // Safely load unit
@@ -664,11 +673,42 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _buildSelectableButton('Vente', Icons.attach_money, _destination == 'Vente', () => setState(() => _destination = 'Vente'))),
+              Expanded(
+                child: _buildSelectableButton(
+                  'Vente',
+                  Icons.attach_money,
+                  _destination == 'Vente',
+                  () => setState(() {
+                    _destination = 'Vente';
+                    if (_productType == 'immobilisation') {
+                      _productType = 'produit';
+                    }
+                  }),
+                ),
+              ),
               SizedBox(width: 12),
-              Expanded(child: _buildSelectableButton('Achat', Icons.shopping_cart_outlined, _destination == 'Achat', () => setState(() => _destination = 'Achat'))),
+              Expanded(
+                child: _buildSelectableButton(
+                  'Achat',
+                  Icons.shopping_cart_outlined,
+                  _destination == 'Achat',
+                  () => setState(() => _destination = 'Achat'),
+                ),
+              ),
               SizedBox(width: 12),
-              Expanded(child: _buildSelectableButton('Vente et Achat', null, _destination == 'Vente et Achat', () => setState(() => _destination = 'Vente et Achat'))),
+              Expanded(
+                child: _buildSelectableButton(
+                  'Vente et Achat',
+                  null,
+                  _destination == 'Vente et Achat',
+                  () => setState(() {
+                    _destination = 'Vente et Achat';
+                    if (_productType == 'immobilisation') {
+                      _productType = 'produit';
+                    }
+                  }),
+                ),
+              ),
             ],
           ),
           SizedBox(height: 24),
@@ -676,9 +716,34 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           SizedBox(height: 8),
           Row(
             children: [
-              Expanded(child: _buildSelectableButton('Produit', Icons.inventory_2_outlined, _productType == 'produit', () => setState(() => _productType = 'produit'))),
+              Expanded(
+                child: _buildSelectableButton(
+                  'Produit',
+                  Icons.inventory_2_outlined,
+                  _productType == 'produit',
+                  () => setState(() => _productType = 'produit'),
+                ),
+              ),
               SizedBox(width: 12),
-              Expanded(child: _buildSelectableButton('Service', Icons.settings_outlined, _productType == 'service', () => setState(() => _productType = 'service'))),
+              Expanded(
+                child: _buildSelectableButton(
+                  'Service',
+                  Icons.settings_outlined,
+                  _productType == 'service',
+                  () => setState(() => _productType = 'service'),
+                ),
+              ),
+              if (_destination == 'Achat') ...[
+                SizedBox(width: 12),
+                Expanded(
+                  child: _buildSelectableButton(
+                    'Immobilisation',
+                    Icons.account_balance_outlined,
+                    _productType == 'immobilisation',
+                    () => setState(() => _productType = 'immobilisation'),
+                  ),
+                ),
+              ],
             ],
           ),
           SizedBox(height: 24),
@@ -765,9 +830,30 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
           SizedBox(height: 24),
           Row(
             children: [
-              Expanded(child: AppTextField(label: 'Prix de Vente', controller: _sellCtrl, suffix: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Text('DT')]), keyboardType: TextInputType.number)),
-              SizedBox(width: 24),
-              Expanded(child: AppTextField(label: 'Prix d\'Achat', controller: _purchCtrl, suffix: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Text('DT')]), keyboardType: TextInputType.number)),
+              if (_destination == 'Vente' || _destination == 'Vente et Achat')
+                Expanded(
+                  child: AppTextField(
+                    label: 'Prix de Vente',
+                    controller: _sellCtrl,
+                    suffix: Column(mainAxisAlignment: MainAxisAlignment.center, children: const [Text('DT')]),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              if (_destination == 'Vente et Achat')
+                const SizedBox(width: 24),
+              if (_destination == 'Achat' || _destination == 'Vente et Achat')
+                Expanded(
+                  child: AppTextField(
+                    label: 'Prix d\'Achat',
+                    controller: _purchCtrl,
+                    suffix: Column(mainAxisAlignment: MainAxisAlignment.center, children: const [Text('DT')]),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              if (_destination != 'Vente et Achat') ...[
+                const SizedBox(width: 24),
+                Expanded(child: Container()),
+              ],
             ],
           ),
           SizedBox(height: 24),
@@ -1144,30 +1230,37 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.surface,
-          border: Border.all(color: isSelected ? AppColors.primary : AppColors.border),
+          border: Border.all(color: isSelected ? AppColors.primary : AppColors.border, width: isSelected ? 1.5 : 1),
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            if (icon != null) ...[
-              Icon(icon, size: 18, color: isSelected ? AppColors.primary : AppColors.textSecondary),
-              const SizedBox(width: 8),
-            ],
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? AppColors.primary : AppColors.textPrimary,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 18, color: isSelected ? AppColors.primary : AppColors.textSecondary),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              Icon(Icons.check_circle, size: 16, color: AppColors.primary),
-            ]
+            if (isSelected)
+              Positioned(
+                right: 0,
+                child: Icon(Icons.check_circle_outline_rounded, size: 18, color: AppColors.primary),
+              ),
           ],
         ),
       ),
@@ -1218,8 +1311,8 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> with SingleTi
         category: _category,
         brandId: _brand,
         unit: _unit,
-        purchasePrice: double.tryParse(_purchCtrl.text) ?? 0,
-        sellingPrice: double.tryParse(_sellCtrl.text) ?? 0,
+        purchasePrice: (_destination == 'Vente') ? 0 : (double.tryParse(_purchCtrl.text) ?? 0),
+        sellingPrice: (_destination == 'Achat') ? 0 : (double.tryParse(_sellCtrl.text) ?? 0),
         tvaRate: _tvaRate,
         allowNegativeStock: _allowNegativeStock,
         lowStockAlert: _lowStockAlert,

@@ -14,6 +14,7 @@ class Enterprise {
   final String? address;
   final String? rib;
   final String? logoUrl;
+  final String? stampUrl;
   final String ownerId;
   final List<EnterpriseMember> members;
   final bool defaultsCreated;
@@ -32,6 +33,7 @@ class Enterprise {
     this.address,
     this.rib,
     this.logoUrl,
+    this.stampUrl,
     required this.ownerId,
     this.members = const [],
     this.defaultsCreated = false,
@@ -53,6 +55,8 @@ class Enterprise {
         'rib': rib,
         'logo_url': logoUrl,
         'logoUrl': logoUrl,
+        'stamp_url': stampUrl,
+        'stampUrl': stampUrl,
         'owner_id': ownerId,
         'members': members.map((m) => m.toMap()).toList(),
         'defaults_created': defaultsCreated,
@@ -81,6 +85,7 @@ class Enterprise {
       address: map['address']?.toString(),
       rib: map['rib']?.toString(),
       logoUrl: map['logo_url']?.toString() ?? map['logoUrl']?.toString() ?? map['logoPath']?.toString(),
+      stampUrl: map['stamp_url']?.toString() ?? map['stampUrl']?.toString() ?? map['cachet_url']?.toString() ?? map['cachetUrl']?.toString(),
       ownerId: map['owner_id']?.toString() ?? map['ownerId']?.toString() ?? map['userId']?.toString() ?? '',
       members: parsedMembers,
       defaultsCreated: map['defaults_created'] == true ||
@@ -115,6 +120,8 @@ class Enterprise {
     String? rib,
     String? logoUrl,
     bool clearLogo = false,
+    String? stampUrl,
+    bool clearStamp = false,
     String? ownerId,
     List<EnterpriseMember>? members,
     bool? defaultsCreated,
@@ -133,6 +140,7 @@ class Enterprise {
         address: address ?? this.address,
         rib: rib ?? this.rib,
         logoUrl: clearLogo ? null : (logoUrl ?? this.logoUrl),
+        stampUrl: clearStamp ? null : (stampUrl ?? this.stampUrl),
         ownerId: ownerId ?? this.ownerId,
         members: members ?? this.members,
         defaultsCreated: defaultsCreated ?? this.defaultsCreated,
@@ -153,6 +161,7 @@ class Enterprise {
         'address': address,
         'rib': rib,
         'logo_url': logoUrl,
+        'stamp_url': stampUrl,
         'owner_id': ownerId,
         'defaults_created': defaultsCreated ? 1 : 0,
         'defaultsCreated': defaultsCreated,
@@ -176,6 +185,7 @@ class Enterprise {
           address == other.address &&
           rib == other.rib &&
           logoUrl == other.logoUrl &&
+          stampUrl == other.stampUrl &&
           ownerId == other.ownerId &&
           defaultsCreated == other.defaultsCreated &&
           updatedAt == other.updatedAt;
@@ -193,6 +203,7 @@ class Enterprise {
       address.hashCode ^
       rib.hashCode ^
       logoUrl.hashCode ^
+      stampUrl.hashCode ^
       ownerId.hashCode ^
       defaultsCreated.hashCode ^
       updatedAt.hashCode;

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/document_template.dart';
+import '../services/enterprise_service.dart';
+import '../utils/company_logo_helper.dart';
 import '../utils/constants.dart';
 
 /// Widget-based preview of the invoice template.
@@ -53,6 +55,8 @@ class TemplatePreviewWidget extends StatelessWidget {
                       _buildDraggableTotals(scale),
                       // Signature
                       _buildDraggableSignature(scale),
+                      // Stamp (Cachet de l'entreprise)
+                      _buildDraggableStamp(scale),
                       // Mentions légales & Footer
                       _buildDraggableLegalNotice(scale),
                     ],
@@ -602,6 +606,73 @@ class TemplatePreviewWidget extends StatelessWidget {
             SizedBox(height: 10 * scale),
             Container(height: 0.5 * scale, color: AppColors.textTertiary),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDraggableStamp(double scale) {
+    final comp = template.companyInfoConfig;
+    final stampCfg = template.stampConfig;
+    final isVisible = comp['showStamp'] == true || stampCfg['visible'] == true;
+    if (!isVisible) return const SizedBox.shrink();
+
+    final x = (stampCfg['positionX'] as num?)?.toDouble() ?? 140.0;
+    final y = (stampCfg['positionY'] as num?)?.toDouble() ?? 225.0;
+    final w = ((stampCfg['width'] as num?)?.toDouble() ?? 35.0) * scale;
+    final h = ((stampCfg['height'] as num?)?.toDouble() ?? 35.0) * scale;
+
+    final currentStampUrl = EnterpriseService.instance.currentEnterprise?.stampUrl;
+    final stampBytes = CompanyLogoHelper.decodeBase64Logo(currentStampUrl);
+
+    return _buildDraggableOverlay(
+      'stamp',
+      x,
+      y,
+      scale,
+      Container(
+        width: w,
+        height: h,
+        decoration: BoxDecoration(
+          color: AppColors.surface.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(
+            color: const Color(0xFF1E40AF).withValues(alpha: 0.4),
+            width: 0.8,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: stampBytes != null && stampBytes.isNotEmpty
+              ? Image.memory(
+                  stampBytes,
+                  fit: BoxFit.contain,
+                  width: w,
+                  height: h,
+                )
+              : Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.verified_outlined,
+                        size: (w * 0.35).clamp(8.0, 24.0),
+                        color: const Color(0xFF1E40AF),
+                      ),
+                      SizedBox(height: 1 * scale),
+                      Text(
+                        'CACHET',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: (2.2 * scale).clamp(5.0, 12.0),
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1E40AF),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
         ),
       ),
     );

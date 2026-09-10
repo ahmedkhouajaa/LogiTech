@@ -95,6 +95,7 @@ class CompanySettings {
   final String id;
   final String name;
   final String? logoPath;
+  final String? stampPath;
   final String? address;
   final String? city;
   final String? phone;
@@ -115,7 +116,7 @@ class CompanySettings {
   final DateTime updatedAt;
 
   CompanySettings({
-    this.id = '1', this.name = 'Mon Entreprise', this.logoPath,
+    this.id = '1', this.name = 'Mon Entreprise', this.logoPath, this.stampPath,
     this.address, this.city, this.phone, this.email, this.website,
     this.taxId, this.rcNumber, this.nis, this.nif, this.ai,
     this.currency = 'DZD', this.defaultTvaRate = 19,
@@ -125,7 +126,8 @@ class CompanySettings {
   }) : updatedAt = updatedAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() => {
-        'id': id, 'name': name, 'logo_path': logoPath, 'address': address,
+        'id': id, 'name': name, 'logo_path': logoPath, 'stamp_path': stampPath,
+        'address': address,
         'city': city, 'phone': phone, 'email': email, 'website': website,
         'tax_id': taxId, 'rc_number': rcNumber, 'nis': nis, 'nif': nif,
         'ai': ai, 'currency': currency, 'default_tva_rate': defaultTvaRate,
@@ -137,6 +139,7 @@ class CompanySettings {
   factory CompanySettings.fromMap(Map<String, dynamic> map) => CompanySettings(
         id: map['id'] as String? ?? '1', name: map['name'] as String? ?? 'Mon Entreprise',
         logoPath: map['logo_path'] as String?,
+        stampPath: (map['stamp_path'] ?? map['stamp_url'] ?? map['stampUrl']) as String?,
         address: map['address'] as String?, city: map['city'] as String?,
         phone: map['phone'] as String?, email: map['email'] as String?,
         website: map['website'] as String?, taxId: map['tax_id'] as String?,
@@ -154,7 +157,7 @@ class CompanySettings {
       );
 
   CompanySettings copyWith({
-    String? id, String? name, String? logoPath, String? address,
+    String? id, String? name, String? logoPath, String? stampPath, String? address,
     String? city, String? phone, String? email, String? website,
     String? taxId, String? rcNumber, String? nis, String? nif, String? ai,
     String? currency, double? defaultTvaRate, String? invoicePrefix,
@@ -162,7 +165,9 @@ class CompanySettings {
     DateTime? updatedAt,
   }) => CompanySettings(
         id: id ?? this.id, name: name ?? this.name,
-        logoPath: logoPath ?? this.logoPath, address: address ?? this.address,
+        logoPath: logoPath ?? this.logoPath,
+        stampPath: stampPath ?? this.stampPath,
+        address: address ?? this.address,
         city: city ?? this.city, phone: phone ?? this.phone,
         email: email ?? this.email, website: website ?? this.website,
         taxId: taxId ?? this.taxId, rcNumber: rcNumber ?? this.rcNumber,
