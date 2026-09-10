@@ -81,6 +81,7 @@ class SupportMessage {
   final String senderInitial;
   final bool isFromUser;
   final String text;
+  final String? imageUrl;
   final String status; // 'sent', 'read'
   final DateTime createdAt;
 
@@ -92,20 +93,68 @@ class SupportMessage {
     required this.senderInitial,
     required this.isFromUser,
     required this.text,
+    this.imageUrl,
     this.status = 'sent',
     required this.createdAt,
   });
 
+  SupportMessage copyWith({
+    String? id,
+    String? ticketId,
+    String? senderId,
+    String? senderName,
+    String? senderInitial,
+    bool? isFromUser,
+    String? text,
+    String? imageUrl,
+    String? status,
+    DateTime? createdAt,
+  }) {
+    return SupportMessage(
+      id: id ?? this.id,
+      ticketId: ticketId ?? this.ticketId,
+      senderId: senderId ?? this.senderId,
+      senderName: senderName ?? this.senderName,
+      senderInitial: senderInitial ?? this.senderInitial,
+      isFromUser: isFromUser ?? this.isFromUser,
+      text: text ?? this.text,
+      imageUrl: imageUrl ?? this.imageUrl,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   factory SupportMessage.fromMap(Map<String, dynamic> map, String docId) {
+    // Robustly determine if sender is user or support:
+    // If isFromSupport is true or isFromUser is false, it's from support.
+    final bool isSupport = map['isFromSupport'] == true || map['isFromUser'] == false;
+    final bool isUser = !isSupport;
+
+    final String text = (map['text'] ?? map['content'] ?? '').toString();
+    final String senderName = (map['senderName'] ?? '').toString();
+    final String? imageUrl = (map['imageUrl'] != null && map['imageUrl'].toString().isNotEmpty)
+        ? map['imageUrl'].toString()
+        : null;
+
+    String initial = (map['senderInitial'] ?? '').toString().trim();
+    if (initial.isEmpty) {
+      if (senderName.isNotEmpty) {
+        initial = senderName[0].toUpperCase();
+      } else {
+        initial = isUser ? 'U' : 'S';
+      }
+    }
+
     return SupportMessage(
       id: docId,
-      ticketId: map['ticketId'] ?? '',
-      senderId: map['senderId'] ?? '',
-      senderName: map['senderName'] ?? '',
-      senderInitial: map['senderInitial'] ?? 'U',
-      isFromUser: map['isFromUser'] ?? true,
-      text: map['text'] ?? '',
-      status: map['status'] ?? 'sent',
+      ticketId: (map['ticketId'] ?? '').toString(),
+      senderId: (map['senderId'] ?? '').toString(),
+      senderName: senderName.isNotEmpty ? senderName : (isUser ? 'Client' : 'Support LogiTech'),
+      senderInitial: initial,
+      isFromUser: isUser,
+      text: text,
+      imageUrl: imageUrl,
+      status: (map['status'] ?? 'sent').toString(),
       createdAt: map['createdAt'] is Timestamp
           ? (map['createdAt'] as Timestamp).toDate()
           : DateTime.tryParse(map['createdAt']?.toString() ?? '') ?? DateTime.now(),
@@ -113,15 +162,21 @@ class SupportMessage {
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    final map = <String, dynamic>{
       'ticketId': ticketId,
       'senderId': senderId,
       'senderName': senderName,
       'senderInitial': senderInitial,
       'isFromUser': isFromUser,
+      'isFromSupport': !isFromUser,
       'text': text,
+      'content': text.isNotEmpty ? text : (imageUrl != null ? '📷 Image jointe' : ''),
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
     };
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      map['imageUrl'] = imageUrl;
+    }
+    return map;
   }
 }

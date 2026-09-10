@@ -18,7 +18,6 @@ import '../blocs/warehouses/warehouses_event.dart';
 import '../models/stock_movement.dart' show Warehouse;
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
-import '../database/database_helper.dart';
 import '../services/document_numbering_service.dart';
 import '../widgets/dashboard_card.dart';
 
@@ -53,6 +52,7 @@ class _CreateSupplierCreditNoteScreenState
   final _formKey = GlobalKey<FormState>();
   final _uuid = const Uuid();
   bool _isSaving = false;
+  bool _hasAttemptedSubmit = false;
 
   String? _selectedsupplierId;
   String? _selectedProjectId;
@@ -149,7 +149,34 @@ class _CreateSupplierCreditNoteScreenState
   // aâ€â‚¬aâ€â‚¬ Save aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬aâ€â‚¬
   Future<void> _save() async {
     if (_isSaving) return;
-    setState(() => _isSaving = true);
+    setState(() {
+      _hasAttemptedSubmit = true;
+      _isSaving = true;
+    });
+    _formKey.currentState?.validate();
+
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Veuillez ajouter au moins un article'),
+            backgroundColor: AppColors.error),
+      );
+      setState(() => _isSaving = false);
+      return;
+    }
+
+    final hasEmptyArticle = _items.any((item) =>
+        (item.designation == null || item.designation!.trim().isEmpty));
+
+    if (hasEmptyArticle) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Veuillez sélectionner un article pour chaque ligne'),
+            backgroundColor: AppColors.error),
+      );
+      return;
+    }
 
     if (_selectedsupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -771,6 +798,9 @@ class _CreateSupplierCreditNoteScreenState
   }
 
   Widget _buildItemRow(int index, SupplierCreditNoteItem item) {
+    final isArticleMissing = _hasAttemptedSubmit &&
+        (item.designation == null || item.designation!.trim().isEmpty);
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -781,13 +811,18 @@ class _CreateSupplierCreditNoteScreenState
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Designation
               Expanded(
                 flex: 3,
                 child: TextFormField(
                   initialValue: item.designation ?? '',
-                  decoration: _itemInputDecoration(''),
+                  decoration: _itemInputDecoration(
+                    'Rechercher un article...',
+                    hasError: isArticleMissing,
+                    errorText: isArticleMissing ? 'Veuillez sélectionner un article' : null,
+                  ),
                   style: TextStyle(fontSize: 13),
                   onChanged: (v) => setState(() =>
                       _items[index] = item.copyWith(designation: v)),
@@ -932,25 +967,30 @@ class _CreateSupplierCreditNoteScreenState
     );
   }
 
-  InputDecoration _itemInputDecoration(String hint) {
+  InputDecoration _itemInputDecoration(String hint, {bool hasError = false, String? errorText}) {
+    final borderSide = hasError
+        ? BorderSide(color: AppColors.error, width: 1.5)
+        : BorderSide(color: AppColors.border);
     return InputDecoration(
       hintText: hint,
       hintStyle: TextStyle(
-          color: AppColors.textTertiary, fontSize: 12),
+          color: hasError ? AppColors.error : AppColors.textTertiary, fontSize: 12),
       filled: true,
-      fillColor: AppColors.surfaceAlt,
+      fillColor: hasError ? AppColors.error.withValues(alpha: 0.04) : AppColors.surfaceAlt,
       contentPadding:
           EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      errorText: hasError ? errorText : null,
+      errorStyle: TextStyle(fontSize: 11, color: AppColors.error),
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: AppColors.border)),
+          borderSide: borderSide),
       enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(color: AppColors.border)),
+          borderSide: borderSide),
       focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
           borderSide:
-              BorderSide(color: AppColors.primary, width: 1.5)),
+              BorderSide(color: hasError ? AppColors.error : AppColors.primary, width: 1.5)),
     );
   }
 

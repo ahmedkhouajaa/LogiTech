@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import '../../services/auth_service.dart';
 import '../../services/enterprise_service.dart';
 import '../../services/permission_service.dart';
+import '../../utils/anti_spam_guard.dart';
 import 'package:business_manager_pro/services/error_handler.dart';
 
 // ─── Events ──────────────────────────────────────────────────────────
@@ -190,8 +191,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onAuthLoginRequested(AuthLoginRequested event, Emitter<AuthState> emit) async {
-    // Scenario 11: Debounce simultaneous clicks
+    // Debounce simultaneous clicks
     if (state is AuthLoading) return;
+
+    // Pre-flight anti-brute force / rate-limit check
+    final spamCheck = AntiSpamGuard.instance.checkLoginAllowed(email: event.email);
+    if (!spamCheck.isAllowed) {
+      emit(AuthError(spamCheck.message));
+      return;
+    }
 
     emit(AuthLoading());
     try {
@@ -214,6 +222,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onAuthSignUpRequested(AuthSignUpRequested event, Emitter<AuthState> emit) async {
     if (state is AuthLoading) return;
+
+    // Pre-flight anti-spam / rate-limit check
+    final spamCheck = AntiSpamGuard.instance.checkSignUpAllowed();
+    if (!spamCheck.isAllowed) {
+      emit(AuthError(spamCheck.message));
+      return;
+    }
 
     emit(AuthLoading());
     try {

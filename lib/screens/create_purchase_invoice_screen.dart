@@ -40,6 +40,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   final _formKey = GlobalKey<FormState>();
   final _uuid = const Uuid();
   bool _isSaving = false;
+  bool _hasAttemptedSubmit = false;
 
   Supplier? _selectedSupplier;
   String? _selectedProjectId;
@@ -599,6 +600,11 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   }
 
   Widget _buildItemRow(int index, PurchaseInvoiceItem item) {
+    final isArticleMissing = _hasAttemptedSubmit &&
+        (item.productId.trim().isEmpty ||
+            ((item.productName == null || item.productName!.trim().isEmpty) &&
+                (item.description == null || item.description!.trim().isEmpty)));
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -607,6 +613,7 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Designation
               Expanded(
@@ -618,6 +625,8 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
                     return SearchableSelectorField(
                       hint: 'Rechercher un article...',
                       selectedText: selectedProd?.name ?? (item.productName?.isNotEmpty == true ? item.productName : null),
+                      hasError: isArticleMissing,
+                      errorText: isArticleMissing ? 'Veuillez sélectionner un article' : null,
                       onTap: () async {
                         final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
                         if (res != null && mounted) {
@@ -1076,7 +1085,33 @@ class _CreatePurchaseInvoiceScreenState extends State<CreatePurchaseInvoiceScree
   // ─── Save ────────────────────────────────────────────────────────
   Future<void> _save() async {
     if (widget.isReadOnly || _isSaving) return;
-    setState(() => _isSaving = true);
+    setState(() {
+      _hasAttemptedSubmit = true;
+      _isSaving = true;
+    });
+    _formKey.currentState?.validate();
+
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+      );
+      setState(() => _isSaving = false);
+      return;
+    }
+
+    final hasEmptyArticle = _items.any((item) =>
+        item.productId.trim().isEmpty ||
+        ((item.productName == null || item.productName!.trim().isEmpty) &&
+         (item.description == null || item.description!.trim().isEmpty)));
+
+    if (hasEmptyArticle) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
     if (_selectedSupplier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez selectionner un fournisseur'), backgroundColor: AppColors.error),

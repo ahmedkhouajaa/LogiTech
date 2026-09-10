@@ -25,7 +25,7 @@ class LoadFirstProducts extends ProductsEvent {
   const LoadFirstProducts({
     this.searchQuery,
     this.stockFilter = 'Tous',
-    this.pageSize = 50,
+    this.pageSize = 10,
   });
 
   @override
@@ -40,7 +40,7 @@ class LoadNextProducts extends ProductsEvent {
   const LoadNextProducts({
     this.searchQuery,
     this.stockFilter = 'Tous',
-    this.pageSize = 50,
+    this.pageSize = 10,
   });
 
   @override

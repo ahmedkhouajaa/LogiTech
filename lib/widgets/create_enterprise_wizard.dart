@@ -4,6 +4,7 @@ import '../blocs/enterprise/enterprise_bloc.dart';
 import '../services/enterprise_service.dart';
 import '../services/permission_service.dart';
 import '../utils/constants.dart';
+import '../utils/company_logo_helper.dart';
 
 /// 3-Step Wizard for Creating a New Enterprise (Dialog or Full-Screen Onboarding).
 class CreateEnterpriseWizard extends StatefulWidget {
@@ -40,6 +41,24 @@ class _CreateEnterpriseWizardState extends State<CreateEnterpriseWizard> {
   final _ribController = TextEditingController();
 
   bool _isSubmitting = false;
+  String? _logoBase64;
+  bool _isPickingLogo = false;
+
+  Future<void> _pickLogo() async {
+    setState(() => _isPickingLogo = true);
+    try {
+      final logo = await CompanyLogoHelper.pickAndProcessLogo(context: context);
+      if (logo != null && mounted) {
+        setState(() => _logoBase64 = logo);
+      }
+    } finally {
+      if (mounted) setState(() => _isPickingLogo = false);
+    }
+  }
+
+  void _removeLogo() {
+    setState(() => _logoBase64 = null);
+  }
 
   @override
   void dispose() {
@@ -111,6 +130,7 @@ class _CreateEnterpriseWizardState extends State<CreateEnterpriseWizard> {
               rcNumber: rc.isNotEmpty ? rc : null,
               address: address.isNotEmpty ? address : null,
               rib: rib.isNotEmpty ? rib : null,
+              logoUrl: _logoBase64,
             ),
           );
 
@@ -395,6 +415,7 @@ class _CreateEnterpriseWizardState extends State<CreateEnterpriseWizard> {
             description: 'Renseignez le nom et les coordonnées de contact de votre société.',
           ),
           const SizedBox(height: 18),
+          _buildLogoPickerSection(isMobile),
           _buildFormField(
             label: 'Nom de votre société (Tireur)',
             controller: _nameController,
@@ -786,6 +807,170 @@ class _CreateEnterpriseWizardState extends State<CreateEnterpriseWizard> {
                     fontSize: 12,
                     color: AppColors.textSecondary,
                   ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoPickerSection(bool isMobile) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: AppColors.isDarkMode
+            ? AppColors.surfaceAlt.withValues(alpha: 0.5)
+            : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.border.withValues(alpha: AppColors.isDarkMode ? 0.6 : 0.8),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 68,
+                height: 68,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: AppShadows.sm,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: _isPickingLogo
+                      ? const Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : (_logoBase64 != null
+                          ? CompanyLogoHelper.buildLogoWidget(
+                              logoUrl: _logoBase64,
+                              fit: BoxFit.contain,
+                            )
+                          : Center(
+                              child: Icon(
+                                Icons.image_rounded,
+                                size: 30,
+                                color: AppColors.textTertiary,
+                              ),
+                            )),
+                ),
+              ),
+              if (_logoBase64 != null)
+                Positioned(
+                  top: -5,
+                  right: -5,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: AppColors.success,
+                      shape: BoxShape.circle,
+                      boxShadow: AppShadows.sm,
+                    ),
+                    child: const Icon(Icons.check_rounded, size: 12, color: Colors.white),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Logo de la société',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _logoBase64 != null
+                            ? AppColors.success.withValues(alpha: 0.12)
+                            : AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_logoBase64 != null) ...[
+                            Icon(Icons.check_circle_rounded, size: 11, color: AppColors.success),
+                            const SizedBox(width: 4),
+                          ],
+                          Text(
+                            _logoBase64 != null ? 'Logo accepté' : 'Optionnel',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: _logoBase64 != null ? AppColors.success : AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _logoBase64 != null
+                      ? 'Logo importé avec succès'
+                      : 'Format PNG, JPG ou WebP. Ce logo sera imprimé sur vos devis et factures.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: _logoBase64 != null ? AppColors.success : AppColors.textTertiary,
+                    fontWeight: _logoBase64 != null ? FontWeight.w500 : FontWeight.normal,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _isPickingLogo ? null : _pickLogo,
+                      icon: Icon(
+                        _logoBase64 != null ? Icons.refresh_rounded : Icons.upload_rounded,
+                        size: 14,
+                      ),
+                      label: Text(
+                        _logoBase64 != null ? 'Changer' : 'Choisir un logo',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                    if (_logoBase64 != null) ...[
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: _removeLogo,
+                        icon: const Icon(Icons.delete_outline_rounded, size: 14, color: Colors.red),
+                        label: const Text('Supprimer', style: TextStyle(fontSize: 12, color: Colors.red)),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),

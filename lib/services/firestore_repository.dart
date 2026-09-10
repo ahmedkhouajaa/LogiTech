@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'enterprise_service.dart';
+import '../database/database_helper.dart';
 import '../models/quote.dart';
 import '../models/invoice.dart';
 import '../models/customer.dart';
@@ -80,10 +81,17 @@ class FirestoreRepository {
         rethrow;
       }
     }
+
+    try {
+      await DatabaseHelper.instance.resetDocSequenceIfEmpty(collection);
+    } catch (_) {}
   }
 
   Future<void> deleteDocument(String collection, String id) async {
     await _firestore.collection(collection).doc(id).delete();
+    try {
+      await DatabaseHelper.instance.resetDocSequenceIfEmpty(collection);
+    } catch (_) {}
   }
 
   // Helper Entity Persistence

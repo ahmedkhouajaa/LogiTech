@@ -39,6 +39,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final _formKey = GlobalKey<FormState>();
   final _uuid = const Uuid();
   bool _isSaving = false;
+  bool _hasAttemptedSubmit = false;
 
   Customer? _selectedCustomer;
   String? _selectedProjectId;
@@ -342,7 +343,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       SearchableSelectorField(
-                                        hint: 'Rechercher des clients...',
+                                        hint: 'Rechercher un client...',
                                         selectedText: displayName,
                                         hasError: field.hasError,
                                         onTap: () async {
@@ -597,6 +598,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   }
 
   Widget _buildItemRow(int index, InvoiceItem item) {
+    final isArticleMissing = _hasAttemptedSubmit &&
+        (item.productId.trim().isEmpty ||
+            ((item.productName == null || item.productName!.trim().isEmpty) &&
+                (item.description == null || item.description!.trim().isEmpty)));
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -605,6 +611,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Designation
               Expanded(
@@ -615,6 +622,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                     return SearchableSelectorField(
                       hint: 'Rechercher un article...',
                       selectedText: item.productName?.isNotEmpty == true ? item.productName : null,
+                      hasError: isArticleMissing,
+                      errorText: isArticleMissing ? 'Veuillez sélectionner un article' : null,
                       onTap: () async {
                         final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
                         if (res != null && mounted) {
@@ -1072,6 +1081,27 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   // ─── Save ────────────────────────────────────────────────────────
   Future<void> _save() async {
     if (_isSaving) return;
+    setState(() => _hasAttemptedSubmit = true);
+    _formKey.currentState?.validate();
+
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final hasEmptyArticle = _items.any((item) =>
+        item.productId.trim().isEmpty ||
+        ((item.productName == null || item.productName!.trim().isEmpty) &&
+         (item.description == null || item.description!.trim().isEmpty)));
+
+    if (hasEmptyArticle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
 
     if (_selectedCustomer == null) {
       ScaffoldMessenger.of(context).showSnackBar(

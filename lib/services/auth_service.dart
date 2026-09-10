@@ -11,6 +11,7 @@ import 'enterprise_service.dart';
 import '../models/user_management_model.dart';
 import '../utils/platform_utils.dart';
 import '../utils/firestore_safe_helper.dart';
+import '../utils/anti_spam_guard.dart';
 import 'auth/desktop_google_auth_helper.dart';
 
 class AuthService with WidgetsBindingObserver {
@@ -299,6 +300,12 @@ class AuthService with WidgetsBindingObserver {
   }
 
   Future<bool> login(String email, String password) async {
+    // 1. Anti-Brute Force / Rate Limit Check
+    final spamCheck = AntiSpamGuard.instance.checkLoginAllowed(email: email);
+    if (!spamCheck.isAllowed) {
+      throw spamCheck.message;
+    }
+
     // Check connectivity first
     final isOnline = await ConnectivityService.instance.checkConnectivity();
     if (!isOnline) {
@@ -311,6 +318,9 @@ class AuthService with WidgetsBindingObserver {
         password: password,
       ).timeout(const Duration(seconds: 8));
       if (userCredential.user != null) {
+        // Record successful login (clears lockout and reset counter)
+        AntiSpamGuard.instance.recordLoginResult(email: email, success: true);
+
         _currentUserUid = userCredential.user!.uid;
         _offlineMode = false;
 
@@ -351,15 +361,24 @@ class AuthService with WidgetsBindingObserver {
         unawaited(SyncService.instance.triggerSync());
         return true;
       }
+      AntiSpamGuard.instance.recordLoginResult(email: email, success: false);
       return false;
     } on FirebaseAuthException {
+      AntiSpamGuard.instance.recordLoginResult(email: email, success: false);
       rethrow;
     } catch (e) {
+      AntiSpamGuard.instance.recordLoginResult(email: email, success: false);
       throw 'Erreur inattendue: $e';
     }
   }
 
   Future<bool> signUpWithEmail(String email, String password, String name) async {
+    // 1. Anti-Spam / Rate Limit Check
+    final spamCheck = AntiSpamGuard.instance.checkSignUpAllowed();
+    if (!spamCheck.isAllowed) {
+      throw spamCheck.message;
+    }
+
     final isOnline = await ConnectivityService.instance.checkConnectivity();
     if (!isOnline) {
       throw 'Aucune connexion Internet. Veuillez vérifier votre connexion et réessayer.';
@@ -373,6 +392,8 @@ class AuthService with WidgetsBindingObserver {
       );
 
       if (userCredential.user != null) {
+        AntiSpamGuard.instance.recordSignUpResult(success: true);
+
         // Create user profile in Firestore (without auto-creating enterprise)
         try {
           await _createUserProfile(userCredential.user!, name: name);
@@ -392,10 +413,13 @@ class AuthService with WidgetsBindingObserver {
         _offlineMode = false;
         return true;
       }
+      AntiSpamGuard.instance.recordSignUpResult(success: false);
       return false;
     } on FirebaseAuthException {
+      AntiSpamGuard.instance.recordSignUpResult(success: false);
       rethrow;
     } catch (e) {
+      AntiSpamGuard.instance.recordSignUpResult(success: false);
       throw 'Erreur inattendue: $e';
     }
   }

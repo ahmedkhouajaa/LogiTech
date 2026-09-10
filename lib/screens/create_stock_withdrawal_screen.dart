@@ -41,6 +41,7 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
   final _reasonController = TextEditingController();
   final _notesController = TextEditingController();
   List<Warehouse> _warehouses = [];
+  bool _hasAttemptedSubmit = false;
 
   List<StockWithdrawalItem> _items = [];
   final Map<String, double> _stockQuantities = {}; // to hold current stock of selected products
@@ -83,19 +84,30 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
   }
 
   Future<void> _save() async {
+    setState(() => _hasAttemptedSubmit = true);
     // No online check for create actions — offline creation is allowed
     if (!_formKey.currentState!.validate()) return;
     if (_warehouseId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un entrepôt')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un entrepôt'), backgroundColor: AppColors.error));
       return;
     }
-    final validItems = _items.where((i) => i.productId.isNotEmpty).toList();
-    if (validItems.isEmpty) {
+
+    if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez ajouter au moins un article')),
+        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
       );
       return;
     }
+
+    final hasEmptyArticle = _items.any((item) => item.productId.trim().isEmpty);
+    if (hasEmptyArticle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final validItems = _items.where((i) => i.productId.isNotEmpty).toList();
 
     final seenProducts = <String>{};
     for (var item in validItems) {
@@ -689,40 +701,55 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    InkWell(
-                      onTap: () async {
-                        final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId);
-                        if (selectedProduct != null) {
-                          _updateItemProduct(index, selectedProduct);
-                        }
-                      },
-                      child: Container(
-                        height: 40,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.5),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Builder(
+                      builder: (context) {
+                        final isMissing = _hasAttemptedSubmit && item.productId.trim().isEmpty;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                item.productId.isNotEmpty
-                                    ? products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', code: '', name: '', sellingPrice: 0, purchasePrice: 0, tvaRate: 0, unit: '', productType: '')).name
-                                    : 'Sélectionner un article',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: item.productId.isNotEmpty ? AppColors.textPrimary : AppColors.textSecondary,
+                            InkWell(
+                              onTap: () async {
+                                final selectedProduct = await ArticleSelectionModal.show(context, warehouseId: _warehouseId);
+                                if (selectedProduct != null) {
+                                  _updateItemProduct(index, selectedProduct);
+                                }
+                              },
+                              child: Container(
+                                height: 40,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: isMissing ? AppColors.error.withValues(alpha: 0.04) : AppColors.surface,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: isMissing ? AppColors.error : AppColors.primary.withValues(alpha: 0.5), width: 1.5),
                                 ),
-                                overflow: TextOverflow.ellipsis,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        item.productId.isNotEmpty
+                                            ? products.firstWhere((p) => p.id == item.productId, orElse: () => Product(id: '', code: '', name: '', sellingPrice: 0, purchasePrice: 0, tvaRate: 0, unit: '', productType: '')).name
+                                            : 'Sélectionner un article',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: isMissing ? AppColors.error : (item.productId.isNotEmpty ? AppColors.textPrimary : AppColors.textSecondary),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Icon(Icons.arrow_drop_down, color: isMissing ? AppColors.error : AppColors.textSecondary, size: 20),
+                                  ],
+                                ),
                               ),
                             ),
-                            Icon(Icons.arrow_drop_down, color: AppColors.textSecondary, size: 20),
+                            if (isMissing)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4.0),
+                                child: Text('Veuillez sélectionner un article', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                              ),
                           ],
-                        ),
-                      ),
+                        );
+                      },
                     ),
                 if (_items.where((i) => i.productId == item.productId && i.productId.isNotEmpty).length > 1)
                   Padding(
@@ -851,9 +878,12 @@ class _CreateStockWithdrawalScreenState extends State<CreateStockWithdrawalScree
                               (p) => p?.id == item.productId,
                               orElse: () => null,
                             );
+                            final isMissing = _hasAttemptedSubmit && item.productId.trim().isEmpty;
                             return SearchableSelectorField(
                               hint: 'Sélectionner un article',
                               selectedText: selectedProd?.name,
+                              hasError: isMissing,
+                              errorText: isMissing ? 'Veuillez sélectionner un article' : null,
                               onTap: () async {
                                 final stockMap = <String, double>{};
                                 for (var p in products) {

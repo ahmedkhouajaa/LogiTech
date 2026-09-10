@@ -38,7 +38,11 @@ class _DocumentTemplateEditorScreenState
         _config[key] = Map<String, dynamic>.from(_config[key] as Map);
       }
     }
-    _config['companyInfo'] = Map<String, dynamic>.from(_config['companyInfo'] as Map? ?? DocumentTemplate.defaultCompanyInfo());
+    final companyInfo = Map<String, dynamic>.from(_config['companyInfo'] as Map? ?? DocumentTemplate.defaultCompanyInfo());
+    if (companyInfo['logoExplicitlyDisabled'] != true) {
+      companyInfo['showLogo'] = true;
+    }
+    _config['companyInfo'] = companyInfo;
     _config['documentInfo'] = Map<String, dynamic>.from(_config['documentInfo'] as Map? ?? DocumentTemplate.defaultDocumentInfo());
     _config['clientInfo'] = Map<String, dynamic>.from(_config['clientInfo'] as Map? ?? DocumentTemplate.defaultClientInfo());
     _config['tableColumns'] = List<Map<String, dynamic>>.from(
@@ -592,7 +596,24 @@ class _DocumentTemplateEditorScreenState
               _buildToggleItem('Email', companyInfo['showEmail'] != false, (v) => _updateNestedConfig('companyInfo', 'showEmail', v), isMobile: isMobile),
               _buildToggleItem('Site Web', companyInfo['showWebsite'] != false, (v) => _updateNestedConfig('companyInfo', 'showWebsite', v), isMobile: isMobile),
               _buildToggleItem('Adresse de l\'entreprise', companyInfo['showAddress'] != false, (v) => _updateNestedConfig('companyInfo', 'showAddress', v), isMobile: isMobile),
-              _buildToggleItem('Logo de l\'entreprise', companyInfo['showLogo'] == true, (v) => _updateNestedConfig('companyInfo', 'showLogo', v), isMobile: isMobile),
+              _buildToggleItem(
+                'Logo de l\'entreprise',
+                companyInfo['showLogo'] != false,
+                (v) {
+                  setState(() {
+                    final map = Map<String, dynamic>.from(_config['companyInfo'] as Map? ?? {});
+                    map['showLogo'] = v;
+                    if (!v) {
+                      map['logoExplicitlyDisabled'] = true;
+                    } else {
+                      map.remove('logoExplicitlyDisabled');
+                    }
+                    _config['companyInfo'] = map;
+                    _hasChanges = true;
+                  });
+                },
+                isMobile: isMobile,
+              ),
             ],
           ),
 
@@ -1595,7 +1616,7 @@ class _DocumentTemplateEditorScreenState
           // ─── QR Code ────────────────────────────────────
           TemplateEnableHeader(
             title: 'Code QR El-Fatoora',
-            enabled: _getSubConfig('qrCode')['enabled'] as bool? ?? true,
+            enabled: _getSubConfig('qrCode')['enabled'] as bool? ?? false,
             onChanged: (v) => _updateNestedConfig('qrCode', 'enabled', v),
           ),
           if (_getSubConfig('qrCode')['enabled'] == true) ...[
@@ -1641,7 +1662,7 @@ class _DocumentTemplateEditorScreenState
           // ─── Référence TTN ──────────────────────────────
           TemplateEnableHeader(
             title: 'Référence TTN',
-            enabled: _getSubConfig('ttnReference')['enabled'] as bool? ?? true,
+            enabled: _getSubConfig('ttnReference')['enabled'] as bool? ?? false,
             onChanged: (v) => _updateNestedConfig('ttnReference', 'enabled', v),
           ),
           if (_getSubConfig('ttnReference')['enabled'] == true) ...[
@@ -1705,7 +1726,7 @@ class _DocumentTemplateEditorScreenState
           // ─── Date de soumission ─────────────────────────
           TemplateEnableHeader(
             title: 'Date de soumission',
-            enabled: _getSubConfig('submissionDate')['enabled'] as bool? ?? true,
+            enabled: _getSubConfig('submissionDate')['enabled'] as bool? ?? false,
             onChanged: (v) => _updateNestedConfig('submissionDate', 'enabled', v),
           ),
           if (_getSubConfig('submissionDate')['enabled'] == true) ...[
@@ -1762,7 +1783,7 @@ class _DocumentTemplateEditorScreenState
           // ─── Badge de statut ────────────────────────────
           TemplateEnableHeader(
             title: 'Badge de statut',
-            enabled: _getSubConfig('statusBadge')['enabled'] as bool? ?? true,
+            enabled: _getSubConfig('statusBadge')['enabled'] as bool? ?? false,
             onChanged: (v) => _updateNestedConfig('statusBadge', 'enabled', v),
           ),
           if (_getSubConfig('statusBadge')['enabled'] == true) ...[

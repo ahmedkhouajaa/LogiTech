@@ -3,7 +3,9 @@ import 'package:intl/intl.dart';
 import '../models/support_ticket.dart';
 import '../services/support_service.dart';
 import '../services/permission_service.dart';
+import '../widgets/support_chat_image_viewer.dart';
 import '../utils/constants.dart';
+import '../utils/anti_spam_guard.dart';
 
 class SupportTicketsScreen extends StatefulWidget {
   const SupportTicketsScreen({super.key});
@@ -16,6 +18,9 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
   SupportTicket? _selectedTicket;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
+  String? _attachedImageBase64;
+  bool _isUploadingImage = false;
+  bool _isSending = false;
 
   @override
   void dispose() {
@@ -24,17 +29,81 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImage() async {
+    setState(() => _isUploadingImage = true);
+    final dataUri = await SupportImageHelper.pickAndProcessImage(context: context);
+    if (mounted) {
+      setState(() {
+        _attachedImageBase64 = dataUri;
+        _isUploadingImage = false;
+      });
+    }
+  }
+
   void _sendMessage() async {
+    if (_isSending) return; // Debounce rapid taps or fast enter spam
+
     final text = _messageController.text.trim();
-    if (text.isEmpty || _selectedTicket == null) return;
+    final image = _attachedImageBase64;
+    if ((text.isEmpty && image == null) || _selectedTicket == null) return;
 
+    // 1. Anti-spam pre-flight check
+    final spamCheck = AntiSpamGuard.instance.checkMessageAllowed(text);
+    if (!spamCheck.isAllowed) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.shield_outlined, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    spamCheck.message,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFD97706), // Amber warning
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: spamCheck.waitSeconds > 3 ? 4 : 2),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isSending = true);
     _messageController.clear();
-    await SupportService.instance.sendMessage(
-      ticketId: _selectedTicket!.id,
-      text: text,
-    );
+    setState(() {
+      _attachedImageBase64 = null;
+    });
 
-    _scrollToBottom();
+    try {
+      await SupportService.instance.sendMessage(
+        ticketId: _selectedTicket!.id,
+        text: text,
+        imageUrl: image,
+      );
+      _scrollToBottom();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e is AntiSpamException ? e.message : 'Erreur d\'envoi: $e'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
+    }
   }
 
   void _scrollToBottom() {
@@ -124,16 +193,45 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
             onPressed: () async {
               if (formKey.currentState?.validate() != true) return;
 
-              final ticket = await SupportService.instance.createTicket(
-                subject: subjectController.text.trim(),
-                initialMessage: initialMsgController.text.trim(),
-              );
+              final spamCheck = AntiSpamGuard.instance.checkTicketCreationAllowed();
+              if (!spamCheck.isAllowed) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        const Icon(Icons.shield_outlined, color: Colors.white, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text(spamCheck.message)),
+                      ],
+                    ),
+                    backgroundColor: const Color(0xFFD97706),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                return;
+              }
 
-              if (ctx.mounted) Navigator.pop(ctx);
+              try {
+                final ticket = await SupportService.instance.createTicket(
+                  subject: subjectController.text.trim(),
+                  initialMessage: initialMsgController.text.trim(),
+                );
 
-              setState(() {
-                _selectedTicket = ticket;
-              });
+                if (ctx.mounted) Navigator.pop(ctx);
+
+                setState(() {
+                  _selectedTicket = ticket;
+                });
+              } catch (e) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(
+                      content: Text(e is AntiSpamException ? e.message : 'Erreur: $e'),
+                      backgroundColor: Colors.red.shade700,
+                    ),
+                  );
+                }
+              }
             },
             icon: const Icon(Icons.send_rounded, size: 18),
             label: const Text('Créer le ticket'),
@@ -240,6 +338,14 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                 }
 
                 final tickets = snapshot.data ?? [];
+
+                // Keep _selectedTicket synchronized with latest status/updates from stream
+                if (_selectedTicket != null) {
+                  final matching = tickets.where((t) => t.id == _selectedTicket!.id);
+                  if (matching.isNotEmpty && matching.first != _selectedTicket) {
+                    _selectedTicket = matching.first;
+                  }
+                }
 
                 if (tickets.isEmpty) {
                   return Center(
@@ -432,6 +538,7 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
           Expanded(
             child: StreamBuilder<List<SupportMessage>>(
               stream: SupportService.instance.getMessagesStream(ticket.id),
+              initialData: SupportService.instance.getLocalMessages(ticket.id),
               builder: (context, snapshot) {
                 final messages = snapshot.data ?? [];
 
@@ -452,6 +559,57 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
             ),
           ),
 
+          // Image Attachment Preview Banner
+          if (_attachedImageBase64 != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                boxShadow: AppShadows.sm,
+              ),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: ChatImageWidget(
+                        imageUrl: _attachedImageBase64!,
+                        maxHeight: 44,
+                        maxWidth: 44,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'Image jointe prête à l\'envoi',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'Envoyez directement ou ajoutez un commentaire',
+                          style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    tooltip: 'Supprimer',
+                    onPressed: () => setState(() => _attachedImageBase64 = null),
+                  ),
+                ],
+              ),
+            ),
+
           // Chat Input Footer
           Container(
             padding: const EdgeInsets.all(12),
@@ -461,6 +619,22 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
             ),
             child: Row(
               children: [
+                IconButton(
+                  icon: _isUploadingImage
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          Icons.add_photo_alternate_outlined,
+                          color: AppColors.primary,
+                          size: 24,
+                        ),
+                  tooltip: 'Joindre une image / capture',
+                  onPressed: _isUploadingImage ? null : _pickImage,
+                ),
+                const SizedBox(width: 6),
                 Expanded(
                   child: TextField(
                     controller: _messageController,
@@ -488,18 +662,27 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
                 ),
                 const SizedBox(width: 8),
                 Material(
-                  color: AppColors.primary,
+                  color: _isSending ? AppColors.primary.withValues(alpha: 0.6) : AppColors.primary,
                   borderRadius: BorderRadius.circular(AppRadius.full),
                   child: InkWell(
-                    onTap: _sendMessage,
+                    onTap: _isSending ? null : _sendMessage,
                     borderRadius: BorderRadius.circular(AppRadius.full),
-                    child: const Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: Icon(
-                        Icons.send_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: _isSending
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.send_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                     ),
                   ),
                 ),
@@ -552,14 +735,22 @@ class _SupportTicketsScreenState extends State<SupportTicketsScreen> {
               child: Column(
                 crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    msg.text,
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.4,
-                      color: isUser ? Colors.white : AppColors.textPrimary,
+                  if (msg.imageUrl != null && msg.imageUrl!.isNotEmpty) ...[
+                    ChatImageWidget(
+                      imageUrl: msg.imageUrl!,
+                      isUser: isUser,
                     ),
-                  ),
+                    if (msg.text.isNotEmpty) const SizedBox(height: 8),
+                  ],
+                  if (msg.text.isNotEmpty)
+                    Text(
+                      msg.text,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.4,
+                        color: isUser ? Colors.white : AppColors.textPrimary,
+                      ),
+                    ),
                   const SizedBox(height: 4),
                   Text(
                     DateFormat('HH:mm').format(msg.createdAt),

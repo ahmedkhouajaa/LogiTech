@@ -16,7 +16,7 @@ class FirestoreSafeHelper {
     final trimmedId = docId.trim();
     if (trimmedId.isEmpty) return null;
 
-    final effectiveTimeout = timeout ?? (kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 30));
+    final effectiveTimeout = timeout ?? (kIsWeb ? const Duration(seconds: 2) : const Duration(milliseconds: 2500));
 
     try {
       final docRef = collection.doc(trimmedId);

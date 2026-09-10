@@ -34,7 +34,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    context.read<ProductsBloc>().add(const LoadFirstProducts(pageSize: 50));
+    context.read<ProductsBloc>().add(const LoadFirstProducts(pageSize: 10));
     context.read<StockBloc>().add(LoadStock());
   }
 
@@ -51,7 +51,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
       final state = context.read<ProductsBloc>().state;
       if (state is ProductsLoaded && state.hasMore && !state.isLoadingMore) {
         context.read<ProductsBloc>().add(
-          const LoadNextProducts(pageSize: 50),
+          const LoadNextProducts(pageSize: 10),
         );
       }
     }
@@ -226,7 +226,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     ArticleImportDialog.show(
                       context,
                       onImportSuccess: () {
-                        context.read<ProductsBloc>().add(const LoadFirstProducts(pageSize: 50));
+                        context.read<ProductsBloc>().add(const LoadFirstProducts(pageSize: 10));
                         context.read<StockBloc>().add(LoadStock());
                       },
                     );
@@ -348,7 +348,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                               : OutlinedButton.icon(
                                   onPressed: () {
                                     context.read<ProductsBloc>().add(
-                                      const LoadNextProducts(pageSize: 50),
+                                      const LoadNextProducts(pageSize: 10),
                                     );
                                   },
                                   style: OutlinedButton.styleFrom(

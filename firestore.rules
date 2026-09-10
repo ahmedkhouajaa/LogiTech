@@ -153,9 +153,40 @@ service cloud.firestore {
     }
 
     match /support_tickets/{docId} {
-      allow read, write: if true;
+      // Allow reading tickets only for authenticated users
+      allow read: if isAuthenticated();
+
+      // Restrict ticket creation: must be authenticated with valid constrained payload
+      allow create: if isAuthenticated() &&
+        request.resource.data.subject is string &&
+        request.resource.data.subject.size() >= 2 &&
+        request.resource.data.subject.size() <= 200 &&
+        (!('lastMessage' in request.resource.data) || (request.resource.data.lastMessage is string && request.resource.data.lastMessage.size() <= 4000));
+
+      // Allow ticket status and lastMessage updates by authenticated users
+      allow update: if isAuthenticated();
+
+      // Disallow deleting tickets to prevent loss of audit trails
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated();
+
+        // Enforce strict size and type constraints to prevent base64 bombs & bot flooding
+        allow create: if isAuthenticated() &&
+          (!('text' in request.resource.data) || (request.resource.data.text is string && request.resource.data.text.size() <= 4000)) &&
+          (!('content' in request.resource.data) || (request.resource.data.content is string && request.resource.data.content.size() <= 4000)) &&
+          (!('imageUrl' in request.resource.data) || (request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 650000));
+
+        // Allow read status / acknowledgment updates
+        allow update: if isAuthenticated();
+
+        // Disallow message deletion
+        allow delete: if false;
+      }
+
       match /{allChildren=**} {
-        allow read, write: if true;
+        allow read, write: if isAuthenticated();
       }
     }
 

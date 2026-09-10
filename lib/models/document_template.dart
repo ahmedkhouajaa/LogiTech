@@ -68,6 +68,15 @@ class DocumentTemplate {
         map['isDefault'] == true ||
         map['isDefault'] == 1;
 
+    // Ensure companyInfo defaults showLogo to true unless explicitly disabled
+    if (cfg['companyInfo'] is Map) {
+      final comp = Map<String, dynamic>.from(cfg['companyInfo'] as Map);
+      if (comp['logoExplicitlyDisabled'] != true && (isDef || comp['showLogo'] == null)) {
+        comp['showLogo'] = true;
+        cfg['companyInfo'] = comp;
+      }
+    }
+
     DateTime parseDate(dynamic val) {
       if (val == null) return DateTime.now();
       if (val is DateTime) return val;
@@ -131,7 +140,7 @@ class DocumentTemplate {
         'showRcNumber': true, // Registre de Commerce
         'showAddress': true,
         'showRib': true,
-        'showLogo': false,
+        'showLogo': true,
       };
 
   /// Standard document info default toggles
@@ -227,11 +236,11 @@ class DocumentTemplate {
         // Signature section positioning
         'signature': {'positionX': 135.0, 'positionY': 230.0, 'width': 60.0},
 
-        // E-Facture section
-        'qrCode': {'enabled': true, 'positionX': 15.0, 'positionY': 98.0, 'width': 25.0, 'height': 25.0, 'showLabel': true, 'labelText': 'E-Facture'},
-        'ttnReference': {'enabled': true, 'positionX': 45.0, 'positionY': 99.0, 'fontSize': 9.0, 'color': 0xFF1A56DB, 'fontWeight': 'Gras', 'showLabel': true, 'labelText': 'Réf TTN:'},
-        'submissionDate': {'enabled': true, 'positionX': 45.0, 'positionY': 232.0, 'fontSize': 8.0, 'color': 0xFF000000, 'showLabel': true, 'labelText': 'Envoyé le:'},
-        'statusBadge': {'enabled': true, 'positionX': 45.0, 'positionY': 239.0, 'width': 40.0, 'height': 6.0, 'fontSize': 8.0},
+        // E-Facture section (disabled by default)
+        'qrCode': {'enabled': false, 'positionX': 15.0, 'positionY': 98.0, 'width': 25.0, 'height': 25.0, 'showLabel': true, 'labelText': 'E-Facture'},
+        'ttnReference': {'enabled': false, 'positionX': 45.0, 'positionY': 99.0, 'fontSize': 9.0, 'color': 0xFF1A56DB, 'fontWeight': 'Gras', 'showLabel': true, 'labelText': 'Réf TTN:'},
+        'submissionDate': {'enabled': false, 'positionX': 45.0, 'positionY': 232.0, 'fontSize': 8.0, 'color': 0xFF000000, 'showLabel': true, 'labelText': 'Envoyé le:'},
+        'statusBadge': {'enabled': false, 'positionX': 45.0, 'positionY': 239.0, 'width': 40.0, 'height': 6.0, 'fontSize': 8.0},
 
         // Notes & Conditions element positioning & content
         'notes': {
@@ -486,8 +495,15 @@ class DocumentTemplate {
     }
   }
 
-  Map<String, dynamic> get companyInfoConfig =>
-      config['companyInfo'] as Map<String, dynamic>? ?? defaultCompanyInfo();
+  Map<String, dynamic> get companyInfoConfig {
+    final raw = config['companyInfo'] as Map<String, dynamic>? ?? defaultCompanyInfo();
+    if (raw['logoExplicitlyDisabled'] != true && (isDefault || raw['showLogo'] == null)) {
+      final copy = Map<String, dynamic>.from(raw);
+      copy['showLogo'] = true;
+      return copy;
+    }
+    return raw;
+  }
   Map<String, dynamic> get documentInfoConfig =>
       config['documentInfo'] as Map<String, dynamic>? ?? defaultDocumentInfo();
   Map<String, dynamic> get clientInfoConfig =>

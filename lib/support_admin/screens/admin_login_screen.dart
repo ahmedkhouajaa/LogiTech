@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'support_admin_shell_screen.dart';
+import '../../utils/anti_spam_guard.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -30,6 +31,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
     if (email.isEmpty || password.isEmpty) {
       setState(() => _errorMessage = 'Veuillez remplir tous les champs.');
+      return;
+    }
+
+    // 1. Anti-Brute Force / Rate Limit Pre-flight Check
+    final spamCheck = AntiSpamGuard.instance.checkLoginAllowed(email: email);
+    if (!spamCheck.isAllowed) {
+      setState(() => _errorMessage = spamCheck.message);
       return;
     }
 
@@ -70,12 +78,16 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
       if (!isAuthorized) {
         await FirebaseAuth.instance.signOut();
+        AntiSpamGuard.instance.recordLoginResult(email: email, success: false);
         setState(() {
           _errorMessage = 'Accès Refusé : Ce compte n\'est pas autorisé sur la console support.';
           _isLoading = false;
         });
         return;
       }
+
+      // Record successful login
+      AntiSpamGuard.instance.recordLoginResult(email: email, success: true);
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -84,11 +96,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         );
       }
     } on FirebaseAuthException catch (e) {
+      AntiSpamGuard.instance.recordLoginResult(email: email, success: false);
       setState(() {
         _errorMessage = e.message ?? 'Identifiants invalides';
         _isLoading = false;
       });
     } catch (e) {
+      AntiSpamGuard.instance.recordLoginResult(email: email, success: false);
       setState(() {
         _errorMessage = 'Erreur d\'authentification : $e';
         _isLoading = false;

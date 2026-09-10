@@ -124,6 +124,26 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
     if (widget.isReadOnly) return;
     if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
 
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final hasEmptyArticle = _items.any((item) =>
+        item.productId.trim().isEmpty ||
+        (item.designation == null || item.designation!.trim().isEmpty));
+    if (hasEmptyArticle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Veuillez sélectionner un article pour chaque ligne'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez sélectionner un fournisseur'), backgroundColor: AppColors.error),
@@ -290,7 +310,7 @@ class _MobileSupplierCreditNoteFormScreenState extends State<MobileSupplierCredi
                             absorbing: widget.isReadOnly,
                             child: SmartSearchableSelector(
                               label: 'Fournisseur',
-                              hint: 'Rechercher des fournisseurs...',
+                              hint: 'Rechercher un fournisseur...',
                               selectedText: _selectedSupplierId != null
                                   ? (suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)?.companyName?.isNotEmpty == true
                                       ? suppliers.cast<Supplier?>().firstWhere((s) => s?.id == _selectedSupplierId, orElse: () => null)!.companyName!

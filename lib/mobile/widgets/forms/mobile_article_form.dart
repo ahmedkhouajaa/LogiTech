@@ -78,6 +78,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
   double _discountPercent = 0;
   bool _showDescription = false;
   bool _applyDiscount = false;
+  bool _hasAttemptedSubmit = false;
 
   late final TextEditingController _unitPriceController;
 
@@ -115,6 +116,7 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
 
   void _handleSave() {
     if (_productName.isEmpty) {
+      setState(() => _hasAttemptedSubmit = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez sélectionner un article'), backgroundColor: AppColors.error),
       );
@@ -206,12 +208,15 @@ class _MobileArticleFormState extends State<MobileArticleForm> {
                               hint: 'Rechercher un article...',
                               selectedText: displayName,
                               isHighlighted: true,
+                              hasError: _hasAttemptedSubmit && _productName.isEmpty,
+                              errorText: (_hasAttemptedSubmit && _productName.isEmpty) ? 'Veuillez sélectionner un article' : null,
                               onTap: () async {
                                 final res = await showProductSelectDialog(context, products, selectedProductId: _productId, warehouseId: widget.warehouseId);
                                 if (res != null && mounted) {
                                   final sel = products.firstWhere((p) => p.id == res);
                                   final price = widget.isPurchase ? sel.purchasePrice : sel.sellingPrice;
                                   setState(() {
+                                    _hasAttemptedSubmit = false;
                                     _productId = sel.id;
                                     _productName = sel.name;
                                     _description = sel.name;

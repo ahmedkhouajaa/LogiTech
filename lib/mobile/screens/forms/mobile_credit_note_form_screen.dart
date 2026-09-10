@@ -101,6 +101,25 @@ class _MobileCreditNoteFormScreenState extends State<MobileCreditNoteFormScreen>
     if (widget.isReadOnly) return;
     if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
 
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final hasEmptyArticle = _items.any((item) =>
+        item.productId.trim().isEmpty ||
+        ((item.productName == null || item.productName!.trim().isEmpty) &&
+         (item.description == null || item.description!.trim().isEmpty)));
+
+    if (hasEmptyArticle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error));
       return;

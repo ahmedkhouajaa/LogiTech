@@ -302,32 +302,92 @@ class DatabaseHelper {
   Future<bool> isFirstDocumentOfType(String docCollection, [String? entIdParam]) async {
     String entId = entIdParam ?? currentEnterpriseId ?? 'default';
     if (entId.isEmpty) entId = 'default';
-    final counterRef = _firestore.collection('enterprises').doc(entId).collection('counters').doc(docCollection);
 
     try {
-      final snapshot = await counterRef.get().timeout(const Duration(seconds: 4));
-      if (snapshot.exists && snapshot.data() != null) {
-        final data = snapshot.data()!;
-        if (data['configured'] == true || (data['count'] != null && (data['count'] as num) > 0)) {
-          return false;
-        }
-      }
-
-      final querySnap = await _firestore
+      // 1. Check if there are any active (non-deleted: is_deleted == 0) documents for this enterprise
+      final activeQuery = await _firestore
           .collection(docCollection)
           .where('enterprise_id', isEqualTo: entId)
+          .where('is_deleted', isEqualTo: 0)
           .limit(1)
           .get()
           .timeout(const Duration(seconds: 4));
 
-      if (querySnap.docs.isNotEmpty) {
+      if (activeQuery.docs.isNotEmpty) {
         return false;
       }
 
+      // 2. Also check up to 50 documents for this enterprise in case some legacy documents
+      // omitted the is_deleted field or have is_deleted != 1
+      final anyDocsSnap = await _firestore
+          .collection(docCollection)
+          .where('enterprise_id', isEqualTo: entId)
+          .limit(50)
+          .get()
+          .timeout(const Duration(seconds: 4));
+
+      final hasActive = anyDocsSnap.docs.any((doc) {
+        final data = doc.data();
+        final isDel = data['is_deleted'] == 1 ||
+            data['is_deleted'] == true ||
+            data['is_deleted'] == '1' ||
+            data['isDeleted'] == 1 ||
+            data['isDeleted'] == true;
+        return !isDel;
+      });
+
+      if (hasActive) {
+        return false;
+      }
+
+      // 3. Fallback for 'default' enterprise (check if documents exist without enterprise_id)
+      if (entId == 'default') {
+        final fallbackSnap = await _firestore
+            .collection(docCollection)
+            .limit(20)
+            .get()
+            .timeout(const Duration(seconds: 4));
+
+        final hasFallbackActive = fallbackSnap.docs.any((doc) {
+          final data = doc.data();
+          final docEntId = data['enterprise_id'] ?? data['enterpriseId'];
+          if (docEntId != null && docEntId != 'default' && docEntId != '') {
+            return false;
+          }
+          final isDel = data['is_deleted'] == 1 ||
+              data['is_deleted'] == true ||
+              data['is_deleted'] == '1' ||
+              data['isDeleted'] == 1 ||
+              data['isDeleted'] == true;
+          return !isDel;
+        });
+
+        if (hasFallbackActive) {
+          return false;
+        }
+      }
+
+      // Zero active documents exist in this collection for this enterprise.
+      // This is the first document of this type (or user deleted all documents to reset numbering).
       return true;
     } catch (e) {
       print('⚠️ [DEBUG] isFirstDocumentOfType check failed for $docCollection: $e');
       return false;
+    }
+  }
+
+  Future<void> resetDocSequenceIfEmpty(String docCollection, [String? entIdParam]) async {
+    String entId = entIdParam ?? currentEnterpriseId ?? 'default';
+    if (entId.isEmpty) entId = 'default';
+
+    try {
+      final isFirst = await isFirstDocumentOfType(docCollection, entId);
+      if (isFirst) {
+        final counterRef = _firestore.collection('enterprises').doc(entId).collection('counters').doc(docCollection);
+        await counterRef.delete();
+      }
+    } catch (e) {
+      print('⚠️ [DEBUG] resetDocSequenceIfEmpty failed for $docCollection: $e');
     }
   }
 
@@ -849,6 +909,7 @@ class DatabaseHelper {
           rcNumber: currentEnt.rcNumber,
           address: currentEnt.address,
           rib: currentEnt.rib,
+          logoPath: currentEnt.logoUrl,
         );
       }
     } catch (_) {}
@@ -870,9 +931,27 @@ class DatabaseHelper {
           'rcNumber': settings.rcNumber?.trim(),
           'address': settings.address?.trim(),
           'rib': settings.rib?.trim(),
+          'logo_url': settings.logoPath,
+          'logoUrl': settings.logoPath,
           'updated_at': now.toIso8601String(),
           'updatedAt': now.toIso8601String(),
         };
+
+        final current = EnterpriseService.instance.currentEnterprise;
+        if (current != null && current.id == eid) {
+          EnterpriseService.instance.currentEnterpriseNotifier.value = current.copyWith(
+            name: settings.name,
+            phone: settings.phone,
+            email: settings.email,
+            website: settings.website,
+            taxId: settings.taxId,
+            rcNumber: settings.rcNumber,
+            address: settings.address,
+            rib: settings.rib,
+            logoUrl: settings.logoPath,
+            clearLogo: settings.logoPath == null,
+          );
+        }
 
         if (FirebaseAuth.instance.currentUser != null) {
           await _firestore.collection('enterprises').doc(eid).set(updateMap, SetOptions(merge: true));

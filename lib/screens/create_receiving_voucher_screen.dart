@@ -62,6 +62,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
   final _formKey = GlobalKey<FormState>();
   final _uuid = const Uuid();
   bool _isSaving = false;
+  bool _hasAttemptedSubmit = false;
 
   String? _selectedSupplierId;
   String? _selectedProjectId;
@@ -156,7 +157,35 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
   // ── Save ──────────────────────────────────────────────────────────
   Future<void> _save() async {
     if (widget.isReadOnly || _isSaving) return;
-    setState(() => _isSaving = true);
+    setState(() {
+      _hasAttemptedSubmit = true;
+      _isSaving = true;
+    });
+    _formKey.currentState?.validate();
+
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Veuillez ajouter au moins un article'),
+            backgroundColor: AppColors.error),
+      );
+      setState(() => _isSaving = false);
+      return;
+    }
+
+    final hasEmptyArticle = _items.any((item) =>
+        item.productId.trim().isEmpty ||
+        (item.productName == null || item.productName!.trim().isEmpty));
+
+    if (hasEmptyArticle) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Veuillez sélectionner un article pour chaque ligne'),
+            backgroundColor: AppColors.error),
+      );
+      return;
+    }
 
     if (_selectedSupplierId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -724,6 +753,10 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
   }
 
   Widget _buildArticleRow(ReceivingVoucherItem item, int index) {
+    final isArticleMissing = _hasAttemptedSubmit &&
+        (item.productId.trim().isEmpty ||
+            (item.productName == null || item.productName!.trim().isEmpty));
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -734,6 +767,7 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Designation
               Expanded(
@@ -745,6 +779,8 @@ class _CreateReceivingVoucherScreenState extends State<CreateReceivingVoucherScr
                     return SearchableSelectorField(
                       hint: 'Rechercher un article...',
                       selectedText: selectedProd?.name ?? (item.productName?.isNotEmpty == true ? item.productName : null),
+                      hasError: isArticleMissing,
+                      errorText: isArticleMissing ? 'Veuillez sélectionner un article' : null,
                       onTap: () async {
                         final res = await showProductSelectDialog(context, products, warehouseId: _selectedWarehouseId);
                         if (res != null && mounted) {

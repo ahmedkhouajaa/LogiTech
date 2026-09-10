@@ -18,6 +18,7 @@ import '../widgets/shimmer_effect.dart';
 import '../services/contact_import_export_service.dart';
 import '../widgets/import_export/contact_import_dialog.dart';
 import 'customer_detail_screen.dart';
+import '../widgets/customer_history_dialog.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -445,6 +446,28 @@ class _CustomersScreenState extends State<CustomersScreen> {
                                 
                                 // Actions
                                 const SizedBox(width: 12),
+                                Tooltip(
+                                  message: 'Historique client',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: true,
+                                        builder: (_) => CustomerHistoryDialog(customer: c),
+                                      );
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(4),
+                                      child: Icon(
+                                        Icons.history_rounded,
+                                        size: 20,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
                                 PopupMenuButton<String>(
                                   icon: Icon(Icons.more_horiz_rounded, size: 18, color: AppColors.textTertiary),
                                   padding: EdgeInsets.zero,

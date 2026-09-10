@@ -34,6 +34,7 @@ class CreateCreditNoteScreen extends StatefulWidget {
 class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
   final _formKey = GlobalKey<FormState>();
   final _uuid = const Uuid();
+  bool _hasAttemptedSubmit = false;
 
   Customer? _selectedCustomer;
   String? _selectedProjectId;
@@ -321,7 +322,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       SearchableSelectorField(
-                                        hint: 'Rechercher des clients...',
+                                        hint: 'Rechercher un client...',
                                         selectedText: displayName,
                                         hasError: field.hasError,
                                         onTap: () async {
@@ -578,6 +579,11 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
   }
 
   Widget _buildItemRow(int index, CreditNoteItem item) {
+    final isArticleMissing = _hasAttemptedSubmit &&
+        (item.productId.trim().isEmpty ||
+            ((item.productName == null || item.productName!.trim().isEmpty) &&
+                (item.description == null || item.description!.trim().isEmpty)));
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -586,6 +592,7 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Designation
               Expanded(
@@ -607,7 +614,11 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
                         return TextFormField(
                           controller: textEditingController,
                           focusNode: focusNode,
-                          decoration: _itemInputDecoration('Rechercher un article...'),
+                          decoration: _itemInputDecoration(
+                            'Rechercher un article...',
+                            hasError: isArticleMissing,
+                            errorText: isArticleMissing ? 'Veuillez sélectionner un article' : null,
+                          ),
                           style: TextStyle(fontSize: 13),
                           onChanged: (v) => setState(() => _items[index] = item.copyWith(productName: v)),
                         );
@@ -885,16 +896,21 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
     );
   }
 
-  InputDecoration _itemInputDecoration(String hint) {
+  InputDecoration _itemInputDecoration(String hint, {bool hasError = false, String? errorText}) {
+    final borderSide = hasError
+        ? BorderSide(color: AppColors.error, width: 1.5)
+        : BorderSide(color: Colors.grey.shade400, width: 1.0);
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: AppColors.textPrimary, fontSize: 12),
+      hintStyle: TextStyle(color: hasError ? AppColors.error : AppColors.textPrimary, fontSize: 12),
       filled: true,
-      fillColor: AppColors.surfaceAlt,
+      fillColor: hasError ? AppColors.error.withValues(alpha: 0.04) : AppColors.surfaceAlt,
       contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: Colors.grey.shade400, width: 1.0)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
+      errorText: hasError ? errorText : null,
+      errorStyle: TextStyle(fontSize: 11, color: AppColors.error),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: borderSide),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: borderSide),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md), borderSide: BorderSide(color: hasError ? AppColors.error : AppColors.primary, width: 1.5)),
     );
   }
 
@@ -1170,6 +1186,28 @@ class _CreateCreditNoteScreenState extends State<CreateCreditNoteScreen> {
 
   // ─── Save ────────────────────────────────────────────────────────
   Future<void> _save() async {
+    setState(() => _hasAttemptedSubmit = true);
+    _formKey.currentState?.validate();
+
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final hasEmptyArticle = _items.any((item) =>
+        item.productId.trim().isEmpty ||
+        ((item.productName == null || item.productName!.trim().isEmpty) &&
+         (item.description == null || item.description!.trim().isEmpty)));
+
+    if (hasEmptyArticle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
     if (_selectedCustomer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez selectionner un client'), backgroundColor: AppColors.error),

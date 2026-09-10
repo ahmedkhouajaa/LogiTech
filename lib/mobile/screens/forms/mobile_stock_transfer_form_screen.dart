@@ -38,6 +38,7 @@ class MobileStockTransferFormScreen extends StatefulWidget {
 class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormScreen> {
   final _uuid = const Uuid();
   bool _isLoading = false;
+  bool _hasAttemptedSubmit = false;
 
   DateTime _date = DateTime.now();
   String? _sourceWarehouseId;
@@ -126,6 +127,18 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
     if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final hasEmptyArticle = _items.any((item) => item.productId.trim().isEmpty);
+    if (hasEmptyArticle) {
+      setState(() => _hasAttemptedSubmit = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Veuillez sélectionner un article pour chaque ligne'),
+          backgroundColor: AppColors.error,
+        ),
       );
       return;
     }
@@ -441,6 +454,8 @@ class _MobileStockTransferFormScreenState extends State<MobileStockTransferFormS
                                 SearchableSelectorField(
                                   hint: 'Sélectionner un article',
                                   selectedText: item.productId.isNotEmpty ? (item.productName ?? 'Article') : null,
+                                  hasError: _hasAttemptedSubmit && item.productId.isEmpty,
+                                  errorText: (_hasAttemptedSubmit && item.productId.isEmpty) ? 'Veuillez sélectionner un article' : null,
                                   onTap: () async {
                                     final productsState = context.read<ProductsBloc>().state;
                                     List<Product> products = [];

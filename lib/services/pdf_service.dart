@@ -14,14 +14,15 @@ import '../database/database_helper.dart';
 import 'canvas_pdf_generator.dart';
 import '../utils/file_download_helper.dart';
 import '../utils/constants.dart';
+import '../services/enterprise_service.dart';
+import '../utils/company_logo_helper.dart';
 
 class PdfService {
   static final PdfService instance = PdfService._();
   PdfService._();
 
   Future<Uint8List> generateDocumentBytes(DocumentWrapper document, {DocumentTemplate? template}) async {
-    final rawSettings = await DatabaseHelper.instance.getCompanySettings();
-    final CompanySettings companySettings = (rawSettings is CompanySettings) ? rawSettings : CompanySettings();
+    final companySettings = await DatabaseHelper.instance.getCompanySettings();
 
     // ─── Enrich document with customer/supplier contact details ───
     document = await _enrichDocumentWithContactDetails(document);
@@ -301,7 +302,7 @@ class PdfService {
 
     // 1. Logo Configuration
     final logoCfg = config?['logo'] as Map<String, dynamic>? ?? {};
-    final showLogo = comp['showLogo'] == true;
+    final showLogo = comp['showLogo'] != false;
     final logoX = (logoCfg['positionX'] as num?)?.toDouble() ?? 15.0;
     final logoY = (logoCfg['positionY'] as num?)?.toDouble() ?? 15.0;
     final logoW = (logoCfg['width'] as num?)?.toDouble() ?? 20.0;
@@ -376,23 +377,38 @@ class PdfService {
       child: pw.Stack(
         children: [
           // Logo
-          if (showLogo)
-            pw.Positioned(
+          if (showLogo) () {
+            final logoData = (settings.logoPath != null && settings.logoPath!.trim().isNotEmpty)
+                ? settings.logoPath
+                : EnterpriseService.instance.currentEnterprise?.logoUrl;
+            final logoBytes = CompanyLogoHelper.decodeBase64Logo(logoData);
+
+            return pw.Positioned(
               left: (logoX - 10.0).clamp(0.0, 180.0) * mm,
               top: (logoY - 10.0).clamp(0.0, 200.0) * mm,
-              child: pw.Container(
-                width: logoW * mm,
-                height: logoH * mm,
-                decoration: pw.BoxDecoration(
-                  color: PdfColors.grey200,
-                  borderRadius: pw.BorderRadius.circular(3),
-                  border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
-                ),
-                child: pw.Center(
-                  child: pw.Text('Logo', style: pw.TextStyle(font: font, fontSize: 8, color: PdfColors.grey600)),
-                ),
-              ),
-            ),
+              child: (logoBytes != null && logoBytes.isNotEmpty)
+                  ? pw.Container(
+                      width: logoW * mm,
+                      height: logoH * mm,
+                      child: pw.Image(
+                        pw.MemoryImage(logoBytes),
+                        fit: pw.BoxFit.contain,
+                      ),
+                    )
+                  : pw.Container(
+                      width: logoW * mm,
+                      height: logoH * mm,
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.grey200,
+                        borderRadius: pw.BorderRadius.circular(3),
+                        border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
+                      ),
+                      child: pw.Center(
+                        child: pw.Text('Logo', style: pw.TextStyle(font: font, fontSize: 8, color: PdfColors.grey600)),
+                      ),
+                    ),
+            );
+          }(),
 
           // Company Name
           if (showCompanyName)
@@ -1011,7 +1027,6 @@ class PdfService {
     const accentLight = PdfColor.fromInt(0xFFe8edfb);
 
     final warehouseName = document.customData['warehouseName'] ?? 'Non spécifié';
-    final createdBy = document.customData['createdBy'] ?? '';
 
     pdf.addPage(
       pw.MultiPage(

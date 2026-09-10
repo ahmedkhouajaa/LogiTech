@@ -13,6 +13,7 @@ class Enterprise {
   final String? rcNumber;
   final String? address;
   final String? rib;
+  final String? logoUrl;
   final String ownerId;
   final List<EnterpriseMember> members;
   final bool defaultsCreated;
@@ -30,6 +31,7 @@ class Enterprise {
     this.rcNumber,
     this.address,
     this.rib,
+    this.logoUrl,
     required this.ownerId,
     this.members = const [],
     this.defaultsCreated = false,
@@ -49,6 +51,8 @@ class Enterprise {
         'rc_number': rcNumber,
         'address': address,
         'rib': rib,
+        'logo_url': logoUrl,
+        'logoUrl': logoUrl,
         'owner_id': ownerId,
         'members': members.map((m) => m.toMap()).toList(),
         'defaults_created': defaultsCreated,
@@ -76,6 +80,7 @@ class Enterprise {
       rcNumber: map['rc_number']?.toString() ?? map['rcNumber']?.toString(),
       address: map['address']?.toString(),
       rib: map['rib']?.toString(),
+      logoUrl: map['logo_url']?.toString() ?? map['logoUrl']?.toString() ?? map['logoPath']?.toString(),
       ownerId: map['owner_id']?.toString() ?? map['ownerId']?.toString() ?? map['userId']?.toString() ?? '',
       members: parsedMembers,
       defaultsCreated: map['defaults_created'] == true ||
@@ -108,6 +113,8 @@ class Enterprise {
     String? rcNumber,
     String? address,
     String? rib,
+    String? logoUrl,
+    bool clearLogo = false,
     String? ownerId,
     List<EnterpriseMember>? members,
     bool? defaultsCreated,
@@ -125,6 +132,7 @@ class Enterprise {
         rcNumber: rcNumber ?? this.rcNumber,
         address: address ?? this.address,
         rib: rib ?? this.rib,
+        logoUrl: clearLogo ? null : (logoUrl ?? this.logoUrl),
         ownerId: ownerId ?? this.ownerId,
         members: members ?? this.members,
         defaultsCreated: defaultsCreated ?? this.defaultsCreated,
@@ -144,6 +152,7 @@ class Enterprise {
         'rc_number': rcNumber,
         'address': address,
         'rib': rib,
+        'logo_url': logoUrl,
         'owner_id': ownerId,
         'defaults_created': defaultsCreated ? 1 : 0,
         'defaultsCreated': defaultsCreated,
@@ -166,6 +175,7 @@ class Enterprise {
           rcNumber == other.rcNumber &&
           address == other.address &&
           rib == other.rib &&
+          logoUrl == other.logoUrl &&
           ownerId == other.ownerId &&
           defaultsCreated == other.defaultsCreated &&
           updatedAt == other.updatedAt;
@@ -182,6 +192,7 @@ class Enterprise {
       rcNumber.hashCode ^
       address.hashCode ^
       rib.hashCode ^
+      logoUrl.hashCode ^
       ownerId.hashCode ^
       defaultsCreated.hashCode ^
       updatedAt.hashCode;

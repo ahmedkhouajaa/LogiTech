@@ -5,6 +5,7 @@ import '../blocs/enterprise/enterprise_bloc.dart';
 import '../models/enterprise.dart';
 import '../services/enterprise_service.dart';
 import '../utils/constants.dart';
+import '../utils/company_logo_helper.dart';
 import '../widgets/custom_app_bar.dart';
 
 class CompanyInfoScreen extends StatefulWidget {
@@ -17,6 +18,24 @@ class CompanyInfoScreen extends StatefulWidget {
 class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
+  String? _logoBase64;
+  bool _isPickingLogo = false;
+
+  Future<void> _pickLogo() async {
+    setState(() => _isPickingLogo = true);
+    try {
+      final logo = await CompanyLogoHelper.pickAndProcessLogo(context: context);
+      if (logo != null && mounted) {
+        setState(() => _logoBase64 = logo);
+      }
+    } finally {
+      if (mounted) setState(() => _isPickingLogo = false);
+    }
+  }
+
+  void _removeLogo() {
+    setState(() => _logoBase64 = null);
+  }
 
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -61,6 +80,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
       String rcNumber = currentEnt?.rcNumber ?? '';
       String address = currentEnt?.address ?? '';
       String rib = currentEnt?.rib ?? '';
+      String? logoUrl = currentEnt?.logoUrl;
 
       // Also fetch the freshest data directly from Firestore if available
       if (eid != null && eid.isNotEmpty) {
@@ -79,6 +99,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
             rcNumber = (data['rc_number'] ?? data['rcNumber'])?.toString() ?? rcNumber;
             address = data['address']?.toString() ?? address;
             rib = data['rib']?.toString() ?? rib;
+            logoUrl = (data['logo_url'] ?? data['logoUrl'] ?? data['logoPath'])?.toString() ?? logoUrl;
           }
         } catch (e) {
           debugPrint('[CompanyInfoScreen] Direct Firestore fetch error: $e');
@@ -94,6 +115,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
         _rcNumberController.text = rcNumber;
         _addressController.text = address;
         _ribController.text = rib;
+        _logoBase64 = logoUrl;
         setState(() => _isLoading = false);
       }
     } catch (e) {
@@ -156,6 +178,8 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
         rcNumber: _rcNumberController.text.trim(),
         address: _addressController.text.trim(),
         rib: _ribController.text.trim(),
+        logoUrl: _logoBase64,
+        clearLogo: _logoBase64 == null,
         updatedAt: DateTime.now(),
       );
 
@@ -307,6 +331,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _buildLogoSection(isMobile),
                   if (isMobile) ...[
                     AppTextField(
                       label: 'Nom de votre société (Tireur) *',
@@ -427,6 +452,166 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLogoSection(bool isMobile) {
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 14 : 18),
+      margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: AppColors.isDarkMode
+            ? AppColors.surfaceAlt.withValues(alpha: 0.5)
+            : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: AppColors.border.withValues(alpha: AppColors.isDarkMode ? 0.6 : 0.8),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: isMobile ? 80 : 96,
+                height: isMobile ? 80 : 96,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: AppShadows.sm,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: _isPickingLogo
+                      ? const Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : (_logoBase64 != null
+                          ? CompanyLogoHelper.buildLogoWidget(
+                              logoUrl: _logoBase64,
+                              fit: BoxFit.contain,
+                            )
+                          : Center(
+                              child: Icon(
+                                Icons.business_outlined,
+                                size: isMobile ? 36 : 44,
+                                color: AppColors.textTertiary,
+                              ),
+                            )),
+                ),
+              ),
+              if (_logoBase64 != null)
+                Positioned(
+                  top: -5,
+                  right: -5,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppColors.success,
+                      shape: BoxShape.circle,
+                      boxShadow: AppShadows.sm,
+                    ),
+                    child: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Logo officiel de l\'entreprise',
+                      style: TextStyle(
+                        fontSize: isMobile ? 14 : 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _logoBase64 != null
+                            ? AppColors.success.withValues(alpha: 0.12)
+                            : AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        _logoBase64 != null ? 'Logo configuré' : 'Aucun logo',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: _logoBase64 != null ? AppColors.success : AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _logoBase64 != null
+                      ? 'Logo importé avec succès'
+                      : 'Formats supportés : PNG, JPG, JPEG, WebP. Ce logo apparaîtra sur vos devis, factures, bons de livraison et modèles de documents.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _logoBase64 != null ? AppColors.success : AppColors.textSecondary,
+                    fontWeight: _logoBase64 != null ? FontWeight.w500 : FontWeight.normal,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _isPickingLogo ? null : _pickLogo,
+                      icon: Icon(
+                        _logoBase64 != null ? Icons.photo_library_rounded : Icons.upload_file_rounded,
+                        size: 16,
+                      ),
+                      label: Text(
+                        _logoBase64 != null ? 'Modifier le logo' : 'Télécharger un logo',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                    if (_logoBase64 != null)
+                      TextButton.icon(
+                        onPressed: _removeLogo,
+                        icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red),
+                        label: const Text('Supprimer', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

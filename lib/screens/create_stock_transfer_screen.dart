@@ -39,6 +39,7 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
   String? _destWarehouseId;
 
   List<Warehouse> _warehouses = [];
+  bool _hasAttemptedSubmit = false;
 
   List<StockTransferItem> _items = [];
 
@@ -109,22 +110,17 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
       ];
     }
 
-    if (mounted) {
-      setState(() {
-        _warehouses = warehouses;
-        if (!isEdit) {
-          if (_sourceWarehouseId == null && warehouses.isNotEmpty) {
-            _sourceWarehouseId = warehouses.first.id;
-          }
-          if (_destWarehouseId == null || _destWarehouseId == _sourceWarehouseId) {
-            final otherWarehouses = warehouses.where((w) => w.id != _sourceWarehouseId).toList();
-            _destWarehouseId = otherWarehouses.isNotEmpty ? otherWarehouses.first.id : null;
-          }
-        } else if (_sourceWarehouseId == _destWarehouseId) {
-          _destWarehouseId = null;
+    setState(() {
+      _warehouses = warehouses;
+      if (!isEdit && warehouses.isNotEmpty) {
+        if (_sourceWarehouseId == null) {
+          _sourceWarehouseId = warehouses.first.id;
         }
-      });
-    }
+        if (_destWarehouseId == null && warehouses.length > 1) {
+          _destWarehouseId = warehouses[1].id;
+        }
+      }
+    });
   }
 
   void _onWarehouseChanged() {
@@ -132,15 +128,25 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
   }
 
   Future<void> _save() async {
+    setState(() => _hasAttemptedSubmit = true);
     if (!_formKey.currentState!.validate()) return;
     
-    final validItems = _items.where((i) => i.productId.isNotEmpty).toList();
-    if (validItems.isEmpty) {
+    if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez ajouter au moins un article valide'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
       );
       return;
     }
+
+    final hasEmptyArticle = _items.any((item) => item.productId.trim().isEmpty);
+    if (hasEmptyArticle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final validItems = _items.where((i) => i.productId.isNotEmpty).toList();
 
     final productIds = validItems.map((i) => i.productId).toList();
     if (productIds.toSet().length != productIds.length) {
@@ -632,10 +638,12 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                         (p) => p?.id == item.productId,
                         orElse: () => null,
                       );
+                      final isMissing = _hasAttemptedSubmit && item.productId.trim().isEmpty;
                       final autocompleteWidget = SearchableSelectorField(
                         hint: 'Sélectionner un article',
                         selectedText: selectedProd?.name,
-                        hasError: isDuplicate,
+                        hasError: isDuplicate || isMissing,
+                        errorText: isMissing ? 'Veuillez sélectionner un article' : null,
                         onTap: () async {
                           final stockMap = <String, double>{};
                           if (stockState is StockLoaded) {
@@ -725,32 +733,49 @@ class _CreateStockTransferScreenState extends State<CreateStockTransferScreen> {
                                     });
                                   }
                                 },
-                                child: Container(
-                                  height: 40,
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surface,
-                                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                                    border: Border.all(color: isDuplicate ? AppColors.error : AppColors.border),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          (item.productName != null && item.productName!.isNotEmpty)
-                                              ? item.productName!
-                                              : 'Sélectionner un article',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: (item.productName != null && item.productName!.isNotEmpty) ? AppColors.textPrimary : AppColors.textSecondary,
+                                child: Builder(
+                                  builder: (context) {
+                                    final isMissingMobile = _hasAttemptedSubmit && item.productId.trim().isEmpty;
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          height: 40,
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                          decoration: BoxDecoration(
+                                            color: isMissingMobile ? AppColors.error.withValues(alpha: 0.04) : AppColors.surface,
+                                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                                            border: Border.all(color: (isDuplicate || isMissingMobile) ? AppColors.error : AppColors.border, width: isMissingMobile ? 1.5 : 1.0),
                                           ),
-                                          overflow: TextOverflow.ellipsis,
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  (item.productName != null && item.productName!.isNotEmpty)
+                                                      ? item.productName!
+                                                      : 'Sélectionner un article',
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                    color: isMissingMobile
+                                                        ? AppColors.error
+                                                        : ((item.productName != null && item.productName!.isNotEmpty) ? AppColors.textPrimary : AppColors.textSecondary),
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Icon(Icons.arrow_drop_down, color: isMissingMobile ? AppColors.error : AppColors.textSecondary, size: 20),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                      Icon(Icons.arrow_drop_down, color: AppColors.textSecondary, size: 20),
-                                    ],
-                                  ),
+                                        if (isMissingMobile)
+                                          Padding(
+                                            padding: EdgeInsets.only(top: 4, left: 4),
+                                            child: Text('Veuillez sélectionner un article', style: TextStyle(color: AppColors.error, fontSize: 11)),
+                                          ),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
                               if (isDuplicate)

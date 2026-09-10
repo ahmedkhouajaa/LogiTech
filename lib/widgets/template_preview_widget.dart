@@ -55,15 +55,6 @@ class TemplatePreviewWidget extends StatelessWidget {
                       _buildDraggableSignature(scale),
                       // Mentions légales & Footer
                       _buildDraggableLegalNotice(scale),
-                      // E-Facture elements
-                      if (template.qrCodeConfig['enabled'] == true)
-                        _buildQrCodeOverlay(scale),
-                      if (template.ttnReferenceConfig['enabled'] == true)
-                        _buildTtnOverlay(scale),
-                      if (template.submissionDateConfig['enabled'] == true)
-                        _buildSubmissionDateOverlay(scale),
-                      if (template.statusBadgeConfig['enabled'] == true)
-                        _buildStatusBadgeOverlay(scale),
                     ],
                   ),
                 );
@@ -138,7 +129,7 @@ class TemplatePreviewWidget extends StatelessWidget {
   }
 
   Widget _buildDraggableLogo(double scale) {
-    if (template.companyInfoConfig['showLogo'] != true) return const SizedBox.shrink();
+    if (template.companyInfoConfig['showLogo'] == false) return const SizedBox.shrink();
 
     final cfg = template.logoConfig;
     final x = (cfg['positionX'] as num?)?.toDouble() ?? 15;
@@ -166,7 +157,7 @@ class TemplatePreviewWidget extends StatelessWidget {
   Widget _buildDraggableCompanyName(double scale) {
     if (template.companyInfoConfig['showName'] == false) return const SizedBox.shrink();
 
-    final showLogo = template.companyInfoConfig['showLogo'] == true;
+    final showLogo = template.companyInfoConfig['showLogo'] != false;
     final defaultX = showLogo ? 40.0 : 15.0;
     final cfg = template.companyNameConfig;
     final x = (cfg['positionX'] as num?)?.toDouble() ?? defaultX;
@@ -190,7 +181,7 @@ class TemplatePreviewWidget extends StatelessWidget {
 
   Widget _buildDraggableCompanyDetails(double scale) {
     final comp = template.companyInfoConfig;
-    final showLogo = comp['showLogo'] == true;
+    final showLogo = comp['showLogo'] != false;
     final defaultX = showLogo ? 40.0 : 15.0;
     final cfg = template.companyDetailsConfig;
     final x = (cfg['positionX'] as num?)?.toDouble() ?? defaultX;
@@ -673,121 +664,6 @@ class TemplatePreviewWidget extends StatelessWidget {
       scale: scale,
       onPositionChanged: onPositionChanged!,
       child: child,
-    );
-  }
-
-  Widget _buildQrCodeOverlay(double scale) {
-    final cfg = template.qrCodeConfig;
-    final x = (cfg['positionX'] as num?)?.toDouble() ?? 15;
-    final y = (cfg['positionY'] as num?)?.toDouble() ?? 98;
-    final w = ((cfg['width'] as num?)?.toDouble() ?? 25) * scale;
-    final h = ((cfg['height'] as num?)?.toDouble() ?? 25) * scale;
-
-    return _buildDraggableOverlay(
-      'qrCode', x, y, scale,
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (cfg['showLabel'] == true)
-            Text(
-              cfg['labelText'] as String? ?? 'E-Facture',
-              style: TextStyle(fontSize: 2.5 * scale, color: AppColors.textSecondary),
-            ),
-          Container(
-            width: w,
-            height: h,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.textTertiary, width: 0.5),
-              borderRadius: BorderRadius.circular(1),
-            ),
-            child: Center(
-              child: Icon(Icons.qr_code_2_rounded, size: w * 0.7, color: AppColors.textTertiary),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTtnOverlay(double scale) {
-    final cfg = template.ttnReferenceConfig;
-    final x = (cfg['positionX'] as num?)?.toDouble() ?? 45;
-    final y = (cfg['positionY'] as num?)?.toDouble() ?? 99;
-    final fontSize = ((cfg['fontSize'] as num?)?.toDouble() ?? 9) * scale * 0.4;
-
-    return _buildDraggableOverlay(
-      'ttnReference', x, y, scale,
-      Text(
-        'Réf TTN: XXXXXXXXX',
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: cfg['fontWeight'] == 'Gras' || cfg['fontWeight'] == 'Graisse'
-              ? FontWeight.bold
-              : FontWeight.normal,
-          color: Color(cfg['color'] as int? ?? 0xFF1a56db),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSubmissionDateOverlay(double scale) {
-    final cfg = template.submissionDateConfig;
-    final x = (cfg['positionX'] as num?)?.toDouble() ?? 45;
-    final y = (cfg['positionY'] as num?)?.toDouble() ?? 232;
-    final fontSize = ((cfg['fontSize'] as num?)?.toDouble() ?? 8) * scale * 0.4;
-
-    return _buildDraggableOverlay(
-      'submissionDate', x, y, scale,
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (cfg['showLabel'] == true)
-            Text(
-              cfg['labelText'] as String? ?? 'Envoyé le:',
-              style: TextStyle(fontSize: 2.5 * scale, color: AppColors.textSecondary),
-            ),
-          Text(
-            '12/10/2024 14:30',
-            style: TextStyle(
-              fontSize: fontSize,
-              color: Color(cfg['color'] as int? ?? 0xFF000000),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusBadgeOverlay(double scale) {
-    final cfg = template.statusBadgeConfig;
-    final x = (cfg['positionX'] as num?)?.toDouble() ?? 45;
-    final y = (cfg['positionY'] as num?)?.toDouble() ?? 239;
-
-    final statuses = [
-      ('EN ATTENTE', const Color(0xFFF59E0B)),
-      ('ENVOYÉ', const Color(0xFF3B82F6)),
-      ('VALIDÉ', const Color(0xFF10B981)),
-      ('REJETÉ', const Color(0xFFEF4444)),
-    ];
-
-    return _buildDraggableOverlay(
-      'statusBadge', x, y, scale,
-      Row(
-        mainAxisSize: MainAxisSize.min,
-        children: statuses
-            .map((s) => Container(
-                  margin: EdgeInsets.only(right: 1.5 * scale),
-                  padding: EdgeInsets.symmetric(horizontal: 2 * scale, vertical: 0.8 * scale),
-                  decoration: BoxDecoration(
-                    color: s.$2,
-                    borderRadius: BorderRadius.circular(1),
-                  ),
-                  child: Text(s.$1, style: TextStyle(fontSize: 2 * scale, color: Colors.white, fontWeight: FontWeight.w600)),
-                ))
-            .toList(),
-      ),
     );
   }
 }

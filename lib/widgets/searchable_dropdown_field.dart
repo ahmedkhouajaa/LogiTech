@@ -23,6 +23,9 @@ class SearchableSelectorField extends StatelessWidget {
   final VoidCallback onTap;
   final bool hasError;
   final bool isHighlighted;
+  final String? errorText;
+  final Color? hintColor;
+  final FontWeight? hintFontWeight;
 
   const SearchableSelectorField({
     super.key,
@@ -31,15 +34,19 @@ class SearchableSelectorField extends StatelessWidget {
     required this.onTap,
     this.hasError = false,
     this.isHighlighted = false,
+    this.errorText,
+    this.hintColor,
+    this.hintFontWeight,
   });
 
   @override
   Widget build(BuildContext context) {
     final displayText = (selectedText != null && selectedText!.isNotEmpty) ? selectedText! : hint;
+    final isPlaceholder = selectedText == null || selectedText!.isEmpty;
 
     BorderSide borderSide;
     if (hasError) {
-      borderSide = BorderSide(color: AppColors.error);
+      borderSide = BorderSide(color: AppColors.error, width: 1.5);
     } else if (isHighlighted) {
       borderSide = BorderSide(color: AppColors.primary, width: 1.5);
     } else {
@@ -51,12 +58,21 @@ class SearchableSelectorField extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: AbsorbPointer(
         child: TextFormField(
+          key: ValueKey('selector_${displayText}_$hasError'),
           controller: TextEditingController(text: displayText),
           decoration: InputDecoration(
             filled: true,
-            fillColor: isHighlighted ? AppColors.primary.withValues(alpha: 0.03) : AppColors.surfaceAlt,
-            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            suffixIcon: Icon(Icons.arrow_drop_down_rounded, size: 24, color: AppColors.primary),
+            fillColor: hasError
+                ? AppColors.error.withValues(alpha: 0.04)
+                : (isHighlighted ? AppColors.primary.withValues(alpha: 0.03) : AppColors.surfaceAlt),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            suffixIcon: Icon(
+              Icons.arrow_drop_down_rounded,
+              size: 24,
+              color: hasError ? AppColors.error : AppColors.primary,
+            ),
+            errorText: hasError ? errorText : null,
+            errorStyle: TextStyle(fontSize: 11, color: AppColors.error),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
               borderSide: borderSide,
@@ -67,13 +83,23 @@ class SearchableSelectorField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
+              borderSide: borderSide,
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderSide: BorderSide(color: AppColors.error, width: 1.5),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderSide: BorderSide(color: AppColors.error, width: 1.5),
             ),
           ),
           style: TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+            fontWeight: isPlaceholder ? (hintFontWeight ?? FontWeight.bold) : FontWeight.bold,
+            color: hasError
+                ? AppColors.error
+                : (isPlaceholder ? (hintColor ?? AppColors.textPrimary) : AppColors.textPrimary),
           ),
         ),
       ),

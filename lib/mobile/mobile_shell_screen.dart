@@ -60,6 +60,7 @@ import '../services/trial_service.dart';
 import '../services/app_navigation_service.dart';
 import '../widgets/trial_banner_widget.dart';
 import '../services/permission_service.dart';
+import '../widgets/draggable_ai_floating_button.dart';
 
 class MobileShellScreen extends StatefulWidget {
   const MobileShellScreen({super.key});
@@ -300,8 +301,9 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
+    return DraggableAiFloatingButton(
+      child: Scaffold(
+        backgroundColor: AppColors.background,
       drawer: MobileDrawer(
         activeModule: _activeModule,
         onModuleSelected: _onModuleSelected,
@@ -410,6 +412,7 @@ class _MobileShellScreenState extends State<MobileShellScreen> {
       //     ],
       //   ),
       // ),
+    ),
     );
   }
 }

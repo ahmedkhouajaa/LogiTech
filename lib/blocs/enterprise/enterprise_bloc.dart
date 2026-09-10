@@ -36,6 +36,7 @@ class CreateEnterprise extends EnterpriseEvent {
   final String? rcNumber;
   final String? address;
   final String? rib;
+  final String? logoUrl;
 
   const CreateEnterprise(
     this.name, {
@@ -47,6 +48,7 @@ class CreateEnterprise extends EnterpriseEvent {
     this.rcNumber,
     this.address,
     this.rib,
+    this.logoUrl,
   });
 
   @override
@@ -60,6 +62,7 @@ class CreateEnterprise extends EnterpriseEvent {
         rcNumber,
         address,
         rib,
+        logoUrl,
       ];
 }
 
@@ -235,6 +238,7 @@ class EnterpriseBloc extends Bloc<EnterpriseEvent, EnterpriseState> {
         rcNumber: event.rcNumber,
         address: event.address,
         rib: event.rib,
+        logoUrl: event.logoUrl,
       );
       emit(EnterpriseLoaded(
         enterprises: List<Enterprise>.from(_service.enterprises),

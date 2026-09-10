@@ -19,7 +19,6 @@ import '../../../../models/stock_movement.dart' show Warehouse;
 import '../../../../utils/constants.dart';
 import '../../../../utils/helpers.dart';
 import '../../../../utils/offline_action_helper.dart';
-import '../../../../database/database_helper.dart';
 import '../../../../services/document_numbering_service.dart';
 import '../../widgets/forms/mobile_form_screen.dart';
 import '../../widgets/forms/mobile_form_section.dart';
@@ -144,6 +143,25 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
 
   Future<void> _save() async {
     if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
+
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final hasEmptyArticle = _items.any((item) =>
+        item.productId.trim().isEmpty ||
+        ((item.productName == null || item.productName!.trim().isEmpty) &&
+         (item.description == null || item.description!.trim().isEmpty)));
+
+    if (hasEmptyArticle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
 
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -365,7 +383,7 @@ class _MobileExitVoucherFormScreenState extends State<MobileExitVoucherFormScree
                               : null;
                           return SmartSearchableSelector(
                             label: 'Client',
-                            hint: 'Rechercher des clients...',
+                            hint: 'Rechercher un client...',
                             selectedText: displayName,
                             onTap: () async {
                               final res = await showCustomerSelectDialog(context, customers, selectedCustomerId: _selectedCustomerId);

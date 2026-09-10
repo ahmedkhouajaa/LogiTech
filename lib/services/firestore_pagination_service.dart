@@ -46,7 +46,7 @@ class FirestorePaginationService {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Duration get _queryTimeout => kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 15);
+  Duration get _queryTimeout => kIsWeb ? const Duration(seconds: 2) : const Duration(milliseconds: 2500);
 
   // Pagination state tracking
   DocumentSnapshot? _lastDevisSnapshot;
@@ -4075,7 +4075,7 @@ class FirestorePaginationService {
   }
 
   Future<List<Product>> getFirstProducts({
-    int pageSize = 50,
+    int pageSize = 10,
     String? searchQuery,
     String stockFilter = 'Tous',
   }) async {
@@ -4099,7 +4099,16 @@ class FirestorePaginationService {
             .where('name', isLessThanOrEqualTo: '$q\uf8ff');
       }
 
-      final snapshot = await query.limit(pageSize).get();
+      QuerySnapshot snapshot;
+      try {
+        snapshot = await query.limit(pageSize).get().timeout(_queryTimeout);
+      } catch (_) {
+        try {
+          snapshot = await query.limit(pageSize).get(const GetOptions(source: Source.cache));
+        } catch (_) {
+          snapshot = await query.limit(pageSize).get();
+        }
+      }
       print("DEBUG: getFirstProducts Firebase snapshot length: ${snapshot.docs.length}");
 
       if (snapshot.docs.isNotEmpty) {
@@ -4134,7 +4143,7 @@ class FirestorePaginationService {
   }
 
   Future<List<Product>> getNextProducts({
-    int pageSize = 50,
+    int pageSize = 10,
     String? searchQuery,
     String stockFilter = 'Tous',
   }) async {
@@ -4165,7 +4174,16 @@ class FirestorePaginationService {
       }
 
       query = query.startAfterDocument(_lastProductSnapshot!).limit(pageSize);
-      final snapshot = await query.get();
+      QuerySnapshot snapshot;
+      try {
+        snapshot = await query.get().timeout(_queryTimeout);
+      } catch (_) {
+        try {
+          snapshot = await query.get(const GetOptions(source: Source.cache));
+        } catch (_) {
+          snapshot = await query.get();
+        }
+      }
 
       if (snapshot.docs.isNotEmpty) {
         _lastProductSnapshot = snapshot.docs.last;

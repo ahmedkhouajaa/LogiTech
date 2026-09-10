@@ -40,6 +40,7 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
   final _reasonController = TextEditingController();
   final _notesController = TextEditingController();
   List<Warehouse> _warehouses = [];
+  bool _hasAttemptedSubmit = false;
 
   List<StockEntryItem> _items = [];
   final Map<String, double> _stockQuantities = {}; // to hold current stock of selected products
@@ -57,21 +58,26 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
   @override
   void initState() {
     super.initState();
-    if (context.read<ProductsBloc>().state is! ProductsLoaded) {
-      context.read<ProductsBloc>().add(LoadProducts());
-    }
-    if (context.read<StockBloc>().state is! StockLoaded) {
-      context.read<StockBloc>().add(LoadStock());
-    }
     _loadWarehouses();
-    // Note: Assuming there is a WarehousesBloc or similar if needed. If not, just ProductsBloc.
     if (widget.existing != null) {
-      _date = widget.existing!.date;
-      _warehouseId = widget.existing!.warehouseId;
-      _reasonController.text = widget.existing!.reason ?? '';
-      _notesController.text = widget.existing!.notes ?? '';
-      _items = List.from(widget.existing!.items);
+      final e = widget.existing!;
+      _date = e.date;
+      _warehouseId = e.warehouseId;
+      _reasonController.text = e.reason ?? '';
+      _notesController.text = e.notes ?? '';
+      _items = List.from(e.items);
     }
+  }
+
+  Future<void> _loadWarehouses() async {
+    final list = await DatabaseHelper.instance.getWarehouses();
+    setState(() {
+      _warehouses = list;
+      if (_warehouseId == null && list.isNotEmpty) {
+        final def = list.firstWhere((w) => w.isDefault, orElse: () => list.first);
+        _warehouseId = def.id;
+      }
+    });
   }
 
   @override
@@ -82,19 +88,30 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
   }
 
   Future<void> _save() async {
+    setState(() => _hasAttemptedSubmit = true);
     // No online check for create actions — offline creation is allowed
     if (!_formKey.currentState!.validate()) return;
     if (_warehouseId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez sélectionner un entrepôt')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Veuillez sélectionner un entrepôt'), backgroundColor: AppColors.error));
       return;
     }
-    final validItems = _items.where((i) => i.productId.isNotEmpty).toList();
-    if (validItems.isEmpty) {
+
+    if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez ajouter au moins un article')),
+        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
       );
       return;
     }
+
+    final hasEmptyArticle = _items.any((item) => item.productId.trim().isEmpty);
+    if (hasEmptyArticle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final validItems = _items.where((i) => i.productId.isNotEmpty).toList();
 
     final seenProducts = <String>{};
     for (var item in validItems) {
@@ -340,17 +357,6 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
     );
   }
 
-  Future<void> _loadWarehouses() async {
-    final state = context.read<StockBloc>().state;
-    if (state is StockLoaded) {
-      setState(() {
-        _warehouses = state.warehouses;
-        if (widget.existing == null && _warehouses.isNotEmpty) {
-          _warehouseId = _warehouses.first.id;
-        }
-      });
-    }
-  }
 
   Widget _buildInfoSection() {
     final dateField = Column(
@@ -832,9 +838,12 @@ class _CreateStockEntryScreenState extends State<CreateStockEntryScreen> {
                               (p) => p?.id == item.productId,
                               orElse: () => null,
                             );
+                            final isMissing = _hasAttemptedSubmit && item.productId.trim().isEmpty;
                             return SearchableSelectorField(
                               hint: 'Sélectionner un article',
                               selectedText: selectedProd?.name,
+                              hasError: isMissing,
+                              errorText: isMissing ? 'Veuillez sélectionner un article' : null,
                               onTap: () async {
                                 final stockMap = <String, double>{};
                                 for (var p in products) {

@@ -267,7 +267,7 @@ class EnterpriseService {
     }
     _isLoadingEnterprises = true;
 
-    final timeout = kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 30);
+    final timeout = kIsWeb ? const Duration(seconds: 2) : const Duration(seconds: 3);
 
     for (int attempt = 0; attempt <= maxRetries; attempt++) {
       try {
@@ -788,6 +788,8 @@ class EnterpriseService {
       'rcNumber': updatedWithTimestamp.rcNumber?.trim(),
       'address': updatedWithTimestamp.address?.trim(),
       'rib': updatedWithTimestamp.rib?.trim(),
+      'logo_url': updatedWithTimestamp.logoUrl,
+      'logoUrl': updatedWithTimestamp.logoUrl,
       'updated_at': now.toIso8601String(),
       'updatedAt': now.toIso8601String(),
     };
@@ -841,6 +843,8 @@ class EnterpriseService {
         rcNumber: updatedWithTimestamp.rcNumber,
         address: updatedWithTimestamp.address,
         rib: updatedWithTimestamp.rib,
+        logoUrl: updatedWithTimestamp.logoUrl,
+        clearLogo: updatedWithTimestamp.logoUrl == null,
         updatedAt: now,
       );
     } else {
@@ -875,6 +879,7 @@ class EnterpriseService {
     String? rcNumber,
     String? address,
     String? rib,
+    String? logoUrl,
   }) async {
     if (PermissionService.instance.isLoaded && !PermissionService.instance.isAdmin && enterprises.isNotEmpty) {
       throw 'Action non autorisée. Seuls les administrateurs peuvent créer une entreprise.';
@@ -904,6 +909,7 @@ class EnterpriseService {
         rcNumber: rcNumber,
         address: address,
         rib: rib,
+        logoUrl: logoUrl,
         ownerId: uid,
         members: [EnterpriseMember(uid: uid, role: 'admin')],
         defaultsCreated: false,
@@ -983,6 +989,8 @@ class EnterpriseService {
           'rc_number': rcNumber,
           'address': address,
           'rib': rib,
+          'logo_url': logoUrl,
+          'logoUrl': logoUrl,
           'currency': 'DZD',
           'default_tva_rate': 19,
           'invoice_prefix': 'FAC',

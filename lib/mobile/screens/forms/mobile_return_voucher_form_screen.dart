@@ -124,6 +124,23 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
     if (widget.isReadOnly) return;
     if (_isEditing && !await OfflineActionHelper.checkOnlineOrShowError(context)) return;
 
+    if (_items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez ajouter au moins un article'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    final hasEmptyArticle = _items.any((item) =>
+        (item.designation == null || item.designation!.trim().isEmpty));
+
+    if (hasEmptyArticle) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Veuillez sélectionner un article pour chaque ligne'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
     if (_selectedCustomerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Veuillez sélectionner un client'), backgroundColor: AppColors.error),
@@ -288,7 +305,7 @@ class _MobileReturnVoucherFormScreenState extends State<MobileReturnVoucherFormS
                             absorbing: widget.isReadOnly,
                             child: SmartSearchableSelector(
                               label: 'Client',
-                              hint: 'Rechercher des clients...',
+                              hint: 'Rechercher un client...',
                               selectedText: _selectedCustomerId != null
                                   ? (customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)?.companyName?.isNotEmpty == true
                                       ? customers.cast<Customer?>().firstWhere((c) => c?.id == _selectedCustomerId, orElse: () => null)!.companyName!
